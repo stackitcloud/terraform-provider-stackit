@@ -106,7 +106,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 1. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
 
 Optional:
 
@@ -120,7 +120,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 2. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
 
 Optional:
 
@@ -171,7 +171,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 1. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
 
 Optional:
 
@@ -185,7 +185,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 2. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
 
 Optional:
 

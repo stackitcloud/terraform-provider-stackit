@@ -89,6 +89,59 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 	}
 }
 
+func TestToOptStringPointerMap(t *testing.T) {
+	tests := []struct {
+		name    string
+		tfMap   map[string]attr.Value
+		want    *map[string]*string
+		wantErr bool
+	}{
+		{
+			name: "base",
+			tfMap: map[string]attr.Value{
+				"key":  types.StringValue("value"),
+				"key2": types.StringValue("value2"),
+			},
+			want: &map[string]*string{
+				"key":  new("value"),
+				"key2": new("value2"),
+			},
+			wantErr: false,
+		},
+		{
+			name:    "empty",
+			tfMap:   map[string]attr.Value{},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name:    "nil",
+			tfMap:   nil,
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "invalid type map (non-string)",
+			tfMap: map[string]attr.Value{
+				"key": types.Int64Value(1),
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ToOptStringPointerMap(tt.tfMap)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ToOptStringPointerMap() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Fatalf("ToOptStringPointerMap() mismatch: %s", diff)
+			}
+		})
+	}
+}
+
 func TestToJSONMapUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description   string
