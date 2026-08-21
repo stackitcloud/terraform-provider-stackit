@@ -122,6 +122,7 @@ func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
 
 				if !stateValue.Equal(planValue) {
 					allUnchanged = false
+					return
 				}
 			}
 		}
