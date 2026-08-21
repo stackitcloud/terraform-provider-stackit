@@ -243,7 +243,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							},
 						},
 						"integrity_algorithms": schema.ListAttribute{
-							Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
 							Required:    true,
 							ElementType: types.StringType,
 							Validators: []validator.List{
@@ -287,7 +287,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							},
 						},
 						"integrity_algorithms": schema.ListAttribute{
-							Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
 							Required:    true,
 							ElementType: types.StringType,
 							Validators: []validator.List{
@@ -552,6 +552,10 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	if modelUsesDeprecatedSha1IntegrityAlgorithm(&planModel) {
+		resp.Diagnostics.AddWarning("Deprecated integrity algorithm", "`sha1` is deprecated for `integrity_algorithms` and may be removed in a future API version. Use `sha2_256`, `sha2_384`, or `sha2_512` instead.")
+	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := planModel.ProjectID.ValueString()
@@ -660,6 +664,10 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	if modelUsesDeprecatedSha1IntegrityAlgorithm(&planModel) {
+		resp.Diagnostics.AddWarning("Deprecated integrity algorithm", "`sha1` is deprecated for `integrity_algorithms` and may be removed in a future API version. Use `sha2_256`, `sha2_384`, or `sha2_512` instead.")
 	}
 
 	ctx = core.InitProviderContext(ctx)
@@ -954,6 +962,33 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 	}
 
 	return config, nil
+}
+
+// modelUsesDeprecatedSha1IntegrityAlgorithm reports whether any tunnel/phase in the model still
+// configures the deprecated `sha1` integrity algorithm. `sha1` remains supported by the API but
+// should be avoided in favor of `sha2_256`, `sha2_384`, or `sha2_512`.
+func modelUsesDeprecatedSha1IntegrityAlgorithm(model *Model) bool {
+	usesSha1 := func(algorithms types.List) bool {
+		if tfutils.IsUndefined(algorithms) {
+			return false
+		}
+		for _, el := range algorithms.Elements() {
+			if s, ok := el.(types.String); ok && s.ValueString() == string(vpn.PHASEINTEGRITYALGORITHMSINNER_SHA1) {
+				return true
+			}
+		}
+		return false
+	}
+
+	tunnelUsesSha1 := func(tunnel *TunnelModel) bool {
+		if tunnel == nil {
+			return false
+		}
+		return (tunnel.Phase1 != nil && usesSha1(tunnel.Phase1.IntegrityAlgorithms)) ||
+			(tunnel.Phase2 != nil && usesSha1(tunnel.Phase2.IntegrityAlgorithms))
+	}
+
+	return tunnelUsesSha1(model.Tunnel1) || tunnelUsesSha1(model.Tunnel2)
 }
 
 func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayload) error {

@@ -1120,3 +1120,61 @@ func TestToTunnelConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestModelUsesDeprecatedSha1IntegrityAlgorithm(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		expected    bool
+	}{
+		{
+			description: "no_sha1",
+			input:       new(fixtureModel()),
+			expected:    false,
+		},
+		{
+			description: "sha1_in_tunnel1_phase1",
+			input: new(fixtureModel(func(m *Model) {
+				m.Tunnel1.Phase1.IntegrityAlgorithms = types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("sha1"),
+				})
+			})),
+			expected: true,
+		},
+		{
+			description: "sha1_in_tunnel2_phase2",
+			input: new(fixtureModel(func(m *Model) {
+				m.Tunnel2.Phase2.IntegrityAlgorithms = types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("sha1"),
+				})
+			})),
+			expected: true,
+		},
+		{
+			description: "sha1_mixed_with_other_algorithms",
+			input: new(fixtureModel(func(m *Model) {
+				m.Tunnel1.Phase1.IntegrityAlgorithms = types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("sha2_256"),
+					types.StringValue("sha1"),
+				})
+			})),
+			expected: true,
+		},
+		{
+			description: "integrity_algorithms_undefined",
+			input: new(fixtureModel(func(m *Model) {
+				m.Tunnel1.Phase1.IntegrityAlgorithms = types.ListNull(types.StringType)
+				m.Tunnel2.Phase2.IntegrityAlgorithms = types.ListNull(types.StringType)
+			})),
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			got := modelUsesDeprecatedSha1IntegrityAlgorithm(tt.input)
+			if got != tt.expected {
+				t.Fatalf("got %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
