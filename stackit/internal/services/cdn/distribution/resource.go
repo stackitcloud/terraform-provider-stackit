@@ -334,7 +334,7 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 	resp.TypeName = req.ProviderTypeName + "_cdn_distribution"
 }
 
-func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) { //nolint:tfmodifyplan // false positive - cdn api has a 'regions' array field to define in which regions content to be cached
 	backendOptions := []string{"http", "bucket"}
 	statusCode := []int32{301, 302, 303, 307, 308}
 	resp.Schema = schema.Schema{

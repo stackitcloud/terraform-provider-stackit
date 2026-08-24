@@ -3,6 +3,7 @@ package stringplanmodifier
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -94,26 +95,36 @@ func StringUnchanged(attributePath path.Path) UseStateForUnknownIfFunc { // noli
 	}
 }
 
-// Int64Unchanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func Int64Unchanged(attributePath path.Path) UseStateForUnknownIfFunc { // nolint:gocritic // function signature required by Terraform
-	return func(ctx context.Context, request planmodifier.StringRequest, response *UseStateForUnknownFuncResponse) {
-		var attributePlan types.Int64
-		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
-		response.Diagnostics.Append(diags...)
-		if response.Diagnostics.HasError() {
-			return
-		}
+// UnchangedPaths sets UseStateForUnknown to true if all values matched by paths are equal in Plan & State
+func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
+	return func(ctx context.Context, req planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+		exprs := req.PathExpression.MergeExpressions(paths...)
+		for _, expr := range exprs {
+			matched, diags := req.Config.PathMatches(ctx, expr)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-		var attributeState types.Int64
-		diags = request.State.GetAttribute(ctx, attributePath, &attributeState)
-		response.Diagnostics.Append(diags...)
-		if response.Diagnostics.HasError() {
-			return
-		}
+			for _, match := range matched {
+				var planValue attr.Value
+				resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, match, &planValue)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
 
-		if attributeState == attributePlan {
-			response.UseStateForUnknown = true
-			return
+				var stateValue attr.Value
+				resp.Diagnostics.Append(req.State.GetAttribute(ctx, match, &stateValue)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				if !stateValue.Equal(planValue) {
+					resp.UseStateForUnknown = false
+					return
+				}
+			}
 		}
+		resp.UseStateForUnknown = true
 	}
 }

@@ -206,7 +206,7 @@ func TestToUpdatePayload(t *testing.T) {
 			expected: &modelexperiments.PartialUpdateInstancePayload{
 				Name:                       new("name"),
 				Description:                new("desc"),
-				Labels:                     &map[string]string{"key": "value"},
+				Labels:                     &map[string]*string{"key": new("value")},
 				DeletedExperimentRetention: new("50d"),
 			},
 			isValid: true,

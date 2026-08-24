@@ -9,6 +9,7 @@ Your contribution is welcome! Thank you for your interest in contributing to the
   - [Repository structure](#repository-structure)
   - [Implementing a new resource](#implementing-a-new-resource)
   	- [Resource file structure](#resource-file-structure)
+  	- [Implementing write-only attributes](#implementing-write-only-attributes)
   - [Implementing a new datasource](#implementing-a-new-datasource)
   - [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
   - [Implementing IAM Role Bindings](#implementing-iam-role-bindings)
@@ -65,6 +66,14 @@ Below is a typical structure of a STACKIT Terraform provider resource:
 https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/resource.go
 
 If the new resource `bar` is the first resource in the TFP using a STACKIT service `foo`, please refer to [Onboarding a new STACKIT service](./CONTRIBUTING.md/#onboarding-a-new-stackit-service).
+
+#### Implementing write-only attributes
+
+When implementing [write-only attributes](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) (supported in Terraform 1.11.0 and later), keep in mind that Terraform never populates write-only values in the plan or state models. They are only available in the config model, i.e. they must be read via `req.Config.Get(...)` in the `Create`/`Update` handlers, while all other values are read from the plan model as usual.
+
+You can find a reference implementation of write-only attributes (including the accompanying `<attribute>_wo_version` rotation counter pattern) in the VPN connection resource:
+
+https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/vpn/connection/resource.go
 
 ### Implementing a new datasource
 
