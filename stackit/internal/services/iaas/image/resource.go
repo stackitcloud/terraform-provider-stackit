@@ -48,21 +48,21 @@ var (
 )
 
 type Model struct {
-	Id            types.String    `tfsdk:"id"` // needed by TF
-	ProjectId     types.String    `tfsdk:"project_id"`
-	Region        types.String    `tfsdk:"region"`
-	ImageId       types.String    `tfsdk:"image_id"`
-	Name          types.String    `tfsdk:"name"`
-	DiskFormat    types.String    `tfsdk:"disk_format"`
-	MinDiskSize   types.Int64     `tfsdk:"min_disk_size"`
-	MinRAM        types.Int64     `tfsdk:"min_ram"`
-	Protected     types.Bool      `tfsdk:"protected"`
-	Scope         types.String    `tfsdk:"scope"`
-	Config        types.Object    `tfsdk:"config"`
-	Checksum      types.Object    `tfsdk:"checksum"`
-	Labels        types.Map       `tfsdk:"labels"`
-	LocalFilePath types.String    `tfsdk:"local_file_path"`
-	ImageFile     *imageFileModel `tfsdk:"image_file"`
+	Id            types.String `tfsdk:"id"` // needed by TF
+	ProjectId     types.String `tfsdk:"project_id"`
+	Region        types.String `tfsdk:"region"`
+	ImageId       types.String `tfsdk:"image_id"`
+	Name          types.String `tfsdk:"name"`
+	DiskFormat    types.String `tfsdk:"disk_format"`
+	MinDiskSize   types.Int64  `tfsdk:"min_disk_size"`
+	MinRAM        types.Int64  `tfsdk:"min_ram"`
+	Protected     types.Bool   `tfsdk:"protected"`
+	Scope         types.String `tfsdk:"scope"`
+	Config        types.Object `tfsdk:"config"`
+	Checksum      types.Object `tfsdk:"checksum"`
+	Labels        types.Map    `tfsdk:"labels"`
+	LocalFilePath types.String `tfsdk:"local_file_path"`
+	ImageFile     types.Object `tfsdk:"image_file"`
 }
 
 type localModel struct {
@@ -76,8 +76,8 @@ type downloadModel struct {
 }
 
 type imageFileModel struct {
-	Local    *localModel    `tfsdk:"local"`
-	Download *downloadModel `tfsdk:"download"`
+	Local    types.Object `tfsdk:"local"`
+	Download types.Object `tfsdk:"download"`
 }
 
 // Struct corresponding to Model.Config
@@ -428,7 +428,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"image_file": schema.SingleNestedAttribute{
 				Description: "Representation of an image file.",
-				Computed:    true,
+				Computed:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
@@ -490,20 +490,48 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	if model.ImageFile == nil || model.ImageFile.Download != nil && model.ImageFile.Local != nil || model.ImageFile.Download == nil && model.ImageFile.Local == nil {
+	if model.ImageFile.IsNull() || model.ImageFile.IsUnknown() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+	}
+
+	var imageFile imageFileModel
+	diags = model.ImageFile.As(ctx, &imageFile, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+	}
+
+	isLocal := imageFile.Download.IsNull() || imageFile.Download.IsUnknown()
+	isDownload := imageFile.Local.IsNull() || imageFile.Local.IsUnknown()
+	if isDownload && isLocal || !isDownload && !isLocal {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
 		return
 	}
+
 	var filename string
 	var err error
-	if model.ImageFile.Download != nil {
-		filename, err = downloadImage(ctx, &resp.Diagnostics, model.ImageFile.Download.CachePath.ValueString(), model.ImageFile.Download.URL.ValueString())
+	var downloadModel downloadModel
+	var localModel localModel
+	if isDownload {
+		diags = imageFile.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+			return
+		}
+		filename, err = downloadImage(ctx, &resp.Diagnostics, downloadModel.CachePath.ValueString(), downloadModel.URL.ValueString())
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
 			return
 		}
 	} else {
-		filename = model.ImageFile.Local.Path.ValueString()
+		diags = imageFile.Download.As(ctx, &localModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+			return
+		}
+		filename = localModel.Path.ValueString()
 	}
 
 	// Generate API request body from model
