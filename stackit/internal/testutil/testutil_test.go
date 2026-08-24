@@ -49,6 +49,18 @@ func newTestState(resourceName string, attributes map[string]string) *terraform.
 	}
 }
 
+func TestUsingOpenTofu(t *testing.T) {
+	t.Setenv("TF_ACC_TERRAFORM_PATH", "/usr/local/bin/tofu")
+	if !UsingOpenTofu() {
+		t.Error("UsingOpenTofu() = false, want true")
+	}
+
+	t.Setenv("TF_ACC_TERRAFORM_PATH", "/usr/local/bin/terraform")
+	if UsingOpenTofu() {
+		t.Error("UsingOpenTofu() = true, want false")
+	}
+}
+
 func TestConvertConfigVariable(t *testing.T) {
 	tests := []struct {
 		name     string
