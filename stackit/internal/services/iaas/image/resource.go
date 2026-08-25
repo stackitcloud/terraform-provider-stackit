@@ -519,7 +519,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
 			return
 		}
-		file, err := downloadImage(ctx, &resp.Diagnostics, downloadModel.URL.ValueString())
+		file, err := downloadImage(ctx, downloadModel.URL.ValueString())
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
 			return
@@ -1019,62 +1019,73 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	return nil
 }
 
-// file zurückgeben - unit test mock server (dummy file), file pointer checken | diags raus
-func downloadImage(ctx context.Context, diags *diag.Diagnostics, downloadURL string) (*os.File, error) {
+func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) {
 	if downloadURL == "" {
-		return nil, fmt.Errorf("upload URL is empty")
+		return nil, fmt.Errorf("download URL is empty")
 	}
+
 	md5sum := fmt.Sprintf("%x", md5.Sum([]byte(downloadURL)))
-	// uuid?
-	// go tmp verzeichnis pro ressource -> kein konflikt
-	tmpDir, err := os.MkdirTemp("", "tf-prodiver-download-*")
+
+	tmpDir, err := os.MkdirTemp("", "tf-provider-download-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
+
 	filename := filepath.Join(tmpDir, md5sum+".img")
-	delFile := func() {
-		if err := os.Remove(filename); err != nil {
-			tflog.Debug(ctx, "failed to cleanup file")
+
+	cleanupOnErr := func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			tflog.Warn(ctx, "failed to cleanup temp directory", map[string]interface{}{
+				"dir":   tmpDir,
+				"error": err.Error(),
+			})
 		}
 	}
-	// TODO: retry
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
+		cleanupOnErr()
 		return nil, fmt.Errorf("create download request: %w", err)
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		cleanupOnErr()
 		return nil, fmt.Errorf("download image: %w", err)
 	}
 
 	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
-			// can test if handled, return caller should care
-			core.LogAndAddError(ctx, diags, "Error downloading image", fmt.Sprintf("Closing response body: %v", err))
+		if err := resp.Body.Close(); err != nil {
+			tflog.Debug(ctx, "failed to close HTTP response body", map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("upload image: %s", resp.Status)
+		cleanupOnErr()
+		return nil, fmt.Errorf("download image unexpected status: %s", resp.Status)
 	}
 
-	file, err := os.CreateTemp("", filename)
+	file, err := os.Create(filename)
 	if err != nil {
-		delFile()
+		cleanupOnErr()
 		return nil, fmt.Errorf("creating file: %w", err)
 	}
-	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
-			core.LogAndAddError(ctx, diags, "Error uploading image", fmt.Sprintf("Closing response body: %v", err))
-		}
-	}()
+
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
+		file.Close()
+		cleanupOnErr()
 		return nil, fmt.Errorf("writing to file: %w", err)
 	}
+
+	if _, err := file.Seek(0, 0); err != nil {
+		file.Close()
+		cleanupOnErr()
+		return nil, fmt.Errorf("seeking file: %w", err)
+	}
+
 	return file, nil
 }
