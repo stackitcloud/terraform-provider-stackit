@@ -519,11 +519,12 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
 			return
 		}
-		filename, err = downloadImage(ctx, &resp.Diagnostics, downloadModel.CachePath.ValueString(), downloadModel.URL.ValueString())
+		file, err := downloadImage(ctx, &resp.Diagnostics, downloadModel.URL.ValueString())
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
 			return
 		}
+		filename = file.Name()
 	} else {
 		diags = imageFile.Download.As(ctx, &localModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
@@ -1019,31 +1020,33 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 }
 
 // file zurückgeben - unit test mock server (dummy file), file pointer checken | diags raus
-func downloadImage(ctx context.Context, diags *diag.Diagnostics, cachePath, downloadURL string) (string, error) {
+func downloadImage(ctx context.Context, diags *diag.Diagnostics, downloadURL string) (*os.File, error) {
 	if downloadURL == "" {
-		return "", fmt.Errorf("upload URL is empty")
+		return nil, fmt.Errorf("upload URL is empty")
 	}
 	md5sum := fmt.Sprintf("%x", md5.Sum([]byte(downloadURL)))
 	// uuid?
 	// go tmp verzeichnis pro ressource -> kein konflikt
-	filename := filepath.Join(cachePath, md5sum+".img")
+	tmpDir, err := os.MkdirTemp("", "tf-prodiver-download-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	filename := filepath.Join(tmpDir, md5sum+".img")
 	delFile := func() {
 		if err := os.Remove(filename); err != nil {
 			tflog.Debug(ctx, "failed to cleanup file")
 		}
 	}
-	unlock := iaasUtils.LockimageDownload(filename)
-	defer unlock()
 	// TODO: retry
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("create download request: %w", err)
+		return nil, fmt.Errorf("create download request: %w", err)
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("download image: %w", err)
+		return nil, fmt.Errorf("download image: %w", err)
 	}
 
 	defer func() {
@@ -1055,26 +1058,13 @@ func downloadImage(ctx context.Context, diags *diag.Diagnostics, cachePath, down
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("upload image: %s", resp.Status)
+		return nil, fmt.Errorf("upload image: %s", resp.Status)
 	}
 
-	info, err := os.Stat(filename)
-	if err != nil && !os.IsNotExist(err) {
-		return "", fmt.Errorf("accessing file %q: %w", filename, err)
-	}
-
-	if info != nil {
-		if info.Size() != 0 {
-			// cache hit
-			return filename, nil
-		}
-		delFile()
-	}
-
-	file, err := os.Create(filename)
+	file, err := os.CreateTemp("", filename)
 	if err != nil {
 		delFile()
-		return "", fmt.Errorf("creating file: %w", err)
+		return nil, fmt.Errorf("creating file: %w", err)
 	}
 	defer func() {
 		err = resp.Body.Close()
@@ -1084,7 +1074,7 @@ func downloadImage(ctx context.Context, diags *diag.Diagnostics, cachePath, down
 	}()
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("writing to file: %w", err)
+		return nil, fmt.Errorf("writing to file: %w", err)
 	}
-	return filename, nil
+	return file, nil
 }
