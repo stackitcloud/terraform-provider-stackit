@@ -467,7 +467,7 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:       "flavor_id",
 				Name:           "name",
 				Storage: postgresflex.StorageCreate{
-					Class: new("class"),
+					Class: "class",
 					Size:  34,
 				},
 				Version: "version",
@@ -509,7 +509,7 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:       "flavor_id",
 				Name:           "",
 				Storage: postgresflex.StorageCreate{
-					Class: nil,
+					Class: "",
 					Size:  0,
 				},
 				Version: "",

@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.17.1
-	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.1
+	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.2
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.22.1
@@ -34,7 +34,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.24.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.3.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.2
