@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -84,30 +83,4 @@ func ReadXRequestId(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("no XRequestID header found in response")
 	}
 	return "", fmt.Errorf("no response with type `**http.Response` found in context")
-}
-
-// Global map to hold locks for specific imageDownload IDs
-// This ensures that creating the same imageDownload in parallel waits for the first one to finish
-var (
-	imageDownloadLocksMu sync.Mutex
-	imageDownloadLocks   = make(map[string]*sync.Mutex)
-)
-
-// LockimageDownload acquires a lock for a specific imageDownload identifier.
-// It returns an unlock function that must be deferred.
-func LockimageDownload(id string) func() {
-	imageDownloadLocksMu.Lock()
-	mu, ok := imageDownloadLocks[id]
-	if !ok {
-		mu = &sync.Mutex{}
-		imageDownloadLocks[id] = mu
-	}
-	imageDownloadLocksMu.Unlock()
-
-	mu.Lock()
-
-	// Return the cleanup function
-	return func() {
-		mu.Unlock()
-	}
 }
