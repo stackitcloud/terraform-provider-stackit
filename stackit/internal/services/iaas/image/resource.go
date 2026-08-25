@@ -524,6 +524,8 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
 			return
 		}
+		defer file.Close()
+		defer os.RemoveAll(filepath.Dir(file.Name()))
 		filename = file.Name()
 	} else {
 		diags = imageFile.Download.As(ctx, &localModel, basetypes.ObjectAsOptions{})
