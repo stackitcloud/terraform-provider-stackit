@@ -408,7 +408,7 @@ func Test_UploadImage(t *testing.T) {
 	}
 }
 
-func Test_DownloadImage_EdgeCases(t *testing.T) {
+func Test_DownloadImage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/404":
@@ -441,40 +441,34 @@ func Test_DownloadImage_EdgeCases(t *testing.T) {
 		wantErr     bool
 	}{{
 		name:        "ok",
-		ctx:         context.Background(),
 		downloadURL: server.URL,
 		wantBytes:   []byte("dummy content"),
 		wantErr:     false,
 	},
 		{
 			name:        "invalid_url_format",
-			ctx:         context.Background(),
 			downloadURL: "http://127.0.0.1:0/invalid",
 			wantErr:     true,
 		},
 		{
 			name:        "status_404_not_found",
-			ctx:         context.Background(),
 			downloadURL: server.URL + "/404",
 			wantErr:     true,
 		},
 		{
 			name:        "empty_body_200_ok",
-			ctx:         context.Background(),
 			downloadURL: server.URL + "/empty",
 			wantBytes:   []byte(""),
 			wantErr:     false,
 		},
 		{
 			name:        "large_file_stream",
-			ctx:         context.Background(),
 			downloadURL: server.URL + "/large",
 			wantBytes:   bytes.Repeat([]byte("A"), 1024*1024),
 			wantErr:     false,
 		},
 		{
 			name:        "connection_dropped_mid_stream",
-			ctx:         context.Background(),
 			downloadURL: server.URL + "/drop-conn",
 			wantErr:     true,
 		},
