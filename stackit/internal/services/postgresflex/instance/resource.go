@@ -1079,7 +1079,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		Encryption:     encryptionPayload,
 		RetentionDays:  retentionDays,
 		Storage: postgresflex.StorageCreate{
-			Class: conversion.StringValueToPointer(storage.Class),
+			Class: storage.Class.ValueString(),
 			Size:  storage.Size.ValueInt64(),
 		},
 		Version: model.Version.ValueString(),
