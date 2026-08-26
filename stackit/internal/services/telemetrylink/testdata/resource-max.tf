@@ -6,6 +6,7 @@ variable "region" {}
 variable "display_name" {}
 variable "description" {}
 variable "access_token_wo_version" {}
+variable "enabled" {}
 
 resource "stackit_telemetryrouter_instance" "router" {
   project_id   = var.project_id
@@ -26,6 +27,9 @@ resource "stackit_telemetrylink" "link" {
   region        = var.region
   display_name  = var.display_name
   description   = var.description
+  enabled       = var.enabled
+
+  # In the MIN test, we use the legacy field, in the MAX test, we use the write-only field
   # in the MIN test we use the legacy field, in the MAX test the write-only field
   access_token_wo         = stackit_telemetryrouter_access_token.accessToken.access_token
   access_token_wo_version = var.access_token_wo_version

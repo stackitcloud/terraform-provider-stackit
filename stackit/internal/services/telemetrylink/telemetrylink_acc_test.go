@@ -53,6 +53,7 @@ var testConfigVarsMax = config.Variables{
 	"display_name":            config.StringVariable("tf-acc-test-link-max"),
 	"description":             config.StringVariable("tf-acc-test-link-description"),
 	"access_token_wo_version": config.IntegerVariable(1),
+	"enabled":                 config.BoolVariable(false),
 }
 
 func testConfigVarsMaxUpdated() config.Variables {
@@ -60,6 +61,7 @@ func testConfigVarsMaxUpdated() config.Variables {
 	maps.Copy(newVars, testConfigVarsMin)
 	newVars["display_name"] = config.StringVariable("tf-acc-test-link-updated")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryLink Updated")
+	newVars["enabled"] = config.BoolVariable(true)
 	newVars["access_token_wo_version"] = config.IntegerVariable(1)
 	return newVars
 }
@@ -189,6 +191,7 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["display_name"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "enabled", testutil.ConvertConfigVariable(testConfigVarsMax["enabled"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token_wo_version", testutil.ConvertConfigVariable(testConfigVarsMax["access_token_wo_version"])),
 					// access_token_wo is write-only and must never be persisted to state
 					resource.TestCheckNoResourceAttr("stackit_telemetrylink.link", "access_token_wo"),
@@ -226,6 +229,10 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_telemetrylink.link", "description",
 						"data.stackit_telemetrylink.link", "description",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_telemetrylink.link", "enabled",
+						"data.stackit_telemetrylink.link", "enabled",
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_telemetrylink.link", "create_time",
@@ -271,6 +278,7 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["display_name"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["description"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "enabled", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["enabled"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token_wo_version", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["access_token_wo_version"])),
 					// access_token_wo is write-only and must never be persisted to state
 					resource.TestCheckNoResourceAttr("stackit_telemetrylink.link", "access_token_wo"),

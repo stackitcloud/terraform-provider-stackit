@@ -157,6 +157,19 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 			},
 		},
 		{
+			description: "enabled set to false",
+			model: fixtureModel(func(model *Model) {
+				model.Enabled = types.BoolValue(false)
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.CreateOrUpdateOrganizationTelemetryLinkPayload{
+				DisplayName:       "name",
+				AccessToken:       "",
+				TelemetryRouterId: "tlmrid",
+				Enabled:           false,
+			},
+		},
+		{
 			description:    "nil model",
 			wantErrMessage: "missing plan model",
 		},
@@ -230,6 +243,19 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 			},
 		},
 		{
+			description: "enabled set to false",
+			model: fixtureModel(func(model *Model) {
+				model.Enabled = types.BoolValue(false)
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.CreateOrUpdateFolderTelemetryLinkPayload{
+				DisplayName:       "name",
+				AccessToken:       "",
+				TelemetryRouterId: "tlmrid",
+				Enabled:           false,
+			},
+		},
+		{
 			description:    "nil model",
 			wantErrMessage: "missing plan model",
 		},
@@ -300,6 +326,19 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "wo-access-token",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           true,
+			},
+		},
+		{
+			description: "enabled set to false",
+			model: fixtureModel(func(model *Model) {
+				model.Enabled = types.BoolValue(false)
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.CreateOrUpdateProjectTelemetryLinkPayload{
+				DisplayName:       "name",
+				AccessToken:       "",
+				TelemetryRouterId: "tlmrid",
+				Enabled:           false,
 			},
 		},
 		{
@@ -407,6 +446,21 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 			},
 		},
 		{
+			description: "enabled set to false",
+			model: fixtureModel(func(model *Model) {
+				model.Enabled = types.BoolValue(false)
+			}),
+			stateModel:  fixtureModel(),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(false),
+			},
+		},
+		{
 			description:    "nil model",
 			wantErrMessage: "missing plan model",
 		},
@@ -506,6 +560,21 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 			},
 		},
 		{
+			description: "enabled set to false",
+			model: fixtureModel(func(model *Model) {
+				model.Enabled = types.BoolValue(false)
+			}),
+			stateModel:  fixtureModel(),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(false),
+			},
+		},
+		{
 			description:    "nil model",
 			wantErrMessage: "missing plan model",
 		},
@@ -602,6 +671,21 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(true),
+			},
+		},
+		{
+			description: "enabled set to false",
+			model: fixtureModel(func(model *Model) {
+				model.Enabled = types.BoolValue(false)
+			}),
+			stateModel:  fixtureModel(),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(false),
 			},
 		},
 		{
