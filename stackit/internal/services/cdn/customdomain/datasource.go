@@ -29,7 +29,8 @@ var (
 )
 
 var certificateDataSourceTypes = map[string]attr.Type{
-	"version": types.Int32Type,
+	"version":        types.Int32Type,
+	"skip_dns_check": types.BoolType,
 }
 
 type customDomainDataSource struct {
@@ -112,6 +113,10 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Description: certificateSchemaDescriptions["version"],
 						Computed:    true,
 					},
+					"skip_dns_check": schema.BoolAttribute{
+						Description: certificateSchemaDescriptions["skip_dns_check"],
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -191,14 +196,19 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 	if normalizedCert.Type == "managed" {
 		model.Certificate = types.ObjectNull(certificateDataSourceTypes)
 	} else {
-		// For custom certificates, we only care about the version.
+		// For custom certificates, we only care about the version and skip_dns_check.
 		version := types.Int32Null()
 		if normalizedCert.Version != nil {
 			version = types.Int32Value(*normalizedCert.Version)
 		}
+		skipDnsCheck := types.BoolNull()
+		if normalizedCert.SkipDnsCheck != nil {
+			skipDnsCheck = types.BoolValue(*normalizedCert.SkipDnsCheck)
+		}
 
 		certificateObj, diags := types.ObjectValue(certificateDataSourceTypes, map[string]attr.Value{
-			"version": version,
+			"version":        version,
+			"skip_dns_check": skipDnsCheck,
 		})
 		if diags.HasError() {
 			return fmt.Errorf("failed to map certificate: %w", core.DiagsToError(diags))

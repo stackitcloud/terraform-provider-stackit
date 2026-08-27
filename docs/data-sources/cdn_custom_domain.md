@@ -47,4 +47,5 @@ data "stackit_cdn_custom_domain" "example" {
 
 Read-Only:
 
+- `skip_dns_check` (Boolean) When true, skips the verification check that the custom domain points to the distribution domain via CNAME or ALIAS. Useful for zero-downtime migrations.
 - `version` (Number) A version identifier for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.

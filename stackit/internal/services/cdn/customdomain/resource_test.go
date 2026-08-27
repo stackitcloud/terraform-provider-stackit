@@ -24,9 +24,10 @@ import (
 func TestMapFields(t *testing.T) {
 	// Redefine certificateTypes locally for testing, matching the updated schema
 	certificateTypes := map[string]attr.Type{
-		"version":     types.Int32Type,
-		"certificate": types.StringType,
-		"private_key": types.StringType,
+		"version":        types.Int32Type,
+		"certificate":    types.StringType,
+		"private_key":    types.StringType,
+		"skip_dns_check": types.BoolType,
 	}
 
 	const dummyCert = "dummy-cert-pem"
@@ -36,9 +37,10 @@ func TestMapFields(t *testing.T) {
 
 	// Expected object when a custom certificate is returned
 	certAttributes := map[string]attr.Value{
-		"version":     types.Int32Value(3),
-		"certificate": types.StringValue(dummyCert),
-		"private_key": types.StringValue(dummyKey),
+		"version":        types.Int32Value(3),
+		"certificate":    types.StringValue(dummyCert),
+		"private_key":    types.StringValue(dummyKey),
+		"skip_dns_check": types.BoolValue(false),
 	}
 	certificateObj, _ := types.ObjectValue(certificateTypes, certAttributes)
 
@@ -62,8 +64,9 @@ func TestMapFields(t *testing.T) {
 	customVersion := int32(3)
 	getRespCustom := cdnSdk.GetCustomDomainResponseCertificate{
 		GetCustomDomainCustomCertificate: &cdnSdk.GetCustomDomainCustomCertificate{
-			Type:    customType,
-			Version: customVersion,
+			Type:         customType,
+			Version:      customVersion,
+			SkipDnsCheck: false,
 		},
 	}
 
@@ -107,9 +110,38 @@ func TestMapFields(t *testing.T) {
 			IsValid: true,
 			InitialModel: expectedModel(func(m *CustomDomainModel) {
 				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
-					"certificate": types.StringValue(dummyCert),
-					"private_key": types.StringValue(dummyKey),
-					"version":     types.Int32Null(),
+					"certificate":    types.StringValue(dummyCert),
+					"private_key":    types.StringValue(dummyKey),
+					"version":        types.Int32Null(),
+					"skip_dns_check": types.BoolNull(),
+				})
+			}),
+		},
+		"happy_path_custom_cert_skip_dns_check_true": {
+			Expected: expectedModel(func(m *CustomDomainModel) {
+				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
+					"certificate":    types.StringValue(dummyCert),
+					"private_key":    types.StringValue(dummyKey),
+					"version":        types.Int32Value(3),
+					"skip_dns_check": types.BoolValue(true),
+				})
+			}),
+			Input: customDomainFixture(func(gcdr *cdnSdk.GetCustomDomainResponse) {
+				gcdr.Certificate = cdnSdk.GetCustomDomainResponseCertificate{
+					GetCustomDomainCustomCertificate: &cdnSdk.GetCustomDomainCustomCertificate{
+						Type:         customType,
+						Version:      customVersion,
+						SkipDnsCheck: true,
+					},
+				}
+			}),
+			IsValid: true,
+			InitialModel: expectedModel(func(m *CustomDomainModel) {
+				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
+					"certificate":    types.StringValue(dummyCert),
+					"private_key":    types.StringValue(dummyKey),
+					"version":        types.Int32Null(),
+					"skip_dns_check": types.BoolValue(true),
 				})
 			}),
 		},
@@ -134,9 +166,10 @@ func TestMapFields(t *testing.T) {
 			IsValid: true,
 			InitialModel: expectedModel(func(m *CustomDomainModel) {
 				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
-					"certificate": types.StringValue(dummyCert),
-					"private_key": types.StringValue(dummyKey),
-					"version":     types.Int32Null(),
+					"certificate":    types.StringValue(dummyCert),
+					"private_key":    types.StringValue(dummyKey),
+					"version":        types.Int32Null(),
+					"skip_dns_check": types.BoolNull(),
 				})
 			}),
 		},
@@ -242,9 +275,10 @@ func TestToCertificatePayload(t *testing.T) {
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"version":     types.Int32Null(),
-						"certificate": types.StringValue(certPEM),
-						"private_key": types.StringValue(keyPEM),
+						"version":        types.Int32Null(),
+						"certificate":    types.StringValue(certPEM),
+						"private_key":    types.StringValue(keyPEM),
+						"skip_dns_check": types.BoolNull(),
 					},
 				),
 			},
@@ -253,14 +287,57 @@ func TestToCertificatePayload(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		"success_custom_certificate_skip_dns_check_true": {
+			model: &CustomDomainModel{
+				Certificate: basetypes.NewObjectValueMust(
+					certificateTypes,
+					map[string]attr.Value{
+						"version":        types.Int32Null(),
+						"certificate":    types.StringValue(certPEM),
+						"private_key":    types.StringValue(keyPEM),
+						"skip_dns_check": types.BoolValue(true),
+					},
+				),
+			},
+			expectedPayload: func() *cdnSdk.PutCustomDomainPayloadCertificate {
+				cert := cdnSdk.NewPutCustomDomainCustomCertificate(certBase64, keyBase64, "custom")
+				cert.SetSkipDnsCheck(true)
+				return &cdnSdk.PutCustomDomainPayloadCertificate{
+					PutCustomDomainCustomCertificate: cert,
+				}
+			}(),
+			expectErr: false,
+		},
+		"success_custom_certificate_skip_dns_check_false": {
+			model: &CustomDomainModel{
+				Certificate: basetypes.NewObjectValueMust(
+					certificateTypes,
+					map[string]attr.Value{
+						"version":        types.Int32Null(),
+						"certificate":    types.StringValue(certPEM),
+						"private_key":    types.StringValue(keyPEM),
+						"skip_dns_check": types.BoolValue(false),
+					},
+				),
+			},
+			expectedPayload: func() *cdnSdk.PutCustomDomainPayloadCertificate {
+				cert := cdnSdk.NewPutCustomDomainCustomCertificate(certBase64, keyBase64, "custom")
+				cert.SetSkipDnsCheck(false)
+				return &cdnSdk.PutCustomDomainPayloadCertificate{
+					PutCustomDomainCustomCertificate: cert,
+				}
+			}(),
+			expectErr: false,
+		},
 		"fail_custom_missing_cert_value": {
 			model: &CustomDomainModel{
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"version":     types.Int32Null(),
-						"certificate": types.StringValue(""), // Empty certificate
-						"private_key": types.StringValue(keyPEM),
+						"version":        types.Int32Null(),
+						"certificate":    types.StringValue(""), // Empty certificate
+						"private_key":    types.StringValue(keyPEM),
+						"skip_dns_check": types.BoolNull(),
 					},
 				),
 			},
@@ -273,9 +350,10 @@ func TestToCertificatePayload(t *testing.T) {
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"version":     types.Int32Null(),
-						"certificate": types.StringNull(),
-						"private_key": types.StringNull(),
+						"version":        types.Int32Null(),
+						"certificate":    types.StringNull(),
+						"private_key":    types.StringNull(),
+						"skip_dns_check": types.BoolNull(),
 					},
 				),
 			},

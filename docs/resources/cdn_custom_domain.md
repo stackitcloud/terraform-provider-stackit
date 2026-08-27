@@ -21,8 +21,9 @@ resource "stackit_cdn_custom_domain" "example" {
   distribution_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name            = "https://xxx.xxx"
   certificate = {
-    certificate = "-----BEGIN CERTIFICATE-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END CERTIFICATE---"
-    private_key = "-----BEGIN RSA PRIVATE KEY-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END RSA PRIVATE KEY---"
+    certificate    = "-----BEGIN CERTIFICATE-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END CERTIFICATE---"
+    private_key    = "-----BEGIN RSA PRIVATE KEY-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END RSA PRIVATE KEY---"
+    skip_dns_check = true
   }
 }
 ```
@@ -53,6 +54,7 @@ Optional:
 
 - `certificate` (String, Sensitive) The PEM-encoded TLS certificate. Required for custom certificates.
 - `private_key` (String, Sensitive) The PEM-encoded private key for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.
+- `skip_dns_check` (Boolean) When true, skips the verification check that the custom domain points to the distribution domain via CNAME or ALIAS. Useful for zero-downtime migrations.
 
 Read-Only:
 
