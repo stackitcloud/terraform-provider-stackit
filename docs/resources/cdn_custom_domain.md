@@ -54,7 +54,7 @@ Optional:
 
 - `certificate` (String, Sensitive) The PEM-encoded TLS certificate. Required for custom certificates.
 - `private_key` (String, Sensitive) The PEM-encoded private key for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.
-- `skip_dns_check` (Boolean) When true, skips the verification check that the custom domain points to the distribution domain via CNAME or ALIAS. Useful for zero-downtime migrations.
+- `skip_dns_check` (Boolean) When true, skips the verification check that the custom domain points to the distribution domain via CNAME. Useful for zero-downtime migrations.
 
 Read-Only:
 
