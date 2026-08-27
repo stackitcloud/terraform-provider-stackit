@@ -18,6 +18,12 @@ resource "stackit_rabbitmq_credential" "example" {
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 
+resource "stackit_rabbitmq_credential" "example_monitoring" {
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  roles       = ["monitoring"]
+}
+
 resource "time_rotating" "rotate" {
   rotation_days = 80
 }
@@ -43,6 +49,7 @@ resource "stackit_rabbitmq_credential" "example" {
 ### Optional
 
 - `region` (String) The resource region. If not defined, the provider region is used.
+- `roles` (Set of String) A list of roles to assign to the generated credentials. If not provided, the standard default role 'policymaker' will be assigned. Possible values are: `management`, `policymaker`, `monitoring`, `administrator`..
 - `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only
