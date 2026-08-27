@@ -30,7 +30,6 @@ resource "stackit_telemetrylink" "link" {
   enabled       = var.enabled
 
   # In the MIN test, we use the legacy field, in the MAX test, we use the write-only field
-  # in the MIN test we use the legacy field, in the MAX test the write-only field
   access_token_wo         = stackit_telemetryrouter_access_token.accessToken.access_token
   access_token_wo_version = var.access_token_wo_version
   telemetry_router_id     = stackit_telemetryrouter_instance.router.instance_id
