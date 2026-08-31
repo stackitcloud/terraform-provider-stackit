@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	valkeyUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/utils"
@@ -346,6 +348,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: parametersDescriptions["min_replicas_to_write"],
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.Int32{
+							int32validator.AtLeast(0),
+							int32validator.AtMost(3),
+						},
 					},
 					"monitoring_instance_id": schema.StringAttribute{
 						Description: parametersDescriptions["monitoring_instance_id"],

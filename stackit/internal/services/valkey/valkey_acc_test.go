@@ -25,8 +25,8 @@ var instanceResource = map[string]string{
 	"plan_name":       "stackit-keyvalue-1.4.10-single",
 	"version":         "8",
 	"sgw_acl_invalid": "1.2.3.4/4",
-	"sgw_acl_valid":   "192.168.0.0/16",
-	"sgw_acl_valid2":  "10.10.10.0/24",
+	"sgw_acl_valid":   "193.148.160.0/19",
+	"sgw_acl_valid2":  "45.129.40.0/21",
 }
 
 func parametersConfig(params map[string]string) string {
@@ -116,8 +116,8 @@ func TestAccValkeyResource(t *testing.T) {
 					"maxmemory_samples":       "5",
 					"metrics_frequency":       "10",
 					"metrics_prefix":          "prefix",
-					"min_replicas_max_lag":    "15",
-					"min_replicas_to_write":   "10",
+					"min_replicas_max_lag":    "10",
+					"min_replicas_to_write":   "1",
 					"notify_keyspace_events":  "Ex",
 					"repl_backlog_size":       "1mb",
 					"syslog":                  `["syslog.example.com:123"]`,
@@ -146,8 +146,8 @@ func TestAccValkeyResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.maxmemory_samples", "5"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.metrics_frequency", "10"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.metrics_prefix", "prefix"),
-					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_max_lag", "15"),
-					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_to_write", "10"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_max_lag", "10"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_to_write", "1"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.notify_keyspace_events", "Ex"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.repl_backlog_size", "1mb"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.syslog.#", "1"),
