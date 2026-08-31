@@ -426,8 +426,8 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				ElementType: types.StringType,
 				Optional:    true,
 			},
-			"image_file": schema.SingleNestedAttribute{
-				Description: "Representation of an image file.",
+			"image_file": schema.SingleNestedAttribute{ // Deprecated: image_file is deprecated and will be removed after February 2027
+				Description: "Representation of an image file. (Deprecated: image_file is deprecated and will be removed after February 2027. Use local.file_path instead.)",
 				Computed:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
@@ -442,12 +442,10 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								Description: "Path to the local file.",
 								Required:    true,
 								Validators: []validator.String{
-									// Validating that the file exists in the plan is useful to avoid
-									// creating an image resource where the local image upload will fail
-									validate.FileExists(),
+									validate.FileExists(), // will only be validated if parent is present since parent is optional
 								},
 							},
-							"disable_plan_validation": schema.BoolAttribute{
+							"disable_plan_validation": schema.BoolAttribute{ // TODO: clarify what this is for? (when would I provide a local file path without it being present besides current hacky solutions)
 								Description: "Wheter to disable plan-time validation.",
 								Optional:    true,
 							},
@@ -460,10 +458,9 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 							"url": schema.StringAttribute{
 								Description: "URL to downlioad the image from.",
 								Required:    true,
-							},
-							"cache_path": schema.StringAttribute{
-								Description: "Local path to cache the downloaded image.",
-								Required:    true,
+								Validators: []validator.String{
+									validate.URL("http", "https"), // will only be validated if parent is present since parent is optional
+								},
 							},
 						},
 					},

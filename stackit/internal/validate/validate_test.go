@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -1081,6 +1082,57 @@ func TestNoLeadingOrtTrailingWhitespace(t *testing.T) {
 			}
 			if !tt.wantErr && r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
+func TestURL(t *testing.T) {
+	tests := []struct {
+		name           string
+		allowedSchemes []string
+		value          string
+		wantErr        bool
+	}{
+		{
+			name:           "valid_http_matching_scheme",
+			allowedSchemes: []string{"http", "https"},
+			value:          "http://example.com/file.iso",
+			wantErr:        false,
+		},
+		{
+			name:           "valid_url_no_scheme_restriction",
+			allowedSchemes: nil,
+			value:          "s3://mybucket/file.iso",
+			wantErr:        false,
+		},
+		{
+			name:           "invalid_disallowed_scheme",
+			allowedSchemes: []string{"http", "https"},
+			value:          "ftp://example.com/file.iso",
+			wantErr:        true,
+		},
+		{
+			name:           "invalid_malformed_url",
+			allowedSchemes: nil,
+			value:          "://bad-url",
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := URL(tt.allowedSchemes...)
+			resp := &validator.StringResponse{}
+			req := validator.StringRequest{
+				ConfigValue: types.StringValue(tt.value),
+				Path:        path.Root("url"),
+			}
+
+			v.ValidateString(context.Background(), req, resp)
+
+			if resp.Diagnostics.HasError() != tt.wantErr {
+				t.Errorf("URL() error = %v, wantErr %v", resp.Diagnostics.HasError(), tt.wantErr)
 			}
 		})
 	}
