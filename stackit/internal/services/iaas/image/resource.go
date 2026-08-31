@@ -1042,7 +1042,7 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, file *os.File, up
 	return nil
 }
 
-func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) {
+func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) { //TODO: Ask what the benefit of using os.File over file paths with reopening is
 	if downloadURL == "" {
 		return nil, fmt.Errorf("download URL is empty")
 	}
