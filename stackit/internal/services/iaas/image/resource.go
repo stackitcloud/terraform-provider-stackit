@@ -238,8 +238,8 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"local_file_path": schema.StringAttribute{
-				Description: "The filepath of the raw image file to be uploaded.",
+			"local_file_path": schema.StringAttribute{ // Deprecated: image_file is deprecated and will be removed after February 2027.
+				Description: "The filepath of the raw image file to be uploaded. (Deprecated: image_file is deprecated and will be removed after February 2027. Use local.file_path instead.)",
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -422,8 +422,8 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				ElementType: types.StringType,
 				Optional:    true,
 			},
-			"image_file": schema.SingleNestedAttribute{ // Deprecated: image_file is deprecated and will be removed after February 2027
-				Description: "Representation of an image file. (Deprecated: image_file is deprecated and will be removed after February 2027. Use local.file_path instead.)",
+			"image_file": schema.SingleNestedAttribute{
+				Description: "Representation of an image file.",
 				Computed:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
@@ -442,7 +442,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								},
 							},
 							"disable_plan_validation": schema.BoolAttribute{ // TODO: clarify what this is for? (when would I provide a local file path without it being present besides current hacky solutions)
-								Description: "Wheter to disable plan-time validation.",
+								Description: "Whether to disable plan-time validation.",
 								Optional:    true,
 							},
 						},
