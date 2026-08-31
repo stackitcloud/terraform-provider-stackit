@@ -68,21 +68,6 @@ type Model struct {
 	ImageFile     types.Object `tfsdk:"image_file"`
 }
 
-type localModel struct {
-	Path                  types.String `tfsdk:"file_path"`
-	DisablePlanValidation types.Bool   `tfsdk:"disable_plan_validation"`
-}
-
-type downloadModel struct {
-	URL       types.String `tfsdk:"url"`
-	CachePath types.String `tfsdk:"cache_path"`
-}
-
-type imageFileModel struct {
-	Local    types.Object `tfsdk:"local"`
-	Download types.Object `tfsdk:"download"`
-}
-
 // Struct corresponding to Model.Config
 type configModel struct {
 	BootMenu               types.Bool   `tfsdk:"boot_menu"`
@@ -138,6 +123,23 @@ func NewImageResource() resource.Resource {
 type imageResource struct {
 	client       *iaas.APIClient
 	providerData core.ProviderData
+}
+
+// Struct corresponding to Model.ImageFile
+type imageFileModel struct {
+	Local    types.Object `tfsdk:"local"`
+	Download types.Object `tfsdk:"download"`
+}
+
+// Struct corresponding to Model.ImageFile.Download
+type downloadModel struct {
+	URL types.String `tfsdk:"url"`
+}
+
+// Struct corresponding to Model.ImageFile.Local
+type localModel struct {
+	Path                  types.String `tfsdk:"file_path"`
+	DisablePlanValidation types.Bool   `tfsdk:"disable_plan_validation"`
 }
 
 // Metadata returns the resource type name.
@@ -490,7 +492,6 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -505,52 +506,57 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	if model.ImageFile.IsNull() || model.ImageFile.IsUnknown() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
-	}
-
-	var imageFile imageFileModel
-	diags = model.ImageFile.As(ctx, &imageFile, basetypes.ObjectAsOptions{})
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
-	}
-
-	isLocal := imageFile.Download.IsNull() || imageFile.Download.IsUnknown()
-	isDownload := imageFile.Local.IsNull() || imageFile.Local.IsUnknown()
-	if isDownload && isLocal || !isDownload && !isLocal {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
-		return
-	}
 	var file *os.File
 	var err error
-	var downloadModel downloadModel
-	var localModel localModel
-	if isDownload {
-		diags = imageFile.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
+
+	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() { // is deprecated
+		file, err = loadFileFromDisk(ctx, model.LocalFilePath.ValueString())
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading image from disk", fmt.Sprintf("Loading file: %v", err))
+			return
+		}
+	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
+		var imageFile imageFileModel
+		diags = model.ImageFile.As(ctx, &imageFile, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
 			return
 		}
-		file, err = downloadImage(ctx, downloadModel.URL.ValueString())
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
-			return
+
+		if !imageFile.Download.IsNull() && !imageFile.Download.IsUnknown() { // is download
+			var downloadModel downloadModel
+			diags = imageFile.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			file, err = downloadImage(ctx, downloadModel.URL.ValueString())
+			if err != nil {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
+				return
+			}
+			defer os.RemoveAll(filepath.Dir(file.Name()))
+
+		} else if !imageFile.Local.IsNull() && !imageFile.Local.IsUnknown() { // is local
+			var localModel localModel
+			diags = imageFile.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			file, err = loadFileFromDisk(ctx, localModel.Path.ValueString())
+			if err != nil {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading image from disk", fmt.Sprintf("Loading file: %v", err))
+				return
+			}
 		}
-		defer os.RemoveAll(filepath.Dir(file.Name()))
-	} else {
-		diags = imageFile.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
-			return
-		}
-		file, err = loadFileFromDisk(ctx, localModel.Path.ValueString())
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading image form disk", fmt.Sprintf("Loading file: %v", err))
-			return
-		}
+	}
+
+	if file == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "No valid image source path or URL was resolved from configuration.")
+		return
 	}
 	defer file.Close()
 
