@@ -17,8 +17,10 @@ import (
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -41,10 +43,11 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &imageResource{}
-	_ resource.ResourceWithConfigure   = &imageResource{}
-	_ resource.ResourceWithImportState = &imageResource{}
-	_ resource.ResourceWithModifyPlan  = &imageResource{}
+	_ resource.Resource                     = &imageResource{}
+	_ resource.ResourceWithConfigure        = &imageResource{}
+	_ resource.ResourceWithImportState      = &imageResource{}
+	_ resource.ResourceWithModifyPlan       = &imageResource{}
+	_ resource.ResourceWithConfigValidators = &imageResource{}
 )
 
 type Model struct {
@@ -186,6 +189,15 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 	}
 	r.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
+}
+func (r *imageResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		resourcevalidator.ExactlyOneOf(
+			path.MatchRoot("local_file_path"),
+			path.MatchRoot("image_file").AtName("local"),
+			path.MatchRoot("image_file").AtName("download"),
+		),
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -441,11 +453,14 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 							"file_path": schema.StringAttribute{
 								Description: "Path to the local file.",
 								Required:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.RequiresReplace(),
+								},
 								Validators: []validator.String{
 									validate.FileExists(), // will only be validated if parent is present since parent is optional
 								},
 							},
-							"disable_plan_validation": schema.BoolAttribute{ // TODO: clarify what this is for? (when would I provide a local file path without it being present besides current hacky solutions)
+							"disable_plan_validation": schema.BoolAttribute{ // TODO: clarify what this is for? (when would I provide a local file path without it being present besides current hacky solutions or maybe sophisticated CI?)
 								Description: "Whether to disable plan-time validation.",
 								Optional:    true,
 							},
@@ -458,6 +473,9 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 							"url": schema.StringAttribute{
 								Description: "URL to downlioad the image from.",
 								Required:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.RequiresReplace(),
+								},
 								Validators: []validator.String{
 									validate.URL("http", "https"), // will only be validated if parent is present since parent is optional
 								},
