@@ -285,10 +285,6 @@ $ TF_ACC=1 \
 
 For some services the acceptance tests take more time. By setting the timeout via the flag `-timeout=` to a higher time, you ensure that the tests will not be stopped.
 
-## Migration
-
-For guidance on how to migrate to using this provider, please see our [Migration Guide](./MIGRATION.md).
-
 ## Reporting Issues
 
 If you encounter any issues or have suggestions for improvements, please open an issue in the [repository](https://github.com/stackitcloud/terraform-provider-stackit/issues).
