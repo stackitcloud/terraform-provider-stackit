@@ -32,11 +32,11 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.1
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.24.0
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.25.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.3.0
-	github.com/stackitcloud/stackit-sdk-go/services/redis v1.3.0
+	github.com/stackitcloud/stackit-sdk-go/services/redis v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.2
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.2
