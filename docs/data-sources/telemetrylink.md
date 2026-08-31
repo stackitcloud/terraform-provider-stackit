@@ -37,6 +37,7 @@ data "stackit_telemetrylink" "link" {
 - `create_time` (String) The time the Telemetry Link was created.
 - `description` (String) The description of the Telemetry Link resource.
 - `display_name` (String) The displayed name of the Telemetry Link resource.
+- `enabled` (Boolean) Whether the Telemetry Link is enabled or not.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`resource_type`, `resource_id`,`region`".
 - `status` (String, Deprecated) The status of the TelemetryLink, possible values: Possible values are: `active`, `inactive`, `failed`, `reconciling`, `deleting`.
 - `telemetry_router_id` (String) The Telemetry Router ID.

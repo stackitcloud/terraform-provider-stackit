@@ -23,7 +23,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -88,11 +87,6 @@ func (r *managedRuleSetResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_alb_waf_managed_rule_set", core.Resource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -124,7 +118,7 @@ var descriptions = map[string]string{
 
 func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Managed Rule Set resource schema. %s", core.ResourceRegionFallbackDocstring), core.Resource),
+		Description: fmt.Sprintf("ALB WAF Managed Rule Set resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -237,24 +231,11 @@ func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.Mo
 		return
 	}
 
-	// Warn the user if the name is changing, as this triggers a replacement.
-	// Deletion of the old resource will fail if another resource (e.g. stackit_alb_waf_configuration)
-	// still references this managed rule set.
 	if !req.State.Raw.IsNull() {
 		var stateModel Model
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
-		if !resp.Diagnostics.HasError() && !stateModel.Name.IsNull() && !stateModel.Name.IsUnknown() {
-			if !planModel.Name.Equal(stateModel.Name) {
-				resp.Diagnostics.AddWarning(
-					"Managed Rule Set name change requires resource replacement",
-					fmt.Sprintf(
-						"Changing the \"name\" attribute from %q to %q will destroy and recreate this resource. "+
-							"If another resource (e.g. \"stackit_alb_waf_configuration\") references this managed rule set "+
-							"by name, the replacement will fail. Remove or update that dependency before applying this change.",
-						stateModel.Name.ValueString(), planModel.Name.ValueString(),
-					),
-				)
-			}
+		if !resp.Diagnostics.HasError() {
+			utils.WarnIfNameChanges(stateModel.Name, planModel.Name, "Managed Rule Set", &resp.Diagnostics)
 		}
 	}
 

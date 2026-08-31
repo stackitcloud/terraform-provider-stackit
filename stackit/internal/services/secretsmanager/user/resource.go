@@ -254,7 +254,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -362,7 +362,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))

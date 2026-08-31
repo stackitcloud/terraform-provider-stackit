@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -67,6 +69,7 @@ var schemaDescriptions = map[string]string{
 		"The status of the TelemetryLink, possible values: %s",
 		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetrylink.AllowedTelemetryLinkResponseStatusEnumValues)...),
 	),
+	"enabled": "Whether the Telemetry Link is enabled or not.",
 }
 
 type Model struct {
@@ -82,6 +85,7 @@ type Model struct {
 	AccessTokenWoVersion types.Int64  `tfsdk:"access_token_wo_version"`
 	CreateTime           types.String `tfsdk:"create_time"`
 	Status               types.String `tfsdk:"status"`
+	Enabled              types.Bool   `tfsdk:"enabled"`
 }
 
 type telemetryLinkResource struct {
@@ -179,10 +183,24 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
+						"The display name must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(1024),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9 \-]*)?$`),
+						"The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
@@ -234,6 +252,12 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 				Description:        schemaDescriptions["status"],
 				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
 				Computed:           true,
+			},
+			"enabled": schema.BoolAttribute{
+				Description: schemaDescriptions["enabled"],
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
 			},
 		},
 	}
@@ -726,6 +750,7 @@ func toCreateOrUpdateOrganizationTelemetryLinkPayload(planModel, configModel *Mo
 		Description:       planModel.Description.ValueStringPointer(),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
+		Enabled:           planModel.Enabled.ValueBool(),
 	}, nil
 }
 
@@ -742,6 +767,7 @@ func toCreateOrUpdateFolderTelemetryLinkPayload(planModel, configModel *Model) (
 		Description:       planModel.Description.ValueStringPointer(),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
+		Enabled:           planModel.Enabled.ValueBool(),
 	}, nil
 }
 
@@ -758,6 +784,7 @@ func toCreateOrUpdateProjectTelemetryLinkPayload(planModel, configModel *Model) 
 		Description:       planModel.Description.ValueStringPointer(),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
+		Enabled:           planModel.Enabled.ValueBool(),
 	}, nil
 }
 
@@ -779,6 +806,7 @@ func toPartialUpdateOrganizationTelemetryLinkPayload(planModel, stateModel, conf
 		Description:       new(planModel.Description.ValueString()),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueStringPointer(),
 		AccessToken:       getAccessTokenForUpdate(planModel, stateModel, configModel),
+		Enabled:           planModel.Enabled.ValueBoolPointer(),
 	}, nil
 }
 
@@ -798,6 +826,7 @@ func toPartialUpdateFolderTelemetryLinkPayload(planModel, stateModel, configMode
 		Description:       new(planModel.Description.ValueString()),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueStringPointer(),
 		AccessToken:       getAccessTokenForUpdate(planModel, stateModel, configModel),
+		Enabled:           planModel.Enabled.ValueBoolPointer(),
 	}, nil
 }
 
@@ -817,6 +846,7 @@ func toPartialUpdateProjectTelemetryLinkPayload(planModel, stateModel, configMod
 		Description:       new(planModel.Description.ValueString()),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueStringPointer(),
 		AccessToken:       getAccessTokenForUpdate(planModel, stateModel, configModel),
+		Enabled:           planModel.Enabled.ValueBoolPointer(),
 	}, nil
 }
 
@@ -835,6 +865,7 @@ func mapFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, mod
 	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)
 	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
 	model.Status = types.StringValue(string(link.Status))
+	model.Enabled = types.BoolValue(link.Enabled)
 
 	return nil
 }

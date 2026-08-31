@@ -182,7 +182,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `dremio_custom_endpoint` (String) Custom endpoint for the Dremio service
 - `edgecloud_custom_endpoint` (String) Custom endpoint for the Edge Cloud service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
-- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc, ske
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `intake_custom_endpoint` (String) Custom endpoint for the Intake service
@@ -191,6 +191,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `logs_custom_endpoint` (String) Custom endpoint for the Logs service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
+- `modelexperiments_custom_endpoint` (String) Custom endpoint for the AI Model Experiments service
 - `modelserving_custom_endpoint` (String) Custom endpoint for the AI Model Serving service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service

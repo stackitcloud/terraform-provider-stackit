@@ -13,6 +13,7 @@ linters:
     - tfctxinit # custom local linter
     - tflogresponse # custom local linter
     - tfwriteid # custom local linter
+    - tfmodifyplan # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -40,6 +41,9 @@ linters:
         type: module
         description: "A custom local linter"
       tfwriteid:
+        type: module
+        description: "A custom local linter"
+      tfmodifyplan:
         type: module
         description: "A custom local linter"
     depguard:

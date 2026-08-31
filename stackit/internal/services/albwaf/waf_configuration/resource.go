@@ -22,7 +22,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	albwafUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -87,6 +86,14 @@ func (r *wafResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 		return
 	}
 
+	if !req.State.Raw.IsNull() {
+		var stateModel Model
+		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+		if !resp.Diagnostics.HasError() {
+			albwafUtils.WarnIfNameChanges(stateModel.Name, planModel.Name, "WAF Configuration", &resp.Diagnostics)
+		}
+	}
+
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -97,10 +104,6 @@ func (r *wafResource) Configure(ctx context.Context, req resource.ConfigureReque
 	var ok bool
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		return
-	}
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_alb_waf_configuration", core.Resource)
-	if resp.Diagnostics.HasError() {
 		return
 	}
 	apiClient := albwafUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
@@ -127,7 +130,7 @@ var descriptions = map[string]string{
 
 func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring), core.Resource),
+		Description: fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -407,7 +410,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*albWaf.UpdateWAFPayloa
 	}
 
 	var labels *map[string]string
-	if !(model.Labels.IsNull() || model.Labels.IsUnknown()) {
+	if !tfutils.IsUndefined(model.Labels) {
 		diags := model.Labels.ElementsAs(ctx, &labels, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -426,7 +429,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateWAFPayloa
 	}
 
 	var labels *map[string]string
-	if !(model.Labels.IsNull() || model.Labels.IsUnknown()) {
+	if !tfutils.IsUndefined(model.Labels) {
 		diags := model.Labels.ElementsAs(ctx, &labels, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)

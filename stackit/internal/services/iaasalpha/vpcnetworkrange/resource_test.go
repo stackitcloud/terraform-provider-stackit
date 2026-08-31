@@ -195,9 +195,11 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateVPCNetworkRangePayload{
-				Description: new("description"),
-				Labels: map[string]interface{}{
-					"key": "value",
+				NetworkRangeIPv4Request: &iaas.NetworkRangeIPv4Request{
+					Description: new("description"),
+					Labels: map[string]interface{}{
+						"key": "value",
+					},
 				},
 			},
 			isValid: true,
@@ -209,8 +211,10 @@ func TestToCreatePayload(t *testing.T) {
 				Labels:      types.MapNull(types.StringType),
 			},
 			expected: &iaas.CreateVPCNetworkRangePayload{
-				Description: new("description"),
-				Labels:      map[string]interface{}{},
+				NetworkRangeIPv4Request: &iaas.NetworkRangeIPv4Request{
+					Description: new("description"),
+					Labels:      map[string]interface{}{},
+				},
 			},
 			isValid: true,
 		},
@@ -252,9 +256,11 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			expected: &iaas.UpdateVPCNetworkRangePayload{
-				Description: new("description"),
-				Labels: map[string]interface{}{
-					"key": "value",
+				V1UpdateVPCNetworkRangeIPv4: &iaas.V1UpdateVPCNetworkRangeIPv4{
+					Description: new("description"),
+					Labels: map[string]interface{}{
+						"key": "value",
+					},
 				},
 			},
 			isValid: true,
@@ -266,8 +272,10 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels:      types.MapNull(types.StringType),
 			},
 			expected: &iaas.UpdateVPCNetworkRangePayload{
-				Description: new("description"),
-				Labels:      map[string]interface{}{},
+				V1UpdateVPCNetworkRangeIPv4: &iaas.V1UpdateVPCNetworkRangeIPv4{
+					Description: new("description"),
+					Labels:      map[string]interface{}{},
+				},
 			},
 			isValid: true,
 		},

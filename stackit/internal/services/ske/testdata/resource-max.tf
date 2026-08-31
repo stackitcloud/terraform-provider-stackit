@@ -39,6 +39,7 @@ variable "dns_zone_name" {}
 variable "dns_name" {}
 variable "network_control_plane_access_scope" {}
 variable "access_idp_enabled" {}
+variable "audit_enabled" {}
 
 resource "stackit_ske_cluster" "cluster" {
   project_id = var.project_id
@@ -111,6 +112,9 @@ resource "stackit_ske_cluster" "cluster" {
       type    = "stackit"
     }
   }
+  audit = {
+    enabled = var.audit_enabled
+  }
 }
 
 resource "stackit_ske_kubeconfig" "kubeconfig" {
@@ -119,6 +123,7 @@ resource "stackit_ske_kubeconfig" "kubeconfig" {
   expiration     = var.expiration
   refresh        = var.refresh
   refresh_before = var.refresh_before
+  region         = var.region
 }
 
 data "stackit_ske_cluster" "cluster" {
@@ -132,3 +137,18 @@ resource "stackit_dns_zone" "dns-zone" {
   name       = var.dns_zone_name
   dns_name   = var.dns_name
 }
+
+ephemeral "stackit_ske_kubeconfig" "ephemeral_kubeconfig" {
+  project_id = var.project_id
+  # cluster_name is unknown during the plan phase because stackit_ske_cluster.cluster.id is computed.
+  # This forces Terraform to defer the Open call until the Apply phase, after the cluster is ready.
+  cluster_name = stackit_ske_cluster.cluster.id != "" ? stackit_ske_cluster.cluster.name : ""
+  expiration   = var.expiration
+  region       = var.region
+}
+
+provider "echo" {
+  data = ephemeral.stackit_ske_kubeconfig.ephemeral_kubeconfig.kube_config
+}
+
+resource "echo" "example" {}
