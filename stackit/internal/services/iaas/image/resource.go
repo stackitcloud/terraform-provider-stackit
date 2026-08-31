@@ -507,8 +507,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
 		return
 	}
-
-	var filename string
+	var file *os.File
 	var err error
 	var downloadModel downloadModel
 	var localModel localModel
@@ -519,23 +518,26 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
 			return
 		}
-		file, err := downloadImage(ctx, downloadModel.URL.ValueString())
+		file, err = downloadImage(ctx, downloadModel.URL.ValueString())
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
 			return
 		}
-		defer file.Close()
 		defer os.RemoveAll(filepath.Dir(file.Name()))
-		filename = file.Name()
 	} else {
-		diags = imageFile.Download.As(ctx, &localModel, basetypes.ObjectAsOptions{})
+		diags = imageFile.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
 			return
 		}
-		filename = localModel.Path.ValueString()
+		file, err = loadFileFromDisk(ctx, localModel.Path.ValueString())
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading image form disk", fmt.Sprintf("Loading file: %v", err))
+			return
+		}
 	}
+	defer file.Close()
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -577,7 +579,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Upload image
-	err = uploadImage(ctx, &resp.Diagnostics, filename, imageCreateResp.UploadUrl)
+	err = uploadImage(ctx, &resp.Diagnostics, file, imageCreateResp.UploadUrl)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Uploading image: %v", err))
 		return
@@ -972,31 +974,29 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}, nil
 }
 
-func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadURL string) error {
+func loadFileFromDisk(ctx context.Context, filePath string) (*os.File, error) {
 	if filePath == "" {
-		return fmt.Errorf("file path is empty")
-	}
-	if uploadURL == "" {
-		return fmt.Errorf("upload URL is empty")
+		return nil, fmt.Errorf("file path is empty")
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("open file: %w", err)
+		return nil, fmt.Errorf("open file: %w", err)
 	}
 
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			core.LogAndAddError(ctx, diags, "Error closing file", closeErr.Error())
-		}
-	}()
+	return file, nil
+}
 
+func uploadImage(ctx context.Context, diags *diag.Diagnostics, file *os.File, uploadURL string) error {
+	if file == nil {
+		return fmt.Errorf("file is nil")
+	}
 	stat, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("stat file: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPut, uploadURL, bufio.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, bufio.NewReader(file))
 	if err != nil {
 		return fmt.Errorf("create upload request: %w", err)
 	}
@@ -1064,7 +1064,6 @@ func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) {
 			})
 		}
 	}()
-
 	if resp.StatusCode != http.StatusOK {
 		cleanupOnErr()
 		return nil, fmt.Errorf("download image unexpected status: %s", resp.Status)
@@ -1083,7 +1082,8 @@ func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) {
 		return nil, fmt.Errorf("writing to file: %w", err)
 	}
 
-	if _, err := file.Seek(0, 0); err != nil {
+	// rewind for next consumer
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		file.Close()
 		cleanupOnErr()
 		return nil, fmt.Errorf("seeking file: %w", err)
