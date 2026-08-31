@@ -3,10 +3,13 @@ package image
 import (
 	"bufio"
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -59,6 +62,22 @@ type Model struct {
 	Checksum      types.Object `tfsdk:"checksum"`
 	Labels        types.Map    `tfsdk:"labels"`
 	LocalFilePath types.String `tfsdk:"local_file_path"`
+	ImageFile     types.Object `tfsdk:"image_file"`
+}
+
+type localModel struct {
+	Path                  types.String `tfsdk:"file_path"`
+	DisablePlanValidation types.Bool   `tfsdk:"disable_plan_validation"`
+}
+
+type downloadModel struct {
+	URL       types.String `tfsdk:"url"`
+	CachePath types.String `tfsdk:"cache_path"`
+}
+
+type imageFileModel struct {
+	Local    types.Object `tfsdk:"local"`
+	Download types.Object `tfsdk:"download"`
 }
 
 // Struct corresponding to Model.Config
@@ -225,7 +244,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"local_file_path": schema.StringAttribute{
 				Description: "The filepath of the raw image file to be uploaded.",
-				Required:    true,
+				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -407,6 +426,49 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				ElementType: types.StringType,
 				Optional:    true,
 			},
+			"image_file": schema.SingleNestedAttribute{
+				Description: "Representation of an image file.",
+				Computed:    false,
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"local": schema.SingleNestedAttribute{
+						Description: "Representation of a local image file.",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"file_path": schema.StringAttribute{
+								Description: "Path to the local file.",
+								Required:    true,
+								Validators: []validator.String{
+									// Validating that the file exists in the plan is useful to avoid
+									// creating an image resource where the local image upload will fail
+									validate.FileExists(),
+								},
+							},
+							"disable_plan_validation": schema.BoolAttribute{
+								Description: "Wheter to disable plan-time validation.",
+								Optional:    true,
+							},
+						},
+					},
+					"download": schema.SingleNestedAttribute{
+						Description: "Remote file download settings.",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"url": schema.StringAttribute{
+								Description: "URL to downlioad the image from.",
+								Required:    true,
+							},
+							"cache_path": schema.StringAttribute{
+								Description: "Local path to cache the downloaded image.",
+								Required:    true,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -427,6 +489,55 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	ctx = core.InitProviderContext(ctx)
+
+	if model.ImageFile.IsNull() || model.ImageFile.IsUnknown() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+	}
+
+	var imageFile imageFileModel
+	diags = model.ImageFile.As(ctx, &imageFile, basetypes.ObjectAsOptions{})
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+	}
+
+	isLocal := imageFile.Download.IsNull() || imageFile.Download.IsUnknown()
+	isDownload := imageFile.Local.IsNull() || imageFile.Local.IsUnknown()
+	if isDownload && isLocal || !isDownload && !isLocal {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+		return
+	}
+	var file *os.File
+	var err error
+	var downloadModel downloadModel
+	var localModel localModel
+	if isDownload {
+		diags = imageFile.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+			return
+		}
+		file, err = downloadImage(ctx, downloadModel.URL.ValueString())
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
+			return
+		}
+		defer os.RemoveAll(filepath.Dir(file.Name()))
+	} else {
+		diags = imageFile.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "Error in config")
+			return
+		}
+		file, err = loadFileFromDisk(ctx, localModel.Path.ValueString())
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading image form disk", fmt.Sprintf("Loading file: %v", err))
+			return
+		}
+	}
+	defer file.Close()
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -468,7 +579,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Upload image
-	err = uploadImage(ctx, &resp.Diagnostics, model.LocalFilePath.ValueString(), imageCreateResp.UploadUrl)
+	err = uploadImage(ctx, &resp.Diagnostics, file, imageCreateResp.UploadUrl)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Uploading image: %v", err))
 		return
@@ -863,24 +974,29 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}, nil
 }
 
-func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadURL string) error {
+func loadFileFromDisk(ctx context.Context, filePath string) (*os.File, error) {
 	if filePath == "" {
-		return fmt.Errorf("file path is empty")
-	}
-	if uploadURL == "" {
-		return fmt.Errorf("upload URL is empty")
+		return nil, fmt.Errorf("file path is empty")
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("open file: %w", err)
+		return nil, fmt.Errorf("open file: %w", err)
+	}
+
+	return file, nil
+}
+
+func uploadImage(ctx context.Context, diags *diag.Diagnostics, file *os.File, uploadURL string) error {
+	if file == nil {
+		return fmt.Errorf("file is nil")
 	}
 	stat, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("stat file: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPut, uploadURL, bufio.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, bufio.NewReader(file))
 	if err != nil {
 		return fmt.Errorf("create upload request: %w", err)
 	}
@@ -902,6 +1018,76 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("upload image: %s", resp.Status)
 	}
-
 	return nil
+}
+
+func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) {
+	if downloadURL == "" {
+		return nil, fmt.Errorf("download URL is empty")
+	}
+
+	md5sum := fmt.Sprintf("%x", md5.Sum([]byte(downloadURL)))
+
+	tmpDir, err := os.MkdirTemp("", "tf-provider-download-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp dir: %w", err)
+	}
+
+	filename := filepath.Join(tmpDir, md5sum+".img")
+
+	cleanupOnErr := func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			tflog.Warn(ctx, "failed to cleanup temp directory", map[string]interface{}{
+				"dir":   tmpDir,
+				"error": err.Error(),
+			})
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		cleanupOnErr()
+		return nil, fmt.Errorf("create download request: %w", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		cleanupOnErr()
+		return nil, fmt.Errorf("download image: %w", err)
+	}
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			tflog.Debug(ctx, "failed to close HTTP response body", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+	}()
+	if resp.StatusCode != http.StatusOK {
+		cleanupOnErr()
+		return nil, fmt.Errorf("download image unexpected status: %s", resp.Status)
+	}
+
+	file, err := os.Create(filename)
+	if err != nil {
+		cleanupOnErr()
+		return nil, fmt.Errorf("creating file: %w", err)
+	}
+
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		file.Close()
+		cleanupOnErr()
+		return nil, fmt.Errorf("writing to file: %w", err)
+	}
+
+	// rewind for next consumer
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		file.Close()
+		cleanupOnErr()
+		return nil, fmt.Errorf("seeking file: %w", err)
+	}
+
+	return file, nil
 }

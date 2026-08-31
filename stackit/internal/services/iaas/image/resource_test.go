@@ -1,11 +1,13 @@
 package image
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -350,6 +352,43 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 }
 
+func Test_LoadFileFromDisk(t *testing.T) {
+	tests := []struct {
+		name     string
+		filePath string
+		wantErr  bool
+	}{
+		{
+			name:     "ok",
+			filePath: "testdata/mock-image.txt",
+			wantErr:  false,
+		},
+		{
+			name:     "empty_file_path",
+			filePath: "",
+			wantErr:  true,
+		},
+		{
+			name:     "file_not_found",
+			filePath: "testdata/non-existing-file.txt",
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// Call the function
+			file, err := loadFileFromDisk(context.Background(), tt.filePath)
+			if file != nil {
+				t.Cleanup(func() { _ = file.Close() })
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("uploadImage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func Test_UploadImage(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -396,11 +435,106 @@ func Test_UploadImage(t *testing.T) {
 				t.Error(err)
 				return
 			}
-
+			file, _ := os.Open(tt.filePath)
+			if file != nil {
+				t.Cleanup(func() { _ = file.Close() })
+			}
 			// Call the function
-			err = uploadImage(context.Background(), &diag.Diagnostics{}, tt.filePath, uploadURL.String())
+			err = uploadImage(context.Background(), &diag.Diagnostics{}, file, uploadURL.String())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("uploadImage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_DownloadImage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/404":
+			w.WriteHeader(http.StatusNotFound)
+		case "/empty":
+			w.WriteHeader(http.StatusOK)
+		case "/large":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(bytes.Repeat([]byte("A"), 1024*1024))
+		case "/drop-conn":
+			hj, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "webserver doesn't support hijacking", http.StatusInternalServerError)
+				return
+			}
+			conn, _, _ := hj.Hijack()
+			_ = conn.Close()
+		default:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("dummy content"))
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	tests := []struct {
+		name        string
+		ctx         context.Context
+		downloadURL string
+		wantBytes   []byte
+		wantErr     bool
+	}{{
+		name:        "ok",
+		downloadURL: server.URL,
+		wantBytes:   []byte("dummy content"),
+		wantErr:     false,
+	},
+		{
+			name:        "invalid_url_format",
+			downloadURL: "http://127.0.0.1:0/invalid",
+			wantErr:     true,
+		},
+		{
+			name:        "status_404_not_found",
+			downloadURL: server.URL + "/404",
+			wantErr:     true,
+		},
+		{
+			name:        "empty_body_200_ok",
+			downloadURL: server.URL + "/empty",
+			wantBytes:   []byte(""),
+			wantErr:     false,
+		},
+		{
+			name:        "large_file_stream",
+			downloadURL: server.URL + "/large",
+			wantBytes:   bytes.Repeat([]byte("A"), 1024*1024),
+			wantErr:     false,
+		},
+		{
+			name:        "connection_dropped_mid_stream",
+			downloadURL: server.URL + "/drop-conn",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			file, err := downloadImage(context.Background(), tt.downloadURL)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("downloadImage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if file != nil {
+				t.Cleanup(func() {
+					_ = file.Close()
+					_ = os.Remove(file.Name())
+				})
+
+				gotBytes, err := os.ReadFile(file.Name())
+				if err != nil {
+					t.Fatalf("failed to read downloaded file: %v", err)
+				}
+
+				if !bytes.Equal(gotBytes, tt.wantBytes) {
+					t.Errorf("byte mismatch: got length %d, want length %d", len(gotBytes), len(tt.wantBytes))
+				}
 			}
 		})
 	}
