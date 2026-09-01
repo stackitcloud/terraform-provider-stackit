@@ -1,0 +1,326 @@
+package valkey_test
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api/wait"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
+)
+
+// Instance resource data
+var instanceResource = map[string]string{
+	"project_id":      testutil.ProjectId,
+	"name":            testutil.ResourceNameWithDateTime("valkey"),
+	"plan_id":         "65778323-a25f-4cc8-ae87-b17fb051cba1",
+	"plan_name":       "stackit-keyvalue-1.4.10-single",
+	"version":         "8",
+	"sgw_acl_invalid": "1.2.3.4/4",
+	"sgw_acl_valid":   "193.148.160.0/19",
+	"sgw_acl_valid2":  "45.129.40.0/21",
+}
+
+func parametersConfig(params map[string]string) string {
+	nonStringParams := []string{
+		"down_after_milliseconds",
+		"enable_monitoring",
+		"failover_timeout",
+		"lua_time_limit",
+		"max_disk_threshold",
+		"maxclients",
+		"maxmemory_samples",
+		"metrics_frequency",
+		"min_replicas_max_lag",
+		"min_replicas_to_write",
+		"syslog",
+	}
+	var parameters strings.Builder
+	parameters.WriteString("parameters = {")
+	for k, v := range params {
+		if utils.Contains(nonStringParams, k) {
+			parameters.WriteString(fmt.Sprintf("%s = %s\n", k, v))
+		} else {
+			parameters.WriteString(fmt.Sprintf("%s = %q\n", k, v))
+		}
+	}
+	parameters.WriteString("\n}")
+	return parameters.String()
+}
+
+func resourceConfig(params map[string]string) string {
+	return fmt.Sprintf(`
+				%s
+
+				resource "stackit_valkey_instance" "instance" {
+					project_id = "%s"
+					name       = "%s"
+					plan_name  = "%s"
+ 				 	version    = "%s"
+					%s
+				}
+
+				%s
+				`,
+		testutil.NewConfigBuilder().BuildProviderConfig(),
+		instanceResource["project_id"],
+		instanceResource["name"],
+		instanceResource["plan_name"],
+		instanceResource["version"],
+		parametersConfig(params),
+		resourceConfigCredential(),
+	)
+}
+
+func resourceConfigCredential() string {
+	return `
+		resource "stackit_valkey_credential" "credential" {
+			project_id = stackit_valkey_instance.instance.project_id
+			instance_id = stackit_valkey_instance.instance.instance_id
+		}
+    `
+}
+
+func TestAccValkeyResource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckValkeyDestroy,
+		Steps: []resource.TestStep{
+			// Creation fail
+			{
+				Config:      resourceConfig(map[string]string{"sgw_acl": instanceResource["sgw_acl_invalid"]}),
+				ExpectError: regexp.MustCompile(`.*sgw_acl is invalid.*`),
+			},
+			// Creation
+			{
+				Config: resourceConfig(map[string]string{
+					"sgw_acl":                 instanceResource["sgw_acl_valid"],
+					"down_after_milliseconds": "10000",
+					"enable_monitoring":       "false",
+					"failover_timeout":        "30000",
+					"graphite":                "graphite.example.com:2003",
+					"lazyfree_lazy_eviction":  "no",
+					"lazyfree_lazy_expire":    "no",
+					"lua_time_limit":          "5000",
+					"max_disk_threshold":      "80",
+					"maxclients":              "10000",
+					"maxmemory_policy":        "volatile-lru",
+					"maxmemory_samples":       "5",
+					"metrics_frequency":       "10",
+					"metrics_prefix":          "prefix",
+					"min_replicas_max_lag":    "10",
+					"min_replicas_to_write":   "1",
+					"notify_keyspace_events":  "Ex",
+					"repl_backlog_size":       "1mb",
+					"syslog":                  `["syslog.example.com:123"]`,
+				}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_valkey_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "version", instanceResource["version"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "name", instanceResource["name"]),
+
+					// Instance Params data
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.down_after_milliseconds", "10000"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.enable_monitoring", "false"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.failover_timeout", "30000"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.graphite", "graphite.example.com:2003"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.lazyfree_lazy_eviction", "no"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.lazyfree_lazy_expire", "no"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.lua_time_limit", "5000"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.max_disk_threshold", "80"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.maxclients", "10000"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.maxmemory_policy", "volatile-lru"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.maxmemory_samples", "5"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.metrics_frequency", "10"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.metrics_prefix", "prefix"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_max_lag", "10"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_to_write", "1"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.notify_keyspace_events", "Ex"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.repl_backlog_size", "1mb"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.syslog.#", "1"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.syslog.0", "syslog.example.com:123"),
+
+					// Credential data
+					resource.TestCheckResourceAttrPair(
+						"stackit_valkey_credential.credential", "project_id",
+						"stackit_valkey_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_valkey_credential.credential", "instance_id",
+						"stackit_valkey_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_valkey_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("stackit_valkey_credential.credential", "host"),
+				),
+			},
+			// data source
+			{
+				Config: fmt.Sprintf(`
+					%s
+
+					data "stackit_valkey_instance" "instance" {
+						project_id  = stackit_valkey_instance.instance.project_id
+						instance_id = stackit_valkey_instance.instance.instance_id
+					}
+
+					data "stackit_valkey_credential" "credential" {
+						project_id     = stackit_valkey_credential.credential.project_id
+						instance_id    = stackit_valkey_credential.credential.instance_id
+					    credential_id = stackit_valkey_credential.credential.credential_id
+					}`,
+					resourceConfig(nil),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("data.stackit_valkey_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrPair("stackit_valkey_instance.instance", "instance_id",
+						"data.stackit_valkey_credential.credential", "instance_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_valkey_instance.instance", "instance_id",
+						"data.stackit_valkey_credential.credential", "instance_id"),
+					resource.TestCheckResourceAttr("data.stackit_valkey_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("data.stackit_valkey_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttrSet("data.stackit_valkey_instance.instance", "parameters.sgw_acl"),
+
+					// Credentials data
+					resource.TestCheckResourceAttr("data.stackit_valkey_credential.credential", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("data.stackit_valkey_credential.credential", "credential_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_valkey_credential.credential", "host"),
+					resource.TestCheckResourceAttrSet("data.stackit_valkey_credential.credential", "port"),
+					resource.TestCheckResourceAttrSet("data.stackit_valkey_credential.credential", "uri"),
+					resource.TestCheckResourceAttrSet("data.stackit_valkey_credential.credential", "load_balanced_host"),
+				),
+			},
+			// Import
+			{
+				ResourceName: "stackit_valkey_instance.instance",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_valkey_instance.instance"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_valkey_instance.instance")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName: "stackit_valkey_credential.credential",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_valkey_credential.credential"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_valkey_credential.credential")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					credentialId, ok := r.Primary.Attributes["credential_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute credential_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				Config: resourceConfig(map[string]string{"sgw_acl": instanceResource["sgw_acl_valid2"]}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance data
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttrSet("stackit_valkey_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "plan_id", instanceResource["plan_id"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "plan_name", instanceResource["plan_name"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "version", instanceResource["version"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.sgw_acl", instanceResource["sgw_acl_valid2"]),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func checkInstanceDeleteSuccess(i *valkey.Instance) bool {
+	if i.LastOperation.Type != valkey.INSTANCELASTOPERATIONTYPE_DELETE {
+		return false
+	}
+
+	if i.LastOperation.Type == valkey.INSTANCELASTOPERATIONTYPE_DELETE {
+		if i.LastOperation.State != "succeeded" {
+			return false
+		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
+			return false
+		}
+	}
+	return true
+}
+
+func testAccCheckValkeyDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := valkey.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ValkeyCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	instancesToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_valkey_instance" {
+			continue
+		}
+		// instance terraform ID: "[project_id],[region],[instance_id]"
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		instancesToDestroy = append(instancesToDestroy, instanceId)
+	}
+
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId, "eu01").Execute()
+	if err != nil {
+		return fmt.Errorf("getting instancesResp: %w", err)
+	}
+
+	instances := instancesResp.Instances
+	for i := range instances {
+		if instances[i].InstanceId == nil {
+			continue
+		}
+		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
+			if !checkInstanceDeleteSuccess(&instances[i]) {
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, "eu01", *instances[i].InstanceId).Execute()
+				if err != nil {
+					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
+				}
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", *instances[i].InstanceId).WaitWithContext(ctx)
+				if err != nil {
+					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
+				}
+			}
+		}
+	}
+	return nil
+}
