@@ -3,6 +3,8 @@ package utils
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 
@@ -12,6 +14,32 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
+
+const (
+	// Two object storage resources created in the same apply enable the project concurrently;
+	// the API answers the losing call with 409. See EnableProject.
+	enableProjectAttempts = 4
+)
+
+// Overridden in tests to keep them fast.
+var enableProjectRetryDelay = 2 * time.Second
+
+// EnableProject enables object storage for the specified project. If the project is already enabled, nothing happens
+func EnableProject(ctx context.Context, projectId, region string, client objectstorage.DefaultAPI) error {
+	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate.
+	// That holds for sequential calls. Two object storage resources created in the same apply call this concurrently,
+	// and the API rejects the second one with 409 project.create_conflict ("Two concurrent calls try to create the
+	// same project"). Retrying is safe: once the competing call has finished, enabling an already enabled project succeeds.
+	config := utils.RetryConfig{
+		Attempts:         enableProjectAttempts,
+		Delay:            enableProjectRetryDelay,
+		RetryStatusCodes: []int{http.StatusConflict},
+	}
+	if _, err := utils.RetryRequest(ctx, client.EnableService(ctx, projectId, region).Execute, config); err != nil {
+		return fmt.Errorf("failed to create object storage project: %w", err)
+	}
+	return nil
+}
 
 func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *objectstorage.APIClient {
 	apiClientConfigOptions := []config.ConfigurationOption{
