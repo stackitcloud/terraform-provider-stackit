@@ -23,6 +23,10 @@ resource "stackit_vpn_gateway" "example" {
     tunnel1 = "eu01-1"
     tunnel2 = "eu01-2"
   }
+
+  network_config = {
+    predefined_network_prefix = ["10.20.0.0/28"]
+  }
 }
 ```
 
@@ -41,6 +45,7 @@ resource "stackit_vpn_gateway" "example" {
 
 - `bgp` (Attributes) BGP configuration. Only applicable when routing_type is BGP_ROUTE_BASED. (see [below for nested schema](#nestedatt--bgp))
 - `labels` (Map of String) Map of custom labels (key-value string pairs).
+- `network_config` (Attributes) Network configuration for the VPN gateway. (see [below for nested schema](#nestedatt--network_config))
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
@@ -67,6 +72,15 @@ Required:
 Optional:
 
 - `override_advertised_routes` (List of String) List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.
+
+
+<a id="nestedatt--network_config"></a>
+### Nested Schema for `network_config`
+
+Optional:
+
+- `predefined_network_prefix` (List of String) The IPv4 network prefix (CIDR notation) allocated for the VPN gateway. Must have a prefix length of /28 or larger. Cannot be changed after the gateway is created.
+- `routing_table_id` (String) Custom routing table ID for the VPN gateway. If omitted, a default routing table is assigned.
 
 ## Import
 

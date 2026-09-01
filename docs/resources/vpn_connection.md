@@ -106,7 +106,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 1. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`. `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.
 
 Optional:
 
@@ -120,7 +120,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 2. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`. `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.
 
 Optional:
 
@@ -136,6 +136,10 @@ Optional:
 Required:
 
 - `remote_asn` (Number) Remote ASN for BGP peering (private ASN range, 64512-4294967294).
+
+Optional:
+
+- `inbound_filter_id` (String) UUID of a `stackit_vpn_bgp_filter` to apply for inbound route filtering on this tunnel's BGP peering session. If omitted, no inbound filtering is applied.
 
 
 <a id="nestedatt--tunnel1--peering"></a>
@@ -171,7 +175,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 1. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 1. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`. `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.
 
 Optional:
 
@@ -185,7 +189,7 @@ Optional:
 Required:
 
 - `encryption_algorithms` (List of String) Encryption algorithms for Phase 2. Possible values are: `aes256`, `aes128gcm16`, `aes256gcm16`.
-- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`.
+- `integrity_algorithms` (List of String) Integrity algorithms for Phase 2. Possible values are: `sha1`, `sha2_256`, `sha2_384`, `sha2_512`. `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.
 
 Optional:
 
@@ -201,6 +205,10 @@ Optional:
 Required:
 
 - `remote_asn` (Number) Remote ASN for BGP peering (private ASN range, 64512-4294967294).
+
+Optional:
+
+- `inbound_filter_id` (String) UUID of a `stackit_vpn_bgp_filter` to apply for inbound route filtering on this tunnel's BGP peering session. If omitted, no inbound filtering is applied.
 
 
 <a id="nestedatt--tunnel2--peering"></a>

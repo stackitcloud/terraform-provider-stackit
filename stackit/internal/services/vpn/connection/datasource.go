@@ -157,6 +157,10 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 							Description: "Remote AS number.",
 							Computed:    true,
 						},
+						"inbound_filter_id": schema.StringAttribute{
+							Description: "UUID of the `stackit_vpn_bgp_filter` applied for inbound route filtering on this tunnel's BGP peering session, if any.",
+							Computed:    true,
+						},
 					},
 				},
 			},

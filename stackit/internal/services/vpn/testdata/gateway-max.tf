@@ -9,6 +9,7 @@ variable "local_asn" {}
 variable "override_advertised_routes" {}
 variable "label_key" {}
 variable "label_value" {}
+variable "network_config_prefix" {}
 
 resource "stackit_vpn_gateway" "gateway" {
   project_id   = var.project_id
@@ -25,6 +26,10 @@ resource "stackit_vpn_gateway" "gateway" {
   bgp = {
     local_asn                  = var.local_asn
     override_advertised_routes = var.override_advertised_routes
+  }
+
+  network_config = {
+    predefined_network_prefix = [var.network_config_prefix]
   }
 
   labels = var.label_key == "" ? {} : {
