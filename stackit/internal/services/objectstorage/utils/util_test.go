@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -98,11 +99,6 @@ func TestConfigureClient(t *testing.T) {
 }
 
 func TestEnableProject(t *testing.T) {
-	// The plain mock error is retried on every attempt; shrink the delay to keep the test fast.
-	oldDelay := enableProjectRetryDelay
-	enableProjectRetryDelay = time.Millisecond
-	defer func() { enableProjectRetryDelay = oldDelay }()
-
 	tests := []struct {
 		description string
 		enableFails bool
@@ -121,23 +117,25 @@ func TestEnableProject(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			client := &objectstorage.DefaultAPIServiceMock{
-				EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
-					if tt.enableFails {
-						return nil, fmt.Errorf("create project failed")
-					}
+			synctest.Test(t, func(t *testing.T) {
+				client := &objectstorage.DefaultAPIServiceMock{
+					EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
+						if tt.enableFails {
+							return nil, fmt.Errorf("create project failed")
+						}
 
-					return &objectstorage.ProjectStatus{}, nil
-				}),
-			}
+						return &objectstorage.ProjectStatus{}, nil
+					}),
+				}
 
-			err := EnableProject(context.Background(), "pid", "eu01", client)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
+				err := EnableProject(context.Background(), "pid", "eu01", client)
+				if !tt.isValid && err == nil {
+					t.Fatalf("Should have failed")
+				}
+				if tt.isValid && err != nil {
+					t.Fatalf("Should not have failed: %v", err)
+				}
+			})
 		})
 	}
 }
@@ -155,36 +153,34 @@ func TestEnableProjectRetriesOnConflict(t *testing.T) {
 		{"conflicts until the attempts are used up", enableProjectAttempts, false, enableProjectAttempts},
 	}
 
-	old := enableProjectRetryDelay
-	enableProjectRetryDelay = time.Millisecond
-	defer func() { enableProjectRetryDelay = old }()
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			attempts := 0
-			client := &objectstorage.DefaultAPIServiceMock{
-				EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
-					attempts++
-					if attempts <= tt.conflicts {
-						return nil, &oapierror.GenericOpenAPIError{StatusCode: http.StatusConflict}
-					}
-					return &objectstorage.ProjectStatus{}, nil
-				}),
-			}
+			synctest.Test(t, func(t *testing.T) {
+				attempts := 0
+				client := &objectstorage.DefaultAPIServiceMock{
+					EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
+						attempts++
+						if attempts <= tt.conflicts {
+							return nil, &oapierror.GenericOpenAPIError{StatusCode: http.StatusConflict}
+						}
+						return &objectstorage.ProjectStatus{}, nil
+					}),
+				}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
 
-			err := EnableProject(ctx, "pid", "eu01", client)
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
-			if !tt.isValid && err == nil {
-				t.Fatal("Should have failed")
-			}
-			if attempts != tt.wantAttempts {
-				t.Fatalf("Expected %d attempts, got %d", tt.wantAttempts, attempts)
-			}
+				err := EnableProject(ctx, "pid", "eu01", client)
+				if tt.isValid && err != nil {
+					t.Fatalf("Should not have failed: %v", err)
+				}
+				if !tt.isValid && err == nil {
+					t.Fatal("Should have failed")
+				}
+				if attempts != tt.wantAttempts {
+					t.Fatalf("Expected %d attempts, got %d", tt.wantAttempts, attempts)
+				}
+			})
 		})
 	}
 }
