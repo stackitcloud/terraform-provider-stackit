@@ -281,7 +281,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Handle project init
-	err := enableProject(ctx, &model, region, r.client.DefaultAPI)
+	err := objectstorageUtils.EnableProject(ctx, projectId, region, r.client.DefaultAPI)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
@@ -488,18 +488,6 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 		"credential_id":        idParts[3],
 	})
 	tflog.Info(ctx, "ObjectStorage credential state imported")
-}
-
-// enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
-func enableProject(ctx context.Context, model *Model, region string, client objectstorage.DefaultAPI) error {
-	projectId := model.ProjectId.ValueString()
-
-	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.EnableService(ctx, projectId, region).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create object storage project: %w", err)
-	}
-	return nil
 }
 
 func toCreatePayload(model *Model) (*objectstorage.CreateAccessKeyPayload, error) {

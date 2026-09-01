@@ -27,6 +27,11 @@ const (
 	credentialsFilePath = ".stackit/credentials.json" //nolint:gosec // linter false positive
 )
 
+// UsingOpenTofu reports whether acceptance tests are running with the OpenTofu CLI.
+func UsingOpenTofu() bool {
+	return strings.HasSuffix(os.Getenv("TF_ACC_TERRAFORM_PATH"), "tofu")
+}
+
 var (
 	// TestAccProtoV6ProviderFactories is used to instantiate a provider during
 	// acceptance testing. The factory function will be invoked for every Terraform
@@ -107,6 +112,7 @@ var (
 	IntakeCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_INTAKE_CUSTOM_ENDPOINT", providerName: "intake_custom_endpoint"}
 	TelemetryRouterCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYROUTER_CUSTOM_ENDPOINT", providerName: "telemetryrouter_custom_endpoint"}
 	TelemetryLinkCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYLINK_CUSTOM_ENDPOINT", providerName: "telemetrylink_custom_endpoint"}
+	ValkeyCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_VALKEY_CUSTOM_ENDPOINT", providerName: "valkey_custom_endpoint"}
 
 	allCustomEndpoints = []customEndpointConfig{
 		ALBCustomEndpoint,
@@ -146,6 +152,7 @@ var (
 		SKECustomEndpoint,
 		TelemetryRouterCustomEndpoint,
 		TelemetryLinkCustomEndpoint,
+		ValkeyCustomEndpoint,
 	}
 )
 

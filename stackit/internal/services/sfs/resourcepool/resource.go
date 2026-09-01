@@ -237,7 +237,10 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 						Description: "Name of the snapshot policy.",
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringUnchanged(path.Root("snapshot_policy").AtName("id")), "sets `UseStateForUnknown` only if `id` has not changed"),
+							stringplanmodifierUtils.UseStateForUnknownIf(
+								stringplanmodifierUtils.UnchangedPaths(path.MatchRoot("snapshot_policy").AtName("id")),
+								"sets `UseStateForUnknown` only if `id` has not changed",
+							),
 						},
 					},
 				},

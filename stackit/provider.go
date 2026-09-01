@@ -140,6 +140,8 @@ import (
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
+	valkeyCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/credential"
+	valkeyInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/instance"
 	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
 	vpnGatewayStatus "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway_status"
@@ -225,8 +227,10 @@ type providerModel struct {
 	TelemetryLinkCustomEndpoint     types.String `tfsdk:"telemetrylink_custom_endpoint"`
 	TelemetryRouterCustomEndpoint   types.String `tfsdk:"telemetryrouter_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	ValkeyCustomEndpoint            types.String `tfsdk:"valkey_custom_endpoint"`
 	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
+	ServiceConnectionID             types.String `tfsdk:"service_connection_id"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
 	EnableBetaResources types.Bool `tfsdk:"enable_beta_resources"`
@@ -246,6 +250,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
 		"service_account_federated_token":      "The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.",
 		"use_oidc":                             "Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
+		"service_connection_id":                "The ID of the Azure DevOps pipeline service connection. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
 		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
@@ -288,6 +293,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"telemetrylink_custom_endpoint":        "Custom endpoint for the Telemetry Link service",
 		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"valkey_custom_endpoint":               "Custom endpoint for the Key Value Store service",
 		"vpn_custom_endpoint":                  "Custom endpoint for the VPN service",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
@@ -337,6 +343,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"use_oidc": schema.BoolAttribute{
 				Optional:    true,
 				Description: descriptions["use_oidc"],
+			},
+			"service_connection_id": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_connection_id"],
 			},
 			"oidc_request_token": schema.StringAttribute{
 				Optional:    true,
@@ -512,6 +522,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["telemetrylink_custom_endpoint"],
 			},
+			"valkey_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["valkey_custom_endpoint"],
+			},
 			"vpn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["vpn_custom_endpoint"],
@@ -608,6 +622,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
+	setStringField(providerConfig.ValkeyCustomEndpoint, func(v string) { providerData.ValkeyCustomEndpoint = v })
 	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
@@ -651,9 +666,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		// https://learn.microsoft.com/es-es/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
 		oidcReqURL = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "SYSTEM_OIDCREQUESTURI", "")
 		oidcReqToken = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "SYSTEM_ACCESSTOKEN", "")
-		// This can be set to the ID of the service connection to restrict the token exchange to that connection, not supported by default to avoid additional configuration
-		// for users that don't need it, can be added as an additional provider config parameter in the future if there is demand
-		serviceConnectionID := ""
+		// This can be set to the ID of the service connection to restrict the token exchange to that connection.
+		serviceConnectionID := utils.GetEnvStringOrDefault(providerConfig.ServiceConnectionID, "STACKIT_SERVICE_CONNECTION_ID", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestAzureDevOpsOIDCToken(oidcReqURL, oidcReqToken, serviceConnectionID)
 		}
@@ -791,6 +805,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
 		telemetryLink.NewTelemetryLinkDataSource,
+		valkeyInstance.NewInstanceDataSource,
+		valkeyCredential.NewCredentialDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 		vpnConnection.NewVPNConnectionDataSource,
@@ -905,6 +921,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryRouterInstance.NewTelemetryRouterInstanceResource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
 		telemetryLink.NewTelemetryLinkResource,
+		valkeyInstance.NewInstanceResource,
+		valkeyCredential.NewCredentialResource,
 		vpnConnection.NewVpnConnectionResource,
 		vpnGateway.NewGatewayResource,
 	}

@@ -1608,7 +1608,7 @@ func mapFields(ctx context.Context, r *observabilitySdk.GetInstanceResponse, mod
 	} else {
 		params := make(map[string]attr.Value, len(*ps))
 		for k, v := range *ps {
-			params[k] = types.StringValue(v)
+			params[k] = types.StringPointerValue(v)
 		}
 		res, diags := types.MapValueFrom(ctx, types.StringType, params)
 		if diags.HasError() {
