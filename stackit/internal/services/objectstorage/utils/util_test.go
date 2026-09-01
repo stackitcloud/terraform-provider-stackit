@@ -98,10 +98,7 @@ func TestConfigureClient(t *testing.T) {
 }
 
 func TestEnableProject(t *testing.T) {
-	// EnableProject retries, and the mock returns a plain error rather than an
-	// *oapierror.GenericOpenAPIError - RetryRequest only filters by status code
-	// when it can type-assert the error, so the failing case uses up every
-	// attempt. Without shrinking the delay this test would sleep for seconds.
+	// The plain mock error is retried on every attempt; shrink the delay to keep the test fast.
 	oldDelay := enableProjectRetryDelay
 	enableProjectRetryDelay = time.Millisecond
 	defer func() { enableProjectRetryDelay = oldDelay }()
@@ -145,9 +142,7 @@ func TestEnableProject(t *testing.T) {
 	}
 }
 
-// Two object storage resources created in the same apply enable the project concurrently.
-// The API answers the losing call with 409 project.create_conflict; EnableProject must retry
-// instead of failing the apply.
+// A 409 from a concurrent enable call must be retried instead of failing the apply.
 func TestEnableProjectRetriesOnConflict(t *testing.T) {
 	tests := []struct {
 		description  string
