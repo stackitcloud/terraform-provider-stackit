@@ -49,7 +49,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.18.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.5.1
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.5.1
-	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.1.1
+	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.0
 	github.com/teambition/rrule-go v1.8.2
 	go.uber.org/mock v0.6.0
