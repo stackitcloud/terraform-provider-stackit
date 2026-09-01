@@ -24,12 +24,12 @@ const (
 // Two resources created in the same apply call this concurrently and the API rejects the losing call with
 // 409 project.create_conflict; retrying is safe, since enabling an already enabled project succeeds.
 func EnableProject(ctx context.Context, projectId, region string, client objectstorage.DefaultAPI) error {
-	config := utils.RetryConfig{
+	retryConfig := utils.RetryConfig{
 		Attempts:         enableProjectAttempts,
 		Delay:            enableProjectRetryDelay,
 		RetryStatusCodes: []int{http.StatusConflict},
 	}
-	if _, err := utils.RetryRequest(ctx, client.EnableService(ctx, projectId, region).Execute, config); err != nil {
+	if _, err := utils.RetryRequest(ctx, client.EnableService(ctx, projectId, region).Execute, retryConfig); err != nil {
 		return fmt.Errorf("enable object storage project: %w", err)
 	}
 	return nil
