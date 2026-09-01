@@ -119,7 +119,7 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 // Schema defines the schema for the resource.
 func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main": "ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.\n\n" +
+		"main": "ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration.\n\n" +
 			"~> This resource cannot be destroyed if the bucket contains objects. Please ensure the bucket is empty before attempting to destroy it.",
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
