@@ -29,7 +29,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -133,11 +132,6 @@ func (r *customRuleGroupResource) Configure(ctx context.Context, req resource.Co
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_alb_waf_custom_rule_group", core.Resource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -176,7 +170,7 @@ var descriptions = map[string]string{
 
 func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring), core.Resource),
+		Description: fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -246,7 +240,7 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 									Optional:    true,
 									Computed:    true,
 									Validators: []validator.String{
-										OnlyAllowedIfBoolEquals(path.MatchRelative().AtParent().AtName("log"), true),
+										validate.OnlyAllowedIfBoolEquals(path.MatchRelative().AtParent().AtName("log"), sdkUtils.Ptr(true)),
 									},
 								},
 								"severity": schema.StringAttribute{

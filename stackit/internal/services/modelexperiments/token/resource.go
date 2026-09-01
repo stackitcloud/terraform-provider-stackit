@@ -599,7 +599,7 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstanceToken
 		return nil, fmt.Errorf("nil model")
 	}
 	modelLabels := model.Labels.Elements()
-	labels, err := conversion.ToOptStringMap(modelLabels)
+	labels, err := conversion.ToOptStringPointerMap(modelLabels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}

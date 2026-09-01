@@ -182,7 +182,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `dremio_custom_endpoint` (String) Custom endpoint for the Dremio service
 - `edgecloud_custom_endpoint` (String) Custom endpoint for the Edge Cloud service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
-- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc, ske
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `intake_custom_endpoint` (String) Custom endpoint for the Intake service
@@ -224,4 +224,5 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `telemetryrouter_custom_endpoint` (String) Custom endpoint for the Telemetry Router service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
 - `use_oidc` (Boolean) Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
+- `valkey_custom_endpoint` (String) Custom endpoint for the Key Value Store service
 - `vpn_custom_endpoint` (String) Custom endpoint for the VPN service
