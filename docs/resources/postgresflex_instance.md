@@ -79,6 +79,7 @@ Required:
 - `kek_key_version` (String) Version of the key within the STACKIT-KMS to use for the encryption.
 - `kek_keyring_id` (String) The ID of the keyring where the key is located within the STACKTI-KMS.
 - `service_account` (String) Service-Account linked to the Key within the STACKIT-KMS.
+- Note: Encryption is not enabled for public. The organization ID should be whitelisted by the provider. 
 
 
 <a id="nestedatt--flavor"></a>
@@ -103,6 +104,7 @@ Optional:
 
 - `access_scope` (String) The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. Possible values are: `PUBLIC`, `SNA`.
 - `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
+- `sna` Is not enabled by default for public. The organization ID should be whitelisted by the provider.
 
 Read-Only:
 
