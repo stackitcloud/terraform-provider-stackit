@@ -171,27 +171,28 @@ func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadReque
 }
 
 func mapFields(templates []automation.Template, m *model) error {
-	if templates == nil {
-		return fmt.Errorf("nil response")
-	}
 	if m == nil {
 		return fmt.Errorf("nil model")
 	}
 
 	m.ID = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString())
-	m.Templates = make([]template, 0, len(templates))
 
-	slices.SortFunc(templates, func(a, b automation.Template) int {
-		return strings.Compare(a.Id, b.Id)
-	})
-
-	for _, respTemplate := range templates {
-		m.Templates = append(m.Templates, template{
-			Id:          types.StringValue(respTemplate.Id),
-			Name:        types.StringValue(respTemplate.Name),
-			Description: types.StringValue(respTemplate.Description),
-			CreateTime:  types.StringValue(respTemplate.CreateTime.Format(time.RFC3339)),
+	if templates == nil {
+		m.Templates = nil
+	} else {
+		m.Templates = make([]template, 0, len(templates))
+		slices.SortFunc(templates, func(a, b automation.Template) int {
+			return strings.Compare(a.Id, b.Id)
 		})
+
+		for _, respTemplate := range templates {
+			m.Templates = append(m.Templates, template{
+				Id:          types.StringValue(respTemplate.Id),
+				Name:        types.StringValue(respTemplate.Name),
+				Description: types.StringValue(respTemplate.Description),
+				CreateTime:  types.StringValue(respTemplate.CreateTime.Format(time.RFC3339)),
+			})
+		}
 	}
 	return nil
 }

@@ -83,12 +83,18 @@ func TestMapFields(t *testing.T) {
 			valid: true,
 		},
 		{
-			name: "rejects nil response",
+			name: "maps nil response",
 			model: &model{
 				ProjectId: types.StringValue("project-id"),
 				Region:    types.StringValue("eu01"),
 			},
-			valid: false,
+			expected: &model{
+				ID:        types.StringValue("project-id,eu01"),
+				ProjectId: types.StringValue("project-id"),
+				Region:    types.StringValue("eu01"),
+				Templates: nil,
+			},
+			valid: true,
 		},
 		{
 			name:              "rejects nil model",
