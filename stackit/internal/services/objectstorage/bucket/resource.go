@@ -119,7 +119,7 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 // Schema defines the schema for the resource.
 func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main": "ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.\n\n" +
+		"main": "ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration.\n\n" +
 			"~> This resource cannot be destroyed if the bucket contains objects. Please ensure the bucket is empty before attempting to destroy it.",
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
@@ -211,7 +211,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Handle project init
-	err := enableProject(ctx, &model, region, r.client.DefaultAPI)
+	err := objectstorageUtils.EnableProject(ctx, projectId, region, r.client.DefaultAPI)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
@@ -391,17 +391,5 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model, region
 	model.URLVirtualHostedStyle = types.StringValue(bucket.UrlVirtualHostedStyle)
 	model.Region = types.StringValue(region)
 	model.ObjectLock = types.BoolValue(bucket.ObjectLockEnabled)
-	return nil
-}
-
-// enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
-func enableProject(ctx context.Context, model *Model, region string, client objectstorage.DefaultAPI) error {
-	projectId := model.ProjectId.ValueString()
-
-	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.EnableService(ctx, projectId, region).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create object storage project: %w", err)
-	}
 	return nil
 }

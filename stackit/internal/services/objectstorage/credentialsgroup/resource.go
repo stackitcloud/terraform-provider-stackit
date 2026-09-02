@@ -108,7 +108,7 @@ func (r *credentialsGroupResource) Configure(ctx context.Context, req resource.C
 // Schema defines the schema for the resource.
 func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                 "ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.",
+		"main":                 "ObjectStorage credentials group resource schema. Must have a `region` specified in the provider configuration.",
 		"id":                   "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`credentials_group_id`\".",
 		"credentials_group_id": "The credentials group ID",
 		"name":                 "The credentials group's display name.",
@@ -192,7 +192,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Handle project init
-	err := enableProject(ctx, &model, region, r.client.DefaultAPI)
+	err := objectstorageUtils.EnableProject(ctx, projectId, region, r.client.DefaultAPI)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
@@ -377,18 +377,6 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 	model.CredentialsGroupId = types.StringValue(credentialsGroupId)
 	model.URN = types.StringValue(credentialsGroup.Urn)
 	model.Name = types.StringValue(credentialsGroup.DisplayName)
-	return nil
-}
-
-// enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
-func enableProject(ctx context.Context, model *Model, region string, client objectstorage.DefaultAPI) error {
-	projectId := model.ProjectId.ValueString()
-
-	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.EnableService(ctx, projectId, region).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create object storage project: %w", err)
-	}
 	return nil
 }
 

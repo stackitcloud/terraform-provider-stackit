@@ -1,7 +1,6 @@
 package objectstorage
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
 	"testing"
@@ -10,22 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
-
-type mockSettings struct {
-	returnError bool
-}
-
-func newAPIMock(settings *mockSettings) objectstorage.DefaultAPI {
-	return &objectstorage.DefaultAPIServiceMock{
-		EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
-			if settings.returnError {
-				return nil, fmt.Errorf("create project failed")
-			}
-
-			return &objectstorage.ProjectStatus{}, nil
-		}),
-	}
-}
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
@@ -116,40 +99,6 @@ func TestMapFields(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
-			}
-		})
-	}
-}
-
-func TestEnableProject(t *testing.T) {
-	tests := []struct {
-		description string
-		enableFails bool
-		isValid     bool
-	}{
-		{
-			"default_values",
-			false,
-			true,
-		},
-		{
-			"error_response",
-			true,
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			client := newAPIMock(&mockSettings{
-				returnError: tt.enableFails,
-			})
-
-			err := enableProject(context.Background(), &Model{}, "eu01", client)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
 			}
 		})
 	}
