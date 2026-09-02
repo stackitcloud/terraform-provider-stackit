@@ -173,7 +173,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Redis instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Redis instance resource schema. Must have a `region` specified in the provider configuration. This resource is deprecated and will be removed after August 2027, use stackit_valkey_instance instead. For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the Redis instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
@@ -211,7 +211,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description:        descriptions["main"],
+		DeprecationMessage: "The stackit_redis_instance resource is deprecated and will be removed after August 2027. Use the stackit_valkey_instance resource instead. For more information on how to migrate, see the migration guide: https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
