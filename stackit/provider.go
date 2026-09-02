@@ -658,8 +658,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		// https://learn.microsoft.com/es-es/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
 		oidcReqURL = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "SYSTEM_OIDCREQUESTURI", "")
 		oidcReqToken = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "SYSTEM_ACCESSTOKEN", "")
-		// This can be set to the ID of the service connection to restrict the token exchange to that connection, not supported by default to avoid additional configuration
-		// for users that don't need it, can be added as an additional provider config parameter in the future if there is demand
+		// This can be set to the ID of the service connection to restrict the token exchange to that connection.
 		serviceConnectionID := utils.GetEnvStringOrDefault(providerConfig.ServiceConnectionID, "STACKIT_SERVICE_CONNECTION_ID", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestAzureDevOpsOIDCToken(oidcReqURL, oidcReqToken, serviceConnectionID)
