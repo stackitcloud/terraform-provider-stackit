@@ -18,7 +18,6 @@ Automation templates datasource schema.
 ```terraform
 data "stackit_automation_templates" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  # region is taken from the provider configuration
 }
 ```
 
@@ -45,5 +44,5 @@ Read-Only:
 
 - `create_time` (String) Create timestamp of the template.
 - `description` (String) Description of the template.
-- `id` (String) Template ID.
 - `name` (String) Name of the template.
+- `template_id` (String) Template ID.

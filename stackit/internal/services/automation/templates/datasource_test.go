@@ -52,13 +52,13 @@ func TestMapFields(t *testing.T) {
 				Region:    types.StringValue("eu01"),
 				Templates: []template{
 					{
-						Id:          types.StringValue("template-1"),
+						TemplateId:  types.StringValue("template-1"),
 						Description: types.StringValue("first"),
 						CreateTime:  types.StringValue(testTimestampValue),
 						Name:        types.StringValue("first template"),
 					},
 					{
-						Id:          types.StringValue("template-2"),
+						TemplateId:  types.StringValue("template-2"),
 						Description: types.StringValue("second"),
 						CreateTime:  types.StringValue(testTimestampValue),
 						Name:        types.StringValue("second template"),

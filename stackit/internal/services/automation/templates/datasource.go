@@ -36,7 +36,7 @@ type model struct {
 }
 
 type template struct {
-	Id          types.String `tfsdk:"id"`
+	TemplateId  types.String `tfsdk:"template_id"`
 	CreateTime  types.String `tfsdk:"create_time"`
 	Description types.String `tfsdk:"description"`
 	Name        types.String `tfsdk:"name"`
@@ -101,7 +101,7 @@ func (d *templatesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{
+						"template_id": schema.StringAttribute{
 							Description: "Template ID.",
 							Computed:    true,
 						},
@@ -187,7 +187,7 @@ func mapFields(templates []automation.Template, m *model) error {
 
 		for _, respTemplate := range templates {
 			m.Templates = append(m.Templates, template{
-				Id:          types.StringValue(respTemplate.Id),
+				TemplateId:  types.StringValue(respTemplate.Id),
 				Name:        types.StringValue(respTemplate.Name),
 				Description: types.StringValue(respTemplate.Description),
 				CreateTime:  types.StringValue(respTemplate.CreateTime.Format(time.RFC3339)),

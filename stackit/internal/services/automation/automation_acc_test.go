@@ -26,7 +26,7 @@ func TestAccAutomationTemplatesDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_automation_templates.templates", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_automation_templates.templates", "region", testutil.Region),
 					resource.TestCheckResourceAttrSet("data.stackit_automation_templates.templates", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_automation_templates.templates", "templates.0.id"),
+					resource.TestCheckResourceAttrSet("data.stackit_automation_templates.templates", "templates.0.template_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_automation_templates.templates", "templates.0.name"),
 					resource.TestCheckResourceAttrSet("data.stackit_automation_templates.templates", "templates.0.description"),
 					resource.TestCheckResourceAttrSet("data.stackit_automation_templates.templates", "templates.0.create_time"),
