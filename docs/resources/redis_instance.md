@@ -3,12 +3,12 @@
 page_title: "stackit_redis_instance Resource - stackit"
 subcategory: ""
 description: |-
-  Redis instance resource schema. Must have a region specified in the provider configuration.
+  Redis instance resource schema. Must have a region specified in the provider configuration. This resource is deprecated and will be removed after August 2027, use stackit_valkey_instance instead. For more information on how to migrate, see the migration guide https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/.
 ---
 
 # stackit_redis_instance (Resource)
 
-Redis instance resource schema. Must have a `region` specified in the provider configuration.
+Redis instance resource schema. Must have a `region` specified in the provider configuration. This resource is deprecated and will be removed after August 2027, use stackit_valkey_instance instead. For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).
 
 ## Example Usage
 

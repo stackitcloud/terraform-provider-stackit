@@ -23,6 +23,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const ephemeralKubeconfigAddress = "ephemeral.stackit_ske_kubeconfig.ephemeral_kubeconfig"
+
 var (
 	minTestName = "acc-min" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
 	maxTestName = "acc-max" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
@@ -138,6 +140,11 @@ func TestAccSKEMin(t *testing.T) {
 			{
 				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPreRefresh:  []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+				},
+				ExpectNonEmptyPlan: testutil.UsingOpenTofu(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -189,6 +196,11 @@ func TestAccSKEMin(t *testing.T) {
 			{
 				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPreRefresh:  []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+				},
+				ExpectNonEmptyPlan: testutil.UsingOpenTofu(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 
 					// cluster data
@@ -247,7 +259,10 @@ func TestAccSKEMin(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_ske_cluster.cluster", plancheck.ResourceActionUpdate),
 					},
+					PostApplyPreRefresh:  []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
 				},
+				ExpectNonEmptyPlan: testutil.UsingOpenTofu(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
@@ -299,6 +314,11 @@ func TestAccSKEMax(t *testing.T) {
 			{
 				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPreRefresh:  []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+				},
+				ExpectNonEmptyPlan: testutil.UsingOpenTofu(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -389,6 +409,11 @@ func TestAccSKEMax(t *testing.T) {
 			{
 				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPreRefresh:  []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+				},
+				ExpectNonEmptyPlan: testutil.UsingOpenTofu(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 
 					// cluster data
@@ -486,7 +511,10 @@ func TestAccSKEMax(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_ske_cluster.cluster", plancheck.ResourceActionUpdate),
 					},
+					PostApplyPreRefresh:  []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{testutil.ExpectOnlyEphemeralOpen(ephemeralKubeconfigAddress)},
 				},
+				ExpectNonEmptyPlan: testutil.UsingOpenTofu(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),

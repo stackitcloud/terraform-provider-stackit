@@ -17,13 +17,6 @@ type mockSettings struct {
 
 func newAPIMock(settings *mockSettings) objectstorage.DefaultAPI {
 	return &objectstorage.DefaultAPIServiceMock{
-		EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
-			if settings.returnError {
-				return nil, fmt.Errorf("create project failed")
-			}
-
-			return &objectstorage.ProjectStatus{}, nil
-		}),
 		ListCredentialsGroupsExecuteMock: new(func(_ objectstorage.ApiListCredentialsGroupsRequest) (*objectstorage.ListCredentialsGroupsResponse, error) {
 			if settings.returnError {
 				return nil, fmt.Errorf("get credentials groups failed")
@@ -125,40 +118,6 @@ func TestMapFields(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
-			}
-		})
-	}
-}
-
-func TestEnableProject(t *testing.T) {
-	tests := []struct {
-		description string
-		enableFails bool
-		isValid     bool
-	}{
-		{
-			"default_values",
-			false,
-			true,
-		},
-		{
-			"error_response",
-			true,
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			client := newAPIMock(&mockSettings{
-				returnError: tt.enableFails,
-			})
-
-			err := enableProject(context.Background(), &Model{}, "eu01", client)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
 			}
 		})
 	}
