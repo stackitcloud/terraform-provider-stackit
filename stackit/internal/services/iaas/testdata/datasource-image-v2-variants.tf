@@ -60,3 +60,11 @@ data "stackit_image_v2" "ubuntu_oldest" {
   }
   sort_ascending = true
 }
+
+data "stackit_image_v2" "filter_ubuntu_x86" {
+  project_id = var.project_id
+  filter = {
+    distro       = "ubuntu"
+    architecture = "x86"
+  }
+}
