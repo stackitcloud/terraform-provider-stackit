@@ -39,6 +39,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.2
+	github.com/stackitcloud/stackit-sdk-go/services/runcommand v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.7.1
