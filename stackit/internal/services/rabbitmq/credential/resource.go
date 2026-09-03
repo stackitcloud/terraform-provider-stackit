@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	rabbitmqUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/utils"
@@ -25,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api/wait"
 )
@@ -35,6 +39,8 @@ var (
 	_ resource.ResourceWithConfigure   = &credentialResource{}
 	_ resource.ResourceWithImportState = &credentialResource{}
 	_ resource.ResourceWithModifyPlan  = &credentialResource{}
+
+	roleOptions = sdkUtils.EnumSliceToStringSlice(rabbitmq.AllowedCredentialsParametersRolesInnerEnumValues)
 )
 
 type Model struct {
@@ -53,6 +59,7 @@ type Model struct {
 	Uri          types.String `tfsdk:"uri"`
 	Uris         types.List   `tfsdk:"uris"`
 	Username     types.String `tfsdk:"username"`
+	Roles        types.Set    `tfsdk:"roles"`
 	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
 	// recreation of the resource when they change, enabling resource rotation based on
 	// external conditions such as a rotating timestamp. Changing this forces a new
@@ -225,6 +232,21 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					mapplanmodifier.RequiresReplace(),
 				},
 			},
+			"roles": schema.SetAttribute{
+				Description: "A list of roles to assign to the generated credentials. " +
+					"If not provided, the standard default role 'policymaker' will be assigned. " +
+					fmt.Sprintf("%s.", utils.FormatPossibleValues(roleOptions...)),
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						stringvalidator.OneOf(roleOptions...),
+					),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
+				},
+			},
 			"region": schema.StringAttribute{
 				Optional: true,
 				// must be computed to allow for storing the override value from the provider
@@ -256,8 +278,30 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Create new recordset
-	credentialsResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, region, instanceId).Execute()
+	// Create new credential
+	createReq := r.client.DefaultAPI.CreateCredentials(ctx, projectId, region, instanceId)
+
+	if !utils.IsUndefined(model.Roles) {
+		var roles []string
+		diags = model.Roles.ElementsAs(ctx, &roles, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		sdkRoles := make([]rabbitmq.CredentialsParametersRolesInner, len(roles))
+		for i, r := range roles {
+			sdkRoles[i] = rabbitmq.CredentialsParametersRolesInner(r)
+		}
+
+		createReq = createReq.CreateCredentialsPayload(rabbitmq.CreateCredentialsPayload{
+			Parameters: &rabbitmq.CredentialsParameters{
+				Roles: sdkRoles,
+			},
+		})
+	}
+
+	credentialsResp, err := createReq.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return

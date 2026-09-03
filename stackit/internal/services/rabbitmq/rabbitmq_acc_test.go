@@ -81,6 +81,7 @@ func resourceConfigCredential() string {
 		resource "stackit_rabbitmq_credential" "credential" {
 			project_id = stackit_rabbitmq_instance.instance.project_id
 			instance_id = stackit_rabbitmq_instance.instance.instance_id
+			roles = ["monitoring"]
 		}
     `
 }
@@ -148,6 +149,8 @@ func TestAccRabbitMQResource(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_rabbitmq_credential.credential", "credential_id"),
 					resource.TestCheckResourceAttrSet("stackit_rabbitmq_credential.credential", "host"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_credential.credential", "roles.#", "1"),
+					resource.TestCheckResourceAttr("stackit_rabbitmq_credential.credential", "roles.0", "monitoring"),
 				),
 			},
 			// data source
@@ -230,8 +233,9 @@ func TestAccRabbitMQResource(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"roles"},
 			},
 			// Update
 			{

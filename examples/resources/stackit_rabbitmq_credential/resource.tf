@@ -3,6 +3,12 @@ resource "stackit_rabbitmq_credential" "example" {
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 
+resource "stackit_rabbitmq_credential" "example_monitoring" {
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  roles       = ["monitoring"]
+}
+
 resource "time_rotating" "rotate" {
   rotation_days = 80
 }
