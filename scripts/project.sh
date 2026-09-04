@@ -15,6 +15,8 @@ elif [ "$action" = "tools" ]; then
     cd ${ROOT_DIR}
 
     go mod download
+    (cd tools && go mod download)
+    (cd tools/testdata && go mod download)
 
     go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.24.0
     go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
