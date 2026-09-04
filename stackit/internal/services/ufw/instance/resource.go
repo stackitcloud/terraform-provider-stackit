@@ -90,6 +90,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"rule_id": schema.StringAttribute{
 				Description: "The rule UUID.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: "STACKIT Project ID associated with the rule.",
@@ -126,6 +129,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"source_ip": schema.StringAttribute{
 				Description: "The source IP (CIDR) to which the rule applies.",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"type": schema.StringAttribute{
 				Description: "The type of the rule (e.g., 'ACL').",
@@ -283,15 +289,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updateResp, err := r.client.UpdateRule(ctx, projectId, region, ruleId).UpdateRulePayload(*payload).Execute()
+	_, err = r.client.UpdateRule(ctx, projectId, region, ruleId).UpdateRulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating UFW instance", fmt.Sprintf("Calling API: %v", err))
 		return
-	}
-
-	if updatedRefId := updateResp.GetRefId(); updatedRefId != "" {
-		ruleId = updatedRefId
-		model.RuleId = types.StringValue(ruleId)
 	}
 
 	ctx = core.LogResponse(ctx)
@@ -453,8 +454,6 @@ func ufwUtilsConfigureOptions(providerData *core.ProviderData) []config.Configur
 
 	if providerData.UfwCustomEndpoint != "" {
 		options = append(options, config.WithEndpoint(providerData.UfwCustomEndpoint))
-	} else {
-		options = append(options, config.WithRegion(providerData.GetRegion()))
 	}
 
 	return options

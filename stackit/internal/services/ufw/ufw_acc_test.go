@@ -27,7 +27,7 @@ func TestAccUfwInstanceResource(t *testing.T) {
 		resource "stackit_ufw_instance" "example" {
 			project_id  = "%s"
 			region      = "eu01"
-			instance_id = stackit_edgecloud_instance.target.id
+			instance_id = stackit_edgecloud_instance.target.instance_id
 			product     = "edge-cloud"
 			source_ip   = "192.168.0.0/24"
 			type        = "ACL"
@@ -48,7 +48,7 @@ func TestAccUfwInstanceResource(t *testing.T) {
 		resource "stackit_ufw_instance" "example" {
 			project_id  = "%s"
 			region      = "eu01"
-			instance_id = stackit_edgecloud_instance.target.id
+			instance_id = stackit_edgecloud_instance.target.instance_id
 			product     = "edge-cloud"
 			source_ip   = "10.0.0.0/8"
 			type        = "ACL"
