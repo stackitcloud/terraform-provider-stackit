@@ -40,6 +40,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/setplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -48,6 +49,7 @@ var (
 	_ resource.Resource                = &distributionResource{}
 	_ resource.ResourceWithConfigure   = &distributionResource{}
 	_ resource.ResourceWithImportState = &distributionResource{}
+	_ resource.ResourceWithModifyPlan  = &distributionResource{}
 )
 
 var schemaDescriptions = map[string]string{
@@ -96,15 +98,15 @@ var schemaDescriptions = map[string]string{
 	"waf_allowed_http_versions":                    "Restricts which HTTP protocol versions are accepted. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.",
 	"waf_allowed_request_content_types":            "Restricts which Content-Type headers are accepted in request bodies. If provided, the set must contain at least one item. Case you removed waf will retain the last known state and if omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.",
 	"waf_allowed_http_methods":                     "Restricts which HTTP methods the distribution accepts. If provided, the set must contain at least one item. Case you removed waf will retain the last known state and if omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.",
-	"waf_enabled_rule_ids":                         "Set of WAF rule IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly enabled Rule ID takes precedence over a disabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_disabled_rule_ids":                        "Set of WAF rule IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_log_only_rule_ids":                        "Set of WAF rule IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_enabled_rule_group_ids":                   "Set of WAF Rule Group IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_disabled_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_log_only_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_enabled_rule_collection_ids":              "Set of WAF Collection IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_disabled_rule_collection_ids":             "Set of WAF Collection IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_log_only_rule_collection_ids":             "Set of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_ids":                         "Set of WAF rule IDs explicitly enabled. Set to an empty set to clear previously set rules. When the attribute is omitted, the server-managed set is left untouched (the API may populate defaults when the WAF is enabled). Precedence hierarchy: Specific Rules override Groups. For example, an explicitly enabled Rule ID takes precedence over a disabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_ids":                        "Set of WAF rule IDs explicitly disabled. Set to an empty set or remove the attribute to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_ids":                        "Set of WAF rule IDs explicitly marked as Log Only. Set to an empty set or remove the attribute to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_group_ids":                   "Set of WAF Rule Group IDs explicitly enabled. Set to an empty set to clear previously set rules. When the attribute is omitted, the server-managed set is left untouched (the API may populate defaults when the WAF is enabled). Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly disabled. Set to an empty set or remove the attribute to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly marked as Log Only. Set to an empty set or remove the attribute to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_collection_ids":              "Set of WAF Collection IDs explicitly enabled. Set to an empty set to clear previously set rules. When the attribute is omitted, the server-managed set is left untouched (the API may populate defaults when the WAF is enabled). To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_collection_ids":             "Set of WAF Collection IDs explicitly disabled. Set to an empty set or remove the attribute to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_collection_ids":             "Set of WAF Collection IDs explicitly marked as Log Only. Set to an empty set or remove the attribute to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
 	"config_tls_config":                            "Configuration for TLS protocol versions. Note: Enabling older TLS versions (1.0, 1.1) is generally discouraged for security reasons.",
 	"config_tls_enable_tls_10":                     "If set to true, the distribution will accept connections using TLS 1.0.",
 	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
@@ -583,12 +585,18 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_ids"],
+								PlanModifiers: []planmodifier.Set{
+									setplanmodifier.EmptyOnRemoval(),
+								},
 							},
 							"log_only_rule_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_ids"],
+								PlanModifiers: []planmodifier.Set{
+									setplanmodifier.EmptyOnRemoval(),
+								},
 							},
 							"enabled_rule_group_ids": schema.SetAttribute{
 								Optional:    true,
@@ -601,12 +609,18 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
+								PlanModifiers: []planmodifier.Set{
+									setplanmodifier.EmptyOnRemoval(),
+								},
 							},
 							"log_only_rule_group_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
+								PlanModifiers: []planmodifier.Set{
+									setplanmodifier.EmptyOnRemoval(),
+								},
 							},
 							"enabled_rule_collection_ids": schema.SetAttribute{
 								Optional:    true,
@@ -619,12 +633,18 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
+								PlanModifiers: []planmodifier.Set{
+									setplanmodifier.EmptyOnRemoval(),
+								},
 							},
 							"log_only_rule_collection_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
+								PlanModifiers: []planmodifier.Set{
+									setplanmodifier.EmptyOnRemoval(),
+								},
 							},
 						},
 					},
@@ -1119,6 +1139,113 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	tflog.Info(ctx, "CDN distribution updated")
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+//
+// The CDN API manages some attributes on the server side: the `updated_at` timestamp changes on
+// every update, and WAF rule lists that are left unconfigured may be populated with defaults when
+// the WAF is enabled. During an update these attributes must be planned as unknown
+// "(known after apply)" so Terraform accepts whatever the server returns, instead of asserting a
+// stale value and failing with "Provider produced inconsistent result after apply".
+//
+// The framework normally marks computed attributes unknown by itself, but only when it detects a
+// diff before plan modifiers run. Since the EmptyOnRemoval set plan modifier can introduce the
+// only diff (e.g. removing a WAF rule list), this resource-level step runs afterwards and marks
+// the server-managed attributes unknown for every real update.
+func (r *distributionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic,tfmodifyplan // function signature required by Terraform, distribution has no region
+	// Do nothing on resource creation; computed attributes are already unknown there.
+	if req.State.Raw.IsNull() {
+		return
+	}
+
+	// Do nothing on resource destroy.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var planModel, stateModel, configModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Do nothing when there is no update, to avoid perpetual diffs.
+	if planModel.UpdatedAt.Equal(stateModel.UpdatedAt) && planModel.Config.Equal(stateModel.Config) {
+		return
+	}
+
+	// updated_at always changes on update; plan it as unknown.
+	planModel.UpdatedAt = types.StringUnknown()
+
+	// WAF rule lists that are unconfigured (null in both config and plan) may be populated with
+	// server defaults during an update; plan them as unknown so the server value is accepted.
+	if !utils.IsUndefined(planModel.Config) && !utils.IsUndefined(configModel.Config) {
+		var planConfig, configConfig distributionConfig
+		resp.Diagnostics.Append(planModel.Config.As(ctx, &planConfig, basetypes.ObjectAsOptions{})...)
+		resp.Diagnostics.Append(configModel.Config.As(ctx, &configConfig, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if !utils.IsUndefined(planConfig.Waf) && !utils.IsUndefined(configConfig.Waf) {
+			var planWaf, configWaf wafConfig
+			resp.Diagnostics.Append(planConfig.Waf.As(ctx, &planWaf, basetypes.ObjectAsOptions{})...)
+			resp.Diagnostics.Append(configConfig.Waf.As(ctx, &configWaf, basetypes.ObjectAsOptions{})...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			markWafRuleListsUnknownIfUnconfigured(&planWaf, &configWaf)
+
+			wafObj, diags := types.ObjectValueFrom(ctx, wafTypes, planWaf)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			planAttrs := planModel.Config.Attributes()
+			planAttrs["waf"] = wafObj
+			newConfig, diags := types.ObjectValue(planModel.Config.AttributeTypes(ctx), planAttrs)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			planModel.Config = newConfig
+		}
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &planModel)...)
+}
+
+// markWafRuleListsUnknownIfUnconfigured sets each WAF rule list in the plan model to unknown
+// when it is unconfigured (null in the configuration and null in the plan), so that values
+// managed by the server (e.g. defaults injected when the WAF is enabled) are accepted on apply.
+// Lists with a configured value or an explicit empty-set plan (e.g. from EmptyOnRemoval) are left
+// untouched.
+func markWafRuleListsUnknownIfUnconfigured(planWaf, configWaf *wafConfig) {
+	ruleLists := []struct {
+		plan   *types.Set
+		config *types.Set
+	}{
+		{&planWaf.EnabledRuleIds, &configWaf.EnabledRuleIds},
+		{&planWaf.DisabledRuleIds, &configWaf.DisabledRuleIds},
+		{&planWaf.LogOnlyRuleIds, &configWaf.LogOnlyRuleIds},
+		{&planWaf.EnabledRuleGroupIds, &configWaf.EnabledRuleGroupIds},
+		{&planWaf.DisabledRuleGroupIds, &configWaf.DisabledRuleGroupIds},
+		{&planWaf.LogOnlyRuleGroupIds, &configWaf.LogOnlyRuleGroupIds},
+		{&planWaf.EnabledRuleCollectionIds, &configWaf.EnabledRuleCollectionIds},
+		{&planWaf.DisabledRuleCollectionIds, &configWaf.DisabledRuleCollectionIds},
+		{&planWaf.LogOnlyRuleCollectionIds, &configWaf.LogOnlyRuleCollectionIds},
+	}
+
+	for _, rl := range ruleLists {
+		if rl.config.IsNull() && rl.plan.IsNull() {
+			*rl.plan = types.SetUnknown(types.StringType)
+		}
+	}
+}
+
 func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -1160,6 +1287,21 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 		"distribution_id": idParts[1],
 	})
 	tflog.Info(ctx, "CDN distribution state imported")
+}
+
+// wafRuleListToSet converts an API WAF rule list into a Terraform set. The CDN API omits
+// (returns nil for) rule-list fields that were never configured, and may also omit fields that
+// were explicitly cleared. When the API omits a field, the value already present in the model
+// (i.e. the plan/prior state) is preserved, so that an explicitly empty set configured by the
+// user does not come back as null after apply.
+func wafRuleListToSet(ctx context.Context, apiList []string, prior types.Set, diags *diag.Diagnostics) types.Set {
+	if apiList == nil {
+		if utils.IsUndefined(prior) {
+			return types.SetNull(types.StringType)
+		}
+		return prior
+	}
+	return conversion.StringListToSet(ctx, apiList, diags)
 }
 
 func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Model) error {
@@ -1435,6 +1577,19 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	if distribution.Config.Waf.ParanoiaLevel != nil {
 		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
 	}
+
+	// The CDN API omits WAF rule-list fields that were never configured, and (depending on the
+	// WAF mode) may also omit fields that were explicitly cleared. To keep the Terraform state
+	// consistent with the plan (e.g. an explicitly empty set must not come back as null), we
+	// fall back to the value already present in the model whenever the API omits a field.
+	var priorWaf wafConfig
+	if !utils.IsUndefined(model.Config) {
+		var priorConfig distributionConfig
+		if d := model.Config.As(ctx, &priorConfig, basetypes.ObjectAsOptions{}); !d.HasError() && !utils.IsUndefined(priorConfig.Waf) {
+			_ = priorConfig.Waf.As(ctx, &priorWaf, basetypes.ObjectAsOptions{})
+		}
+	}
+
 	wafObjAttrs := map[string]attr.Value{
 		"mode":                          types.StringValue(string(distribution.Config.Waf.Mode)),
 		"type":                          types.StringValue(string(distribution.Config.Waf.Type)),
@@ -1442,15 +1597,15 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		"allowed_http_versions":         conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpVersions, &diags),
 		"allowed_request_content_types": conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes, &diags),
 		"allowed_http_methods":          conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpMethods, &diags),
-		"enabled_rule_ids":              conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleIds, &diags),
-		"disabled_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleIds, &diags),
-		"log_only_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleIds, &diags),
-		"enabled_rule_group_ids":        conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds, &diags),
-		"disabled_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds, &diags),
-		"log_only_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds, &diags),
-		"enabled_rule_collection_ids":   conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds, &diags),
-		"disabled_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds, &diags),
-		"log_only_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds, &diags),
+		"enabled_rule_ids":              wafRuleListToSet(ctx, distribution.Config.Waf.EnabledRuleIds, priorWaf.EnabledRuleIds, &diags),
+		"disabled_rule_ids":             wafRuleListToSet(ctx, distribution.Config.Waf.DisabledRuleIds, priorWaf.DisabledRuleIds, &diags),
+		"log_only_rule_ids":             wafRuleListToSet(ctx, distribution.Config.Waf.LogOnlyRuleIds, priorWaf.LogOnlyRuleIds, &diags),
+		"enabled_rule_group_ids":        wafRuleListToSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds, priorWaf.EnabledRuleGroupIds, &diags),
+		"disabled_rule_group_ids":       wafRuleListToSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds, priorWaf.DisabledRuleGroupIds, &diags),
+		"log_only_rule_group_ids":       wafRuleListToSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds, priorWaf.LogOnlyRuleGroupIds, &diags),
+		"enabled_rule_collection_ids":   wafRuleListToSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds, priorWaf.EnabledRuleCollectionIds, &diags),
+		"disabled_rule_collection_ids":  wafRuleListToSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds, priorWaf.DisabledRuleCollectionIds, &diags),
+		"log_only_rule_collection_ids":  wafRuleListToSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds, priorWaf.LogOnlyRuleCollectionIds, &diags),
 	}
 
 	if diags.HasError() {

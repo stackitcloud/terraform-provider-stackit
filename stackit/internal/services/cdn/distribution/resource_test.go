@@ -8,8 +8,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
@@ -1075,6 +1078,7 @@ func TestMapFields(t *testing.T) {
 		types.StringValue("rule1"),
 		types.StringValue("rule2"),
 	})
+	emptyWafSet := types.SetValueMust(types.StringType, []attr.Value{})
 	populatedWaf := types.ObjectValueMust(wafTypes, map[string]attr.Value{
 		"mode":                          types.StringValue("ENABLED"),
 		"type":                          types.StringValue("PREMIUM"),
@@ -1127,6 +1131,26 @@ func TestMapFields(t *testing.T) {
 		"enabled_rule_collection_ids":   types.SetNull(types.StringType),
 		"disabled_rule_collection_ids":  types.SetNull(types.StringType),
 		"log_only_rule_collection_ids":  types.SetNull(types.StringType),
+	})
+
+	// defaultWafEmptyRules is the WAF model produced by a plan in which the user explicitly set
+	// every rule list to an empty set (e.g. disabled_rule_ids = []) while the WAF stays disabled.
+	defaultWafEmptyRules := types.ObjectValueMust(wafTypes, map[string]attr.Value{
+		"mode":                          types.StringValue("DISABLED"),
+		"type":                          types.StringValue("FREE"),
+		"paranoia_level":                types.StringNull(),
+		"allowed_http_versions":         types.SetNull(types.StringType),
+		"allowed_request_content_types": types.SetNull(types.StringType),
+		"allowed_http_methods":          types.SetNull(types.StringType),
+		"enabled_rule_ids":              emptyWafSet,
+		"disabled_rule_ids":             emptyWafSet,
+		"log_only_rule_ids":             emptyWafSet,
+		"enabled_rule_group_ids":        emptyWafSet,
+		"disabled_rule_group_ids":       emptyWafSet,
+		"log_only_rule_group_ids":       emptyWafSet,
+		"enabled_rule_collection_ids":   emptyWafSet,
+		"disabled_rule_collection_ids":  emptyWafSet,
+		"log_only_rule_collection_ids":  emptyWafSet,
 	})
 
 	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
@@ -1383,6 +1407,111 @@ func TestMapFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Config.Waf = expectedWafConfig
+			}),
+			IsValid: true,
+		},
+		// Regression test for https://github.com/stackitcloud/terraform-provider-stackit/issues/1630:
+		// when the API omits a WAF rule-list field (returns nil) but the model (plan) holds an
+		// explicitly empty set, the state must keep the empty set instead of becoming null.
+		"waf_rule_list_api_nil_model_empty_set": {
+			InitialState: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    defaultWafEmptyRules,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			// The API omits all rule-list fields (nil), as happens when the WAF is disabled.
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Waf = cdnSdk.WafConfig{
+					Mode: cdnSdk.WAFMODE_DISABLED,
+					Type: cdnSdk.WAFTYPE_FREE,
+				}
+			}),
+			Expected: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    defaultWafEmptyRules,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			IsValid: true,
+		},
+		// When the API returns an explicit empty list, the state must be an empty set regardless
+		// of the prior model value.
+		"waf_rule_list_api_empty_list": {
+			InitialState: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    populatedWaf,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Waf = cdnSdk.WafConfig{
+					Mode:                       cdnSdk.WAFMODE_ENABLED,
+					Type:                       cdnSdk.WAFTYPE_PREMIUM,
+					EnabledRuleIds:             []string{},
+					DisabledRuleIds:            []string{},
+					LogOnlyRuleIds:             []string{},
+					EnabledRuleGroupIds:        []string{},
+					DisabledRuleGroupIds:       []string{},
+					LogOnlyRuleGroupIds:        []string{},
+					EnabledRuleCollectionIds:   []string{},
+					DisabledRuleCollectionIds:  []string{},
+					LogOnlyRuleCollectionIds:   []string{},
+					AllowedHttpVersions:        []string{"rule1", "rule2"},
+					AllowedRequestContentTypes: []string{"rule1", "rule2"},
+					AllowedHttpMethods:         []string{"rule1", "rule2"},
+				}
+			}),
+			Expected: expectedModel(func(m *Model) {
+				emptyRulesWaf := types.ObjectValueMust(wafTypes, map[string]attr.Value{
+					"mode":                          types.StringValue("ENABLED"),
+					"type":                          types.StringValue("PREMIUM"),
+					"paranoia_level":                types.StringNull(),
+					"allowed_http_versions":         populatedWafSet,
+					"allowed_request_content_types": populatedWafSet,
+					"allowed_http_methods":          populatedWafSet,
+					"enabled_rule_ids":              emptyWafSet,
+					"disabled_rule_ids":             emptyWafSet,
+					"log_only_rule_ids":             emptyWafSet,
+					"enabled_rule_group_ids":        emptyWafSet,
+					"disabled_rule_group_ids":       emptyWafSet,
+					"log_only_rule_group_ids":       emptyWafSet,
+					"enabled_rule_collection_ids":   emptyWafSet,
+					"disabled_rule_collection_ids":  emptyWafSet,
+					"log_only_rule_collection_ids":  emptyWafSet,
+				})
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    emptyRulesWaf,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
 			}),
 			IsValid: true,
 		},
@@ -1680,4 +1809,191 @@ func TestValidateCountryCode(t *testing.T) {
 			}
 		})
 	}
+}
+
+// wafObjForModifyPlan builds a waf object value for ModifyPlan tests, allowing null sets.
+func wafObjForModifyPlan(mode string, disabledIds, enabledCollectionIds types.Set) types.Object {
+	return types.ObjectValueMust(wafTypes, map[string]attr.Value{
+		"mode":                          types.StringValue(mode),
+		"type":                          types.StringValue("FREE"),
+		"paranoia_level":                types.StringNull(),
+		"allowed_http_versions":         types.SetNull(types.StringType),
+		"allowed_request_content_types": types.SetNull(types.StringType),
+		"allowed_http_methods":          types.SetNull(types.StringType),
+		"enabled_rule_ids":              types.SetNull(types.StringType),
+		"disabled_rule_ids":             disabledIds,
+		"log_only_rule_ids":             types.SetNull(types.StringType),
+		"enabled_rule_group_ids":        types.SetNull(types.StringType),
+		"disabled_rule_group_ids":       types.SetNull(types.StringType),
+		"log_only_rule_group_ids":       types.SetNull(types.StringType),
+		"enabled_rule_collection_ids":   enabledCollectionIds,
+		"disabled_rule_collection_ids":  types.SetNull(types.StringType),
+		"log_only_rule_collection_ids":  types.SetNull(types.StringType),
+	})
+}
+
+func modifyPlanModel(updatedAt types.String, waf types.Object) *Model {
+	return &Model{
+		ID:             types.StringValue("test-project-id,test-distribution-id"),
+		DistributionId: types.StringValue("test-distribution-id"),
+		ProjectId:      types.StringValue("test-project-id"),
+		Status:         types.StringValue("ACTIVE"),
+		CreatedAt:      types.StringValue("2026-09-04 09:00:00 +0000 UTC"),
+		UpdatedAt:      updatedAt,
+		Errors:         types.ListValueMust(types.StringType, []attr.Value{}),
+		Domains:        types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{}),
+		Config: configFixture(func(v map[string]attr.Value) {
+			v["backend"] = types.ObjectValueMust(backendTypes, map[string]attr.Value{
+				"type":                   types.StringValue("http"),
+				"origin_url":             types.StringValue("https://www.mycoolapp.com"),
+				"origin_request_headers": types.MapNull(types.StringType),
+				"geofencing":             types.MapNull(geofencingTypes.ElemType),
+				"bucket_url":             types.StringNull(),
+				"region":                 types.StringNull(),
+				"credentials":            types.ObjectNull(backendCredentialsTypes),
+			})
+			v["regions"] = types.ListValueMust(types.StringType, []attr.Value{types.StringValue("EU")})
+			v["waf"] = waf
+			v["tls"] = types.ObjectNull(tlsTypes)
+			v["strip_response_cookies"] = types.BoolValue(false)
+			v["forward_host_header"] = types.BoolValue(false)
+		}),
+	}
+}
+
+func modifyPlanRequest(ctx context.Context, schemaResp *resource.SchemaResponse, state, plan, config *Model) (resource.ModifyPlanRequest, *resource.ModifyPlanResponse) {
+	req := resource.ModifyPlanRequest{}
+	req.State = tfsdk.State{Schema: schemaResp.Schema, Raw: tftypes.NewValue(tftypes.DynamicPseudoType, nil)}
+	req.Plan = tfsdk.Plan{Schema: schemaResp.Schema, Raw: tftypes.NewValue(tftypes.DynamicPseudoType, nil)}
+	req.State.Set(ctx, state)
+	req.Plan.Set(ctx, plan)
+
+	// tfsdk.Config has no Set method; marshal the config model via a scratch plan and reuse its Raw.
+	configScratch := tfsdk.Plan{Schema: schemaResp.Schema, Raw: tftypes.NewValue(tftypes.DynamicPseudoType, nil)}
+	configScratch.Set(ctx, config)
+	req.Config = tfsdk.Config{Schema: schemaResp.Schema, Raw: configScratch.Raw}
+
+	resp := &resource.ModifyPlanResponse{}
+	resp.Plan = tfsdk.Plan{Schema: schemaResp.Schema, Raw: tftypes.NewValue(tftypes.DynamicPseudoType, nil)}
+	resp.Plan.Set(ctx, plan)
+	return req, resp
+}
+
+// TestModifyPlan verifies that server-managed attributes (updated_at and unconfigured WAF rule
+// lists) are planned as unknown during updates, and that no-op plans are left untouched to avoid
+// perpetual diffs. Regression test for the inconsistent-result errors reported in
+// https://github.com/stackitcloud/terraform-provider-stackit/issues/1630.
+func TestModifyPlan(t *testing.T) {
+	ctx := context.Background()
+	r := &distributionResource{}
+	schemaResp := &resource.SchemaResponse{}
+	r.Schema(ctx, resource.SchemaRequest{}, schemaResp)
+
+	tsOld := types.StringValue("2026-09-04 09:02:37 +0000 UTC")
+
+	disabledPopulated := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("@builtin/crs/request/942140")})
+	disabledEmpty := types.SetValueMust(types.StringType, []attr.Value{})
+	nullSet := types.SetNull(types.StringType)
+
+	// helper to read a nested waf set from a plan model's config
+	getWafSet := func(t *testing.T, m Model, name string) types.Set {
+		t.Helper()
+		var cfg distributionConfig
+		diags := m.Config.As(ctx, &cfg, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			t.Fatalf("reading config: %v", diags)
+		}
+		var w wafConfig
+		diags = cfg.Waf.As(ctx, &w, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			t.Fatalf("reading waf: %v", diags)
+		}
+		switch name {
+		case "disabled_rule_ids":
+			return w.DisabledRuleIds
+		case "enabled_rule_collection_ids":
+			return w.EnabledRuleCollectionIds
+		}
+		t.Fatalf("unknown waf attr %q", name)
+		return types.SetNull(types.StringType)
+	}
+
+	t.Run("update via waf removal: updated_at and unconfigured lists become unknown", func(t *testing.T) {
+		// state: disabled_rule_ids populated, enabled_rule_collection_ids null (never configured)
+		state := modifyPlanModel(tsOld, wafObjForModifyPlan("ENABLED", disabledPopulated, nullSet))
+		// plan: EmptyOnRemoval already emptied disabled_rule_ids; enabled_rule_collection_ids null
+		plan := modifyPlanModel(tsOld, wafObjForModifyPlan("ENABLED", disabledEmpty, nullSet))
+		// config: user removed disabled_rule_ids (null), enabled_rule_collection_ids null
+		config := modifyPlanModel(tsOld, wafObjForModifyPlan("ENABLED", nullSet, nullSet))
+
+		req, resp := modifyPlanRequest(ctx, schemaResp, state, plan, config)
+		r.ModifyPlan(ctx, req, resp)
+		if resp.Diagnostics.HasError() {
+			t.Fatalf("ModifyPlan diagnostics: %v", resp.Diagnostics)
+		}
+
+		var got Model
+		resp.Plan.Get(ctx, &got)
+
+		if !got.UpdatedAt.IsUnknown() {
+			t.Errorf("expected updated_at to be unknown, got %v", got.UpdatedAt)
+		}
+		if gotSet := getWafSet(t, got, "enabled_rule_collection_ids"); !gotSet.IsUnknown() {
+			t.Errorf("expected enabled_rule_collection_ids to be unknown, got %v", gotSet)
+		}
+		if gotSet := getWafSet(t, got, "disabled_rule_ids"); !gotSet.Equal(disabledEmpty) {
+			t.Errorf("expected disabled_rule_ids to remain empty set, got %v", gotSet)
+		}
+	})
+
+	t.Run("no-op plan: left untouched (no perpetual diff)", func(t *testing.T) {
+		state := modifyPlanModel(tsOld, wafObjForModifyPlan("ENABLED", disabledPopulated, nullSet))
+		plan := modifyPlanModel(tsOld, wafObjForModifyPlan("ENABLED", disabledPopulated, nullSet))
+		config := modifyPlanModel(tsOld, wafObjForModifyPlan("ENABLED", disabledPopulated, nullSet))
+
+		req, resp := modifyPlanRequest(ctx, schemaResp, state, plan, config)
+		r.ModifyPlan(ctx, req, resp)
+		if resp.Diagnostics.HasError() {
+			t.Fatalf("ModifyPlan diagnostics: %v", resp.Diagnostics)
+		}
+
+		var got Model
+		resp.Plan.Get(ctx, &got)
+
+		if !got.UpdatedAt.Equal(tsOld) {
+			t.Errorf("expected updated_at to remain %v, got %v", tsOld, got.UpdatedAt)
+		}
+		if gotSet := getWafSet(t, got, "enabled_rule_collection_ids"); !gotSet.IsNull() {
+			t.Errorf("expected enabled_rule_collection_ids to remain null, got %v", gotSet)
+		}
+	})
+
+	t.Run("create: skipped", func(t *testing.T) {
+		plan := modifyPlanModel(types.StringUnknown(), wafObjForModifyPlan("ENABLED", disabledPopulated, nullSet))
+		config := modifyPlanModel(types.StringUnknown(), wafObjForModifyPlan("ENABLED", disabledPopulated, nullSet))
+
+		req := resource.ModifyPlanRequest{}
+		req.State = tfsdk.State{Schema: schemaResp.Schema, Raw: tftypes.NewValue(schemaResp.Schema.Type().TerraformType(ctx), nil)} // null state = create
+		req.Plan = tfsdk.Plan{Schema: schemaResp.Schema, Raw: tftypes.NewValue(tftypes.DynamicPseudoType, nil)}
+		req.Plan.Set(ctx, plan)
+
+		configScratch := tfsdk.Plan{Schema: schemaResp.Schema, Raw: tftypes.NewValue(tftypes.DynamicPseudoType, nil)}
+		configScratch.Set(ctx, config)
+		req.Config = tfsdk.Config{Schema: schemaResp.Schema, Raw: configScratch.Raw}
+
+		resp := &resource.ModifyPlanResponse{}
+		resp.Plan = tfsdk.Plan{Schema: schemaResp.Schema, Raw: tftypes.NewValue(tftypes.DynamicPseudoType, nil)}
+		resp.Plan.Set(ctx, plan)
+
+		r.ModifyPlan(ctx, req, resp)
+		if resp.Diagnostics.HasError() {
+			t.Fatalf("ModifyPlan diagnostics: %v", resp.Diagnostics)
+		}
+
+		var got Model
+		resp.Plan.Get(ctx, &got)
+		if !got.UpdatedAt.IsUnknown() {
+			t.Errorf("expected updated_at to remain unknown on create, got %v", got.UpdatedAt)
+		}
+	})
 }
