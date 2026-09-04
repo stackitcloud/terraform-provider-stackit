@@ -25,4 +25,11 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
   snapshot_policy = {
     id = var.snapshot_policy_id
   }
+
+  timeouts = {
+    create = "20m"
+    read   = "20m"
+    update = "20m"
+    delete = "20m"
+  }
 }
