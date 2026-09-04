@@ -108,6 +108,11 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	ctx = core.LogResponse(ctx)
 
+	if response == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading share", "Calling API: Empty response")
+		return
+	}
+
 	// Map response body to schema
 	err = mapDataSourceFields(ctx, region, response.Share, &model)
 	if err != nil {
