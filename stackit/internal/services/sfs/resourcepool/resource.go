@@ -304,18 +304,22 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool creation waiting: %v", err))
 		return
 	}
+	if response == nil || response.ResourcePool == nil || response.ResourcePool.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "Calling API: Incomplete response (id missing)")
+		return
+	}
 	ctx = tflog.SetField(ctx, "resource_pool_id", response.ResourcePool.Id)
 
 	// the responses of create and update are not compatible, so we can't use a unified
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
-	if response.ResourcePool == nil || response.ResourcePool.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "response did not contain an ID")
-		return
-	}
 	getResponse, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, *response.ResourcePool.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
+		return
+	}
+	if getResponse == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "Calling API: Empty response")
 		return
 	}
 
@@ -370,6 +374,11 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	if response == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool", "Calling API: Empty response")
+		return
+	}
 
 	// Map response body to schema
 	err = mapFields(ctx, region, response.ResourcePool, &model)
@@ -438,14 +447,18 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	// the responses of create and update are not compatible, so we can't use a unified
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
-	if response.ResourcePool == nil || response.ResourcePool.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "response did not contain an ID")
+	if response == nil || response.ResourcePool == nil || response.ResourcePool.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", "Calling API: Incomplete response (id missing)")
 		return
 	}
 
 	getResponse, err := wait.UpdateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", fmt.Sprintf("resource pool update waiting: %v", err))
+		return
+	}
+	if getResponse == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", "Calling API: Empty response")
 		return
 	}
 	err = mapFields(ctx, region, getResponse.ResourcePool, &model)

@@ -162,3 +162,101 @@ resource "stackit_sfs_share" "example" {
 		},
 	})
 }
+
+// TestSfsResourcePoolReadHandlesEmptyResponse covers a 2xx answer with an empty body. The generated SDK decoder
+// returns early for an empty body, so Execute hands back (nil, nil) and the resource used to dereference that nil.
+func TestSfsResourcePoolReadHandlesEmptyResponse(t *testing.T) {
+	projectId := uuid.NewString()
+	resourcePoolId := uuid.NewString()
+	const region = "eu01"
+
+	s := testutil.NewMockServer(t)
+	defer s.Server.Close()
+	tfConfig := fmt.Sprintf(`
+provider "stackit" {
+	default_region = "%s"
+	sfs_custom_endpoint = "%s"
+	service_account_token = "mock-server-needs-no-auth"
+	enable_beta_resources = true
+}
+resource "stackit_sfs_resource_pool" "resourcepool" {
+  project_id        = "%s"
+  name              = "sfs-instance"
+  availability_zone = "eu01-m"
+  performance_class = "Standard"
+  size_gigabytes    = 512
+  ip_acl            = ["192.168.2.0/24"]
+}
+`, region, s.Server.URL, projectId)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Fail the create wait so the IDs are in state and the next step can refresh them.
+				PreConfig: func() {
+					s.Reset(
+						testutil.MockResponse{
+							Description: "create resource pool",
+							ToJsonBody: sfs.CreateResourcePoolResponse{
+								ResourcePool: &sfs.ResourcePool{Id: new(resourcePoolId)},
+							},
+						},
+						testutil.MockResponse{Description: "failing waiter", StatusCode: http.StatusInternalServerError},
+					)
+				},
+				Config:      tfConfig,
+				ExpectError: regexp.MustCompile("Error creating resource pool"),
+			},
+			{
+				PreConfig: func() {
+					s.Reset(
+						testutil.MockResponse{Description: "refresh with an empty body", StatusCode: http.StatusOK},
+						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
+						testutil.MockResponse{Description: "delete waiter", StatusCode: http.StatusNotFound},
+					)
+				},
+				RefreshState: true,
+				ExpectError:  regexp.MustCompile("Error reading resource pool"),
+			},
+		},
+	})
+}
+
+// TestSfsShareCreateHandlesEmptyResponse covers the same empty-body case on the share create call, where the check
+// meant to validate the response was itself the dereference.
+func TestSfsShareCreateHandlesEmptyResponse(t *testing.T) {
+	projectId := uuid.NewString()
+	resourcePoolId := uuid.NewString()
+	const region = "eu01"
+
+	s := testutil.NewMockServer(t,
+		testutil.MockResponse{Description: "create share with an empty body", StatusCode: http.StatusOK},
+	)
+	defer s.Server.Close()
+	tfConfig := fmt.Sprintf(`
+provider "stackit" {
+	default_region = "%s"
+	sfs_custom_endpoint = "%s"
+	service_account_token = "mock-server-needs-no-auth"
+	enable_beta_resources = true
+}
+resource "stackit_sfs_share" "example" {
+  project_id                 = "%s"
+  resource_pool_id           = "%s"
+  name                       = "my-nfs-share"
+  export_policy              = "high-performance-class"
+  space_hard_limit_gigabytes = 32
+}
+`, region, s.Server.URL, projectId, resourcePoolId)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      tfConfig,
+				ExpectError: regexp.MustCompile("Incomplete response"),
+			},
+		},
+	})
+}
