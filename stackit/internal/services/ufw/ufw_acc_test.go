@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 

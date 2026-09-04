@@ -22,36 +22,36 @@ func TestUfwInstanceResource(t *testing.T) {
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
-		provider "stackit" {
-			ufw_custom_endpoint   = "%s"
-			service_account_token = "mock-server-needs-no-auth"
-		}
+       provider "stackit" {
+          ufw_custom_endpoint   = "%s"
+          service_account_token = "mock-server-needs-no-auth"
+       }
 
-		resource "stackit_ufw_instance" "example" {
-			project_id  = "%s"
-			region      = "%s"
-			instance_id = "target-instance-123"
-			product     = "edge-cloud"
-			source_ip   = "192.168.0.0/24"
-			type        = "ACL"
-		}
-	`, s.Server.URL, projectId, region)
+       resource "stackit_ufw_instance" "example" {
+          project_id  = "%s"
+          region      = "%s"
+          instance_id = "target-instance-123"
+          product     = "edge-cloud"
+          source_ip   = "192.168.0.0/24"
+          type        = "ACL"
+       }
+    `, s.Server.URL, projectId, region)
 
 	tfConfigUpdated := fmt.Sprintf(`
-		provider "stackit" {
-			ufw_custom_endpoint   = "%s"
-			service_account_token = "mock-server-needs-no-auth"
-		}
+       provider "stackit" {
+          ufw_custom_endpoint   = "%s"
+          service_account_token = "mock-server-needs-no-auth"
+       }
 
-		resource "stackit_ufw_instance" "example" {
-			project_id  = "%s"
-			region      = "%s"
-			instance_id = "target-instance-123"
-			product     = "edge-cloud"
-			source_ip   = "10.0.0.0/8"
-			type        = "ACL"
-		}
-	`, s.Server.URL, projectId, region)
+       resource "stackit_ufw_instance" "example" {
+          project_id  = "%s"
+          region      = "%s"
+          instance_id = "target-instance-123"
+          product     = "edge-cloud"
+          source_ip   = "10.0.0.0/8"
+          type        = "ACL"
+       }
+    `, s.Server.URL, projectId, region)
 
 	validRuleResponse := v1api.RuleResponse{
 		Destination: "0.0.0.0/0",
@@ -102,21 +102,29 @@ func TestUfwInstanceResource(t *testing.T) {
 							ToJsonBody:  validRuleResponse,
 						},
 						testutil.MockResponse{
-							Description: "Update UFW Rule",
-							ToJsonBody: v1api.UpdateRuleResponse{
+							Description: "Delete UFW Rule (Replace)",
+							StatusCode:  http.StatusAccepted,
+						},
+						testutil.MockResponse{
+							Description: "Get UFW Rule (Delete Waiter)",
+							StatusCode:  http.StatusNotFound,
+						},
+						testutil.MockResponse{
+							Description: "Create UFW Rule (Replace)",
+							ToJsonBody: v1api.CreateRuleResponse{
 								RefId: &ruleId,
 							},
 						},
 						testutil.MockResponse{
-							Description: "Get UFW Rule (Update Waiter)",
+							Description: "Get UFW Rule (Create Waiter)",
 							ToJsonBody:  validRuleResponseUpdated,
 						},
 						testutil.MockResponse{
-							Description: "Read UFW Rule (Post-Update)",
+							Description: "Read UFW Rule (Post-Replace)",
 							ToJsonBody:  validRuleResponseUpdated,
 						},
 						testutil.MockResponse{
-							Description: "Delete UFW Rule",
+							Description: "Delete UFW Rule (Cleanup)",
 							StatusCode:  http.StatusAccepted,
 						},
 						testutil.MockResponse{
@@ -144,20 +152,20 @@ func TestUfwInstanceSavesIDsOnError(t *testing.T) {
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
-		provider "stackit" {
-			ufw_custom_endpoint   = "%s"
-			service_account_token = "mock-server-needs-no-auth"
-		}
+       provider "stackit" {
+          ufw_custom_endpoint   = "%s"
+          service_account_token = "mock-server-needs-no-auth"
+       }
 
-		resource "stackit_ufw_instance" "example" {
-			project_id  = "%s"
-			region      = "%s"
-			instance_id = "target-instance-123"
-			product     = "edge-cloud"
-			source_ip   = "192.168.0.0/24"
-			type        = "ACL"
-		}
-	`, s.Server.URL, projectId, region)
+       resource "stackit_ufw_instance" "example" {
+          project_id  = "%s"
+          region      = "%s"
+          instance_id = "target-instance-123"
+          product     = "edge-cloud"
+          source_ip   = "192.168.0.0/24"
+          type        = "ACL"
+       }
+    `, s.Server.URL, projectId, region)
 
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
