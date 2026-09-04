@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -43,18 +44,19 @@ var (
 )
 
 type Model struct {
-	Id                  types.String `tfsdk:"id"` // needed by TF
-	ProjectId           types.String `tfsdk:"project_id"`
-	ResourcePoolId      types.String `tfsdk:"resource_pool_id"`
-	AvailabilityZone    types.String `tfsdk:"availability_zone"`
-	IpAcl               types.List   `tfsdk:"ip_acl"`
-	Name                types.String `tfsdk:"name"`
-	Labels              types.Map    `tfsdk:"labels"`
-	PerformanceClass    types.String `tfsdk:"performance_class"`
-	SizeGigabytes       types.Int32  `tfsdk:"size_gigabytes"`
-	SnapshotPolicy      types.Object `tfsdk:"snapshot_policy"`
-	Region              types.String `tfsdk:"region"`
-	SnapshotsAreVisible types.Bool   `tfsdk:"snapshots_are_visible"`
+	Id                  types.String   `tfsdk:"id"` // needed by TF
+	ProjectId           types.String   `tfsdk:"project_id"`
+	ResourcePoolId      types.String   `tfsdk:"resource_pool_id"`
+	AvailabilityZone    types.String   `tfsdk:"availability_zone"`
+	IpAcl               types.List     `tfsdk:"ip_acl"`
+	Name                types.String   `tfsdk:"name"`
+	Labels              types.Map      `tfsdk:"labels"`
+	PerformanceClass    types.String   `tfsdk:"performance_class"`
+	SizeGigabytes       types.Int32    `tfsdk:"size_gigabytes"`
+	SnapshotPolicy      types.Object   `tfsdk:"snapshot_policy"`
+	Region              types.String   `tfsdk:"region"`
+	SnapshotsAreVisible types.Bool     `tfsdk:"snapshots_are_visible"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }
 
 type SnapshotPolicyModel struct {
@@ -134,7 +136,7 @@ func (r *resourcePoolResource) Configure(ctx context.Context, req resource.Confi
 }
 
 // Schema defines the schema for the resource.
-func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *resourcePoolResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Resource-pool resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription(description, core.Resource),
@@ -245,6 +247,7 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 					},
 				},
 			},
+			"timeouts": timeouts.AttributesAll(ctx),
 		},
 	}
 }
@@ -258,6 +261,17 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// The wait handler only enforces its own timeout when the context carries no deadline,
+	// so the context deadline set here is what actually bounds the polling.
+	waiterTimeout := wait.CreateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to read the default wait handler timeout
+	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
@@ -297,11 +311,31 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// The configured timeouts belong in that partial state as well. Without them a failed wait leaves an entry whose
+	// read and delete fall back to the defaults instead of the values the operator configured.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("timeouts"), model.Timeouts)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	response, err := wait.CreateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *resourcePool.ResourcePool.Id).
 		WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool creation waiting: %v", err))
+		// The wait handler reports a timeout, a terminal error state and a failing poll through the same error, so
+		// only mention the create timeout when this context's deadline is what ended the wait.
+		timeoutHint := ""
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			timeoutHint = fmt.Sprintf(" The wait gave up after the configured `timeouts.create` of %s; raise it if the creation regularly needs longer.", createTimeout)
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf(
+			"resource pool creation waiting: %v\n"+
+				"The resource pool was created, and Terraform marks this resource as tainted, so the next apply replaces it. "+
+				"Run `terraform untaint` on it first if the next run should refresh the existing pool instead. "+
+				"If the state entry is lost, import the resource pool with the ID %q.%s",
+			err,
+			utils.BuildInternalTerraformId(projectId, region, *resourcePool.ResourcePool.Id).ValueString(),
+			timeoutHint,
+		))
 		return
 	}
 	ctx = tflog.SetField(ctx, "resource_pool_id", response.ResourcePool.Id)
@@ -343,6 +377,14 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	if resourcePoolId == "" {
@@ -395,6 +437,15 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	waiterTimeout := wait.UpdateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit // false positive - only called to read the default wait handler timeout
+	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	region := model.Region.ValueString()
@@ -470,6 +521,15 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	waiterTimeout := wait.DeleteResourcePoolWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit // false positive - only called to read the default wait handler timeout
+	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
