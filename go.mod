@@ -13,8 +13,9 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.26.0
+	github.com/stackitcloud/stackit-sdk-go/experimental v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.17.1
-	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.2
+	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.3
 	github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.9.1
@@ -60,7 +61,6 @@ require (
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/experimental v0.1.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 )
 
