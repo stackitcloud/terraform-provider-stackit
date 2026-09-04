@@ -15,9 +15,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.17.1
 	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.2
+	github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.22.1
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.23.0
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.13.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.14.0
@@ -34,12 +35,12 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.25.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.3.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.13.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.2
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.10.1
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.2
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.4
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.20.1
@@ -60,6 +61,7 @@ require (
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/stackitcloud/stackit-sdk-go/experimental v0.1.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 )
 
