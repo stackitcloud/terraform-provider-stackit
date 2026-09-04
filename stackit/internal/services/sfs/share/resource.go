@@ -243,7 +243,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	if share.Share == nil || share.Share.Id == nil {
+	if share == nil || share.Share == nil || share.Share.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "error creating share", "Calling API: Incomplete response (id missing)")
 		return
 	}
@@ -264,18 +264,22 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share creation waiting: %v", err))
 		return
 	}
+	if response == nil || response.Share == nil || response.Share.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "Calling API: Incomplete response (id missing)")
+		return
+	}
 	ctx = tflog.SetField(ctx, "share_id", response.Share.Id)
 
 	// the responses of create and update are not compatible, so we can't use a unified
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
-	if response.Share == nil || response.Share.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "response did not contain an ID")
-		return
-	}
 	getResponse, err := r.client.DefaultAPI.GetShare(ctx, projectId, region, resourcePoolId, *response.Share.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
+		return
+	}
+	if getResponse == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "Calling API: Empty response")
 		return
 	}
 
@@ -333,6 +337,11 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	if response == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading share", "Calling API: Empty response")
+		return
+	}
 
 	// Map response body to schema
 	err = mapFields(ctx, response.Share, region, &model)
@@ -403,14 +412,18 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// the responses of create and update are not compatible, so we can't use a unified
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
-	if response.Share == nil || response.Share.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "response did not contain an ID")
+	if response == nil || response.Share == nil || response.Share.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", "Calling API: Incomplete response (id missing)")
 		return
 	}
 
 	getResponse, err := wait.UpdateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", fmt.Sprintf("share update waiting: %v", err))
+		return
+	}
+	if getResponse == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", "Calling API: Empty response")
 		return
 	}
 	err = mapFields(ctx, getResponse.Share, region, &model)
