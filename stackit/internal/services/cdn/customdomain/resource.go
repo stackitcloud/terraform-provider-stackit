@@ -42,16 +42,18 @@ var (
 	_ resource.ResourceWithImportState = &customDomainResource{}
 )
 var certificateSchemaDescriptions = map[string]string{
-	"main":        "The TLS certificate for the custom domain. If omitted, a managed certificate will be used. If the block is specified, a custom certificate is used.",
-	"certificate": "The PEM-encoded TLS certificate. Required for custom certificates.",
-	"private_key": "The PEM-encoded private key for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.",
-	"version":     "A version identifier for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.",
+	"main":           "The TLS certificate for the custom domain. If omitted, a managed certificate will be used. If the block is specified, a custom certificate is used.",
+	"certificate":    "The PEM-encoded TLS certificate. Required for custom certificates.",
+	"private_key":    "The PEM-encoded private key for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.",
+	"version":        "A version identifier for the certificate. Required for custom certificates. The certificate will be updated if this field is changed.",
+	"skip_dns_check": "When true, skips the verification check that the custom domain points to the distribution domain via CNAME. Useful for zero-downtime migrations.",
 }
 
 var certificateTypes = map[string]attr.Type{
-	"version":     types.Int32Type,
-	"certificate": types.StringType,
-	"private_key": types.StringType,
+	"version":        types.Int32Type,
+	"certificate":    types.StringType,
+	"private_key":    types.StringType,
+	"skip_dns_check": types.BoolType,
 }
 
 var customDomainSchemaDescriptions = map[string]string{
@@ -63,9 +65,10 @@ var customDomainSchemaDescriptions = map[string]string{
 }
 
 type CertificateModel struct {
-	Certificate types.String `tfsdk:"certificate"`
-	PrivateKey  types.String `tfsdk:"private_key"`
-	Version     types.Int32  `tfsdk:"version"`
+	Certificate  types.String `tfsdk:"certificate"`
+	PrivateKey   types.String `tfsdk:"private_key"`
+	Version      types.Int32  `tfsdk:"version"`
+	SkipDnsCheck types.Bool   `tfsdk:"skip_dns_check"`
 }
 
 type CustomDomainModel struct {
@@ -87,8 +90,9 @@ func NewCustomDomainResource() resource.Resource {
 }
 
 type Certificate struct {
-	Type    string
-	Version *int32
+	Type         string
+	Version      *int32
+	SkipDnsCheck *bool
 }
 
 func (r *customDomainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -164,6 +168,11 @@ func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaReques
 					},
 					"version": schema.Int32Attribute{
 						Description: certificateSchemaDescriptions["version"],
+						Computed:    true,
+					},
+					"skip_dns_check": schema.BoolAttribute{
+						Description: certificateSchemaDescriptions["skip_dns_check"],
+						Optional:    true,
 						Computed:    true,
 					},
 				},
@@ -417,8 +426,9 @@ func normalizeCertificate(certInput cdnSdk.GetCustomDomainResponseCertificate) (
 	// Now we process the extracted certificates
 	if customCert != nil && customCert.Type != "" {
 		return Certificate{
-			Type:    customCert.Type,
-			Version: new(customCert.Version),
+			Type:         customCert.Type,
+			Version:      &customCert.Version,
+			SkipDnsCheck: &customCert.SkipDnsCheck,
 		}, nil
 	}
 
@@ -465,6 +475,7 @@ func toCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdnSd
 		keyStr,
 		"custom",
 	)
+	customCert.SkipDnsCheck = conversion.BoolValueToPointer(certModel.SkipDnsCheck)
 	certPayload := cdnSdk.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
 
 	return &certPayload, nil
@@ -495,11 +506,12 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 		model.Certificate = types.ObjectNull(certificateTypes)
 	} else {
 		// If the certificate is custom, we need to preserve the user-configured
-		// certificate and private key from the plan/state, and only update the computed version.
+		// certificate and private key from the plan/state, and update the computed version and skip_dns_check.
 		certAttributes := map[string]attr.Value{
-			"certificate": types.StringNull(), // Default to null
-			"private_key": types.StringNull(), // Default to null
-			"version":     types.Int32Null(),
+			"certificate":    types.StringNull(), // Default to null
+			"private_key":    types.StringNull(), // Default to null
+			"version":        types.Int32Null(),
+			"skip_dns_check": types.BoolNull(),
 		}
 
 		// Get existing values from the model's certificate object if it exists
@@ -511,11 +523,17 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 			if val, ok := existingAttrs["private_key"]; ok {
 				certAttributes["private_key"] = val
 			}
+			if val, ok := existingAttrs["skip_dns_check"]; ok {
+				certAttributes["skip_dns_check"] = val
+			}
 		}
 
 		// Set the computed version from the API response
 		if normalizedCert.Version != nil {
 			certAttributes["version"] = types.Int32Value(*normalizedCert.Version)
+		}
+		if normalizedCert.SkipDnsCheck != nil {
+			certAttributes["skip_dns_check"] = types.BoolValue(*normalizedCert.SkipDnsCheck)
 		}
 
 		certificateObj, diags := types.ObjectValue(certificateTypes, certAttributes)
