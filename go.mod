@@ -12,9 +12,10 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.26.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.27.0
+	github.com/stackitcloud/stackit-sdk-go/experimental v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.17.1
-	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.2
+	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.3
 	github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.9.1
@@ -38,13 +39,13 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.2
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.4
-	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.20.1
-	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.1
+	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.21.0
+	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.2
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.1
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.21.1
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.18.0
@@ -60,7 +61,6 @@ require (
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/experimental v0.1.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 )
 
@@ -98,7 +98,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.2.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.3
+	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.4
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
