@@ -106,6 +106,16 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	return new(s.ValueString())
 }
 
+// StringPointerValueNullIfEmpty converts a string pointer to types.String, treating an empty
+// string as null. Some APIs return "" instead of omitting unset optional fields, which would
+// otherwise mismatch a null config for Optional, non-Computed attributes.
+func StringPointerValueNullIfEmpty(s *string) types.String {
+	if s == nil || *s == "" {
+		return types.StringNull()
+	}
+	return types.StringValue(*s)
+}
+
 // StringValueToPointer converts basetypes.StringValue to a pointer to enum.
 // It returns nil if the value is null or unknown.
 func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
