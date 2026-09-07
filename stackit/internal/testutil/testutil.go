@@ -90,6 +90,7 @@ var (
 	ModelServingCustomEndpoint      = customEndpointConfig{envVarName: "TF_ACC_MODELSERVING_CUSTOM_ENDPOINT", providerName: "modelserving_custom_endpoint"}
 	ModelExperimentsCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_MODELEXPERIMENTS_CUSTOM_ENDPOINT", providerName: "modelexperiments_custom_endpoint"}
 	AuthorizationCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_AUTHORIZATION_CUSTOM_ENDPOINT", providerName: "authorization_custom_endpoint"}
+	AutomationCustomEndpoint        = customEndpointConfig{envVarName: "TF_ACC_AUTOMATION_CUSTOM_ENDPOINT", providerName: "automation_custom_endpoint"}
 	MongoDBFlexCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT", providerName: "mongodbflex_custom_endpoint"}
 	OpenSearchCustomEndpoint        = customEndpointConfig{envVarName: "TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT", providerName: "opensearch_custom_endpoint"}
 	ObservabilityCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT", providerName: "observability_custom_endpoint"}
@@ -131,6 +132,7 @@ var (
 		ModelServingCustomEndpoint,
 		ModelExperimentsCustomEndpoint,
 		AuthorizationCustomEndpoint,
+		AutomationCustomEndpoint,
 		MongoDBFlexCustomEndpoint,
 		OpenSearchCustomEndpoint,
 		ObservabilityCustomEndpoint,
