@@ -16,10 +16,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
@@ -54,6 +56,16 @@ type BGPGatewayConfigModel struct {
 	OverrideAdvertisedRoutes types.List  `tfsdk:"override_advertised_routes"`
 }
 
+type NetworkConfigModel struct {
+	PredefinedNetworkPrefix types.String `tfsdk:"predefined_network_prefix"`
+	RoutingTableId          types.String `tfsdk:"routing_table_id"`
+}
+
+var networkConfigTypes = map[string]attr.Type{
+	"predefined_network_prefix": basetypes.StringType{},
+	"routing_table_id":          basetypes.StringType{},
+}
+
 type Model struct {
 	Id                types.String            `tfsdk:"id"` // needed by TF
 	GatewayId         types.String            `tfsdk:"gateway_id"`
@@ -64,6 +76,7 @@ type Model struct {
 	RoutingType       types.String            `tfsdk:"routing_type"`
 	AvailabilityZones *AvailabilityZonesModel `tfsdk:"availability_zones"`
 	Bgp               *BGPGatewayConfigModel  `tfsdk:"bgp"`
+	NetworkConfig     types.Object            `tfsdk:"network_config"`
 	Labels            types.Map               `tfsdk:"labels"`
 }
 
@@ -81,7 +94,10 @@ var schemaDescriptions = map[string]string{
 	"bgp":                            fmt.Sprintf("BGP configuration. Only applicable when routing_type is %s.", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
 	"bgp_local_asn":                  "Local ASN for BGP (private ASN range, 64512-4294967294).",
 	"bgp_override_advertised_routes": "List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.",
-	"labels":                         "Map of custom labels (key-value string pairs).",
+	"network_config":                 "Network configuration for the VPN gateway.",
+	"network_config_predefined_network_prefix": "The IPv4 network prefix (CIDR notation) allocated for the VPN gateway. Must have a prefix length of `/28` or larger. Once the gateway is created, this attribute cannot be changed.",
+	"network_config_routing_table_id":          "Custom routing table ID for the VPN gateway.",
+	"labels":                                   "Map of custom labels (key-value string pairs).",
 }
 
 type gatewayResource struct {
@@ -213,6 +229,32 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							listvalidator.ValueStringsAre(validate.CIDR()),
 						},
 					},
+				},
+			},
+			"network_config": schema.SingleNestedAttribute{
+				Description: schemaDescriptions["network_config"],
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"predefined_network_prefix": schema.StringAttribute{
+						Description: schemaDescriptions["network_config_predefined_network_prefix"],
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.CIDR(),
+						},
+					},
+					"routing_table_id": schema.StringAttribute{
+						Description: schemaDescriptions["network_config_routing_table_id"],
+						Optional:    true,
+					},
+				},
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -525,6 +567,20 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 		payload.Bgp = bgpConfig
 	}
 
+	if !tfutils.IsUndefined(model.NetworkConfig) {
+		var networkConfigModel NetworkConfigModel
+		diags := model.NetworkConfig.As(ctx, &networkConfigModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		networkConfig, err := toNetworkConfigPayload(&networkConfigModel)
+		if err != nil {
+			return nil, err
+		}
+		payload.NetworkConfig = networkConfig
+	}
+
 	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
 		return nil, err
@@ -532,6 +588,23 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 	payload.Labels = &labels
 
 	return payload, nil
+}
+
+func toNetworkConfigPayload(model *NetworkConfigModel) (*vpn.NetworkConfig, error) {
+	networkConfig := &vpn.NetworkConfig{}
+	if !tfutils.IsUndefined(model.PredefinedNetworkPrefix) {
+		// The generated SDK types PredefinedNetworkPrefix as []string, but the API actually
+		// expects a plain string. Route it through AdditionalProperties to get the correct
+		// wire format until the upstream OpenAPI spec is fixed, see
+		// https://github.com/stackitcloud/stackit-api-specifications/issues/69.
+		networkConfig.AdditionalProperties = map[string]interface{}{
+			"predefinedNetworkPrefix": model.PredefinedNetworkPrefix.ValueString(),
+		}
+	}
+	if !tfutils.IsUndefined(model.RoutingTableId) {
+		networkConfig.RoutingTableId = model.RoutingTableId.ValueStringPointer()
+	}
+	return networkConfig, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPayload, error) {
@@ -564,6 +637,20 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 			}
 		}
 		payload.Bgp = bgpConfig
+	}
+
+	if !tfutils.IsUndefined(model.NetworkConfig) {
+		var networkConfigModel NetworkConfigModel
+		diags := model.NetworkConfig.As(ctx, &networkConfigModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		networkConfig, err := toNetworkConfigPayload(&networkConfigModel)
+		if err != nil {
+			return nil, err
+		}
+		payload.NetworkConfig = networkConfig
 	}
 
 	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
@@ -615,6 +702,32 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 		bgpModel.OverrideAdvertisedRoutes = listVal
 
 		model.Bgp = bgpModel
+	}
+
+	if gateway.NetworkConfig != nil {
+		// The generated SDK types PredefinedNetworkPrefix as []string, but the API actually
+		// returns/expects a plain string. Take the first element until the upstream OpenAPI
+		// spec is fixed, see https://github.com/stackitcloud/stackit-api-specifications/issues/69.
+		predefinedNetworkPrefix := types.StringNull()
+		if len(gateway.NetworkConfig.PredefinedNetworkPrefix) > 0 {
+			predefinedNetworkPrefix = types.StringValue(gateway.NetworkConfig.PredefinedNetworkPrefix[0])
+		}
+
+		routingTableId := types.StringNull()
+		if gateway.NetworkConfig.RoutingTableId != nil {
+			routingTableId = types.StringValue(*gateway.NetworkConfig.RoutingTableId)
+		}
+
+		networkConfigObject, diags := types.ObjectValue(networkConfigTypes, map[string]attr.Value{
+			"predefined_network_prefix": predefinedNetworkPrefix,
+			"routing_table_id":          routingTableId,
+		})
+		if diags.HasError() {
+			return fmt.Errorf("mapping network config: %w", core.DiagsToError(diags))
+		}
+		model.NetworkConfig = networkConfigObject
+	} else {
+		model.NetworkConfig = types.ObjectNull(networkConfigTypes)
 	}
 
 	labels, err := tfutils.MapLabels(ctx, gateway.Labels, model.Labels)
