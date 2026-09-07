@@ -41,7 +41,7 @@ resource "stackit_dremio_user" "dremio_user" {
 resource "stackit_intakes" "example" {
   project_id                   = var.project_id
   runner_id                    = stackit_intake_runner.example.runner_id
-  name                         = var.intake_name
+  display_name                 = var.intake_name
   catalog_auth_type            = "dremio"
   catalog_warehouse            = "default"
   catalog_uri                  = startswith(stackit_dremio_instance.dremio.endpoints.catalog, "https://") ? stackit_dremio_instance.dremio.endpoints.catalog : "https://${stackit_dremio_instance.dremio.endpoints.catalog}"

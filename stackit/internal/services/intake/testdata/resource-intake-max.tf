@@ -13,6 +13,7 @@ variable "dremio_user_last_name" {}
 variable "dremio_user_name" {}
 variable "dremio_user_password" {}
 variable "dremio_personal_access_token" {}
+variable "catalog_namespace" {}
 
 resource "stackit_intake_runner" "example" {
   project_id            = var.project_id
@@ -44,11 +45,11 @@ resource "stackit_dremio_user" "dremio_user" {
 }
 
 resource "stackit_intakes" "example" {
-  project_id  = var.project_id
-  region      = var.region
-  runner_id   = stackit_intake_runner.example.runner_id
-  name        = var.intake_name
-  description = var.description
+  project_id   = var.project_id
+  region       = var.region
+  runner_id    = stackit_intake_runner.example.runner_id
+  display_name = var.intake_name
+  description  = var.description
 
   labels = {
     "env"        = "development"
@@ -56,7 +57,7 @@ resource "stackit_intakes" "example" {
   }
 
   catalog_auth_type            = "dremio"
-  catalog_namespace            = "intake"
+  catalog_namespace            = var.catalog_namespace
   catalog_warehouse            = "default"
   catalog_uri                  = startswith(stackit_dremio_instance.dremio.endpoints.catalog, "https://") ? stackit_dremio_instance.dremio.endpoints.catalog : "https://${stackit_dremio_instance.dremio.endpoints.catalog}"
   dremio_token_endpoint        = startswith(stackit_dremio_instance.dremio.endpoints.ui, "https://") ? "${stackit_dremio_instance.dremio.endpoints.ui}/oauth/token" : "https://${stackit_dremio_instance.dremio.endpoints.ui}/oauth/token"

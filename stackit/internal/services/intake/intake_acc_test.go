@@ -108,6 +108,7 @@ func testIntakesConfigVarsMax() config.Variables {
 		"dremio_user_name":             config.StringVariable(dremioUserMax),
 		"dremio_user_password":         config.StringVariable(fmt.Sprintf("TestAcc12!@%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))),
 		"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+		"catalog_namespace":            config.StringVariable("intake"),
 	}
 }
 
@@ -138,6 +139,7 @@ func testIntakesConfigVarsMaxUpdated(base config.Variables) config.Variables {
 	tempConfig["intake_name"] = config.StringVariable(intakeNameMaxUpd)
 	tempConfig["description"] = config.StringVariable("Updated full intake description")
 	tempConfig["max_messages_per_hour"] = config.IntegerVariable(1100)
+	tempConfig["catalog_namespace"] = config.StringVariable("intake-updated")
 	return tempConfig
 }
 
@@ -527,11 +529,13 @@ func TestAccIntakesMin(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(cfg["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "display_name", testutil.ConvertConfigVariable(cfg["intake_name"])),
 					resource.TestCheckResourceAttrSet(intakesResource, "intake_id"),
 					resource.TestCheckResourceAttrSet(intakesResource, "runner_id"),
 					resource.TestCheckResourceAttrSet(intakesResource, "id"),
 					resource.TestCheckResourceAttrSet(intakesResource, "uri"),
+					resource.TestCheckResourceAttrSet(intakesResource, "topic"),
+					resource.TestCheckResourceAttrSet(intakesResource, "dead_letter_topic"),
 					resource.TestCheckResourceAttrSet(intakesResource, "create_time"),
 					resource.TestCheckResourceAttr(intakesResource, "region", testutil.Region),
 				),
@@ -550,10 +554,12 @@ func TestAccIntakesMin(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakesResource, "project_id", "data.stackit_intakes.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakesResource, "intake_id", "data.stackit_intakes.example", "intake_id"),
-					resource.TestCheckResourceAttrPair(intakesResource, "name", "data.stackit_intakes.example", "name"),
+					resource.TestCheckResourceAttrPair(intakesResource, "display_name", "data.stackit_intakes.example", "display_name"),
 					resource.TestCheckResourceAttrPair(intakesResource, "runner_id", "data.stackit_intakes.example", "runner_id"),
 					resource.TestCheckResourceAttrPair(intakesResource, "region", "data.stackit_intakes.example", "region"),
 					resource.TestCheckResourceAttrPair(intakesResource, "uri", "data.stackit_intakes.example", "uri"),
+					resource.TestCheckResourceAttrPair(intakesResource, "topic", "data.stackit_intakes.example", "topic"),
+					resource.TestCheckResourceAttrPair(intakesResource, "dead_letter_topic", "data.stackit_intakes.example", "dead_letter_topic"),
 					resource.TestCheckResourceAttrPair(intakesResource, "create_time", "data.stackit_intakes.example", "create_time"),
 				),
 			},
@@ -632,7 +638,7 @@ func TestAccIntakesMax(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(cfg["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "display_name", testutil.ConvertConfigVariable(cfg["intake_name"])),
 					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(cfg["description"])),
 					resource.TestCheckResourceAttr(intakesResource, "labels.env", "development"),
 					resource.TestCheckResourceAttr(intakesResource, "labels.created_by", "terraform-provider-stackit"),
@@ -658,7 +664,7 @@ func TestAccIntakesMax(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakesResource, "project_id", "data.stackit_intakes.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakesResource, "intake_id", "data.stackit_intakes.example", "intake_id"),
-					resource.TestCheckResourceAttrPair(intakesResource, "name", "data.stackit_intakes.example", "name"),
+					resource.TestCheckResourceAttrPair(intakesResource, "display_name", "data.stackit_intakes.example", "display_name"),
 					resource.TestCheckResourceAttrPair(intakesResource, "description", "data.stackit_intakes.example", "description"),
 					resource.TestCheckResourceAttrPair(intakesResource, "catalog_auth_type", "data.stackit_intakes.example", "catalog_auth_type"),
 					resource.TestCheckResourceAttrPair(intakesResource, "catalog_namespace", "data.stackit_intakes.example", "catalog_namespace"),
@@ -687,8 +693,9 @@ func TestAccIntakesMax(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(cfgUpdated["intake_name"])),
+					resource.TestCheckResourceAttrPair(intakesResource, "display_name", "data.stackit_intakes.example", "display_name"),
 					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(cfgUpdated["description"])),
+					resource.TestCheckResourceAttr(intakesResource, "catalog_namespace", "intake-updated"),
 					resource.TestCheckResourceAttrSet(intakesResource, "intake_id"),
 				),
 			},

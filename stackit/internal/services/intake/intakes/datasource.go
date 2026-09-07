@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -25,6 +26,30 @@ import (
 var (
 	_ datasource.DataSource = &intakesDataSource{}
 )
+
+// DataSourceModel is the internal model of the terraform data source
+type DataSourceModel struct {
+	Id                  types.String `tfsdk:"id"` // needed by TF
+	ProjectId           types.String `tfsdk:"project_id"`
+	RunnerId            types.String `tfsdk:"runner_id"`
+	IntakeId            types.String `tfsdk:"intake_id"`
+	DisplayName         types.String `tfsdk:"display_name"`
+	Description         types.String `tfsdk:"description"`
+	Labels              types.Map    `tfsdk:"labels"`
+	Region              types.String `tfsdk:"region"`
+	Uri                 types.String `tfsdk:"uri"`
+	Topic               types.String `tfsdk:"topic"`
+	DeadLetterTopic     types.String `tfsdk:"dead_letter_topic"`
+	CreateTime          types.String `tfsdk:"create_time"`
+	DremioTokenEndpoint types.String `tfsdk:"dremio_token_endpoint"`
+	CatalogAuthType     types.String `tfsdk:"catalog_auth_type"`
+	CatalogNamespace    types.String `tfsdk:"catalog_namespace"`
+	CatalogPartitioning types.String `tfsdk:"catalog_partitioning"`
+	CatalogPartitionBy  types.List   `tfsdk:"catalog_partition_by"`
+	CatalogTableName    types.String `tfsdk:"catalog_table_name"`
+	CatalogUri          types.String `tfsdk:"catalog_uri"`
+	CatalogWarehouse    types.String `tfsdk:"catalog_warehouse"`
+}
 
 // NewIntakesDataSource is a helper function to simplify the provider implementation
 func NewIntakesDataSource() datasource.DataSource {
@@ -58,31 +83,8 @@ func (d *intakesDataSource) Configure(ctx context.Context, req datasource.Config
 
 // Schema defines the schema for the data source
 func (d *intakesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{ //nolint:gosec // descriptions
-		"main":                         "Datasource for STACKIT Intake.",
-		"id":                           "Terraform's internal resource identifier. It is structured as `project_id`,`region`,`intake_id`.",
-		"project_id":                   "STACKIT Project ID to which the intake is associated.",
-		"intake_id":                    "The intake ID.",
-		"runner_id":                    "The runner ID.",
-		"name":                         "The name of the intake.",
-		"description":                  "The description of the intake.",
-		"labels":                       "User-defined labels.",
-		"uri":                          "The URI of the intake.",
-		"create_time":                  "The creation time of the intake.",
-		"region":                       "The resource region. If not defined, the provider region is used.",
-		"dremio_personal_access_token": "The Dremio personal access token.",
-		"dremio_token_endpoint":        "The Dremio token endpoint.",
-		"catalog_auth_type":            "The catalog authentication type.",
-		"catalog_namespace":            "The catalog namespace.",
-		"catalog_partitioning":         "The catalog partitioning.",
-		"catalog_partition_by":         "The catalog partition by.",
-		"catalog_table_name":           "The catalog table name.",
-		"catalog_uri":                  "The catalog URI.",
-		"catalog_warehouse":            "The catalog warehouse.",
-	}
-
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description: descriptions["datasource_main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -108,8 +110,8 @@ func (d *intakesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: descriptions["runner_id"],
 				Computed:    true,
 			},
-			"name": schema.StringAttribute{
-				Description: descriptions["name"],
+			"display_name": schema.StringAttribute{
+				Description: descriptions["display_name"],
 				Computed:    true,
 			},
 			"description": schema.StringAttribute{
@@ -125,6 +127,14 @@ func (d *intakesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: descriptions["uri"],
 				Computed:    true,
 			},
+			"topic": schema.StringAttribute{
+				Description: descriptions["topic"],
+				Computed:    true,
+			},
+			"dead_letter_topic": schema.StringAttribute{
+				Description: descriptions["dead_letter_topic"],
+				Computed:    true,
+			},
 			"create_time": schema.StringAttribute{
 				Description: descriptions["create_time"],
 				Computed:    true,
@@ -132,11 +142,6 @@ func (d *intakesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"region": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["region"],
-			},
-			"dremio_personal_access_token": schema.StringAttribute{
-				Description: descriptions["dremio_personal_access_token"],
-				Computed:    true,
-				Sensitive:   true,
 			},
 			"dremio_token_endpoint": schema.StringAttribute{
 				Description: descriptions["dremio_token_endpoint"],
@@ -177,7 +182,7 @@ func (d *intakesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (d *intakesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -207,7 +212,7 @@ func (d *intakesDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, intakeResp, &model, region)
+	err = mapDataSourceFields(ctx, intakeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading intake", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -219,4 +224,70 @@ func (d *intakesDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 	tflog.Info(ctx, "Intake read")
+}
+
+func mapDataSourceFields(ctx context.Context, intakeResp *intake.IntakeResponse, model *DataSourceModel, region string) error {
+	if intakeResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(),
+		region,
+		intakeResp.Id,
+	)
+
+	labels, err := utils.MapLabels(ctx, &intakeResp.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+
+	model.IntakeId = types.StringValue(intakeResp.Id)
+	model.RunnerId = types.StringValue(intakeResp.IntakeRunnerId)
+	model.DisplayName = types.StringValue(intakeResp.DisplayName)
+	model.Labels = labels
+	model.Description = types.StringPointerValue(intakeResp.Description)
+	model.Region = types.StringValue(region)
+	model.Uri = types.StringValue(intakeResp.Uri)
+	model.Topic = types.StringValue(intakeResp.Topic)
+	model.DeadLetterTopic = types.StringValue(intakeResp.DeadLetterTopic)
+	model.CreateTime = types.StringValue(intakeResp.CreateTime.String())
+
+	model.CatalogNamespace = types.StringPointerValue(intakeResp.Catalog.Namespace)
+	model.CatalogTableName = types.StringPointerValue(intakeResp.Catalog.TableName)
+	model.CatalogUri = types.StringValue(intakeResp.Catalog.Uri)
+	model.CatalogWarehouse = types.StringValue(intakeResp.Catalog.Warehouse)
+
+	if intakeResp.Catalog.Partitioning != nil {
+		model.CatalogPartitioning = types.StringValue(string(*intakeResp.Catalog.Partitioning))
+	} else {
+		model.CatalogPartitioning = types.StringNull()
+	}
+
+	if intakeResp.Catalog.PartitionBy != nil {
+		partitionByList, diags := types.ListValueFrom(ctx, types.StringType, intakeResp.Catalog.PartitionBy)
+		if diags.HasError() {
+			return fmt.Errorf("converting partition_by list: %v", diags)
+		}
+		model.CatalogPartitionBy = partitionByList
+	} else {
+		model.CatalogPartitionBy = types.ListNull(types.StringType)
+	}
+
+	if intakeResp.Catalog.Auth != nil {
+		model.CatalogAuthType = types.StringValue(string(intakeResp.Catalog.Auth.Type))
+		if intakeResp.Catalog.Auth.Dremio != nil {
+			model.DremioTokenEndpoint = types.StringValue(intakeResp.Catalog.Auth.Dremio.TokenEndpoint)
+		} else {
+			model.DremioTokenEndpoint = types.StringNull()
+		}
+	} else {
+		model.CatalogAuthType = types.StringNull()
+		model.DremioTokenEndpoint = types.StringNull()
+	}
+
+	return nil
 }

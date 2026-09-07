@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -42,13 +45,17 @@ type Model struct {
 	ProjectId           types.String `tfsdk:"project_id"`
 	RunnerId            types.String `tfsdk:"runner_id"`
 	IntakeId            types.String `tfsdk:"intake_id"`
-	Name                types.String `tfsdk:"name"`
+	DisplayName         types.String `tfsdk:"display_name"`
 	Description         types.String `tfsdk:"description"`
 	Labels              types.Map    `tfsdk:"labels"`
 	Region              types.String `tfsdk:"region"`
 	Uri                 types.String `tfsdk:"uri"`
+	Topic               types.String `tfsdk:"topic"`
+	DeadLetterTopic     types.String `tfsdk:"dead_letter_topic"`
 	CreateTime          types.String `tfsdk:"create_time"`
 	DremioPAT           types.String `tfsdk:"dremio_personal_access_token"`
+	DremioPATWo         types.String `tfsdk:"dremio_personal_access_token_wo"`
+	DremioPATWoVersion  types.Int64  `tfsdk:"dremio_personal_access_token_wo_version"`
 	DremioTokenEndpoint types.String `tfsdk:"dremio_token_endpoint"`
 	CatalogAuthType     types.String `tfsdk:"catalog_auth_type"`
 	CatalogNamespace    types.String `tfsdk:"catalog_namespace"`
@@ -121,31 +128,38 @@ func (r *intakesResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	}
 }
 
-// Schema defines the schema for the data source
-func (r *intakesResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{ //nolint:gosec // descriptions
-		"main":                         "Manages STACKIT Intake.",
-		"id":                           "Terraform's internal resource identifier. It is structured as `project_id`,`region`,`intake_id`.",
-		"project_id":                   "STACKIT Project ID to which the intake is associated.",
-		"runner_id":                    "The runner ID.",
-		"intake_id":                    "The intake ID.",
-		"name":                         "The name of the intake.",
-		"region":                       "The resource region. If not defined, the provider region is used.",
-		"description":                  "The description of the intake.",
-		"labels":                       "User-defined labels.",
-		"uri":                          "The URI of the intake.",
-		"create_time":                  "The creation time of the intake.",
-		"dremio_personal_access_token": "The Dremio personal access token.",
-		"dremio_token_endpoint":        "The Dremio token endpoint.",
-		"catalog_auth_type":            "The catalog authentication type.",
-		"catalog_namespace":            "The catalog namespace.",
-		"catalog_partitioning":         "The catalog partitioning.",
-		"catalog_partition_by":         "The catalog partition by.",
-		"catalog_table_name":           "The catalog table name.",
-		"catalog_uri":                  "The catalog URI.",
-		"catalog_warehouse":            "The catalog warehouse.",
-	}
+var descriptions = map[string]string{ //nolint:gosec // descriptions
+	"main":                         "Manages STACKIT Intake.",
+	"datasource_main":              "Datasource for STACKIT Intake.",
+	"id":                           "Terraform's internal resource identifier. It is structured as `project_id`,`region`,`intake_id`.",
+	"project_id":                   "STACKIT Project ID to which the intake is associated.",
+	"runner_id":                    "The runner ID.",
+	"intake_id":                    "The intake ID.",
+	"display_name":                 "The display name of the intake.",
+	"region":                       "The resource region. If not defined, the provider region is used.",
+	"description":                  "The description of the intake.",
+	"labels":                       "User-defined labels.",
+	"uri":                          "The URI of the intake.",
+	"topic":                        "The topic to publish data to.",
+	"dead_letter_topic":            "The topic where undelivered messages are published (Dead Letter Queue).",
+	"create_time":                  "The creation time of the intake.",
+	"dremio_personal_access_token": "The Dremio personal access token. Write-only argument `dremio_personal_access_token_wo` should be preferred.",
+	"dremio_personal_access_token_wo": "The Dremio personal access token. Write-only - never stored in state and never returned by the API. " +
+		"To rotate the token, update this value AND increment `dremio_personal_access_token_wo_version`. Changing this field alone will NOT trigger an update.",
+	"dremio_personal_access_token_wo_version": "User-managed rotation counter for `dremio_personal_access_token_wo`. Must be incremented every time `dremio_personal_access_token_wo` is changed. " +
+		"Terraform diffs this field to detect token rotations - changing `dremio_personal_access_token_wo` alone will NOT trigger an update because it is write-only and never stored in state.",
+	"dremio_token_endpoint": "The Dremio token endpoint.",
+	"catalog_auth_type":     "The catalog authentication type.",
+	"catalog_namespace":     "The catalog namespace.",
+	"catalog_partitioning":  "The catalog partitioning.",
+	"catalog_partition_by":  "The catalog partition by.",
+	"catalog_table_name":    "The catalog table name.",
+	"catalog_uri":           "The catalog URI.",
+	"catalog_warehouse":     "The catalog warehouse.",
+}
 
+// Schema defines the schema for the resource
+func (r *intakesResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -182,9 +196,12 @@ func (r *intakesResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"name": schema.StringAttribute{
-				Description: descriptions["name"],
+			"display_name": schema.StringAttribute{
+				Description: descriptions["display_name"],
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
@@ -210,6 +227,20 @@ func (r *intakesResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"topic": schema.StringAttribute{
+				Description: descriptions["topic"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"dead_letter_topic": schema.StringAttribute{
+				Description: descriptions["dead_letter_topic"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"create_time": schema.StringAttribute{
 				Description: descriptions["create_time"],
 				Computed:    true,
@@ -229,6 +260,34 @@ func (r *intakesResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: descriptions["dremio_personal_access_token"],
 				Optional:    true,
 				Sensitive:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.MatchRoot("dremio_personal_access_token_wo"),
+						path.MatchRoot("dremio_personal_access_token_wo_version"),
+					),
+					stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot("dremio_personal_access_token_wo")),
+				},
+			},
+			"dremio_personal_access_token_wo": schema.StringAttribute{
+				Description: descriptions["dremio_personal_access_token_wo"],
+				Optional:    true,
+				WriteOnly:   true,
+				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(path.MatchRoot("dremio_personal_access_token")),
+					stringvalidator.AlsoRequires(path.MatchRoot("dremio_personal_access_token_wo_version")),
+				},
+			},
+			"dremio_personal_access_token_wo_version": schema.Int64Attribute{
+				Description: descriptions["dremio_personal_access_token_wo_version"],
+				Optional:    true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot("dremio_personal_access_token_wo")),
+					int64validator.ConflictsWith(path.MatchRoot("dremio_personal_access_token")),
+				},
 			},
 			"dremio_token_endpoint": schema.StringAttribute{
 				Description: descriptions["dremio_token_endpoint"],
@@ -281,18 +340,16 @@ func (r *intakesResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"catalog_uri": schema.StringAttribute{
 				Description: descriptions["catalog_uri"],
-				Optional:    true,
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"catalog_warehouse": schema.StringAttribute{
 				Description: descriptions["catalog_warehouse"],
-				Optional:    true,
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 				},
 			},
 		},
@@ -301,8 +358,9 @@ func (r *intakesResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *intakesResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model, configModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -314,7 +372,7 @@ func (r *intakesResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(ctx, &model, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating intake", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -402,9 +460,10 @@ func (r *intakesResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *intakesResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model, state Model
+	var model, state, configModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -418,7 +477,7 @@ func (r *intakesResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "intake_id", intakeId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(ctx, &model, &state)
+	payload, err := toUpdatePayload(ctx, &model, &state, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating intake", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -534,11 +593,13 @@ func mapFields(ctx context.Context, intakeResp *intake.IntakeResponse, model *Mo
 
 	model.IntakeId = types.StringValue(intakeResp.Id)
 	model.RunnerId = types.StringValue(intakeResp.IntakeRunnerId)
-	model.Name = types.StringValue(intakeResp.DisplayName)
+	model.DisplayName = types.StringValue(intakeResp.DisplayName)
 	model.Labels = labels
 	model.Description = types.StringPointerValue(intakeResp.Description)
 	model.Region = types.StringValue(region)
 	model.Uri = types.StringValue(intakeResp.Uri)
+	model.Topic = types.StringValue(intakeResp.Topic)
+	model.DeadLetterTopic = types.StringValue(intakeResp.DeadLetterTopic)
 	model.CreateTime = types.StringValue(intakeResp.CreateTime.String())
 
 	model.CatalogNamespace = types.StringPointerValue(intakeResp.Catalog.Namespace)
@@ -581,9 +642,14 @@ func mapFields(ctx context.Context, intakeResp *intake.IntakeResponse, model *Mo
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakePayload, error) {
+func toCreatePayload(ctx context.Context, model *Model, configModel ...*Model) (*intake.CreateIntakePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
+	}
+
+	var cfg *Model
+	if len(configModel) > 0 {
+		cfg = configModel[0]
 	}
 
 	labels, err := utils.LabelsToPayload(ctx, model.Labels)
@@ -612,13 +678,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakePay
 			Type: intake.CatalogAuthType(authType),
 		}
 		if authType == "dremio" {
-			auth.Dremio = intake.NewDremioAuth(model.DremioPAT.ValueString(), model.DremioTokenEndpoint.ValueString())
+			pat := getDremioPATForCreate(model, cfg)
+			auth.Dremio = intake.NewDremioAuth(pat, model.DremioTokenEndpoint.ValueString())
 		}
 	}
 
 	return &intake.CreateIntakePayload{
 		Description:    conversion.StringValueToPointer(model.Description),
-		DisplayName:    model.Name.ValueString(),
+		DisplayName:    model.DisplayName.ValueString(),
 		IntakeRunnerId: model.RunnerId.ValueString(),
 		Labels:         labels,
 		Catalog: intake.IntakeCatalog{
@@ -631,6 +698,28 @@ func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakePay
 			Warehouse:    model.CatalogWarehouse.ValueString(),
 		},
 	}, nil
+}
+
+func getDremioPATForCreate(planModel, configModel *Model) string {
+	if planModel != nil && !utils.IsUndefined(planModel.DremioPAT) {
+		return planModel.DremioPAT.ValueString()
+	} else if configModel != nil && !utils.IsUndefined(configModel.DremioPATWo) &&
+		planModel != nil && !utils.IsUndefined(planModel.DremioPATWoVersion) {
+		return configModel.DremioPATWo.ValueString()
+	}
+	return ""
+}
+
+func getDremioPATForUpdate(planModel, stateModel, configModel *Model) *string {
+	if planModel != nil && !utils.IsUndefined(planModel.DremioPAT) {
+		return planModel.DremioPAT.ValueStringPointer()
+	} else if configModel != nil && !utils.IsUndefined(configModel.DremioPATWo) &&
+		planModel != nil && stateModel != nil {
+		if !planModel.DremioPATWoVersion.Equal(stateModel.DremioPATWoVersion) {
+			return configModel.DremioPATWo.ValueStringPointer()
+		}
+	}
+	return nil
 }
 
 func hasCatalogChanged(model, state *Model) bool {
@@ -661,6 +750,9 @@ func hasCatalogChanged(model, state *Model) bool {
 	if !model.DremioPAT.Equal(state.DremioPAT) {
 		return true
 	}
+	if !model.DremioPATWoVersion.Equal(state.DremioPATWoVersion) {
+		return true
+	}
 	if !model.DremioTokenEndpoint.Equal(state.DremioTokenEndpoint) {
 		return true
 	}
@@ -668,17 +760,22 @@ func hasCatalogChanged(model, state *Model) bool {
 }
 
 // Build UpdateIntakePayload from provider's model
-func toUpdatePayload(ctx context.Context, model, state *Model) (*intake.UpdateIntakePayload, error) {
+func toUpdatePayload(ctx context.Context, model, state *Model, configModel ...*Model) (*intake.UpdateIntakePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
+	}
+
+	var cfg *Model
+	if len(configModel) > 0 {
+		cfg = configModel[0]
 	}
 
 	payload := &intake.UpdateIntakePayload{}
 	if !model.RunnerId.IsNull() && !model.RunnerId.IsUnknown() {
 		payload.IntakeRunnerId = model.RunnerId.ValueString()
 	}
-	if !model.Name.IsNull() && !model.Name.IsUnknown() {
-		payload.DisplayName = conversion.StringValueToPointer(model.Name)
+	if !model.DisplayName.IsNull() && !model.DisplayName.IsUnknown() {
+		payload.DisplayName = conversion.StringValueToPointer(model.DisplayName)
 	}
 	if !model.Description.IsNull() && !model.Description.IsUnknown() {
 		payload.Description = conversion.StringValueToPointer(model.Description)
@@ -730,8 +827,9 @@ func toUpdatePayload(ctx context.Context, model, state *Model) (*intake.UpdateIn
 			}
 			if authType == "dremio" {
 				dremioAuth := &intake.DremioAuthPatch{}
-				if !model.DremioPAT.IsNull() && !model.DremioPAT.IsUnknown() {
-					dremioAuth.PersonalAccessToken = conversion.StringValueToPointer(model.DremioPAT)
+				pat := getDremioPATForUpdate(model, state, cfg)
+				if pat != nil {
+					dremioAuth.PersonalAccessToken = pat
 				}
 				if !model.DremioTokenEndpoint.IsNull() && !model.DremioTokenEndpoint.IsUnknown() {
 					dremioAuth.TokenEndpoint = conversion.StringValueToPointer(model.DremioTokenEndpoint)

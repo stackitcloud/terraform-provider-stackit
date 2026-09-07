@@ -41,11 +41,12 @@ data "stackit_intakes" "example" {
 - `catalog_uri` (String) The catalog URI.
 - `catalog_warehouse` (String) The catalog warehouse.
 - `create_time` (String) The creation time of the intake.
+- `dead_letter_topic` (String) The topic where undelivered messages are published (Dead Letter Queue).
 - `description` (String) The description of the intake.
-- `dremio_personal_access_token` (String, Sensitive) The Dremio personal access token.
+- `display_name` (String) The display name of the intake.
 - `dremio_token_endpoint` (String) The Dremio token endpoint.
 - `id` (String) Terraform's internal resource identifier. It is structured as `project_id`,`region`,`intake_id`.
 - `labels` (Map of String) User-defined labels.
-- `name` (String) The name of the intake.
 - `runner_id` (String) The runner ID.
+- `topic` (String) The topic to publish data to.
 - `uri` (String) The URI of the intake.
