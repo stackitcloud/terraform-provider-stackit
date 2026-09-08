@@ -232,6 +232,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					mapplanmodifier.RequiresReplace(),
 				},
 			},
+			// Roles is not returned by the API and there is no get endpoint that fetches them. So currently there is no way to verfiy the fields were set by terraform, and update is also not possible.
 			"roles": schema.SetAttribute{
 				Description: "A list of roles to assign to the generated credentials. " +
 					"If not provided, the standard default role 'policymaker' will be assigned. " +
