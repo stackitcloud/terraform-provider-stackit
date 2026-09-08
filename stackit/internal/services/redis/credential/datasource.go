@@ -76,7 +76,7 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 // Schema defines the schema for the data source.
 func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
-		"main":          "Redis credential data source schema. Must have a `region` specified in the provider configuration.",
+		"main":          "Redis credential data source schema. Must have a `region` specified in the provider configuration. This data source is deprecated and will be removed after August 2027, use stackit_valkey_credential instead. For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
 		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the Redis instance.",
@@ -86,7 +86,8 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	}
 
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description:        descriptions["main"],
+		DeprecationMessage: "The stackit_redis_credential data source is deprecated and will be removed after August 2027. Use the stackit_valkey_credential data source instead. For more information on how to migrate, see the migration guide: https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

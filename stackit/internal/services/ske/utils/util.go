@@ -5,14 +5,11 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 )
 
 func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *ske.APIClient {
@@ -44,28 +41,4 @@ func IsEmptyExtension(extension *ske.Extension) bool {
 		return true
 	}
 	return false
-}
-
-// Deprecated: HasOsVersionMinChanged
-func HasOsVersionMinChanged(ctx context.Context, request planmodifier.StringRequest, response *stringplanmodifier.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
-	dependencyPath := request.Path.ParentPath().AtName("os_version_min")
-
-	var minVersionPlan types.String
-	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	var minVersionState types.String
-	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	if minVersionState == minVersionPlan {
-		response.UseStateForUnknown = true
-		return
-	}
 }

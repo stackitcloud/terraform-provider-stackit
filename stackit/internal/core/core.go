@@ -42,6 +42,7 @@ type ProviderData struct {
 	ALBCustomEndpoint               string
 	AlbWafCustomEndpoint            string
 	AuthorizationCustomEndpoint     string
+	AutomationCustomEndpoint        string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
 	DremioCustomEndpoint            string
@@ -75,6 +76,7 @@ type ProviderData struct {
 	ServiceAccountCustomEndpoint    string
 	TelemetryLinkCustomEndpoint     string
 	TelemetryRouterCustomEndpoint   string
+	ValkeyCustomEndpoint            string
 	VpnCustomEndpoint               string
 	EnableBetaResources             bool
 	Experiments                     []string

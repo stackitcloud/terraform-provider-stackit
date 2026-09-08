@@ -1,0 +1,237 @@
+package valkey
+
+import (
+	"context"
+	"fmt"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
+)
+
+func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
+	tests := []struct {
+		description string
+		state       Model
+		input       *valkey.CredentialsResponse
+		expected    Model
+		isValid     bool
+	}{
+		{
+			"default_values",
+			Model{
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			&valkey.CredentialsResponse{
+				Id:  "cid",
+				Raw: &valkey.RawCredentials{},
+			},
+			Model{
+				Id:                types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
+				CredentialId:      types.StringValue("cid"),
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue(testRegion),
+				Host:              types.StringValue(""),
+				Hosts:             types.ListNull(types.StringType),
+				LoadBalancedHost:  types.StringNull(),
+				Password:          types.StringValue(""),
+				Port:              types.Int32Null(),
+				Uri:               types.StringNull(),
+				Username:          types.StringValue(""),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			true,
+		},
+		{
+			"simple_values",
+			Model{
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			&valkey.CredentialsResponse{
+				Id: "cid",
+				Raw: &valkey.RawCredentials{
+					Credentials: valkey.Credentials{
+						Host: "host",
+						Hosts: []string{
+							"host_1",
+							"",
+						},
+						LoadBalancedHost: new("load_balanced_host"),
+						Password:         "password",
+						Port:             new(int32(1234)),
+						Uri:              new("uri"),
+						Username:         "username",
+					},
+				},
+			},
+			Model{
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
+				Host:         types.StringValue("host"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_1"),
+					types.StringValue(""),
+				}),
+				LoadBalancedHost:  types.StringValue("load_balanced_host"),
+				Password:          types.StringValue("password"),
+				Port:              types.Int32Value(1234),
+				Uri:               types.StringValue("uri"),
+				Username:          types.StringValue("username"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			true,
+		},
+		{
+			"hosts_unordered",
+			Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			&valkey.CredentialsResponse{
+				Id: "cid",
+				Raw: &valkey.RawCredentials{
+					Credentials: valkey.Credentials{
+						Host: "host",
+						Hosts: []string{
+							"",
+							"host_1",
+							"host_2",
+						},
+						LoadBalancedHost: new("load_balanced_host"),
+						Password:         "password",
+						Port:             new(int32(1234)),
+						Uri:              new("uri"),
+						Username:         "username",
+					},
+				},
+			},
+			Model{
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
+				Host:         types.StringValue("host"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+				LoadBalancedHost:  types.StringValue("load_balanced_host"),
+				Password:          types.StringValue("password"),
+				Port:              types.Int32Value(1234),
+				Uri:               types.StringValue("uri"),
+				Username:          types.StringValue("username"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			true,
+		},
+		{
+			"null_fields_and_int_conversions",
+			Model{
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			&valkey.CredentialsResponse{
+				Id: "cid",
+				Raw: &valkey.RawCredentials{
+					Credentials: valkey.Credentials{
+						Host:             "",
+						Hosts:            []string{},
+						LoadBalancedHost: nil,
+						Password:         "",
+						Port:             new(int32(2123456789)),
+						Uri:              nil,
+						Username:         "",
+					},
+				},
+			},
+			Model{
+				Id:                types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
+				CredentialId:      types.StringValue("cid"),
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue(testRegion),
+				Host:              types.StringValue(""),
+				Hosts:             types.ListValueMust(types.StringType, []attr.Value{}),
+				LoadBalancedHost:  types.StringNull(),
+				Password:          types.StringValue(""),
+				Port:              types.Int32Value(2123456789),
+				Uri:               types.StringNull(),
+				Username:          types.StringValue(""),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			true,
+		},
+		{
+			"nil_response",
+			Model{
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			nil,
+			Model{},
+			false,
+		},
+		{
+			"no_resource_id",
+			Model{
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			&valkey.CredentialsResponse{},
+			Model{},
+			false,
+		},
+		{
+			"nil_raw_credential",
+			Model{
+				InstanceId:        types.StringValue("iid"),
+				ProjectId:         types.StringValue("pid"),
+				RotateWhenChanged: types.MapNull(types.StringType),
+			},
+			&valkey.CredentialsResponse{
+				Id: "cid",
+			},
+			Model{},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			err := mapFields(context.Background(), tt.input, &tt.state, testRegion)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(tt.state, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}

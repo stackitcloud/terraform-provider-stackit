@@ -414,7 +414,7 @@ func TestMapFields(t *testing.T) {
 				Name:       new("name"),
 				PlanName:   "plan1",
 				PlanId:     "planId",
-				Parameters: &map[string]string{"key": "value"},
+				Parameters: &map[string]*string{"key": new("value")},
 				Instance: observabilitySdk.InstanceSensitiveData{
 					MetricsRetentionTimeRaw: int32(60),
 					MetricsRetentionTime1h:  int32(30),
@@ -481,7 +481,7 @@ func TestMapFields(t *testing.T) {
 				Name:       new("name"),
 				PlanName:   "plan1",
 				PlanId:     "planId",
-				Parameters: &map[string]string{"key": "value"},
+				Parameters: &map[string]*string{"key": new("value")},
 			},
 			&observabilitySdk.ListACLResponse{
 				Acl: []string{
@@ -644,7 +644,7 @@ func TestMapFields(t *testing.T) {
 				Name:       new("name"),
 				PlanName:   "plan1",
 				PlanId:     "planId",
-				Parameters: &map[string]string{"key": "value"},
+				Parameters: &map[string]*string{"key": new("value")},
 				Instance: observabilitySdk.InstanceSensitiveData{
 					MetricsRetentionTimeRaw: int32(30),
 					MetricsRetentionTime1h:  int32(15),
