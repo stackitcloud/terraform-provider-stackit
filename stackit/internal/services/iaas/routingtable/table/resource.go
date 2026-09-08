@@ -123,7 +123,10 @@ func (r *routingTableResource) ModifyPlan(ctx context.Context, req resource.Modi
 
 func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Routing table resource schema. Must have a `region` specified in the provider configuration.\n\n" +
-		"This resource is for SNA, not VPC, based networks."
+		"This resource is for SNA, not VPC, based networks.\n\n" +
+		"The platform deletes routing tables and their routes together with the network area region (`stackit_network_area_region`) they belong to. " +
+		"When the network area or its region no longer exists, the provider treats the routing table as deleted: " +
+		"it is removed from the Terraform state on refresh, and destroying it succeeds."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Resource),
@@ -302,17 +305,12 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 
 	routingTableResp, err := r.client.DefaultAPI.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
-		utils.LogError(
-			ctx,
-			&resp.Diagnostics,
-			err,
-			"Reading routing table",
-			fmt.Sprintf("routing table with ID %q does not exist in organization %q.", routingTableId, organizationId),
-			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Organization with ID %q not found or forbidden access", organizationId),
-			},
-		)
-		resp.State.RemoveResource(ctx)
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 

@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   Routing table resource schema. Must have a region specified in the provider configuration.
   This resource is for SNA, not VPC, based networks.
+  The platform deletes routing tables and their routes together with the network area region (stackit_network_area_region) they belong to. When the network area or its region no longer exists, the provider treats the routing table as deleted: it is removed from the Terraform state on refresh, and destroying it succeeds.
   ~> This resource is part of the experimental feature routing-tables and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
@@ -13,6 +14,8 @@ description: |-
 Routing table resource schema. Must have a `region` specified in the provider configuration.
 
 This resource is for SNA, not VPC, based networks.
+
+The platform deletes routing tables and their routes together with the network area region (`stackit_network_area_region`) they belong to. When the network area or its region no longer exists, the provider treats the routing table as deleted: it is removed from the Terraform state on refresh, and destroying it succeeds.
 
 ~> This resource is part of the experimental feature routing-tables and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 

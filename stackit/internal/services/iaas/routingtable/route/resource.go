@@ -108,7 +108,10 @@ func (r *routeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 // Schema defines the schema for the resource.
 func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Routing table route resource schema. Must have a `region` specified in the provider configuration.\n\n" +
-		"This resource is for SNA, not VPC, based networks."
+		"This resource is for SNA, not VPC, based networks.\n\n" +
+		"The platform deletes routing tables and their routes together with the network area region (`stackit_network_area_region`) they belong to. " +
+		"When the network area or its region no longer exists, the provider treats the route as deleted: " +
+		"it is removed from the Terraform state on refresh, and destroying it succeeds."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Resource),
