@@ -70,16 +70,16 @@ func (r *credentialDataSource) Configure(ctx context.Context, req datasource.Con
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "Valkey credential client configured")
+	tflog.Info(ctx, "Key Value Store(valkey) credential client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
-		"main":          "Valkey credential data source schema. Must have a `region` specified in the provider configuration.",
+		"main":          "Key Value Store(valkey) credential data source schema. Must have a `region` specified in the provider configuration.",
 		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
-		"instance_id":   "ID of the Valkey instance.",
+		"instance_id":   "ID of the Key Value Store(valkey) instance.",
 		"project_id":    "STACKIT project ID to which the instance is associated.",
 		"uri":           "Connection URI.",
 		"region":        "The resource region. If not defined, the provider region is used.",
@@ -202,7 +202,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Valkey credential read")
+	tflog.Info(ctx, "Key Value Store(valkey) credential read")
 }
 
 func mapDataSourceFields(ctx context.Context, credentialsResp *valkey.CredentialsResponse, model *DataSourceModel, region string) error {

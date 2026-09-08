@@ -86,7 +86,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "Valkey credential client configured")
+	tflog.Info(ctx, "Key Value Store(valkey) credential client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -122,10 +122,10 @@ func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.Modify
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
-		"main":          "Valkey credential resource schema. Must have a `region` specified in the provider configuration.",
+		"main":          "Key Value Store(valkey) credential resource schema. Must have a `region` specified in the provider configuration.",
 		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
-		"instance_id":   "ID of the Valkey instance.",
+		"instance_id":   "ID of the Key Value Store(valkey) instance.",
 		"project_id":    "STACKIT Project ID to which the instance is associated.",
 		"uri":           "Connection URI.",
 		"region":        "The resource region. If not defined, the provider region is used.",
@@ -286,7 +286,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Valkey credential created")
+	tflog.Info(ctx, "Key Value Store(valkey) credential created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -340,7 +340,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Valkey credential read")
+	tflog.Info(ctx, "Key Value Store(valkey) credential read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -387,7 +387,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "Valkey credential deleted")
+	tflog.Info(ctx, "Key Value Store(valkey) credential deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -408,7 +408,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 		"instance_id":   idParts[2],
 		"credential_id": idParts[3],
 	})
-	tflog.Info(ctx, "Valkey credential state imported")
+	tflog.Info(ctx, "Key Value Store(valkey) credential state imported")
 }
 
 func mapFields(ctx context.Context, credentialsResp *valkey.CredentialsResponse, model *Model, region string) error {

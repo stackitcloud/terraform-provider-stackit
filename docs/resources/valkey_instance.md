@@ -3,12 +3,12 @@
 page_title: "stackit_valkey_instance Resource - stackit"
 subcategory: ""
 description: |-
-  Valkey instance resource schema. Must have a region specified in the provider configuration.
+  Key Value Store(valkey) instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_valkey_instance (Resource)
 
-Valkey instance resource schema. Must have a `region` specified in the provider configuration.
+Key Value Store(valkey) instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -50,7 +50,7 @@ resource "stackit_valkey_instance" "example" {
 - `dashboard_url` (String)
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `image_url` (String)
-- `instance_id` (String) ID of the Valkey instance.
+- `instance_id` (String) ID of the Key Value Store(valkey) instance.
 - `plan_id` (String) The selected plan ID.
 
 <a id="nestedatt--parameters"></a>
