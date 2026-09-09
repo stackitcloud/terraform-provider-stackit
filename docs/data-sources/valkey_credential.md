@@ -26,7 +26,7 @@ data "stackit_valkey_credential" "example" {
 ### Required
 
 - `credential_id` (String) The credential's ID.
-- `instance_id` (String) ID of the Key Value Store(valkey) instance.
+- `instance_id` (String) ID of the Valkey instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Optional

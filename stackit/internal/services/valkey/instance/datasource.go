@@ -63,7 +63,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	descriptions := map[string]string{
 		"main":        "Key Value Store(valkey) instance data source schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id": "ID of the Key Value Store(valkey) instance.",
+		"instance_id": "ID of the Valkey instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
 		"name":        "Instance name.",
 		"version":     "The service version.",
@@ -311,5 +311,5 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Key Value Store(valkey) instance read")
+	tflog.Info(ctx, "Valkey instance read")
 }

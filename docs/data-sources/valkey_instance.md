@@ -24,7 +24,7 @@ data "stackit_valkey_instance" "example" {
 
 ### Required
 
-- `instance_id` (String) ID of the Key Value Store(valkey) instance.
+- `instance_id` (String) ID of the Valkey instance.
 - `project_id` (String) STACKIT Project ID to which the instance is associated.
 
 ### Optional

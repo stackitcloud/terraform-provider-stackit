@@ -138,7 +138,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "Key Value Store (valkey) instance client configured")
+	tflog.Info(ctx, "Valkey instance client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -176,7 +176,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	descriptions := map[string]string{
 		"main":        "Key Value Store(valkey) instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id": "ID of the Key Value Store(valkey) instance.",
+		"instance_id": "ID of the Valkey instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
 		"version":     "The service version.",
@@ -510,7 +510,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Key Value Store(valkey) instance created")
+	tflog.Info(ctx, "Valkey instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -570,7 +570,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Key Value Store(valkey) instance read")
+	tflog.Info(ctx, "Valkey instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -640,7 +640,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Key Value Store(valkey) instance updated")
+	tflog.Info(ctx, "Valkey instance updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -681,7 +681,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
-	tflog.Info(ctx, "Key Value Store(valkey) instance deleted")
+	tflog.Info(ctx, "Valkey instance deleted")
 }
 
 // ImportState imports a resource into the Terraform state on success.
@@ -702,7 +702,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 		"region":      idParts[1],
 		"instance_id": idParts[2],
 	})
-	tflog.Info(ctx, "Key Value Store(valkey) instance state imported")
+	tflog.Info(ctx, "Valkey instance state imported")
 }
 
 func mapFields(instance *valkey.Instance, model *Model, region string) error {
@@ -933,7 +933,7 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
-		return fmt.Errorf("getting Key Value Store(valkey) offerings: %w", err)
+		return fmt.Errorf("getting Valkey offerings: %w", err)
 	}
 
 	version := model.Version.ValueString()
@@ -971,7 +971,7 @@ func loadPlanNameAndVersion(ctx context.Context, client *valkey.APIClient, model
 	planId := model.PlanId.ValueString()
 	res, err := client.DefaultAPI.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
-		return fmt.Errorf("getting Key Value Store(valkey) offerings: %w", err)
+		return fmt.Errorf("getting Valkey offerings: %w", err)
 	}
 
 	for _, offer := range res.Offerings {

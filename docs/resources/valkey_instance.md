@@ -50,7 +50,7 @@ resource "stackit_valkey_instance" "example" {
 - `dashboard_url` (String)
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `image_url` (String)
-- `instance_id` (String) ID of the Key Value Store(valkey) instance.
+- `instance_id` (String) ID of the Valkey instance.
 - `plan_id` (String) The selected plan ID.
 
 <a id="nestedatt--parameters"></a>

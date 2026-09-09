@@ -61,7 +61,9 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Redis instance data source schema. Must have a `region` specified in the provider configuration. This data source is deprecated and will be removed after August 2027, use stackit_valkey_instance (Key Value Store) instead. For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
+		"main": "Redis instance data source schema. Must have a `region` specified in the provider configuration.",
+		"warning_message": "The `stackit_redis_instance` data source is deprecated and will be removed after August 2027, use `stackit_valkey_instance` (Key Value Store) instead. \n" +
+			"For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
 		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the Redis instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
@@ -98,8 +100,9 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	}
 
 	resp.Schema = schema.Schema{
-		Description:        descriptions["main"],
-		DeprecationMessage: "The stackit_redis_instance data source is deprecated and will be removed after August 2027. Use the stackit_valkey_instance (Key Value Store) data source instead. For more information on how to migrate, see the migration guide: https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/",
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["warning_message"]),
+		Description:         fmt.Sprintf("%s\n\n%s", descriptions["main"], descriptions["warning_message"]),
+		DeprecationMessage:  descriptions["warning_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
