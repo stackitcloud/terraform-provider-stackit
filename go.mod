@@ -55,7 +55,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.0
 	github.com/teambition/rrule-go v1.8.2
 	go.uber.org/mock v0.6.0
-	golang.org/x/mod v0.40.0
+	golang.org/x/mod v0.41.0
 )
 
 require (
