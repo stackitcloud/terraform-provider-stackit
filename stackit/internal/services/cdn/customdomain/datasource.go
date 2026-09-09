@@ -201,10 +201,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 		if normalizedCert.Version != nil {
 			version = types.Int32Value(*normalizedCert.Version)
 		}
-		skipDnsCheck := types.BoolNull()
-		if normalizedCert.SkipDnsCheck != nil {
-			skipDnsCheck = types.BoolValue(*normalizedCert.SkipDnsCheck)
-		}
+		skipDnsCheck := types.BoolPointerValue(normalizedCert.SkipDnsCheck)
 
 		certificateObj, diags := types.ObjectValue(certificateDataSourceTypes, map[string]attr.Value{
 			"version":        version,

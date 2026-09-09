@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -174,6 +175,7 @@ func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaReques
 						Description: certificateSchemaDescriptions["skip_dns_check"],
 						Optional:    true,
 						Computed:    true,
+						Default:     booldefault.StaticBool(false),
 					},
 				},
 			},
@@ -523,18 +525,13 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 			if val, ok := existingAttrs["private_key"]; ok {
 				certAttributes["private_key"] = val
 			}
-			if val, ok := existingAttrs["skip_dns_check"]; ok {
-				certAttributes["skip_dns_check"] = val
-			}
 		}
 
 		// Set the computed version from the API response
 		if normalizedCert.Version != nil {
 			certAttributes["version"] = types.Int32Value(*normalizedCert.Version)
 		}
-		if normalizedCert.SkipDnsCheck != nil {
-			certAttributes["skip_dns_check"] = types.BoolValue(*normalizedCert.SkipDnsCheck)
-		}
+		certAttributes["skip_dns_check"] = types.BoolPointerValue(normalizedCert.SkipDnsCheck)
 
 		certificateObj, diags := types.ObjectValue(certificateTypes, certAttributes)
 		if diags.HasError() {

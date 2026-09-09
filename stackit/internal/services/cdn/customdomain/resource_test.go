@@ -145,6 +145,34 @@ func TestMapFields(t *testing.T) {
 				})
 			}),
 		},
+		"happy_path_custom_cert_skip_dns_check_drift": {
+			Expected: expectedModel(func(m *CustomDomainModel) {
+				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
+					"certificate":    types.StringValue(dummyCert),
+					"private_key":    types.StringValue(dummyKey),
+					"version":        types.Int32Value(3),
+					"skip_dns_check": types.BoolValue(false),
+				})
+			}),
+			Input: customDomainFixture(func(gcdr *cdnSdk.GetCustomDomainResponse) {
+				gcdr.Certificate = cdnSdk.GetCustomDomainResponseCertificate{
+					GetCustomDomainCustomCertificate: &cdnSdk.GetCustomDomainCustomCertificate{
+						Type:         customType,
+						Version:      customVersion,
+						SkipDnsCheck: false,
+					},
+				}
+			}),
+			IsValid: true,
+			InitialModel: expectedModel(func(m *CustomDomainModel) {
+				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
+					"certificate":    types.StringValue(dummyCert),
+					"private_key":    types.StringValue(dummyKey),
+					"version":        types.Int32Null(),
+					"skip_dns_check": types.BoolValue(true),
+				})
+			}),
+		},
 		"happy_path_managed_cert": {
 			Expected: expectedModel(func(m *CustomDomainModel) {
 				m.Certificate = types.ObjectNull(certificateTypes)
