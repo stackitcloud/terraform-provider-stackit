@@ -576,6 +576,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	server, err = serverReq.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("get server details: %v", err))
+		return
 	}
 
 	// Map response body to schema
@@ -824,6 +825,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	)
 	if server, err = r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
+		return
 	}
 
 	if model.DesiredStatus.ValueString() == modelStateDeallocated {
