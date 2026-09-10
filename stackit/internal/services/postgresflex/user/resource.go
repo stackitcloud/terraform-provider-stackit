@@ -564,6 +564,24 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 // The expected format of the resource import identifier is: project_id,zone_id,record_set_id
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
+
+	if len(idParts) == 4 {
+		r.defaultImportState(ctx, req, resp, idParts)
+		return
+	}
+
+	if len(idParts) == 5 {
+		r.withPasswordResetImportState(ctx, req, resp, idParts)
+		return
+	}
+
+	core.LogAndAddError(ctx, &resp.Diagnostics,
+		"Error importing user",
+		fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id] - got %q", req.ID),
+	)
+}
+
+func (r *userResource) defaultImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse, idParts []string) {
 	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing user",
@@ -577,8 +595,63 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[3])...)
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
-		"Postgresflex user imported with empty password and empty uri",
+		"Postgresflex user imported with empty password and uri",
 		"The user password and uri are not imported as they are only available upon creation of a new user. The password and uri fields will be empty.",
+	)
+	tflog.Info(ctx, "Postgresflex user state imported")
+}
+
+func (r *userResource) withPasswordResetImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse, idParts []string) {
+	if len(idParts) != 5 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" || idParts[4] != "reset" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing user",
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id],reset, got %q", req.ID),
+		)
+		return
+	}
+
+	userId, err := strconv.ParseInt(idParts[3], 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing user",
+			fmt.Sprintf("Could not convert value %q to int64", idParts[3]),
+		)
+		return
+	}
+
+	resPwResp, err := r.client.DefaultAPI.ResetUserPassword(ctx, idParts[0], idParts[1], idParts[2], userId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing user",
+			fmt.Sprintf("Could not convert value %q to int64", idParts[3]),
+		)
+		return
+	}
+
+	if resPwResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing user",
+			fmt.Sprint("Api response is nil"),
+		)
+		return
+	}
+
+	pw, ok := resPwResp.GetPasswordOk()
+	if !ok {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing user",
+			fmt.Sprintf("Returned password is not ok, got %q", *pw),
+		)
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[3])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password"), *pw)...)
+	core.LogAndAddWarning(ctx, &resp.Diagnostics,
+		"Postgresflex user imported with empty uri",
+		"The user uri is not imported as it is only available upon creation of a new user. The uri field will be empty.",
 	)
 	tflog.Info(ctx, "Postgresflex user state imported")
 }
