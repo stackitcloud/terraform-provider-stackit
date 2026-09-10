@@ -3,12 +3,12 @@
 page_title: "stackit_valkey_credential Data Source - stackit"
 subcategory: ""
 description: |-
-  Valkey credential data source schema. Must have a region specified in the provider configuration.
+  Key Value Store(valkey) credential data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_valkey_credential (Data Source)
 
-Valkey credential data source schema. Must have a `region` specified in the provider configuration.
+Key Value Store(valkey) credential data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

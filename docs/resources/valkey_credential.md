@@ -3,12 +3,12 @@
 page_title: "stackit_valkey_credential Resource - stackit"
 subcategory: ""
 description: |-
-  Valkey credential resource schema. Must have a region specified in the provider configuration.
+  Key Value Store(valkey) credential resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_valkey_credential (Resource)
 
-Valkey credential resource schema. Must have a `region` specified in the provider configuration.
+Key Value Store(valkey) credential resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
