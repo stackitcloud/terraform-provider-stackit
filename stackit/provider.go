@@ -140,6 +140,7 @@ import (
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
+	ufwInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ufw/instance"
 	valkeyCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/credential"
 	valkeyInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/instance"
 	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
@@ -227,6 +228,7 @@ type providerModel struct {
 	TelemetryLinkCustomEndpoint     types.String `tfsdk:"telemetrylink_custom_endpoint"`
 	TelemetryRouterCustomEndpoint   types.String `tfsdk:"telemetryrouter_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	UfwCustomEndpoint               types.String `tfsdk:"ufw_custom_endpoint"`
 	ValkeyCustomEndpoint            types.String `tfsdk:"valkey_custom_endpoint"`
 	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
@@ -293,6 +295,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"telemetrylink_custom_endpoint":        "Custom endpoint for the Telemetry Link service",
 		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"ufw_custom_endpoint":                  "Custom endpoint for the UFW service",
 		"valkey_custom_endpoint":               "Custom endpoint for the Key Value Store service",
 		"vpn_custom_endpoint":                  "Custom endpoint for the VPN service",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
@@ -522,6 +525,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["telemetrylink_custom_endpoint"],
 			},
+			"ufw_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["ufw_custom_endpoint"],
+			},
 			"valkey_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["valkey_custom_endpoint"],
@@ -622,6 +629,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
+	setStringField(providerConfig.UfwCustomEndpoint, func(v string) { providerData.UfwCustomEndpoint = v })
 	setStringField(providerConfig.ValkeyCustomEndpoint, func(v string) { providerData.ValkeyCustomEndpoint = v })
 	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
 
@@ -921,6 +929,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryRouterInstance.NewTelemetryRouterInstanceResource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
 		telemetryLink.NewTelemetryLinkResource,
+		ufwInstance.NewInstanceResource,
 		valkeyInstance.NewInstanceResource,
 		valkeyCredential.NewCredentialResource,
 		vpnConnection.NewVpnConnectionResource,
