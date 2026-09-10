@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -252,6 +253,16 @@ func (r *resourcePoolResource) Schema(ctx context.Context, _ resource.SchemaRequ
 	}
 }
 
+// timeoutHint names the configured timeout when this context's deadline is what ended a wait. The wait handler
+// reports a timeout, a terminal error state and a failing poll through the same error, so on the other two the
+// hint would point at the wrong cause.
+func timeoutHint(ctx context.Context, operation string, timeout time.Duration) string {
+	if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return ""
+	}
+	return fmt.Sprintf(" The wait gave up after the configured `timeouts.%s` of %s; raise it if the operation regularly needs longer.", operation, timeout)
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
@@ -311,31 +322,12 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// The configured timeouts belong in that partial state as well. Without them a failed wait leaves an entry whose
-	// read and delete fall back to the defaults instead of the values the operator configured.
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("timeouts"), model.Timeouts)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
 	response, err := wait.CreateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *resourcePool.ResourcePool.Id).
 		WaitWithContext(ctx)
 	if err != nil {
-		// The wait handler reports a timeout, a terminal error state and a failing poll through the same error, so
-		// only mention the create timeout when this context's deadline is what ended the wait.
-		timeoutHint := ""
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			timeoutHint = fmt.Sprintf(" The wait gave up after the configured `timeouts.create` of %s; raise it if the creation regularly needs longer.", createTimeout)
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf(
-			"resource pool creation waiting: %v\n"+
-				"The resource pool was created, and Terraform marks this resource as tainted, so the next apply replaces it. "+
-				"Run `terraform untaint` on it first if the next run should refresh the existing pool instead. "+
-				"If the state entry is lost, import the resource pool with the ID %q.%s",
-			err,
-			utils.BuildInternalTerraformId(projectId, region, *resourcePool.ResourcePool.Id).ValueString(),
-			timeoutHint,
-		))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool",
+			fmt.Sprintf("resource pool creation waiting: %v%s", err, timeoutHint(ctx, "create", createTimeout)))
 		return
 	}
 	ctx = tflog.SetField(ctx, "resource_pool_id", response.ResourcePool.Id)
@@ -377,6 +369,7 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -437,6 +430,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	waiterTimeout := wait.UpdateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit // false positive - only called to read the default wait handler timeout
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
@@ -496,7 +490,8 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 
 	getResponse, err := wait.UpdateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool",
+			fmt.Sprintf("resource pool get: %v%s", err, timeoutHint(ctx, "update", updateTimeout)))
 		return
 	}
 	err = mapFields(ctx, region, getResponse.ResourcePool, &model)
@@ -558,7 +553,8 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	// only delete, if no error occurred
 	_, err = wait.DeleteResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("resource pool deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool",
+			fmt.Sprintf("resource pool deletion waiting: %v%s", err, timeoutHint(ctx, "delete", deleteTimeout)))
 		return
 	}
 
