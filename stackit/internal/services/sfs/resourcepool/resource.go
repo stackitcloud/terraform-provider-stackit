@@ -260,7 +260,7 @@ func timeoutHint(ctx context.Context, operation string, timeout time.Duration) s
 	if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return ""
 	}
-	return fmt.Sprintf(" The wait gave up after the configured `timeouts.%s` of %s; raise it if the operation regularly needs longer.", operation, timeout)
+	return fmt.Sprintf("\nThe wait gave up after the configured `timeouts.%s` of %s; raise it if the operation regularly needs longer.", operation, timeout)
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -490,8 +490,8 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 
 	getResponse, err := wait.UpdateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool",
-			fmt.Sprintf("resource pool get: %v%s", err, timeoutHint(ctx, "update", updateTimeout)))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool",
+			fmt.Sprintf("resource pool update waiting: %v%s", err, timeoutHint(ctx, "update", updateTimeout)))
 		return
 	}
 	err = mapFields(ctx, region, getResponse.ResourcePool, &model)
