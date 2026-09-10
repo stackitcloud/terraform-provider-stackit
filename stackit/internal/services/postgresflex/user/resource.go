@@ -554,7 +554,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	_, err = wait.DeleteUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("User deletion waiting: %v", err))
 		return
 	}
 	tflog.Info(ctx, "Postgres Flex user deleted")
