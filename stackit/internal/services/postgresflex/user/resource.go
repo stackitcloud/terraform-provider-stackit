@@ -631,7 +631,7 @@ func (r *userResource) withPasswordResetImportState(ctx context.Context, req res
 	if resPwResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing user",
-			fmt.Sprint("Api response is nil"),
+			"Api response is nil",
 		)
 		return
 	}
