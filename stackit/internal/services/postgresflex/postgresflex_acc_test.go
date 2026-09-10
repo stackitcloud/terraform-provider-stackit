@@ -140,11 +140,12 @@ var testConfigDatabaseVarsMinUpdated = func() config.Variables {
 
 // User - MIN
 var testConfigUserVarsMin = config.Variables{
-	"project_id":       config.StringVariable(testutil.ProjectId),
-	"name":             config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"acl":              config.StringVariable("192.168.0.0/24"),
-	"backup_schedule":  config.StringVariable("0 16 * * *"),
-	"flavor_id":        config.StringVariable("4.8-replica"),
+	"project_id":      config.StringVariable(testutil.ProjectId),
+	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"acl":             config.StringVariable("192.168.0.0/24"),
+	"backup_schedule": config.StringVariable("0 16 * * *"),
+	// "flavor_id":        config.StringVariable("4.8-replica"),
+	"flavor_id":        config.StringVariable("2.4"),
 	"storage_class":    config.StringVariable("premium-perf2-stackit"),
 	"storage_size":     config.IntegerVariable(5),
 	"instance_version": config.StringVariable("16"),
@@ -722,6 +723,7 @@ func TestAccPostgresFlexDatabaseMin(t *testing.T) {
 }
 
 func TestAccPostgresFlexUserMin(t *testing.T) {
+	var initialPassword string
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -831,6 +833,52 @@ func TestAccPostgresFlexUserMin(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"password", "uri"},
+			},
+			// Import with password reset
+			{
+				ConfigVariables: testConfigUserVarsMin,
+				ResourceName:    "stackit_postgresflex_user.user",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_postgresflex_user.user"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_postgresflex_user.user")
+					}
+
+					projectId, ok := r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					userId, ok := r.Primary.Attributes["user_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute user_id")
+					}
+					initialPassword = r.Primary.Attributes["password"]
+					return fmt.Sprintf("%s,%s,%s,%s,reset", projectId, region, instanceId, userId), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"password", "uri"},
+				ImportStateCheck: func(s []*terraform.InstanceState) error {
+					if len(s) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(s))
+					}
+					newPassword, ok := s[0].Attributes["password"]
+					if !ok || newPassword == "" {
+						return fmt.Errorf("expected password to be set in imported state")
+					}
+					if initialPassword != "" && newPassword == initialPassword {
+						return fmt.Errorf("expected password to have changed after reset, but got same password")
+					}
+					return nil
+				},
 			},
 			// Update
 			{
