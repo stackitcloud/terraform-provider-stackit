@@ -9,6 +9,7 @@ variable "local_asn" {}
 variable "override_advertised_routes" {}
 variable "label_key" {}
 variable "label_value" {}
+variable "network_config_prefix" {}
 
 resource "stackit_vpn_gateway" "gateway" {
   project_id   = var.project_id
@@ -20,6 +21,10 @@ resource "stackit_vpn_gateway" "gateway" {
   availability_zones = {
     tunnel1 = var.az_tunnel1
     tunnel2 = var.az_tunnel2
+  }
+
+  network_config = {
+    predefined_network_prefix = [var.network_config_prefix]
   }
 
   bgp = {
