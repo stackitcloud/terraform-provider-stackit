@@ -129,7 +129,7 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK call is actually done inside readCredentialsGroups()
+	ctx = core.LogResponse(ctx)
 
 	if !found {
 		resp.State.RemoveResource(ctx)

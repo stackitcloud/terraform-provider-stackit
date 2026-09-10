@@ -304,7 +304,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	waiterTimeout := wait.CreateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.CreateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout()
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -435,7 +435,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	waiterTimeout := wait.PartialUpdateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.PartialUpdateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout()
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -495,7 +495,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	waiterTimeout := wait.DeleteZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.DeleteZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout()
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

@@ -2,7 +2,6 @@ package tfwriteid
 
 import (
 	"go/ast"
-	"strings"
 
 	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
@@ -63,7 +62,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			}
 
 			// Check if we've hit a STACKIT SDK wait handler call before the util function
-			if strings.HasPrefix(pkgPath, lintutils.StackitSdkModulePrefix) && strings.Contains(pkgPath, "wait") && !strings.HasPrefix(pkgPath, "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement") && pkgPath != "github.com/stackitcloud/stackit-sdk-go/core/wait" && !hasCalledUtil {
+			callsWait := lintutils.IsWaitCall(pass.TypesInfo, call, calledFuncName)
+			if callsWait && !hasCalledUtil {
 				pass.Reportf(
 					call.Pos(),
 					"%s: call to wait handler from %s must happen AFTER %s.%s is called in %s %s",

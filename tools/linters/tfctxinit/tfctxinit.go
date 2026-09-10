@@ -2,10 +2,10 @@ package tfctxinit
 
 import (
 	"go/ast"
-	"strings"
 
 	"golang.org/x/tools/go/ast/inspector"
 
+	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/facts/servicecall"
 	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/lintutils"
 
 	"github.com/golangci/plugin-module-register/register"
@@ -20,7 +20,7 @@ const (
 var Analyzer = &analysis.Analyzer{
 	Name:     analyzerName,
 	Doc:      "Ensures core.InitProviderContext is called before any SDK call in a Terraform resource lifecycle (CRUD) implementation",
-	Requires: []*analysis.Analyzer{inspect.Analyzer},
+	Requires: []*analysis.Analyzer{inspect.Analyzer, servicecall.Analyzer},
 	Run:      run,
 }
 
@@ -32,6 +32,7 @@ func run(pass *analysis.Pass) (any, error) {
 	)
 
 	inspectNode := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	serviceCalls := pass.ResultOf[servicecall.Analyzer].(*servicecall.Result)
 
 	// Filter only for function declarations (Terraform CRUD methods)
 	nodeFilter := []ast.Node{
@@ -64,8 +65,8 @@ func run(pass *analysis.Pass) (any, error) {
 				hasCalledUtil = true
 			}
 
-			// Check if we've hit a STACKIT SDK call before the util function
-			if strings.HasPrefix(pkgPath, lintutils.StackitSdkModulePrefix) && !hasCalledUtil {
+			// Check if we've hit a service call before the util function
+			if !hasCalledUtil && servicecall.HasServiceCall(call, pass.TypesInfo, serviceCalls) {
 				pass.Reportf(
 					call.Pos(),
 					"%s: call to %s must happen AFTER %s.%s is called in %s",
