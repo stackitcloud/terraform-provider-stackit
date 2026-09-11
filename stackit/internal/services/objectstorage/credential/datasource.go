@@ -133,7 +133,11 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	credentialsGroupResp, err := r.client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -142,7 +146,8 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			"Reading credential",
 			fmt.Sprintf("Credential group with ID %q does not exist in project %q.", credentialsGroupId, projectId),
 			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusForbidden:       fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg,
 			},
 		)
 		resp.State.RemoveResource(ctx)
