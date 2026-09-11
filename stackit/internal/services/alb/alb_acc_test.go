@@ -106,6 +106,7 @@ var testConfigVarsMax = config.Variables{
 	"target_pool_port_3":                config.StringVariable("9001"),
 	"target_pool_port_4":                config.StringVariable("1234"),
 	"target_display_name":               config.StringVariable("example-target"),
+	"ahc_alt_port":                      config.StringVariable("8080"),
 	"ahc_interval":                      config.StringVariable("1s"),
 	"ahc_interval_jitter":               config.StringVariable("0.010s"),
 	"ahc_timeout":                       config.StringVariable("1s"),
@@ -167,6 +168,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["ahc_http_ok_status_201"] = config.StringVariable("203")
 	tempConfig["ahc_timeout"] = config.StringVariable("5s")
 	tempConfig["ahc_healthy_threshold"] = config.StringVariable("5")
+	tempConfig["ahc_alt_port"] = config.StringVariable("8081")
 	tempConfig["acl"] = config.StringVariable("10.11.10.8/24")
 	return tempConfig
 }
@@ -390,6 +392,7 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.target_port", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_port_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.targets.0.display_name", testutil.ConvertConfigVariable(testConfigVarsMax["target_display_name"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_alt_port"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval_jitter"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_timeout"])),
@@ -479,6 +482,7 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_1"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.target_port", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_port_1"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.targets.0.display_name", testutil.ConvertConfigVariable(testConfigVarsMax["target_display_name"])),
+					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_alt_port"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval_jitter"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_timeout"])),
@@ -616,6 +620,7 @@ func TestAccALBResourceMax(t *testing.T) {
 					testutil.CheckListAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters", configVarsMaxUpdated()["query_parameters"]),
 					testutil.CheckListAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers", configVarsMaxUpdated()["headers"]),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.target_port", testutil.ConvertConfigVariable(configVarsMaxUpdated()["target_pool_port_1"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_alt_port"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_timeout"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_healthy_threshold"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_http_ok_status_200"])),

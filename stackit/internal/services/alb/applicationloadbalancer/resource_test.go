@@ -239,6 +239,7 @@ func fixtureModel(explicitBool *bool, mods ...func(m *Model)) *Model {
 						"active_health_check": types.ObjectValueMust(
 							activeHealthCheckTypes,
 							map[string]attr.Value{
+								"alt_port":            types.Int32Value(8080),
 								"healthy_threshold":   types.Int32Value(1),
 								"interval":            types.StringValue("2s"),
 								"interval_jitter":     types.StringValue("3s"),
@@ -424,6 +425,7 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 					CustomCa:                  new("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURDekNDQWZPZ0F3SUJBZ0lVVHlQc1RXQzlseTdvK3dORlltMHV1MStQOElFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZURVRNQkVHQTFVRUF3d0tUWGxEZFhOMGIyMURRVEFlRncweU5UQXlNVGt4T1RJME1qQmFGdzB5TmpBeQpNVGt4T1RJME1qQmFNQlV4RXpBUkJnTlZCQU1NQ2sxNVEzVnpkRzl0UTBFd2dnRWlNQTBHQ1NxR1NJYjNEUUVCCkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDUU1FWUtiaU54VTM3ZkV3Qk94a3ZDc2hCUiswTXd4d0xXOE1pMy9wdm8KbjNodXhqY203RWFLVzlyN2tJYW9IWGJUUzF0bk82ckhBSEtCRHh6dW9ZRDdDMlNNU2lMeGRkcXVOUnZwa0xhUAo4cUFYbmVRWTJWUDdMenNBZ3NDMDRQS0cwWUMxTmdGNXNKR3NpV0lSR0ltK2NzWUxuUE1ud2FBR3g0SXZZNm1ICkFtTTY0YjZRUkNnMzZMSytQNk45S1R2U1FMdnZtRmRrQTJzRFRvQ21OL0FtcDZ4TkRGcSthUUdMd2RRUXFIRFAKVGFVcVBtRXlpRkhLdkZVYUZNTlFWazhCMU9tOEFTbzY5bThVM0VhdDRaT1ZXMXRpdEUzOTNRa09kQTZaeXBNQwpySkpwZU5OTExKcTNtSU9XT2Q3R0V5QXZqVWZtSndHaHFFRlM3bE1HNjdobkFnTUJBQUdqVXpCUk1CMEdBMVVkCkRnUVdCQlNrL0lNNWphT0FKTDMvS255cTNjVnZhMDRZWkRBZkJnTlZIU01FR0RBV2dCU2svSU01amFPQUpMMy8KS255cTNjVnZhMDRZWkRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCZQpaL21FOHJOSWJOYkhRZXAvVnBwc2hhWlV6Z2R5NG5zbWgwd3Z4TXVISVFQMEtIcnhMQ2toT243QTlmdTRtWS9QClErOFFxbG5qVHNNNGNxaXVGY2Q1VjFOazlWRi9lNVgzSFhDREhoL2pCRncrTzVUR1ZBUi83REJ3MzFsWXYvTHQKSGFra2pRQ2Rhd3V2SDNvc08vVWtFbE0vaTJLQytpWUJhdlRlbm05N0FSN1dHZ1cxNS9NSXF4TmFZRStuSnRoLwpkY1ZEMGI1cVN1WVFhRW1aM0N6TVVpMTg4UitnbzVvekNmMmNPYWErMy9MRVlBYUkzdktpU0U4S1Rzc2h5b0ttCk82WVpxclZ4UUNXQ0RUT3NkMjhrN2xIdDh3SitqelljakN1NjBEVXBnMVpwWStabm1yRTh2UFBEYi96WGhCbjYKL2xsWFRXT1VqbXVUS25Hc0lEUDUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="),
 				},
 				ActiveHealthCheck: &albSdk.ActiveHealthCheck{
+					AltPort:            new(int32(8080)),
 					HealthyThreshold:   new(int32(1)),
 					UnhealthyThreshold: new(int32(5)),
 					Interval:           new("2s"),
@@ -844,6 +846,7 @@ func TestMapFields(t *testing.T) {
 								"active_health_check": types.ObjectValueMust(
 									activeHealthCheckTypes,
 									map[string]attr.Value{
+										"alt_port":            types.Int32Null(),
 										"healthy_threshold":   types.Int32Value(1),
 										"interval":            types.StringValue("2s"),
 										"interval_jitter":     types.StringValue("3s"),

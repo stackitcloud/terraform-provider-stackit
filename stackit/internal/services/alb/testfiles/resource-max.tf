@@ -37,6 +37,7 @@ variable "labels_key_1" {}
 variable "labels_value_1" {}
 variable "labels_key_2" {}
 variable "labels_value_2" {}
+variable "ahc_alt_port" {}
 variable "ahc_interval" {}
 variable "ahc_interval_jitter" {}
 variable "ahc_timeout" {}
@@ -160,6 +161,7 @@ resource "stackit_application_load_balancer" "loadbalancer" {
     {
       name = var.target_pool_name_1
       active_health_check = {
+        alt_port            = var.ahc_alt_port
         interval            = var.ahc_interval
         interval_jitter     = var.ahc_interval_jitter
         timeout             = var.ahc_timeout
