@@ -13,7 +13,6 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.27.0
-	github.com/stackitcloud/stackit-sdk-go/experimental v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.17.2
 	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.4
 	github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.1

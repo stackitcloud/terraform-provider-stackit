@@ -52,7 +52,12 @@ var gatewayMinVarsUpdated = func() config.Variables {
 }()
 
 var gatewayMaxVars = config.Variables{
-	"project_id":                 config.StringVariable(testutil.ProjectId),
+	"organization_id":            config.StringVariable(testutil.OrganizationId),
+	"parent_container_id":        config.StringVariable(testutil.TestProjectParentContainerID),
+	"owner_email":                config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"network_area_name":          config.StringVariable("vpn-na-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"project_name":               config.StringVariable("vpn-proj-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"routing_table_name":         config.StringVariable("vpn-rt-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"region":                     config.StringVariable(testutil.Region),
 	"display_name":               config.StringVariable("vpn-gw-acc-test-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"plan_id":                    config.StringVariable("p500"),
@@ -61,6 +66,7 @@ var gatewayMaxVars = config.Variables{
 	"az_tunnel2":                 config.StringVariable("eu01-2"),
 	"local_asn":                  config.IntegerVariable(65000),
 	"override_advertised_routes": config.ListVariable(config.StringVariable("10.0.0.0/16"), config.StringVariable("192.168.0.0/24")),
+	"network_config_prefix":      config.StringVariable("10.0.0.0/28"),
 	"label_key":                  config.StringVariable("env"),
 	"label_value":                config.StringVariable("test"),
 }
@@ -274,9 +280,9 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: gatewayMaxVars,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.ConvertConfigVariable(gatewayMaxVars["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(gatewayMaxVars["display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(gatewayMaxVars["plan_id"])),
@@ -286,6 +292,8 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVars["local_asn"])),
 					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVars["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix", testutil.ConvertConfigVariable(gatewayMaxVars["network_config_prefix"])),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "network_config.routing_table_id", "stackit_routing_table.routing_table", "routing_table_id"),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
 			},
@@ -301,10 +309,10 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 							gateway_id = stackit_vpn_gateway.gateway.gateway_id
 						}
 						`,
-					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "project_id", testutil.ConvertConfigVariable(gatewayMaxVars["project_id"])),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(gatewayMaxVars["display_name"])),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(gatewayMaxVars["plan_id"])),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "routing_type", testutil.ConvertConfigVariable(gatewayMaxVars["routing_type"])),
@@ -314,6 +322,8 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					testutil.CheckListAttr("data.stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVars["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
 
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix", testutil.ConvertConfigVariable(gatewayMaxVars["network_config_prefix"])),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "network_config.routing_table_id", "stackit_routing_table.routing_table", "routing_table_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway.gateway", "gateway_id"),
 
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "region", "stackit_vpn_gateway.gateway", "region"),
@@ -332,11 +342,11 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
                 			gateway_id = stackit_vpn_gateway.gateway.gateway_id
 						}
 						`,
-					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway_status.gateway", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway_status.gateway", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "region", testutil.Region),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "display_name", testutil.ConvertConfigVariable(gatewayMaxVars["display_name"])),
 
@@ -355,9 +365,9 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: gatewayMaxVarsUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["plan_id"])),
@@ -367,15 +377,17 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["local_asn"])),
 					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVarsUpdated["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_value"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["network_config_prefix"])),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "network_config.routing_table_id", "stackit_routing_table.routing_table", "routing_table_id"),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
 			},
 			// Update step 2 - test removal of optional fields
 			{
 				ConfigVariables: gatewayMaxVarsUpdated2,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["plan_id"])),
@@ -385,6 +397,8 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["local_asn"])),
 					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVarsUpdated2["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels.#", "0"),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["network_config_prefix"])),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "network_config.routing_table_id", "stackit_routing_table.routing_table", "routing_table_id"),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
 			},
@@ -401,7 +415,15 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute gateway_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, gatewayId), nil
+					projectId, ok := r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						region = testutil.Region
+					}
+					return fmt.Sprintf("%s,%s,%s", projectId, region, gatewayId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -600,10 +622,10 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 			// Creation – BGP_ROUTE_BASED gateway + full connection config including BGP tunnel peers
 			{
 				ConfigVariables: connectionMaxVars,
-				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Gateway
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.ConvertConfigVariable(connectionMaxVars["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(connectionMaxVars["display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(connectionMaxVars["plan_id"])),
@@ -615,7 +637,7 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(connectionMaxVars["label_key"]), testutil.ConvertConfigVariable(connectionMaxVars["label_value"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 					// Connection – identity & top-level
-					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVars["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVars["connection_display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
@@ -697,10 +719,10 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 							connection_id = stackit_vpn_connection.connection.connection_id
 						}
 						`,
-					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVars["region"])),
 					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVars["connection_display_name"])),
 					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "enabled", "true"),
@@ -742,10 +764,10 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 			// Update – change display name and BGP remote ASNs; verify no other drift
 			{
 				ConfigVariables: connectionMaxVarsUpdated,
-				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Gateway unchanged
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_gateway.gateway", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["plan_id"])),
@@ -753,7 +775,7 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["local_asn"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 					// Connection
-					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["connection_display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
@@ -802,13 +824,13 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 			// observable signal that the rotation was applied correctly.
 			{
 				ConfigVariables: connectionMaxVarsPskRotated,
-				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentRoutingTables).BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Rotated version counters must be persisted in state
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel1_psk_version"])),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel2_psk_version"])),
 					// All other fields must be unchanged – catches unintended drift
-					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "project_id", "stackit_resourcemanager_project.project", "project_id"),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["region"])),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["connection_display_name"])),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
@@ -851,9 +873,17 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute gateway_id")
 					}
+					projectId, ok := r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						region = testutil.Region
+					}
 					return fmt.Sprintf("%s,%s,%s,%s",
-						testutil.ProjectId,
-						testutil.Region,
+						projectId,
+						region,
 						gatewayId,
 						connectionId,
 					), nil

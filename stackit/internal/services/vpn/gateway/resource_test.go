@@ -3,13 +3,19 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
+	"testing/synctest"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
+
+	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 var (
@@ -181,6 +187,88 @@ func TestMapFields(t *testing.T) {
 			},
 			expected: Model{},
 			isValid:  false,
+		},
+		{
+			description: "with_network_config",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
+				},
+				input: &vpn.GatewayResponse{
+					Id:          new("gateway-id"),
+					DisplayName: "test-gateway",
+					PlanId:      "p500",
+					RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,
+					AvailabilityZones: vpn.GatewayAvailabilityZones{
+						Tunnel1: "eu01-1",
+						Tunnel2: "eu01-2",
+					},
+					NetworkConfig: &vpn.NetworkConfig{
+						PredefinedNetworkPrefix: new("10.20.0.0/28"),
+						RoutingTableId:          new("routing-table-id"),
+					},
+				},
+			},
+			expected: Model{
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectId:   types.StringValue(projectId),
+				Region:      types.StringValue(region),
+				GatewayId:   types.StringValue("gateway-id"),
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				NetworkConfig: types.ObjectValueMust(networkConfigTypes, map[string]attr.Value{
+					"predefined_network_prefix": types.StringValue("10.20.0.0/28"),
+					"routing_table_id":          types.StringValue("routing-table-id"),
+				}),
+				Labels: types.MapNull(types.StringType),
+			},
+			isValid: true,
+		},
+		{
+			description: "network_config_without_routing_table_id",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
+				},
+				input: &vpn.GatewayResponse{
+					Id:          new("gateway-id"),
+					DisplayName: "test-gateway",
+					PlanId:      "p500",
+					RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,
+					AvailabilityZones: vpn.GatewayAvailabilityZones{
+						Tunnel1: "eu01-1",
+						Tunnel2: "eu01-2",
+					},
+					NetworkConfig: &vpn.NetworkConfig{
+						PredefinedNetworkPrefix: new("10.20.0.0/28"),
+					},
+				},
+			},
+			expected: Model{
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectId:   types.StringValue(projectId),
+				Region:      types.StringValue(region),
+				GatewayId:   types.StringValue("gateway-id"),
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				NetworkConfig: types.ObjectValueMust(networkConfigTypes, map[string]attr.Value{
+					"predefined_network_prefix": types.StringValue("10.20.0.0/28"),
+					"routing_table_id":          types.StringNull(),
+				}),
+
+				Labels: types.MapNull(types.StringType),
+			},
+			isValid: true,
 		},
 	}
 	for _, tt := range tests {
@@ -360,6 +448,37 @@ func TestToUpdatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "with_network_config",
+			input: &Model{
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				NetworkConfig: types.ObjectValueMust(networkConfigTypes, map[string]attr.Value{
+					"predefined_network_prefix": types.StringValue("10.0.0.0/28"),
+					"routing_table_id":          types.StringValue("routing-table-id"),
+				}),
+			},
+			expected: &vpn.UpdateGatewayPayload{
+				DisplayName: "test-gateway",
+				PlanId:      "p500",
+				RoutingType: vpn.RoutingType("ROUTE_BASED"),
+				AvailabilityZones: vpn.UpdateGatewayPayloadAvailabilityZones{
+					Tunnel1: "eu01-1",
+					Tunnel2: "eu01-2",
+				},
+				NetworkConfig: &vpn.NetworkConfig{
+					PredefinedNetworkPrefix: new("10.0.0.0/28"),
+					RoutingTableId:          new("routing-table-id"),
+				},
+				Labels: &map[string]string{},
+			},
+			isValid: true,
+		},
+		{
 			description: "nil_model",
 			input:       nil,
 			expected:    nil,
@@ -382,6 +501,56 @@ func TestToUpdatePayload(t *testing.T) {
 					t.Fatalf("Data does not match (-want +got):\n%s", diff)
 				}
 			}
+		})
+	}
+}
+
+func TestUpdateGatewayRetriesOnConflict(t *testing.T) {
+	tests := []struct {
+		description  string
+		conflicts    int
+		isValid      bool
+		wantAttempts int
+	}{
+		{"succeeds immediately", 0, true, 1},
+		{"one conflict then success", 1, true, 2},
+		{"conflicts until attempts used up", updateGatewayAttempts, false, updateGatewayAttempts},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				attempts := 0
+				client := &vpn.DefaultAPIServiceMock{
+					UpdateGatewayExecuteMock: new(func(_ vpn.ApiUpdateGatewayRequest) (*vpn.GatewayResponse, error) {
+						attempts++
+						if attempts <= tt.conflicts {
+							return nil, &oapierror.GenericOpenAPIError{StatusCode: http.StatusConflict}
+						}
+						return &vpn.GatewayResponse{}, nil
+					}),
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+				defer cancel()
+
+				retryConfig := tfutils.RetryConfig{
+					Attempts:         updateGatewayAttempts,
+					Delay:            updateGatewayRetryDelay,
+					RetryStatusCodes: []int{http.StatusConflict},
+				}
+
+				_, err := tfutils.RetryRequest(ctx, client.UpdateGateway(ctx, projectId, region, "gateway-id").UpdateGatewayPayload(vpn.UpdateGatewayPayload{}).Execute, retryConfig)
+				if tt.isValid && err != nil {
+					t.Fatalf("Should not have failed: %v", err)
+				}
+				if !tt.isValid && err == nil {
+					t.Fatal("Should have failed")
+				}
+				if attempts != tt.wantAttempts {
+					t.Fatalf("Expected %d attempts, got %d", tt.wantAttempts, attempts)
+				}
+			})
 		})
 	}
 }
