@@ -87,7 +87,7 @@ resource "stackit_network" "listener_network" {
   project_id       = var.project_id
   name             = var.network_name_listener
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "10.11.10.0/24"
+  ipv4_prefix      = "10.2.2.0/24"
   routed           = "true"
 }
 
@@ -95,7 +95,7 @@ resource "stackit_network" "target_network" {
   project_id       = var.project_id
   name             = var.network_name_targets
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "10.11.11.0/24"
+  ipv4_prefix      = "10.2.3.0/24"
   routed           = "true"
 }
 
