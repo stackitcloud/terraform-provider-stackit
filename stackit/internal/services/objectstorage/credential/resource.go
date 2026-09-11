@@ -294,7 +294,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	// Create new credential
-	credentialResp, err := r.client.DefaultAPI.CreateAccessKey(ctx, projectId, region).CredentialsGroup(credentialsGroupId).CreateAccessKeyPayload(*payload).Execute()
+	credentialResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.CreateAccessKey(ctx, projectId, region).CredentialsGroup(credentialsGroupId).CreateAccessKeyPayload(*payload).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -454,7 +458,11 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing credential
-	_, err := r.client.DefaultAPI.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute()
+	_, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -560,7 +568,11 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 
-	credentialsGroupResp, err := client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := utils.RetryRequest(
+		ctx,
+		client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

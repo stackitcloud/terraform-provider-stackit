@@ -130,7 +130,11 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	bucketResp, err := r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute()
+	bucketResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		utils.LogError(
 			ctx,

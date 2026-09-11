@@ -133,7 +133,11 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	credentialsGroupResp, err := r.client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -199,7 +199,11 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new credentials group
-	got, err := r.client.DefaultAPI.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute()
+	got, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -310,7 +314,11 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing credentials group
-	_, err := r.client.DefaultAPI.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
+	_, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -390,7 +398,11 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 		return found, fmt.Errorf("missing configuration: either name or credentials group id must be provided")
 	}
 
-	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, model.ProjectId.ValueString(), region).Execute()
+	credentialsGroupsResp, err := utils.RetryRequest(
+		ctx,
+		client.ListCredentialsGroups(ctx, model.ProjectId.ValueString(), region).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
