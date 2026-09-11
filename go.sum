@@ -155,8 +155,6 @@ github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnB
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
 github.com/stackitcloud/stackit-sdk-go/core v0.27.0 h1:7lc6qStcFDFf8zHP4ORPa9joybw+Sa2LtB6BVjKQ+ek=
 github.com/stackitcloud/stackit-sdk-go/core v0.27.0/go.mod h1:WU1hhxnjXw2EV7CYa1nlEvNpMiRY6CvmIOaHuL3pOaA=
-github.com/stackitcloud/stackit-sdk-go/experimental v0.2.0 h1:xRgrDL0jZ9otmF+tgSJQEcMc8b7WUJJ9UdFtX9GBQSY=
-github.com/stackitcloud/stackit-sdk-go/experimental v0.2.0/go.mod h1:ebvgQJYWApj5Ktk3QfPzvDpKdghrtZcKMpWA7R3NvPs=
 github.com/stackitcloud/stackit-sdk-go/services/alb v0.17.2 h1:OAMCll/+6FTB65+H+BVyqJDrELUGdkMXggnveBl1O7I=
 github.com/stackitcloud/stackit-sdk-go/services/alb v0.17.2/go.mod h1:zEx3JFbwg1VLB9uKa2P4BA2DdypghX1FT8mbJU+msjE=
 github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.4 h1:KNEcAPj66Asb00V7f6v3Ku2d6ybP8PL1IwFQubUuxc0=

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -33,6 +34,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+)
+
+const (
+	updateGatewayAttempts   = 6
+	updateGatewayRetryDelay = 10 * time.Second
 )
 
 var (
@@ -247,7 +253,7 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"routing_table_id": schema.StringAttribute{
 						Description: schemaDescriptions["network_config_routing_table_id"],
 						Optional:    true,
-						Computed:    true,
+						// Computed:    true,
 						Validators: []validator.String{
 							validate.UUID(),
 							validate.NoSeparator(),
@@ -474,7 +480,13 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	_, err = r.client.DefaultAPI.UpdateGateway(ctx, projectId, region, gatewayId).UpdateGatewayPayload(*payload).Execute()
+	retryConfig := tfutils.RetryConfig{
+		Attempts:         updateGatewayAttempts,
+		Delay:            updateGatewayRetryDelay,
+		RetryStatusCodes: []int{http.StatusConflict},
+	}
+
+	_, err = tfutils.RetryRequest(ctx, r.client.DefaultAPI.UpdateGateway(ctx, projectId, region, gatewayId).UpdateGatewayPayload(*payload).Execute, retryConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", err.Error())
 		return
