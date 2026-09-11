@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -45,6 +46,7 @@ type dataSourceModel struct {
 	SnapshotsAreVisible            types.Bool           `tfsdk:"snapshots_are_visible"`
 	SnapshotPolicy                 *SnapshotPolicyModel `tfsdk:"snapshot_policy"`
 	Labels                         types.Map            `tfsdk:"labels"`
+	Timeouts                       timeouts.Value       `tfsdk:"timeouts"`
 }
 
 type resourcePoolDataSource struct {
@@ -90,6 +92,15 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -130,7 +141,7 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 }
 
 // Schema implements datasource.DataSource.
-func (r *resourcePoolDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *resourcePoolDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Resource-pool datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
@@ -217,6 +228,7 @@ func (r *resourcePoolDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				ElementType: types.StringType,
 				Computed:    true,
 			},
+			"timeouts": timeouts.Attributes(ctx),
 		},
 	}
 }
