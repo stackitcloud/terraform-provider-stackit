@@ -218,7 +218,11 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Create new bucket
-	_, err = r.client.DefaultAPI.CreateBucket(ctx, projectId, region, bucketName).ObjectLockEnabled(model.ObjectLock.ValueBool()).Execute()
+	_, err = utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.CreateBucket(ctx, projectId, region, bucketName).ObjectLockEnabled(model.ObjectLock.ValueBool()).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -275,7 +279,11 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	bucketResp, err := r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute()
+	bucketResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -330,7 +338,11 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing bucket
-	_, err := r.client.DefaultAPI.DeleteBucket(ctx, projectId, region, bucketName).Execute()
+	_, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.DeleteBucket(ctx, projectId, region, bucketName).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {

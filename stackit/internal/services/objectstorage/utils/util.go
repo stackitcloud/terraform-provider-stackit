@@ -20,6 +20,35 @@ const (
 	enableProjectRetryDelay = 2 * time.Second
 )
 
+// RateLimitRetryConfig retries on HTTP 429 with exponential backoff.
+//
+// The Object Storage Control Plane is rate-limited to 80 req/min (~1.33 req/s).
+// Large states trigger this during the parallel refresh phase (terraform plan/apply)
+// and during bulk creates/deletes in a single apply.
+//
+// Practical example — 300 buckets in a single state:
+//   - Minimum time to process all requests at the rate limit: 300/80*60 = 225s (~3.75 min).
+//   - The first ~80 requests succeed immediately; the remaining ~220 receive 429 and retry.
+//   - With Terraform's default parallelism of 10, the retry waves clear roughly every 7.5s
+//     (10 goroutines / 1.33 req/s), so most goroutines need only 2–3 attempts.
+//   - Total retry budget of ~435s comfortably exceeds the 225s floor.
+//
+// Design rationale:
+//   - Starting delay of 5s: at 1.33 req/s refill, 500ms returns less than 1 new token —
+//     all goroutines would immediately fail again, burning attempts without progress.
+//     5s refills ~6.7 tokens, enough for the majority of competing goroutines to succeed.
+//   - Cap of 60s: covers a full fixed-window rate-limit reset so goroutines do not exhaust
+//     their budget before the 1-minute window clears.
+//   - 10 attempts: backoff schedule 5s+10s+20s+40s+(5×60s) = 435s total budget.
+var RateLimitRetryConfig = utils.RetryConfig{
+	Attempts: 10,
+	Backoff: func(attempt int) time.Duration {
+		// Exponential backoff: 5s, 10s, 20s, 40s, 60s (capped)
+		return min(5*time.Second*(1<<uint(attempt-1)), 60*time.Second)
+	},
+	RetryStatusCodes: []int{http.StatusTooManyRequests},
+}
+
 // EnableProject enables object storage for the specified project. If the project is already enabled, nothing happens.
 // Two resources created in the same apply call this concurrently and the API rejects the losing call with
 // 409 project.create_conflict; retrying is safe, since enabling an already enabled project succeeds.
