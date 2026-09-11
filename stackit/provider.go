@@ -692,9 +692,10 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Make round tripper and custom endpoints available during DataSource and Resource
 	// type Configure methods.
 	clientFactory := core.DefaultClientFactory{
-		RoundTripper:    roundTripper,
-		UserAgent:       fmt.Sprintf("stackit-terraform-provider/%s", p.version),
-		CustomEndpoints: customEndpointConfig,
+		RoundTripper:          roundTripper,
+		UserAgent:             fmt.Sprintf("stackit-terraform-provider/%s", p.version),
+		CustomEndpoints:       customEndpointConfig,
+		ProviderDefaultRegion: providerData.GetRegion(),
 	}
 
 	providerDataInternal, err := core.NewProviderDataInternal(providerData, &clientFactory)
@@ -708,6 +709,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
 	var ephemeralProviderData core.EphemeralProviderData
 	ephemeralProviderData.ProviderData = providerData
+	ephemeralProviderData.RoundTripper = roundTripper
 	resp.EphemeralResourceData = ephemeralProviderData
 }
 

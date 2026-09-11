@@ -19,7 +19,6 @@ import (
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdk "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
@@ -350,7 +349,7 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "SqlserverFlex database state imported")
 }
 
-func mapFields(apiResp *sdk.GetDatabaseResponse, model *SharedModel, region string) error {
+func mapFields(apiResp *sqlserverflex.GetDatabaseResponse, model *SharedModel, region string) error {
 	if apiResp == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -375,11 +374,11 @@ func mapFields(apiResp *sdk.GetDatabaseResponse, model *SharedModel, region stri
 	return nil
 }
 
-func toCreatePayload(model *Model) (*sdk.CreateDatabasePayload, error) {
+func toCreatePayload(model *Model) (*sqlserverflex.CreateDatabasePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	payload := &sdk.CreateDatabasePayload{
+	payload := &sqlserverflex.CreateDatabasePayload{
 		Name:  model.Name.ValueString(),
 		Owner: model.Owner.ValueString(),
 	}

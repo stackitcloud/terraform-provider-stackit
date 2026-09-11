@@ -72,6 +72,7 @@ var DefaultOperationTimeout = 30 * time.Minute
 
 type EphemeralProviderData struct {
 	ProviderData
+	RoundTripper http.RoundTripper
 }
 
 type CustomEndpointConfig struct {
@@ -133,6 +134,8 @@ type providerDataInternal struct {
 	clients      clientCollection
 }
 
+type RoleBindingClientCollection = clientCollection
+
 type clientCollection struct {
 	IaaSv2Client                iaasv2.DefaultAPI
 	IaaSv2AlphaClient           iaasv2alpha.DefaultAPI
@@ -176,20 +179,6 @@ type clientCollection struct {
 	ObservabilityV1Client       observability.DefaultAPI
 }
 
-func parseInternalProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (providerDataInternal, bool) {
-	// Prevent panic if the provider has not been configured.
-	if providerData == nil {
-		return providerDataInternal{}, false
-	}
-
-	stackitProviderDataInternal, ok := providerData.(providerDataInternal)
-	if !ok {
-		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.providerDataInternal, got %T", providerData))
-		return providerDataInternal{}, false
-	}
-	return stackitProviderDataInternal, true
-}
-
 func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, clientCollection, bool) {
 	// Prevent panic if the provider has not been configured.
 	if providerData == nil {
@@ -204,14 +193,18 @@ func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagno
 	return stackitProviderDataInternal.providerData, stackitProviderDataInternal.clients, true
 }
 
-func ParseProviderDataLeg(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, bool) {
-	providerDataInternal, ok := parseInternalProviderData(ctx, providerData, diags)
-	return providerDataInternal.providerData, ok
-}
+func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (EphemeralProviderData, bool) {
+	// Prevent panic if the provider has not been configured.
+	if providerData == nil {
+		return EphemeralProviderData{}, false
+	}
 
-func ParseClients(ctx context.Context, providerData any, diags *diag.Diagnostics) (clientCollection, bool) {
-	providerDataInternal, ok := parseInternalProviderData(ctx, providerData, diags)
-	return providerDataInternal.clients, ok
+	stackitProviderData, ok := providerData.(EphemeralProviderData)
+	if !ok {
+		LogAndAddError(ctx, diags, "Error configuring API client", "Expected configure type core.EphemeralProviderData")
+		return EphemeralProviderData{}, false
+	}
+	return stackitProviderData, true
 }
 
 type ProviderData struct {

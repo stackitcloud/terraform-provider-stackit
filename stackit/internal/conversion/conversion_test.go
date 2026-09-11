@@ -8,8 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -218,96 +216,6 @@ func TestToJSONMapUpdatePayload(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
-			}
-		})
-	}
-}
-
-func TestParseEphemeralProviderData(t *testing.T) {
-	// TODO
-	//var randomRoundTripper http.RoundTripper = &http.Transport{
-	//	TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
-	//}
-	type args struct {
-		providerData any
-	}
-	type want struct {
-		ok           bool
-		providerData core.EphemeralProviderData
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    want
-		wantErr bool
-	}{
-		{
-			name: "provider has not been configured",
-			args: args{
-				providerData: nil,
-			},
-			want: want{
-				ok: false,
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid provider data",
-			args: args{
-				providerData: struct{}{},
-			},
-			want: want{
-				ok: false,
-			},
-			wantErr: true,
-		},
-		{
-			name: "valid provider data 1",
-			args: args{
-				providerData: core.EphemeralProviderData{},
-			},
-			want: want{
-				ok:           true,
-				providerData: core.EphemeralProviderData{},
-			},
-			wantErr: false,
-		},
-		{
-			name: "valid provider data 2",
-			args: args{
-				providerData: core.EphemeralProviderData{
-					ProviderData: core.ProviderData{
-						// TODO
-						//RoundTripper: randomRoundTripper,
-					},
-				},
-			},
-			want: want{
-				ok: true,
-				providerData: core.EphemeralProviderData{
-					ProviderData: core.ProviderData{
-						// TODO
-						//RoundTripper: randomRoundTripper,
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			diags := diag.Diagnostics{}
-
-			actual, ok := ParseEphemeralProviderData(ctx, tt.args.providerData, &diags)
-			if diags.HasError() != tt.wantErr {
-				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
-			}
-			if ok != tt.want.ok {
-				t.Errorf("ParseProviderData() got = %v, want %v", ok, tt.want.ok)
-			}
-			if !reflect.DeepEqual(actual, tt.want.providerData) {
-				t.Errorf("ParseProviderData() got = %v, want %v", actual, tt.want)
 			}
 		})
 	}

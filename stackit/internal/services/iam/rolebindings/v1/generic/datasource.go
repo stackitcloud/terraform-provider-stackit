@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
@@ -36,14 +35,14 @@ type nestedRoleBinding struct {
 // RoleBindingDatasource is the resource implementation.
 type RoleBindingDatasource[C any] struct {
 	providerData core.ProviderData
-	apiClient    *C
+	apiClient    C
 
 	ApiName      string // e.g. "iaas", "secretsmanager", ...
 	ResourceType string // e.g. "instance", ...
 
 	// callbacks for lifecyle handling
-	ApiClientFactory func(context.Context, *core.ProviderData, *diag.Diagnostics) *C
-	ExecReadRequest  func(ctx context.Context, client *C, region, resourceId string) ([]GenericRoleBindingResponse, error)
+	ApiClientExtractor func(clientCollection core.RoleBindingClientCollection) C
+	ExecReadRequest    func(ctx context.Context, client C, region, resourceId string) ([]GenericRoleBindingResponse, error)
 }
 
 // Metadata returns the resource type name.
@@ -53,7 +52,7 @@ func (r *RoleBindingDatasource[C]) Metadata(_ context.Context, req datasource.Me
 
 // Configure adds the provider configured client to the resource.
 func (r *RoleBindingDatasource[C]) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, _, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clientCollection, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -63,10 +62,8 @@ func (r *RoleBindingDatasource[C]) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	r.apiClient = r.ApiClientFactory(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.apiClient = r.ApiClientExtractor(clientCollection)
+
 	tflog.Info(ctx, fmt.Sprintf("%s %s client configured", r.ApiName, r.ResourceType))
 }
 

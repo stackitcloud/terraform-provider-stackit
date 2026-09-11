@@ -251,20 +251,6 @@ func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.M
 	return mapPayload, nil
 }
 
-func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (core.EphemeralProviderData, bool) {
-	// Prevent panic if the provider has not been configured.
-	if providerData == nil {
-		return core.EphemeralProviderData{}, false
-	}
-
-	stackitProviderData, ok := providerData.(core.EphemeralProviderData)
-	if !ok {
-		core.LogAndAddError(ctx, diags, "Error configuring API client", "Expected configure type core.EphemeralProviderData")
-		return core.EphemeralProviderData{}, false
-	}
-	return stackitProviderData, true
-}
-
 // StringListToSet safely converts a Go slice of strings into a Terraform framework types.Set.
 //
 // By accepting a pointer to diag.Diagnostics, it enables clean, inline assignments within

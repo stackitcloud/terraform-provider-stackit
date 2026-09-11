@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/clients"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 )
@@ -29,7 +28,7 @@ type accessTokenEphemeralResource struct {
 }
 
 func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
-	ephemeralProviderData, ok := conversion.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	ephemeralProviderData, ok := core.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -44,8 +43,7 @@ func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req epheme
 		return
 	}
 
-	// TODO
-	//e.roundTripper = ephemeralProviderData.RoundTripper
+	e.roundTripper = ephemeralProviderData.RoundTripper
 }
 
 type ephemeralTokenModel struct {
