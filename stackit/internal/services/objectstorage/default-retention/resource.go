@@ -207,13 +207,15 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Parsing model: %v", err))
 	}
-	result, err := apiRequest.Execute()
+	result, err := utils.RetryRequest(ctx, apiRequest.Execute, objectstorageUtils.RateLimitRetryConfig)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK call is done inside utils.RetryRequest
 
 	err = mapFields(result, &model, region)
 	if err != nil {
@@ -248,7 +250,11 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete default-retention
-	_, err := r.client.DefaultAPI.DeleteDefaultRetention(ctx, projectId, region, bucketName).Execute()
+	_, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.DeleteDefaultRetention(ctx, projectId, region, bucketName).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
 			if oapiErr.StatusCode == http.StatusNotFound {
@@ -260,7 +266,9 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 				return
 			}
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting default-retention", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error deleting default-retention", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -287,14 +295,20 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Read default-retention
-	result, err := r.client.DefaultAPI.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
+	result, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.GetDefaultRetention(ctx, projectId, region, bucketName).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading default-retention", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error reading default-retention", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -337,13 +351,15 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Parsing model: %v", err))
 	}
-	result, err := apiRequest.Execute()
+	result, err := utils.RetryRequest(ctx, apiRequest.Execute, objectstorageUtils.RateLimitRetryConfig)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK call is done inside utils.RetryRequest
 
 	err = mapFields(result, &model, region)
 	if err != nil {

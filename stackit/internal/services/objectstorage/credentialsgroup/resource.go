@@ -199,9 +199,15 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new credentials group
-	got, err := r.client.DefaultAPI.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute()
+	got, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error creating credentials group", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -262,7 +268,9 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 
 	found, err := readCredentialsGroups(ctx, &model, region, r.client.DefaultAPI)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -310,14 +318,20 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing credentials group
-	_, err := r.client.DefaultAPI.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
+	_, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials group", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error deleting credentials group", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -390,7 +404,11 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 		return found, fmt.Errorf("missing configuration: either name or credentials group id must be provided")
 	}
 
-	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, model.ProjectId.ValueString(), region).Execute()
+	credentialsGroupsResp, err := utils.RetryRequest(
+		ctx,
+		client.ListCredentialsGroups(ctx, model.ProjectId.ValueString(), region).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
