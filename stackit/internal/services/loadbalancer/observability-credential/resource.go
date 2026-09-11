@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -52,7 +50,7 @@ func NewObservabilityCredentialResource() resource.Resource {
 
 // observabilityCredentialResource is the resource implementation.
 type observabilityCredentialResource struct {
-	client       *loadbalancer.APIClient
+	client       loadbalancer.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -93,18 +91,14 @@ func (r *observabilityCredentialResource) ModifyPlan(ctx context.Context, req re
 
 // Configure adds the provider configured client to the resource.
 func (r *observabilityCredentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	r.providerData = providerData
 
-	apiClient := loadbalancerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.LoadbalancerV2Client
+
 	tflog.Info(ctx, "Load Balancer client configured")
 }
 

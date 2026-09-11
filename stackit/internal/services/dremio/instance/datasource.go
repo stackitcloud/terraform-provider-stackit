@@ -15,8 +15,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
-
-	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 )
 
 var (
@@ -63,7 +61,7 @@ type OAuthDatasourceModel struct {
 }
 
 type instanceDataSource struct {
-	client       *dremioSdk.APIClient
+	client       dremioSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -90,11 +88,8 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	apiClient := dremioUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.DremioV1BetaClient
+
 	tflog.Info(ctx, "Dremio instance client configured for data source")
 }
 

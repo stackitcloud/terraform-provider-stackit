@@ -19,7 +19,7 @@ import (
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -52,7 +52,7 @@ func NewScfOrganizationManagerResource() resource.Resource {
 
 // scfOrganizationManagerResource implements the resource interface for scf organization manager.
 type scfOrganizationManagerResource struct {
-	client       *scf.APIClient
+	client       scf.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -71,17 +71,14 @@ var descriptions = map[string]string{
 }
 
 func (s *scfOrganizationManagerResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) { // nolint:gocritic // function signature required by Terraform
-	var ok bool
-	s.providerData, ok = core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
-	if response.Diagnostics.HasError() {
-		return
-	}
-	s.client = apiClient
+	s.providerData = providerData
+	s.client = clients.ScfV1Client
+
 	tflog.Info(ctx, "scf client configured")
 }
 
@@ -229,7 +226,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	}
 
 	// Create the new scf organization manager via the API client.
-	scfOrgManagerCreateResponse, err := s.client.DefaultAPI.CreateOrgManager(ctx, projectId, region, orgId).Execute()
+	scfOrgManagerCreateResponse, err := s.client.CreateOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Calling API to create org manager: %v", err))
 		return
@@ -280,7 +277,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Read the current scf organization manager via orgId
-	scfOrgManager, err := s.client.DefaultAPI.GetOrgManager(ctx, projectId, region, orgId).Execute()
+	scfOrgManager, err := s.client.GetOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -330,7 +327,7 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Call API to delete the existing scf organization manager.
-	_, err := s.client.DefaultAPI.DeleteOrgManager(ctx, projectId, region, orgId).Execute()
+	_, err := s.client.DeleteOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusGone || oapiErr.StatusCode == http.StatusNotFound) {

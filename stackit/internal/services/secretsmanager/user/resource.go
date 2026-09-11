@@ -11,8 +11,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -59,7 +57,7 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client *secretsmanager.APIClient
+	client secretsmanager.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -69,16 +67,13 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 // Configure adds the provider configured client to the resource.
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := secretsmanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.SecretsmanagerV1Client
+
 	tflog.Info(ctx, "Secrets Manager user client configured")
 }
 

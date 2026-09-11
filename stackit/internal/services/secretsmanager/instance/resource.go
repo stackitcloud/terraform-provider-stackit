@@ -9,8 +9,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -59,7 +57,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *secretsmanager.APIClient
+	client secretsmanager.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -69,16 +67,13 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := secretsmanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.SecretsmanagerV1Client
+
 	tflog.Info(ctx, "Secrets Manager instance client configured")
 }
 
@@ -538,9 +533,9 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateInstancePayload, error
 }
 
 // updateACL creates and deletes ACL so that the instance's ACL are the ones in the model
-func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *secretsmanager.APIClient) error {
+func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client secretsmanager.DefaultAPI) error {
 	// Get ACL current state
-	currentACLResp, err := client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+	currentACLResp, err := client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		return fmt.Errorf("fetching current ACL: %w", err)
 	}
@@ -571,14 +566,14 @@ func updateACL(ctx context.Context, projectId, instanceId string, acl []string, 
 			payload := secretsmanager.CreateACLPayload{
 				Cidr: cidr,
 			}
-			_, err := client.DefaultAPI.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
+			_, err := client.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
 			if err != nil {
 				return fmt.Errorf("creating ACL '%v': %w", cidr, err)
 			}
 		}
 
 		if !state.isInModel && state.isCreated {
-			err := client.DefaultAPI.DeleteACL(ctx, projectId, instanceId, state.id).Execute()
+			err := client.DeleteACL(ctx, projectId, instanceId, state.id).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting ACL '%v': %w", cidr, err)
 			}

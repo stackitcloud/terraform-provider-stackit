@@ -17,11 +17,14 @@ import (
 	cdn "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	certSdk "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
+	dremio "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 	iaasv2alpha "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
 	iaasv2 "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
+	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
 	logme "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v2api"
@@ -29,11 +32,15 @@ import (
 	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
 	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	observability "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v2api"
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
+	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
@@ -127,39 +134,46 @@ type providerDataInternal struct {
 }
 
 type clientCollection struct {
-	IaaSv2Client              iaasv2.DefaultAPI
-	IaaSv2AlphaClient         iaasv2alpha.DefaultAPI
-	ResourceManagerClient     resourcemanager.DefaultAPI
-	ModelExperimentsV1Client  modelexperiments.DefaultAPI
-	EdgeV1Client              edge.DefaultAPI
-	DnsV1Client               dns.DefaultAPI
-	CdnV1Client               cdn.DefaultAPI
-	ServerBackupV2Client      serverbackup.DefaultAPI
-	AlbCertificatesV2Client   certSdk.DefaultAPI
-	ServiceEnablementV2Client serviceenablement.DefaultAPI
-	AlbWafV1CLient            albwaf.DefaultAPI
-	LogsV1Client              logs.DefaultAPI
-	VpnV1Client               vpn.DefaultAPI
-	AuthorizationV2Client     authorization.DefaultAPI
-	PostgresflexV3Client      postgresflex.DefaultAPI
-	AlbV2Client               alb.DefaultAPI
-	SkeV2Client               ske.DefaultAPI
-	SqlServerFlexV3Client     sqlserverflex.DefaultAPI
-	ModelservingV1Client      modelserving.DefaultAPI
-	LogmeV2Client             logme.DefaultAPI
-	OpensearchV2Client        opensearch.DefaultAPI
-	GitV1BetaClient           git.DefaultAPI
-	RedisV2Client             redis.DefaultAPI
-	TelemetryRouterV1Client   telemetryrouter.DefaultAPI
-	TelemetryLinkV1Client     telemetrylink.DefaultAPI
-	ServerUpdateV2Client      serverupdate.DefaultAPI
-	KmsV1Client               kms.DefaultAPI
-	SfsV1Client               sfs.DefaultAPI
-	ServiceAccountV2Client    serviceaccount.DefaultAPI
-	RabbitMqV2Client          rabbitmq.DefaultAPI
-	MongoDbFlexV2Client       mongodbflex.DefaultAPI
-	ObjectStorageV2Client     objectstorage.DefaultAPI
-	MariadbV2Client           mariadb.DefaultAPI
+	IaaSv2Client                iaasv2.DefaultAPI
+	IaaSv2AlphaClient           iaasv2alpha.DefaultAPI
+	ResourceManagerClient       resourcemanager.DefaultAPI
+	ModelExperimentsV1Client    modelexperiments.DefaultAPI
+	EdgeV1Client                edge.DefaultAPI
+	DnsV1Client                 dns.DefaultAPI
+	CdnV1Client                 cdn.DefaultAPI
+	ServerBackupV2Client        serverbackup.DefaultAPI
+	AlbCertificatesV2Client     certSdk.DefaultAPI
+	ServiceEnablementV2Client   serviceenablement.DefaultAPI
+	AlbWafV1CLient              albwaf.DefaultAPI
+	LogsV1Client                logs.DefaultAPI
+	VpnV1Client                 vpn.DefaultAPI
+	AuthorizationV2Client       authorization.DefaultAPI
+	PostgresflexV3Client        postgresflex.DefaultAPI
+	AlbV2Client                 alb.DefaultAPI
+	SkeV2Client                 ske.DefaultAPI
+	SqlServerFlexV3Client       sqlserverflex.DefaultAPI
+	ModelservingV1Client        modelserving.DefaultAPI
+	LogmeV2Client               logme.DefaultAPI
+	OpensearchV2Client          opensearch.DefaultAPI
+	GitV1BetaClient             git.DefaultAPI
+	RedisV2Client               redis.DefaultAPI
+	TelemetryRouterV1Client     telemetryrouter.DefaultAPI
+	TelemetryLinkV1Client       telemetrylink.DefaultAPI
+	ServerUpdateV2Client        serverupdate.DefaultAPI
+	KmsV1Client                 kms.DefaultAPI
+	SfsV1Client                 sfs.DefaultAPI
+	ServiceAccountV2Client      serviceaccount.DefaultAPI
+	RabbitMqV2Client            rabbitmq.DefaultAPI
+	MongoDbFlexV2Client         mongodbflex.DefaultAPI
+	ObjectStorageV2Client       objectstorage.DefaultAPI
+	MariadbV2Client             mariadb.DefaultAPI
+	ScfV1Client                 scf.DefaultAPI
+	LoadbalancerV2Client        loadbalancer.DefaultAPI
+	IntakeV1BetaClient          intake.DefaultAPI
+	DremioV1BetaClient          dremio.DefaultAPI
+	SecretsmanagerV1Client      secretsmanager.DefaultAPI
+	SecretsmanagerV1AlphaClient secretsmanagerV1Alpha.DefaultAPI
+	ObservabilityV1Client       observability.DefaultAPI
 }
 
 func parseInternalProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (providerDataInternal, bool) {

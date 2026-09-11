@@ -2,14 +2,16 @@ package unittest
 
 import (
 	_ "embed"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -35,24 +37,44 @@ func TestVolumeResource(t *testing.T) {
 		return vars
 	}
 
+	getCallCounter := new(-1)
 	mockClient := iaas.DefaultAPIServiceMock{
-		CreateVolumeExecuteMock: utils.Ptr(func(r iaas.ApiCreateVolumeRequest) (*iaas.Volume, error) {
+		CreateVolumeExecuteMock: new(func(_ iaas.ApiCreateVolumeRequest) (*iaas.Volume, error) {
 			return &iaas.Volume{
 				Id: new(volumeId),
 			}, nil
 		}),
-		GetVolumeExecuteMock: utils.Ptr(func(r iaas.ApiGetVolumeRequest) (*iaas.Volume, error) {
-			return &iaas.Volume{
-				Id:               new(volumeId),
-				Status:           new("AVAILABLE"),
-				Size:             new(int64(64)),
-				AvailabilityZone: "eu01-1",
-			}, nil
+		GetVolumeExecuteMock: new(func(_ iaas.ApiGetVolumeRequest) (*iaas.Volume, error) {
+			*getCallCounter++
+
+			switch *getCallCounter {
+			case 0:
+				// creation wait handler
+				return &iaas.Volume{
+					Id:               new(volumeId),
+					Status:           new("AVAILABLE"),
+					Size:             new(int64(64)),
+					AvailabilityZone: "eu01-1",
+				}, nil
+			case 1:
+				// read request of deletion test step
+				return &iaas.Volume{
+					Id:               new(volumeId),
+					Status:           new("AVAILABLE"),
+					Size:             new(int64(64)),
+					AvailabilityZone: "eu01-1",
+				}, nil
+			case 2:
+				// deletion wait handler
+				return nil, oapierror.NewError(http.StatusNotFound, "")
+			}
+
+			panic("should be unreachable")
 		}),
 	}
 
 	resource.UnitTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.NewTestUnitV6ProviderFactories(&clientutils.MockClientFactory{
+		ProtoV6ProviderFactories: testutil.NewTestUnitV6ProviderFactories(&core.MockClientFactory{
 			IaaSV2ClientMock: mockClient,
 		}),
 		Steps: []resource.TestStep{
@@ -60,15 +82,8 @@ func TestVolumeResource(t *testing.T) {
 				Config:          tfConfig,
 				ConfigVariables: variables(),
 			},
-			{
-				Config:          tfConfig,
-				ConfigVariables: variables(),
-				Check: func(s *terraform.State) error {
-					// Clear the root module resources so the auto-destroy finds nothing
-					s.RootModule().Resources = make(map[string]*terraform.ResourceState)
-					return nil
-				},
-			},
+			// Note that Terraform automatically adds a step below which deletes all resources used in the unit test.
+			// This means we also have to mock the delete request and the deletion wait handler.
 		},
 	})
 }

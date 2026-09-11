@@ -446,7 +446,7 @@ func TestReadCredentials(t *testing.T) {
 				CredentialId:       tt.expectedModel.CredentialId,
 				RotateWhenChanged:  types.MapNull(types.StringType),
 			}
-			found, err := readCredentials(context.Background(), model, "eu01", client)
+			found, err := readCredentials(context.Background(), model, "eu01", client.DefaultAPI)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

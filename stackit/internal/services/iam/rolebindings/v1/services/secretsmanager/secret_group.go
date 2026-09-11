@@ -10,15 +10,14 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/rolebindings/v1/generic"
-
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
 )
 
 func NewSecretsmanagerSecretGroupRoleBindingResource() resource.Resource {
 	return &generic.RoleBindingResource[secretsmanagerV1Alpha.APIClient]{
-		ApiName:          "secretsmanager",
-		ResourceType:     "secret_group",
-		ApiClientFactory: secretsmanagerUtils.ConfigureV1AlphaClient,
+		ApiName:      "secretsmanager",
+		ResourceType: "secret_group",
+		// TODO
+		//ApiClientFactory: secretsmanagerUtils.ConfigureV1AlphaClient,
 		ExecCreateRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
 			payload := secretsmanagerV1Alpha.AddSecretGroupRoleBindingsPayload{
 				Role:    role,
@@ -56,9 +55,10 @@ func NewSecretsmanagerSecretGroupRoleBindingResource() resource.Resource {
 
 func NewSecretsmanagerSecretGroupRoleBindingsDatasource() datasource.DataSource {
 	return &generic.RoleBindingDatasource[secretsmanagerV1Alpha.APIClient]{
-		ApiName:          "secretsmanager",
-		ResourceType:     "secret_group",
-		ApiClientFactory: secretsmanagerUtils.ConfigureV1AlphaClient,
+		ApiName:      "secretsmanager",
+		ResourceType: "secret_group",
+		// TODO
+		// ApiClientFactory: secretsmanagerUtils.ConfigureV1AlphaClient,
 		ExecReadRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId string) ([]generic.GenericRoleBindingResponse, error) {
 			resp, err := client.DefaultAPI.ListSecretGroupRoleBindings(ctx, region, resourceId).Execute()
 			if err != nil {

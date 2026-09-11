@@ -25,8 +25,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 
-	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
-
 	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi/wait"
 )
 
@@ -80,7 +78,7 @@ var descriptions = map[string]string{
 }
 
 type userResource struct {
-	client       *dremioSdk.APIClient
+	client       dremioSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -131,11 +129,8 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	apiClient := dremioUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.DremioV1BetaClient
+
 	tflog.Info(ctx, "Dremio user client configured")
 }
 

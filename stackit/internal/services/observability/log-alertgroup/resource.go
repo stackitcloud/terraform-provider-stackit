@@ -8,8 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -84,31 +82,28 @@ func NewLogAlertGroupResource() resource.Resource {
 
 // alertGroupResource is the resource implementation.
 type logAlertGroupResource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Metadata returns the resource type name.
-func (l *logAlertGroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *logAlertGroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_observability_logalertgroup"
 }
 
 // Configure adds the provider configured client to the resource.
-func (l *logAlertGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+func (r *logAlertGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	l.client = apiClient
+	r.client = clients.ObservabilityV1Client
+
 	tflog.Info(ctx, "Observability log alert group client configured")
 }
 
 // Schema defines the schema for the resource.
-func (l *logAlertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *logAlertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Observability log alert group resource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
@@ -230,7 +225,7 @@ func (l *logAlertGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *logAlertGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -254,7 +249,7 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	createAlertGroupResp, err := l.client.DefaultAPI.CreateLogsAlertgroups(ctx, instanceId, projectId).CreateLogsAlertgroupsPayload(*payload).Execute()
+	createAlertGroupResp, err := r.client.CreateLogsAlertgroups(ctx, instanceId, projectId).CreateLogsAlertgroupsPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -295,7 +290,7 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *logAlertGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -312,7 +307,7 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	readAlertGroupResp, err := l.client.DefaultAPI.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	readAlertGroupResp, err := r.client.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -340,12 +335,12 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 // The Update function is redundant since any modifications will
 // automatically trigger a resource recreation through Terraform's built-in
 // lifecycle management.
-func (l *logAlertGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *logAlertGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating log alert group", "Observability log alert groups can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -363,7 +358,7 @@ func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	_, err := l.client.DefaultAPI.DeleteLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	_, err := r.client.DeleteLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -381,7 +376,7 @@ func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id,name
-func (l *logAlertGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *logAlertGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -32,7 +30,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -41,16 +39,13 @@ func (d *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 }
 
 func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.ObservabilityV1Client
+
 	tflog.Info(ctx, "Observability instance client configured")
 }
 
@@ -449,7 +444,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	plan, err := loadPlanId(ctx, *d.client, &model)
+	plan, err := loadPlanId(ctx, d.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan: %v", err))
 		return

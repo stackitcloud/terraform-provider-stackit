@@ -20,7 +20,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	intakeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -58,7 +58,7 @@ func NewRunnerResource() resource.Resource {
 
 // runnerResource is the resource implementation.
 type runnerResource struct {
-	client       *intake.APIClient
+	client       intake.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -74,11 +74,9 @@ func (r *runnerResource) Configure(ctx context.Context, req resource.ConfigureRe
 		return
 	}
 
-	apiClient := intakeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IntakeV1BetaClient
+
 	tflog.Info(ctx, "Intake runner client configured")
 }
 

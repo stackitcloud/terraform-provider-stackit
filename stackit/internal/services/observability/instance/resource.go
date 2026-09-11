@@ -14,8 +14,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/int32planmodifier"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -385,7 +383,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -395,16 +393,13 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ObservabilityV1Client
+
 	tflog.Info(ctx, "Observability instance client configured")
 }
 
@@ -932,7 +927,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		return
 	}
 
-	plan, err := loadPlanId(ctx, *r.client, &configModel)
+	plan, err := loadPlanId(ctx, r.client, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -1011,7 +1006,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	plan, err := loadPlanId(ctx, *r.client, &model)
+	plan, err := loadPlanId(ctx, r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -1210,7 +1205,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	plan, err := loadPlanId(ctx, *r.client, &model)
+	plan, err := loadPlanId(ctx, r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -1361,7 +1356,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	plan, err := loadPlanId(ctx, *r.client, &model)
+	plan, err := loadPlanId(ctx, r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -2246,12 +2241,12 @@ func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, r
 	}, nil
 }
 
-func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *observabilitySdk.APIClient) error {
+func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client observabilitySdk.DefaultAPI) error {
 	payload := observabilitySdk.UpdateACLPayload{
 		Acl: acl,
 	}
 
-	_, err := client.DefaultAPI.UpdateACL(ctx, instanceId, projectId).UpdateACLPayload(payload).Execute()
+	_, err := client.UpdateACL(ctx, instanceId, projectId).UpdateACLPayload(payload).Execute()
 	if err != nil {
 		return fmt.Errorf("updating ACL: %w", err)
 	}
@@ -2552,9 +2547,9 @@ func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*obser
 	}, nil
 }
 
-func loadPlanId(ctx context.Context, client observabilitySdk.APIClient, model *Model) (observabilitySdk.Plan, error) {
+func loadPlanId(ctx context.Context, client observabilitySdk.DefaultAPI, model *Model) (observabilitySdk.Plan, error) {
 	projectId := model.ProjectId.ValueString()
-	res, err := client.DefaultAPI.ListPlans(ctx, projectId).Execute()
+	res, err := client.ListPlans(ctx, projectId).Execute()
 	if err != nil {
 		return observabilitySdk.Plan{}, err
 	}

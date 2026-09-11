@@ -54,6 +54,7 @@ type plansDataSource struct {
 func (d *plansDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
 	}
 
 	d.client = clients.EdgeV1Client

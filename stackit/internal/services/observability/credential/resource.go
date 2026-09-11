@@ -8,8 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -54,7 +52,7 @@ func NewCredentialResource() resource.Resource {
 
 // credentialResource is the resource implementation.
 type credentialResource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -64,16 +62,13 @@ func (r *credentialResource) Metadata(_ context.Context, req resource.MetadataRe
 
 // Configure adds the provider configured client to the resource.
 func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ObservabilityV1Client
+
 	tflog.Info(ctx, "Observability credential client configured")
 }
 

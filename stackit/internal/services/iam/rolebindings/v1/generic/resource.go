@@ -63,7 +63,7 @@ func (r *RoleBindingResource[C]) Metadata(_ context.Context, req resource.Metada
 
 // Configure adds the provider configured client to the resource.
 func (r *RoleBindingResource[C]) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, _, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}

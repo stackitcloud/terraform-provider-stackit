@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -33,31 +31,28 @@ func NewLogAlertGroupDataSource() datasource.DataSource {
 
 // alertGroupDataSource is the datasource implementation.
 type logAlertGroupDataSource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Configure adds the provider configured client to the resource.
-func (l *logAlertGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+func (d *logAlertGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	l.client = apiClient
+	d.client = clients.ObservabilityV1Client
+
 	tflog.Info(ctx, "Observability log alert group client configured")
 }
 
 // Metadata provides metadata for the log alert group datasource.
-func (l *logAlertGroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *logAlertGroupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_observability_logalertgroup"
 }
 
 // Schema defines the schema for the log alert group data source.
-func (l *logAlertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *logAlertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Observability log alert group datasource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
@@ -130,7 +125,7 @@ func (l *logAlertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	}
 }
 
-func (l *logAlertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *logAlertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -147,7 +142,7 @@ func (l *logAlertGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	readAlertGroupResp, err := l.client.DefaultAPI.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	readAlertGroupResp, err := d.client.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

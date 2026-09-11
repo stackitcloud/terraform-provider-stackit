@@ -10,8 +10,6 @@ import (
 var _ ClientFactory = &MockClientFactory{}
 
 type MockClientFactory struct {
-	defaultClientFactory DefaultClientFactory
-
 	ServiceEnablementV2ClientMock serviceenablementV2.DefaultAPI
 	IaaSV2ClientMock              iaasV2.DefaultAPI
 	ModelExperimentsV1ClientMock  modelexperiments.DefaultAPI
@@ -23,7 +21,7 @@ func (m *MockClientFactory) newServiceEnablementV2Client() (serviceenablementV2.
 		return m.ServiceEnablementV2ClientMock, nil
 	}
 
-	return m.defaultClientFactory.newServiceEnablementV2Client()
+	return serviceenablementV2.DefaultAPIServiceMock{}, nil
 }
 
 func (m *MockClientFactory) newIaaSV2Client() (iaasV2.DefaultAPI, error) {
@@ -31,7 +29,7 @@ func (m *MockClientFactory) newIaaSV2Client() (iaasV2.DefaultAPI, error) {
 		return m.IaaSV2ClientMock, nil
 	}
 
-	return m.defaultClientFactory.newIaaSV2Client()
+	return iaasV2.DefaultAPIServiceMock{}, nil
 }
 
 func (m *MockClientFactory) newResourceManagerClient() (resourcemanager.DefaultAPI, error) {
@@ -39,7 +37,7 @@ func (m *MockClientFactory) newResourceManagerClient() (resourcemanager.DefaultA
 		return m.ResourceManagerClientMock, nil
 	}
 
-	return m.defaultClientFactory.newResourceManagerClient()
+	return resourcemanager.DefaultAPIServiceMock{}, nil
 }
 
 func (m *MockClientFactory) newModelExperimentsV1Client() (modelexperiments.DefaultAPI, error) {
@@ -47,5 +45,5 @@ func (m *MockClientFactory) newModelExperimentsV1Client() (modelexperiments.Defa
 		return m.ModelExperimentsV1ClientMock, nil
 	}
 
-	return m.defaultClientFactory.newModelExperimentsV1Client()
+	return modelexperiments.DefaultAPIServiceMock{}, nil
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	intakeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
@@ -31,7 +31,7 @@ func NewRunnerDataSource() datasource.DataSource {
 }
 
 type runnerDataSource struct {
-	client       *intake.APIClient
+	client       intake.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -41,18 +41,14 @@ func (r *runnerDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 
 // Configure adds the provider configured client to the data source
 func (r *runnerDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	r.providerData = providerData
 
-	apiClient := intakeUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IntakeV1BetaClient
+
 	tflog.Info(ctx, "Intake runner client configured for data source")
 }
 

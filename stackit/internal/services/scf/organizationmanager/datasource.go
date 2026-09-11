@@ -14,7 +14,7 @@ import (
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -44,22 +44,19 @@ func NewScfOrganizationManagerDataSource() datasource.DataSource {
 
 // scfOrganizationManagerDataSource is the datasource implementation.
 type scfOrganizationManagerDataSource struct {
-	client       *scf.APIClient
+	client       scf.DefaultAPI
 	providerData core.ProviderData
 }
 
 func (s *scfOrganizationManagerDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
-	var ok bool
-	s.providerData, ok = core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
-	if response.Diagnostics.HasError() {
-		return
-	}
-	s.client = apiClient
+	s.providerData = providerData
+	s.client = clients.ScfV1Client
+
 	tflog.Info(ctx, "scf client configured for scfOrganizationManagerDataSource")
 }
 
@@ -151,7 +148,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
 	// Read the current scf organization manager via orgId
-	ScfOrgManager, err := s.client.DefaultAPI.GetOrgManager(ctx, projectId, region, orgId).Execute()
+	ScfOrgManager, err := s.client.GetOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

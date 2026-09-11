@@ -698,6 +698,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 
 	providerDataInternal, err := core.NewProviderDataInternal(providerData, &clientFactory)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up provider data: %v", err))
+	}
 
 	resp.DataSourceData = providerDataInternal
 	resp.ResourceData = providerDataInternal
@@ -802,12 +805,6 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 		vpnConnection.NewVPNConnectionDataSource,
-	}
-	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
-	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
-
-	// client factory approach
-	refactoredDatasources := []func(factory clientutils.ClientFactory) datasource.DataSource{
 		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasImage.NewImageDataSource,
 		iaasImageV2.NewImageV2DataSource,
@@ -828,13 +825,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		iaasVolume.NewVolumeDataSource,
 	}
-
-	// won't be needed after refactoring is completed
-	for _, d := range refactoredDatasources {
-		dataSources = append(dataSources, func() datasource.DataSource {
-			return d(p.clientFactory)
-		})
-	}
+	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
+	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
 
 	return dataSources
 }
@@ -926,13 +918,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryLink.NewTelemetryLinkResource,
 		vpnConnection.NewVpnConnectionResource,
 		vpnGateway.NewGatewayResource,
-	}
-	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
-	resources = append(resources, customRole.NewCustomRoleResources()...)
-	resources = append(resources, iamRoleBindingsV1.NewRoleBindingResources()...)
-
-	// client factory approach
-	refactoredResources := []func(factory clientutils.ClientFactory) resource.Resource{
 		iaasAffinityGroup.NewAffinityGroupResource,
 		iaasImage.NewImageResource,
 		iaasNetwork.NewNetworkResource,
@@ -953,13 +938,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasRoutingTableRoute.NewRoutingTableRouteResource,
 		iaasVolume.NewVolumeResource,
 	}
-
-	// won't be needed after refactoring
-	for _, r := range refactoredResources {
-		resources = append(resources, func() resource.Resource {
-			return r(p.clientFactory)
-		})
-	}
+	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
+	resources = append(resources, customRole.NewCustomRoleResources()...)
+	resources = append(resources, iamRoleBindingsV1.NewRoleBindingResources()...)
 
 	return resources
 }

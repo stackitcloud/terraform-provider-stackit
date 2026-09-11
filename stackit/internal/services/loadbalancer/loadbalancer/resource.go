@@ -12,8 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
-	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -227,7 +225,7 @@ func NewLoadBalancerResource() resource.Resource {
 
 // loadBalancerResource is the resource implementation.
 type loadBalancerResource struct {
-	client       *loadbalancer.APIClient
+	client       loadbalancer.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -305,18 +303,14 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 
 // Configure adds the provider configured client to the resource.
 func (r *loadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	r.providerData = providerData
 
-	apiClient := loadbalancerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.LoadbalancerV2Client
+
 	tflog.Info(ctx, "Load Balancer client configured")
 }
 

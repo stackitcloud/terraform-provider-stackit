@@ -185,12 +185,10 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	model.ProjectId = types.StringValue(projectId)
 
 	var areaId basetypes.StringValue
-	if projectResp.AreaId != nil {
-		if projectResp.AreaId.String != nil {
-			areaId = types.StringPointerValue(projectResp.AreaId.String)
-		} else if projectResp.AreaId.StaticAreaID != nil {
-			areaId = types.StringValue(string(*projectResp.AreaId.StaticAreaID))
-		}
+	if projectResp.AreaId.String != nil {
+		areaId = types.StringPointerValue(projectResp.AreaId.String)
+	} else if projectResp.AreaId.StaticAreaID != nil {
+		areaId = types.StringValue(string(*projectResp.AreaId.StaticAreaID))
 	}
 
 	var createdAt basetypes.StringValue

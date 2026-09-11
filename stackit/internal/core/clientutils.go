@@ -5,9 +5,13 @@ import (
 	"net/http"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	dremio "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 	iaasV2 "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+	observability "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 	serviceenablementV2 "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 )
 
@@ -46,6 +50,9 @@ type DefaultClientFactory struct {
 	RoundTripper    http.RoundTripper
 	UserAgent       string
 	CustomEndpoints CustomEndpointConfig
+
+	// Deprecated: This should be only used for legacy implementations, not for new ones!
+	ProviderDefaultRegion string
 }
 
 func (f *DefaultClientFactory) defaultConfigOptions(customEndpoint string) []config.ConfigurationOption {
@@ -66,7 +73,7 @@ func (f *DefaultClientFactory) newServiceEnablementV2Client() (serviceenablement
 
 	apiClient, err := serviceenablementV2.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -77,7 +84,7 @@ func (f *DefaultClientFactory) newIaaSV2Client() (iaasV2.DefaultAPI, error) {
 
 	apiClient, err := iaasV2.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -88,7 +95,7 @@ func (f *DefaultClientFactory) newResourceManagerClient() (resourcemanager.Defau
 
 	apiClient, err := resourcemanager.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -99,7 +106,84 @@ func (f *DefaultClientFactory) newModelExperimentsV1Client() (modelexperiments.D
 
 	apiClient, err := modelexperiments.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newDremioV1BetaClient() (dremio.DefaultAPI, error) {
+	apiClientConfigOptions := []config.ConfigurationOption{
+		config.WithCustomAuth(f.RoundTripper),
+		config.WithUserAgent(f.UserAgent),
+		config.WithRegion(f.ProviderDefaultRegion),
+	}
+	if f.CustomEndpoints.DremioCustomEndpoint != "" {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.DremioCustomEndpoint))
+	}
+	apiClient, err := dremio.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newSecretsmanagerV1Client() (secretsmanager.DefaultAPI, error) {
+	apiClientConfigOptions := []config.ConfigurationOption{
+		config.WithCustomAuth(f.RoundTripper),
+		config.WithUserAgent(f.UserAgent),
+	}
+
+	if f.CustomEndpoints.SecretsManagerCustomEndpoint != "" {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.SecretsManagerCustomEndpoint))
+	} else {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(f.ProviderDefaultRegion))
+	}
+
+	apiClient, err := secretsmanager.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newSecretsmanagerV1AlphaClient() (secretsmanagerV1Alpha.DefaultAPI, error) {
+	apiClientConfigOptions := []config.ConfigurationOption{
+		config.WithCustomAuth(f.RoundTripper),
+		config.WithUserAgent(f.UserAgent),
+	}
+
+	if f.CustomEndpoints.SecretsManagerCustomEndpoint != "" {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.SecretsManagerCustomEndpoint))
+	} else {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(f.ProviderDefaultRegion))
+	}
+
+	apiClient, err := secretsmanagerV1Alpha.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newObservabilityV1Client() (observability.DefaultAPI, error) {
+	apiClientConfigOptions := []config.ConfigurationOption{
+		config.WithCustomAuth(f.RoundTripper),
+		config.WithUserAgent(f.UserAgent),
+	}
+
+	if f.CustomEndpoints.ObservabilityCustomEndpoint != "" {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.ObservabilityCustomEndpoint))
+	} else {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(f.ProviderDefaultRegion))
+	}
+
+	apiClient, err := observability.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("Configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil

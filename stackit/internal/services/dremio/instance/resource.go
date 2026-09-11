@@ -27,8 +27,6 @@ import (
 
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi/wait"
-
-	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 )
 
 var (
@@ -157,7 +155,7 @@ func NewInstanceResource() resource.Resource {
 }
 
 type instanceResource struct {
-	client       *dremioSdk.APIClient
+	client       dremioSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -204,11 +202,8 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	apiClient := dremioUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.DremioV1BetaClient
+
 	tflog.Info(ctx, "Dremio instance client configured")
 }
 

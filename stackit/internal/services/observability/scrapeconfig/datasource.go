@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -35,7 +33,7 @@ func NewScrapeConfigDataSource() datasource.DataSource {
 
 // scrapeConfigDataSource is the data source implementation.
 type scrapeConfigDataSource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -44,16 +42,12 @@ func (d *scrapeConfigDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.ObservabilityV1Client
 }
 
 // Schema defines the schema for the data source.

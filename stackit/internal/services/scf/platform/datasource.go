@@ -13,7 +13,7 @@ import (
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -31,22 +31,19 @@ func NewScfPlatformDataSource() datasource.DataSource {
 
 // scfPlatformDataSource is the datasource implementation.
 type scfPlatformDataSource struct {
-	client       *scf.APIClient
+	client       scf.DefaultAPI
 	providerData core.ProviderData
 }
 
 func (s *scfPlatformDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
-	var ok bool
-	s.providerData, ok = core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := scfUtils.ConfigureClient(ctx, &s.providerData, &response.Diagnostics)
-	if response.Diagnostics.HasError() {
-		return
-	}
-	s.client = apiClient
+	s.providerData = providerData
+	s.client = clients.ScfV1Client
+
 	tflog.Info(ctx, "scf client configured for platform")
 }
 
@@ -146,7 +143,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Read the scf platform
-	scfPlatformResponse, err := s.client.DefaultAPI.GetPlatform(ctx, projectId, region, platformId).Execute()
+	scfPlatformResponse, err := s.client.GetPlatform(ctx, projectId, region, platformId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -32,7 +30,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *secretsmanager.APIClient
+	client secretsmanager.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -42,16 +40,13 @@ func (r *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := secretsmanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.SecretsmanagerV1Client
+
 	tflog.Info(ctx, "Secrets Manager instance client configured")
 }
 

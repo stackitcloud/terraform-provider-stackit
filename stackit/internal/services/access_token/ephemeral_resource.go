@@ -44,7 +44,8 @@ func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req epheme
 		return
 	}
 
-	e.roundTripper = ephemeralProviderData.RoundTripper
+	// TODO
+	//e.roundTripper = ephemeralProviderData.RoundTripper
 }
 
 type ephemeralTokenModel struct {

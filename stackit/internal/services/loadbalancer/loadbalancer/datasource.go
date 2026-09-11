@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -35,7 +33,7 @@ func NewLoadBalancerDataSource() datasource.DataSource {
 
 // loadBalancerDataSource is the data source implementation.
 type loadBalancerDataSource struct {
-	client       *loadbalancer.APIClient
+	client       loadbalancer.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -46,18 +44,14 @@ func (r *loadBalancerDataSource) Metadata(_ context.Context, req datasource.Meta
 
 // Configure adds the provider configured client to the data source.
 func (r *loadBalancerDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	r.providerData = providerData
 
-	apiClient := loadbalancerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.LoadbalancerV2Client
+
 	tflog.Info(ctx, "Load balancer client configured")
 }
 
