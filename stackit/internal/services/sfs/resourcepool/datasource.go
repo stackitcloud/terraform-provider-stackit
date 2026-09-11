@@ -114,6 +114,11 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	ctx = core.LogResponse(ctx)
 
+	if response == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool", "Calling API: Empty response")
+		return
+	}
+
 	// Map response body to schema
 	err = mapDataSourceFields(ctx, region, response.ResourcePool, &model)
 	if err != nil {

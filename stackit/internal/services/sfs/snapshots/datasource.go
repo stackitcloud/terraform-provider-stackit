@@ -124,6 +124,11 @@ func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasourc
 
 	ctx = core.LogResponse(ctx)
 
+	if response == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool snapshot", "Calling API: Empty response")
+		return
+	}
+
 	// Map response body to schema
 	err = mapDataSourceFields(ctx, region, &response.ResourcePoolSnapshots, &model)
 	if err != nil {
