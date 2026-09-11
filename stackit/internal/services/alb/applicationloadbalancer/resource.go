@@ -273,6 +273,7 @@ var targetPoolTypes = map[string]attr.Type{
 
 // Struct corresponding to targetPool.ActiveHealthCheck
 type activeHealthCheck struct {
+	AltPort            types.Int32  `tfsdk:"alt_port"`
 	HealthyThreshold   types.Int32  `tfsdk:"healthy_threshold"`
 	HttpHealthChecks   types.Object `tfsdk:"http_health_checks"`
 	Interval           types.String `tfsdk:"interval"`
@@ -283,6 +284,7 @@ type activeHealthCheck struct {
 
 // Types corresponding to activeHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
+	"alt_port":            types.Int32Type,
 	"healthy_threshold":   types.Int32Type,
 	"http_health_checks":  types.ObjectType{AttrTypes: httpHealthChecksTypes},
 	"interval":            types.StringType,
@@ -452,6 +454,7 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
 		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
 		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
+		"alt_port":                               "Overrides the default port used for health check probes.",
 		"healthy_threshold":                      "Healthy threshold of the health checking.",
 		"http_health_checks":                     "Options for the HTTP health checking.",
 		"http_health_checks.ok_status":           "List of HTTP status codes that indicate a healthy response.",
@@ -966,6 +969,13 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Description: descriptions["active_health_check"],
 							Optional:    true,
 							Attributes: map[string]schema.Attribute{
+								"alt_port": schema.Int32Attribute{
+									Description: descriptions["alt_port"],
+									Optional:    true,
+									Validators: []validator.Int32{
+										int32validator.Between(1, 65535),
+									},
+								},
 								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Required:    true,
@@ -1952,6 +1962,7 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*albSdk.Ac
 	}
 
 	return &albSdk.ActiveHealthCheck{
+		AltPort:            conversion.Int32ValueToPointer(activeHealthCheckModel.AltPort),
 		HealthyThreshold:   conversion.Int32ValueToPointer(activeHealthCheckModel.HealthyThreshold),
 		Interval:           conversion.StringValueToPointer(activeHealthCheckModel.Interval),
 		IntervalJitter:     conversion.StringValueToPointer(activeHealthCheckModel.IntervalJitter),
@@ -2774,6 +2785,7 @@ func mapActiveHealthCheck(ctx context.Context, activeHealthCheckResp *albSdk.Act
 	}
 
 	activeHealthCheckMap := map[string]attr.Value{
+		"alt_port":            types.Int32PointerValue(activeHealthCheckResp.AltPort),
 		"healthy_threshold":   types.Int32PointerValue(activeHealthCheckResp.HealthyThreshold),
 		"interval":            types.StringPointerValue(activeHealthCheckResp.Interval),
 		"interval_jitter":     types.StringPointerValue(activeHealthCheckResp.IntervalJitter),
