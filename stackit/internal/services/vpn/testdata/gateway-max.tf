@@ -16,6 +16,7 @@ variable "label_key" {}
 variable "label_value" {}
 variable "network_config_prefix" {}
 
+# no test candidate, just needed for the testing setup
 resource "stackit_network_area" "network_area" {
   organization_id = var.organization_id
   name            = var.network_area_name
@@ -24,6 +25,7 @@ resource "stackit_network_area" "network_area" {
   }
 }
 
+# no test candidate, just needed for the testing setup
 resource "stackit_resourcemanager_project" "project" {
   parent_container_id = var.parent_container_id
   name                = var.project_name
@@ -35,6 +37,7 @@ resource "stackit_resourcemanager_project" "project" {
   depends_on = [stackit_network_area_region.network_area_region]
 }
 
+# no test candidate, just needed for the testing setup
 resource "stackit_network_area_region" "network_area_region" {
   organization_id = var.organization_id
   network_area_id = stackit_network_area.network_area.network_area_id
@@ -51,6 +54,7 @@ resource "stackit_network_area_region" "network_area_region" {
   }
 }
 
+# no test candidate, just needed for the testing setup
 resource "stackit_routing_table" "routing_table" {
   organization_id = stackit_network_area.network_area.organization_id
   network_area_id = stackit_network_area.network_area.network_area_id
@@ -58,6 +62,7 @@ resource "stackit_routing_table" "routing_table" {
   depends_on      = [stackit_network_area_region.network_area_region]
 }
 
+# actual testing candidate
 resource "stackit_vpn_gateway" "gateway" {
   project_id   = stackit_resourcemanager_project.project.project_id
   region       = var.region

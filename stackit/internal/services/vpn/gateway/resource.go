@@ -253,7 +253,6 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"routing_table_id": schema.StringAttribute{
 						Description: schemaDescriptions["network_config_routing_table_id"],
 						Optional:    true,
-						// Computed:    true,
 						Validators: []validator.String{
 							validate.UUID(),
 							validate.NoSeparator(),
@@ -480,6 +479,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	// the backend may respond with 409s during the update (happens in acc test consistently). Error message states to retry at a later time so we use the retry utils here
 	retryConfig := tfutils.RetryConfig{
 		Attempts:         updateGatewayAttempts,
 		Delay:            updateGatewayRetryDelay,
@@ -710,15 +710,9 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	if gateway.NetworkConfig == nil {
 		model.NetworkConfig = types.ObjectNull(networkConfigTypes)
 	} else {
-		predefinedNetworkPrefix := types.StringNull()
-		if gateway.NetworkConfig.PredefinedNetworkPrefix != nil {
-			predefinedNetworkPrefix = types.StringValue(*gateway.NetworkConfig.PredefinedNetworkPrefix)
-		}
+		predefinedNetworkPrefix := types.StringPointerValue(gateway.NetworkConfig.PredefinedNetworkPrefix)
 
-		routingTableId := types.StringNull()
-		if gateway.NetworkConfig.RoutingTableId != nil {
-			routingTableId = types.StringValue(*gateway.NetworkConfig.RoutingTableId)
-		}
+		routingTableId := types.StringPointerValue(gateway.NetworkConfig.RoutingTableId)
 
 		networkConfigObject, diags := types.ObjectValue(networkConfigTypes, map[string]attr.Value{
 			"predefined_network_prefix": predefinedNetworkPrefix,
