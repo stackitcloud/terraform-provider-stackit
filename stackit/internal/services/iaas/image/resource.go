@@ -1,8 +1,9 @@
 package image
 
 import (
-	"bufio"
 	"context"
+
+	//nolint:gosec // G501: weak crypto is acceptable here for hash generation
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -192,7 +193,8 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
 }
-func (r *imageResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+
+func (r *imageResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		resourcevalidator.ExactlyOneOf(
 			path.MatchRoot("local_file_path"),
@@ -473,7 +475,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"url": schema.StringAttribute{
-								Description: "URL to downlioad the image from.",
+								Description: "URL to download the image from.",
 								Required:    true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
@@ -506,59 +508,46 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	var file *os.File
+	var filePath string
 	var err error
 
-	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() { // is deprecated
-		file, err = loadFileFromDisk(ctx, model.LocalFilePath.ValueString())
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading image from disk", fmt.Sprintf("Loading file: %v", err))
-			return
-		}
-	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
-		var imageFile imageFileModel
-		diags = model.ImageFile.As(ctx, &imageFile, basetypes.ObjectAsOptions{})
+	// Handle legacy option
+	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
+		filePath = model.LocalFilePath.String()
+	}
+
+	if filePath == "" && !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
+		var imageFileModel imageFileModel
+		diags = model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
-		if !imageFile.Download.IsNull() && !imageFile.Download.IsUnknown() { // is download
+		// Handle download option
+		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
 			var downloadModel downloadModel
-			diags = imageFile.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
+			diags = imageFileModel.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
 			resp.Diagnostics.Append(diags...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
-
-			file, err = downloadImage(ctx, downloadModel.URL.ValueString())
+			filePath, err = downloadImage(ctx, downloadModel.URL.ValueString())
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
 				return
 			}
-			defer os.RemoveAll(filepath.Dir(file.Name()))
-
-		} else if !imageFile.Local.IsNull() && !imageFile.Local.IsUnknown() { // is local
+		}
+		// Handle local option
+		if !imageFileModel.Local.IsNull() && !imageFileModel.Local.IsUnknown() {
 			var localModel localModel
-			diags = imageFile.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
+			diags = imageFileModel.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
 			resp.Diagnostics.Append(diags...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
-
-			file, err = loadFileFromDisk(ctx, localModel.Path.ValueString())
-			if err != nil {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error loading image from disk", fmt.Sprintf("Loading file: %v", err))
-				return
-			}
+			filePath = localModel.Path.String()
 		}
 	}
-
-	if file == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", "No valid image source path or URL was resolved from configuration.")
-		return
-	}
-	defer file.Close()
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -600,7 +589,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Upload image
-	err = uploadImage(ctx, &resp.Diagnostics, file, imageCreateResp.UploadUrl)
+	err = uploadImage(ctx, filePath, imageCreateResp.UploadUrl)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Uploading image: %v", err))
 		return
@@ -995,29 +984,33 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}, nil
 }
 
-func loadFileFromDisk(ctx context.Context, filePath string) (*os.File, error) {
+func uploadImage(ctx context.Context, filePath, uploadURL string) error {
 	if filePath == "" {
-		return nil, fmt.Errorf("file path is empty")
+		return fmt.Errorf("file path is empty")
+	}
+	if uploadURL == "" {
+		return fmt.Errorf("upload URL is empty")
 	}
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("open file: %w", err)
+		return fmt.Errorf("open file: %w", err)
 	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			tflog.Debug(ctx, "failed to close upload file handle", map[string]interface{}{
+				"file":  filePath,
+				"error": err.Error(),
+			})
+		}
+	}()
 
-	return file, nil
-}
-
-func uploadImage(ctx context.Context, diags *diag.Diagnostics, file *os.File, uploadURL string) error {
-	if file == nil {
-		return fmt.Errorf("file is nil")
-	}
 	stat, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("stat file: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, bufio.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, file)
 	if err != nil {
 		return fmt.Errorf("create upload request: %w", err)
 	}
@@ -1030,54 +1023,56 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, file *os.File, up
 		return fmt.Errorf("upload image: %w", err)
 	}
 	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
-			core.LogAndAddError(ctx, diags, "Error uploading image", fmt.Sprintf("Closing response body: %v", err))
+		if err := resp.Body.Close(); err != nil {
+			tflog.Debug(ctx, "failed to close HTTP response body", map[string]interface{}{
+				"error": err.Error(),
+			})
 		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("upload image: %s", resp.Status)
 	}
+
 	return nil
 }
 
-func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) { //TODO: Ask what the benefit of using os.File over file paths with reopening is
+func downloadImage(ctx context.Context, downloadURL string) (fileName string, err error) {
 	if downloadURL == "" {
-		return nil, fmt.Errorf("download URL is empty")
+		return "", fmt.Errorf("download URL is empty")
 	}
 
+	//nolint:gosec // G401: weak crypto is acceptable here for hash generation
 	md5sum := fmt.Sprintf("%x", md5.Sum([]byte(downloadURL)))
 
 	tmpDir, err := os.MkdirTemp("", "tf-provider-download-*")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
 
-	filename := filepath.Join(tmpDir, md5sum+".img")
-
-	cleanupOnErr := func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			tflog.Warn(ctx, "failed to cleanup temp directory", map[string]interface{}{
-				"dir":   tmpDir,
-				"error": err.Error(),
-			})
+	defer func() {
+		if err != nil {
+			if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+				tflog.Warn(ctx, "failed to cleanup temp directory", map[string]interface{}{
+					"dir":   tmpDir,
+					"error": removeErr.Error(),
+				})
+			}
 		}
-	}
+	}()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	fileName = filepath.Join(tmpDir, md5sum+".img")
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, http.NoBody)
 	if err != nil {
-		cleanupOnErr()
-		return nil, fmt.Errorf("create download request: %w", err)
+		return "", fmt.Errorf("create download request: %w", err)
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		cleanupOnErr()
-		return nil, fmt.Errorf("download image: %w", err)
+		return "", fmt.Errorf("download image: %w", err)
 	}
-
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			tflog.Debug(ctx, "failed to close HTTP response body", map[string]interface{}{
@@ -1085,30 +1080,25 @@ func downloadImage(ctx context.Context, downloadURL string) (*os.File, error) { 
 			})
 		}
 	}()
+
 	if resp.StatusCode != http.StatusOK {
-		cleanupOnErr()
-		return nil, fmt.Errorf("download image unexpected status: %s", resp.Status)
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return "", fmt.Errorf("download image unexpected status: %s", resp.Status)
 	}
 
-	file, err := os.Create(filename)
+	file, err := os.Create(fileName)
 	if err != nil {
-		cleanupOnErr()
-		return nil, fmt.Errorf("creating file: %w", err)
+		return "", fmt.Errorf("creating file: %w", err)
 	}
 
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
-		file.Close()
-		cleanupOnErr()
-		return nil, fmt.Errorf("writing to file: %w", err)
+	if _, err = io.Copy(file, resp.Body); err != nil {
+		_ = file.Close()
+		return "", fmt.Errorf("writing to file: %w", err)
 	}
 
-	// rewind for next consumer
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		file.Close()
-		cleanupOnErr()
-		return nil, fmt.Errorf("seeking file: %w", err)
+	if err = file.Close(); err != nil {
+		return "", fmt.Errorf("closing file: %w", err)
 	}
 
-	return file, nil
+	return fileName, nil
 }
