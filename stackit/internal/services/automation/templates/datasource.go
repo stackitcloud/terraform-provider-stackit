@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/experimental/paginate"
+	"github.com/stackitcloud/stackit-sdk-go/core/experimental/paginate"
 	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1betaapi"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"

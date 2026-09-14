@@ -43,3 +43,19 @@ func LabelsToPayload(ctx context.Context, modelLabels types.Map) (map[string]str
 
 	return labels, nil
 }
+
+// LabelsToNullableValuePayload behaves like LabelsToPayload but returns a map with pointer
+// values, for payloads that use a per-key nullable map (e.g. to support deleting a single
+// label by setting its value to null in a partial update).
+func LabelsToNullableValuePayload(ctx context.Context, modelLabels types.Map) (map[string]*string, error) {
+	labels := map[string]*string{}
+
+	if !IsUndefined(modelLabels) {
+		diags := modelLabels.ElementsAs(ctx, &labels, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
+		}
+	}
+
+	return labels, nil
+}
