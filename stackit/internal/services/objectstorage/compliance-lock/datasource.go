@@ -110,7 +110,11 @@ func (d *compliancelockDataSource) Read(ctx context.Context, req datasource.Read
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := d.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := utils.RetryRequest(
+		ctx,
+		d.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		utils.LogError(
 			ctx,
