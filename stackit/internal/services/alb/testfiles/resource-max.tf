@@ -37,6 +37,7 @@ variable "labels_key_1" {}
 variable "labels_value_1" {}
 variable "labels_key_2" {}
 variable "labels_value_2" {}
+variable "ahc_alt_port" {}
 variable "ahc_interval" {}
 variable "ahc_interval_jitter" {}
 variable "ahc_timeout" {}
@@ -86,7 +87,7 @@ resource "stackit_network" "listener_network" {
   project_id       = var.project_id
   name             = var.network_name_listener
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "10.11.10.0/24"
+  ipv4_prefix      = "10.2.2.0/24"
   routed           = "true"
 }
 
@@ -94,7 +95,7 @@ resource "stackit_network" "target_network" {
   project_id       = var.project_id
   name             = var.network_name_targets
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "10.11.11.0/24"
+  ipv4_prefix      = "10.2.3.0/24"
   routed           = "true"
 }
 
@@ -160,6 +161,7 @@ resource "stackit_application_load_balancer" "loadbalancer" {
     {
       name = var.target_pool_name_1
       active_health_check = {
+        alt_port            = var.ahc_alt_port
         interval            = var.ahc_interval
         interval_jitter     = var.ahc_interval_jitter
         timeout             = var.ahc_timeout

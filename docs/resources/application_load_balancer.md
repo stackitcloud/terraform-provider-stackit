@@ -437,6 +437,7 @@ Required:
 
 Optional:
 
+- `alt_port` (Number) Overrides the default port used for health check probes.
 - `http_health_checks` (Attributes) Options for the HTTP health checking. (see [below for nested schema](#nestedatt--target_pools--active_health_check--http_health_checks))
 
 <a id="nestedatt--target_pools--active_health_check--http_health_checks"></a>

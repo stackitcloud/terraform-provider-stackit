@@ -121,6 +121,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
 		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
 		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
+		"alt_port":                               "Overrides the default port used for health check probes.",
 		"healthy_threshold":                      "Healthy threshold of the health checking.",
 		"http_health_checks":                     "Options for the HTTP health checking.",
 		"http_health_checks.ok_status":           "List of HTTP status codes that indicate a healthy response.",
@@ -435,6 +436,10 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 							Description: descriptions["active_health_check"],
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
+								"alt_port": schema.Int32Attribute{
+									Description: descriptions["alt_port"],
+									Computed:    true,
+								},
 								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Computed:    true,

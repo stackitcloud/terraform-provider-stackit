@@ -40,7 +40,7 @@ resource "stackit_network" "network" {
   project_id       = var.project_id
   name             = var.network_name
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "192.168.3.0/25"
+  ipv4_prefix      = "10.0.0.0/25"
   routed           = "true"
 }
 
