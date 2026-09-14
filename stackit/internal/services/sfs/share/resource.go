@@ -404,13 +404,13 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
 	if response.Share == nil || response.Share.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "response did not contain an ID")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", "response did not contain an ID")
 		return
 	}
 
 	getResponse, err := wait.UpdateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", fmt.Sprintf("share get: %v", err))
 		return
 	}
 	err = mapFields(ctx, getResponse.Share, region, &model)
