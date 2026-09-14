@@ -550,6 +550,10 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					data "stackit_sfs_resource_pool" "resource_pool_ds" {
 					  project_id       = stackit_sfs_resource_pool.resourcepool.project_id
 					  resource_pool_id = stackit_sfs_resource_pool.resourcepool.resource_pool_id
+
+					  timeouts = {
+					    read = "20m"
+					  }
 					}
 					`,
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig,
