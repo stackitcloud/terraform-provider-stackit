@@ -35,6 +35,7 @@ data "stackit_sfs_share" "example" {
 ### Optional
 
 - `region` (String) The resource region. Read-only attribute that reflects the provider region.
+- `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
 
@@ -49,3 +50,10 @@ You can also assign a Share Export Policy after creating the Share
 - `space_hard_limit_gigabytes` (Number) Space hard limit for the Share.
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
 				(unit: gigabytes)
+
+<a id="nestedatt--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).

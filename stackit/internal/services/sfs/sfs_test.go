@@ -216,3 +216,56 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
 		},
 	})
 }
+
+// TestSfsShareCreateTimeout asserts that the configured `timeouts.create` bounds the create. Only the create timeout
+// is covered: read, update and delete would each need a successful create beforehand, which makes those tests slow
+// and flaky.
+func TestSfsShareCreateTimeout(t *testing.T) {
+	projectId := uuid.NewString()
+	resourcePoolId := uuid.NewString()
+	s := testutil.NewMockServer(t)
+	defer s.Server.Close()
+	tfConfig := fmt.Sprintf(`
+provider "stackit" {
+	default_region = "eu01"
+	sfs_custom_endpoint = "%s"
+	service_account_token = "mock-server-needs-no-auth"
+	enable_beta_resources = true
+}
+resource "stackit_sfs_share" "example" {
+  project_id                 = "%s"
+  resource_pool_id           = "%s"
+  name                       = "my-nfs-share"
+  export_policy              = "high-performance-class"
+  space_hard_limit_gigabytes = 32
+
+  timeouts = {
+    create = "10ms"
+    read   = "10ms"
+    update = "10ms"
+    delete = "10ms"
+  }
+}
+`, s.Server.URL, projectId, resourcePoolId)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					s.Reset(testutil.MockResponse{
+						Description: "answers later than the configured timeout allows",
+						Handler: func(_ http.ResponseWriter, r *http.Request) {
+							select {
+							case <-r.Context().Done():
+							case <-time.After(20 * time.Millisecond):
+							}
+						},
+					})
+				},
+				Config:      tfConfig,
+				ExpectError: regexp.MustCompile("deadline exceeded"),
+			},
+		},
+	})
+}

@@ -787,6 +787,10 @@ func TestAccShareResourceMax(t *testing.T) {
 					  project_id       = stackit_sfs_resource_pool.resourcepool.project_id
 					  resource_pool_id = stackit_sfs_resource_pool.resourcepool.resource_pool_id
 					  share_id         = stackit_sfs_share.share.share_id
+
+					  timeouts = {
+					    read = "20m"
+					  }
 					}
 					`,
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig,

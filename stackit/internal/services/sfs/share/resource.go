@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -35,16 +36,17 @@ var (
 )
 
 type Model struct {
-	Id                      types.String `tfsdk:"id"` // needed by TF
-	ProjectId               types.String `tfsdk:"project_id"`
-	ResourcePoolId          types.String `tfsdk:"resource_pool_id"`
-	ShareId                 types.String `tfsdk:"share_id"`
-	Name                    types.String `tfsdk:"name"`
-	Labels                  types.Map    `tfsdk:"labels"`
-	ExportPolicyName        types.String `tfsdk:"export_policy"`
-	SpaceHardLimitGigabytes types.Int32  `tfsdk:"space_hard_limit_gigabytes"`
-	Region                  types.String `tfsdk:"region"`
-	MountPath               types.String `tfsdk:"mount_path"`
+	Id                      types.String   `tfsdk:"id"` // needed by TF
+	ProjectId               types.String   `tfsdk:"project_id"`
+	ResourcePoolId          types.String   `tfsdk:"resource_pool_id"`
+	ShareId                 types.String   `tfsdk:"share_id"`
+	Name                    types.String   `tfsdk:"name"`
+	Labels                  types.Map      `tfsdk:"labels"`
+	ExportPolicyName        types.String   `tfsdk:"export_policy"`
+	SpaceHardLimitGigabytes types.Int32    `tfsdk:"space_hard_limit_gigabytes"`
+	Region                  types.String   `tfsdk:"region"`
+	MountPath               types.String   `tfsdk:"mount_path"`
+	Timeouts                timeouts.Value `tfsdk:"timeouts"`
 }
 
 // NewShareResource is a helper function to simplify the provider implementation.
@@ -114,7 +116,7 @@ func (r *shareResource) Configure(ctx context.Context, req resource.ConfigureReq
 }
 
 // Schema defines the schema for the resource.
-func (r *shareResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *shareResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "SFS Share schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription(description, core.Resource),
@@ -203,6 +205,7 @@ You can also assign a Share Export Policy after creating the Share`,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"timeouts": timeouts.AttributesAll(ctx),
 		},
 	}
 }
@@ -216,6 +219,17 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// The wait handler only enforces its own timeout when the context carries no deadline,
+	// so the context deadline set here is what actually bounds the polling.
+	waiterTimeout := wait.CreateShareWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to read the default wait handler timeout
+	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
@@ -261,7 +275,8 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 	response, err := wait.CreateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, *share.Share.Id).
 		WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share",
+			fmt.Sprintf("share creation waiting: %v%s", err, utils.TimeoutHint(ctx, "create", createTimeout)))
 		return
 	}
 	ctx = tflog.SetField(ctx, "share_id", response.Share.Id)
@@ -303,6 +318,15 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	shareId := model.ShareId.ValueString()
@@ -358,6 +382,16 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	waiterTimeout := wait.UpdateShareWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit // false positive - only called to read the default wait handler timeout
+	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	projectId := model.ProjectId.ValueString()
 	shareId := model.ShareId.ValueString()
 	region := model.Region.ValueString()
@@ -410,7 +444,8 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	getResponse, err := wait.UpdateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share",
+			fmt.Sprintf("share get: %v%s", err, utils.TimeoutHint(ctx, "update", updateTimeout)))
 		return
 	}
 	err = mapFields(ctx, getResponse.Share, region, &model)
@@ -435,6 +470,15 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	waiterTimeout := wait.DeleteShareWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit // false positive - only called to read the default wait handler timeout
+	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	shareId := model.ShareId.ValueString()
@@ -465,7 +509,8 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	// only delete, if no error occurred
 	_, err = wait.DeleteShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("share deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share",
+			fmt.Sprintf("share deletion waiting: %v%s", err, utils.TimeoutHint(ctx, "delete", deleteTimeout)))
 		return
 	}
 

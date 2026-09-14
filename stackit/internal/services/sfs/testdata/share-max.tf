@@ -31,4 +31,11 @@ resource "stackit_sfs_share" "share" {
   labels = {
     label = var.label
   }
+
+  timeouts = {
+    create = "20m"
+    read   = "20m"
+    update = "20m"
+    delete = "20m"
+  }
 }

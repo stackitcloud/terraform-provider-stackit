@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -28,16 +29,17 @@ var (
 )
 
 type dataSourceModel struct {
-	Id                      types.String `tfsdk:"id"` // needed by TF
-	ProjectId               types.String `tfsdk:"project_id"`
-	ResourcePoolId          types.String `tfsdk:"resource_pool_id"`
-	ShareId                 types.String `tfsdk:"share_id"`
-	Name                    types.String `tfsdk:"name"`
-	MountPath               types.String `tfsdk:"mount_path"`
-	SpaceHardLimitGigabytes types.Int32  `tfsdk:"space_hard_limit_gigabytes"`
-	ExportPolicyName        types.String `tfsdk:"export_policy"`
-	Region                  types.String `tfsdk:"region"`
-	Labels                  types.Map    `tfsdk:"labels"`
+	Id                      types.String   `tfsdk:"id"` // needed by TF
+	ProjectId               types.String   `tfsdk:"project_id"`
+	ResourcePoolId          types.String   `tfsdk:"resource_pool_id"`
+	ShareId                 types.String   `tfsdk:"share_id"`
+	Name                    types.String   `tfsdk:"name"`
+	MountPath               types.String   `tfsdk:"mount_path"`
+	SpaceHardLimitGigabytes types.Int32    `tfsdk:"space_hard_limit_gigabytes"`
+	ExportPolicyName        types.String   `tfsdk:"export_policy"`
+	Region                  types.String   `tfsdk:"region"`
+	Labels                  types.Map      `tfsdk:"labels"`
+	Timeouts                timeouts.Value `tfsdk:"timeouts"`
 }
 type shareDataSource struct {
 	client       *sfs.APIClient
@@ -82,6 +84,15 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	shareId := model.ShareId.ValueString()
@@ -124,7 +135,7 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 }
 
 // Schema implements datasource.DataSource.
-func (r *shareDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *shareDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "SFS Share schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
@@ -189,6 +200,7 @@ You can also assign a Share Export Policy after creating the Share`,
 				ElementType: types.StringType,
 				Computed:    true,
 			},
+			"timeouts": timeouts.Attributes(ctx),
 		},
 	}
 }
