@@ -241,9 +241,9 @@ resource "stackit_sfs_share" "example" {
 
   timeouts = {
     create = "10ms"
-    read   = "10ms"
-    update = "10ms"
-    delete = "10ms"
+    read   = "10m"
+    update = "10m"
+    delete = "10m"
   }
 }
 `, s.Server.URL, projectId, resourcePoolId)
