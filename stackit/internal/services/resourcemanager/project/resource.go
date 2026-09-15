@@ -514,7 +514,7 @@ func toUpdatePayload(ctx context.Context, model *ResourceModel) (*resourcemanage
 		return nil, fmt.Errorf("nil model")
 	}
 
-	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	labels, err := utils.LabelsToNullableValuePayload(ctx, model.Labels)
 	if err != nil {
 		return nil, err
 	}

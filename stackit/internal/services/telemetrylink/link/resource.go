@@ -750,7 +750,7 @@ func toCreateOrUpdateOrganizationTelemetryLinkPayload(planModel, configModel *Mo
 		Description:       planModel.Description.ValueStringPointer(),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
-		Enabled:           planModel.Enabled.ValueBool(),
+		Enabled:           planModel.Enabled.ValueBoolPointer(),
 	}, nil
 }
 
@@ -767,7 +767,7 @@ func toCreateOrUpdateFolderTelemetryLinkPayload(planModel, configModel *Model) (
 		Description:       planModel.Description.ValueStringPointer(),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
-		Enabled:           planModel.Enabled.ValueBool(),
+		Enabled:           planModel.Enabled.ValueBoolPointer(),
 	}, nil
 }
 
@@ -784,7 +784,7 @@ func toCreateOrUpdateProjectTelemetryLinkPayload(planModel, configModel *Model) 
 		Description:       planModel.Description.ValueStringPointer(),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
-		Enabled:           planModel.Enabled.ValueBool(),
+		Enabled:           planModel.Enabled.ValueBoolPointer(),
 	}, nil
 }
 

@@ -229,6 +229,7 @@ Read-Only:
 
 Read-Only:
 
+- `alt_port` (Number) Overrides the default port used for health check probes.
 - `healthy_threshold` (Number) Healthy threshold of the health checking.
 - `http_health_checks` (Attributes) Options for the HTTP health checking. (see [below for nested schema](#nestedatt--target_pools--active_health_check--http_health_checks))
 - `interval` (String) Interval duration of health checking in seconds.
