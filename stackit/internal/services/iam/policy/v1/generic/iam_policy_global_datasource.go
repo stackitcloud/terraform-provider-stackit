@@ -145,7 +145,7 @@ func (d *globalIAMPolicyDatasource[C]) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	// Map response body to schema
 	err = mapFieldsGlobal(iamPolicy, &model)

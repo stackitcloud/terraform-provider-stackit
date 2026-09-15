@@ -199,7 +199,7 @@ func (r *GlobalIAMPolicyResource[C]) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	err = mapFieldsGlobal(roleBindingResp, &model)
 	if err != nil {
@@ -244,7 +244,7 @@ func (r *GlobalIAMPolicyResource[C]) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	// Map response body to schema
 	err = mapFieldsGlobal(iamPolicy, &model)
@@ -296,7 +296,7 @@ func (r *GlobalIAMPolicyResource[C]) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	err = mapFieldsGlobal(roleBindingResp, &model)
 	if err != nil {
