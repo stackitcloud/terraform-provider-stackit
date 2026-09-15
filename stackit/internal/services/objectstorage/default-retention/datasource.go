@@ -16,6 +16,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -110,14 +111,20 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Read default-retention
-	result, err := d.client.DefaultAPI.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
+	result, err := utils.RetryRequest(
+		ctx,
+		d.client.DefaultAPI.GetDefaultRetention(ctx, projectId, region, bucketName).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading default-retention", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error reading default-retention", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 

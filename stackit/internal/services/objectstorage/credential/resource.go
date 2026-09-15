@@ -294,9 +294,15 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	// Create new credential
-	credentialResp, err := r.client.DefaultAPI.CreateAccessKey(ctx, projectId, region).CredentialsGroup(credentialsGroupId).CreateAccessKeyPayload(*payload).Execute()
+	credentialResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.CreateAccessKey(ctx, projectId, region).CredentialsGroup(credentialsGroupId).CreateAccessKeyPayload(*payload).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error creating credential", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -377,7 +383,9 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	found, err := readCredentials(ctx, &model, region, r.client)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error reading credential", fmt.Sprintf("Finding credential: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -454,13 +462,19 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing credential
-	_, err := r.client.DefaultAPI.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute()
+	_, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error deleting credential", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -560,7 +574,11 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 
-	credentialsGroupResp, err := client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := utils.RetryRequest(
+		ctx,
+		client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

@@ -130,7 +130,11 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	bucketResp, err := r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute()
+	bucketResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -139,7 +143,8 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			"Reading bucket",
 			fmt.Sprintf("Bucket with name %q does not exist in project %q.", bucketName, projectId),
 			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusForbidden:       fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg,
 			},
 		)
 		resp.State.RemoveResource(ctx)

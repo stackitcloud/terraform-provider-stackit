@@ -165,20 +165,32 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := r.client.DefaultAPI.CreateComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.CreateComplianceLock(ctx, projectId, region).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
 
 		if !(ok && oapiErr.StatusCode == http.StatusConflict) {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating compliance lock", fmt.Sprintf("Calling API: %v", err))
+			utils.LogError(ctx, &resp.Diagnostics, err, "Error creating compliance lock", fmt.Sprintf("Calling API: %v", err),
+				map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+			)
 			return
 		}
 
 		tflog.Info(ctx, "Compliance lock is already enabled for this project. Please check duplicate resources.")
-		complianceResp, err = r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
+		complianceResp, err = utils.RetryRequest(
+			ctx,
+			r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute,
+			objectstorageUtils.RateLimitRetryConfig,
+		)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err))
+			utils.LogError(ctx, &resp.Diagnostics, err, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err),
+				map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+			)
 			return
 		}
 	}
@@ -216,14 +228,20 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 
@@ -268,9 +286,15 @@ func (r *compliancelockResource) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := r.client.DefaultAPI.DeleteComplianceLock(ctx, projectId, region).Execute()
+	_, err := utils.RetryRequest(
+		ctx,
+		r.client.DefaultAPI.DeleteComplianceLock(ctx, projectId, region).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting compliance lock", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error deleting compliance lock", fmt.Sprintf("Calling API: %v", err),
+			map[int]string{http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg},
+		)
 		return
 	}
 

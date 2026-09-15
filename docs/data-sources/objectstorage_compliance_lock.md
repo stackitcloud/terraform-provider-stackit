@@ -3,12 +3,12 @@
 page_title: "stackit_objectstorage_compliance_lock Data Source - stackit"
 subcategory: ""
 description: |-
-  ObjectStorage compliance lock resource schema. Must have a region specified in the provider configuration.
+  ObjectStorage compliance lock data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_objectstorage_compliance_lock (Data Source)
 
-ObjectStorage compliance lock resource schema. Must have a `region` specified in the provider configuration.
+ObjectStorage compliance lock data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

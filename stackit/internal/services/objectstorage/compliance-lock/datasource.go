@@ -58,7 +58,7 @@ func (d *compliancelockDataSource) Configure(ctx context.Context, req datasource
 // Schema defines the schema for the resource.
 func (d *compliancelockDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":               "ObjectStorage compliance lock resource schema. Must have a `region` specified in the provider configuration.",
+		"main":               "ObjectStorage compliance lock data source schema. Must have a `region` specified in the provider configuration.",
 		"id":                 "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`\".",
 		"project_id":         "STACKIT Project ID to which the compliance lock is associated.",
 		"region":             "The resource region. If not defined, the provider region is used.",
@@ -110,7 +110,11 @@ func (d *compliancelockDataSource) Read(ctx context.Context, req datasource.Read
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := d.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := utils.RetryRequest(
+		ctx,
+		d.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute,
+		objectstorageUtils.RateLimitRetryConfig,
+	)
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -119,7 +123,8 @@ func (d *compliancelockDataSource) Read(ctx context.Context, req datasource.Read
 			"Reading compliance lock",
 			fmt.Sprintf("Compliance lock does not exist in project %q.", projectId),
 			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusForbidden:       fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+				http.StatusTooManyRequests: objectstorageUtils.RateLimitErrMsg,
 			},
 		)
 		resp.State.RemoveResource(ctx)
