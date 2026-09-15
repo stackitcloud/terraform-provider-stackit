@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/teambition/rrule-go"
 
@@ -317,6 +318,41 @@ func FileExists() *Validator {
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			_, err := os.Stat(req.ConfigValue.ValueString())
 			if err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
+// FileExistsUnlessDisabled validates file existence unless a sibling boolean attribute is true.
+func FileExistsUnlessDisabled(disableFlagName string) *Validator {
+	description := "file must exist"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+				return
+			}
+
+			var disablePlanValidation types.Bool
+			disablePath := req.Path.ParentPath().AtName(disableFlagName)
+
+			diags := req.Config.GetAttribute(ctx, disablePath, &disablePlanValidation)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			if disablePlanValidation.IsUnknown() || disablePlanValidation.ValueBool() {
+				return
+			}
+
+			if _, err := os.Stat(req.ConfigValue.ValueString()); err != nil {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,

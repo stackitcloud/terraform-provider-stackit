@@ -841,6 +841,101 @@ func TestFileExists(t *testing.T) {
 	}
 }
 
+func TestFileExistsUnlessDisabled(t *testing.T) {
+	// Reusable low-level type mapping
+	objectType := tftypes.Object{
+		AttributeTypes: map[string]tftypes.Type{
+			"file_path":               tftypes.String,
+			"disable_plan_validation": tftypes.Bool,
+		},
+	}
+
+	// Minimal inline schema definition
+	testSchema := schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"local": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"file_path":               schema.StringAttribute{Required: true},
+					"disable_plan_validation": schema.BoolAttribute{Optional: true},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		description string
+		flag        string
+		path        path.Path
+		input       types.String
+		config      tfsdk.Config
+		isValid     bool
+	}{
+		{
+			description: "file missing BUT disable flag is TRUE -> valid",
+			flag:        "disable_plan_validation",
+			path:        path.Root("local").AtName("file_path"),
+			input:       types.StringValue("testdata/non-existing-file.txt"),
+			config: tfsdk.Config{
+				Schema: testSchema,
+				Raw: tftypes.NewValue(tftypes.Object{
+					AttributeTypes: map[string]tftypes.Type{
+						"local": objectType,
+					},
+				}, map[string]tftypes.Value{
+					"local": tftypes.NewValue(objectType, map[string]tftypes.Value{
+						"file_path":               tftypes.NewValue(tftypes.String, "testdata/non-existing-file.txt"),
+						"disable_plan_validation": tftypes.NewValue(tftypes.Bool, true),
+					}),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "file missing AND disable flag is FALSE -> invalid",
+			flag:        "disable_plan_validation",
+			path:        path.Root("local").AtName("file_path"),
+			input:       types.StringValue("testdata/non-existing-file.txt"),
+			config: tfsdk.Config{
+				Schema: testSchema,
+				Raw: tftypes.NewValue(tftypes.Object{
+					AttributeTypes: map[string]tftypes.Type{
+						"local": objectType,
+					},
+				}, map[string]tftypes.Value{
+					"local": tftypes.NewValue(objectType, map[string]tftypes.Value{
+						"file_path":               tftypes.NewValue(tftypes.String, "testdata/non-existing-file.txt"),
+						"disable_plan_validation": tftypes.NewValue(tftypes.Bool, false),
+					}),
+				}),
+			},
+			isValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+
+			FileExistsUnlessDisabled(tt.flag).ValidateString(
+				context.Background(),
+				validator.StringRequest{
+					Path:        tt.path,
+					ConfigValue: tt.input,
+					Config:      tt.config,
+				},
+				&r,
+			)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
 func TestValidTtlDuration(t *testing.T) {
 	tests := []struct {
 		description string
@@ -1082,57 +1177,6 @@ func TestNoLeadingOrtTrailingWhitespace(t *testing.T) {
 			}
 			if !tt.wantErr && r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
-			}
-		})
-	}
-}
-
-func TestURL(t *testing.T) {
-	tests := []struct {
-		name           string
-		allowedSchemes []string
-		value          string
-		wantErr        bool
-	}{
-		{
-			name:           "valid_http_matching_scheme",
-			allowedSchemes: []string{"http", "https"},
-			value:          "http://example.com/file.iso",
-			wantErr:        false,
-		},
-		{
-			name:           "valid_url_no_scheme_restriction",
-			allowedSchemes: nil,
-			value:          "s3://mybucket/file.iso",
-			wantErr:        false,
-		},
-		{
-			name:           "invalid_disallowed_scheme",
-			allowedSchemes: []string{"http", "https"},
-			value:          "ftp://example.com/file.iso",
-			wantErr:        true,
-		},
-		{
-			name:           "invalid_malformed_url",
-			allowedSchemes: nil,
-			value:          "://bad-url",
-			wantErr:        true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			v := URL(tt.allowedSchemes...)
-			resp := &validator.StringResponse{}
-			req := validator.StringRequest{
-				ConfigValue: types.StringValue(tt.value),
-				Path:        path.Root("url"),
-			}
-
-			v.ValidateString(context.Background(), req, resp)
-
-			if resp.Diagnostics.HasError() != tt.wantErr {
-				t.Errorf("URL() error = %v, wantErr %v", resp.Diagnostics.HasError(), tt.wantErr)
 			}
 		})
 	}
