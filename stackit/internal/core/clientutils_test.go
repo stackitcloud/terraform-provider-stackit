@@ -12,7 +12,7 @@ func Test_initClientCollection(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *clientCollection
+		want    *ClientCollection
 		wantErr bool
 	}{
 		// TODO: Add test cases.

@@ -14,6 +14,7 @@ linters:
     - tflogresponse # custom local linter
     - tfwriteid # custom local linter
     - tfmodifyplan # custom local linter
+    - tfclientcollection # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -44,6 +45,9 @@ linters:
         type: module
         description: "A custom local linter"
       tfmodifyplan:
+        type: module
+        description: "A custom local linter"
+      tfclientcollection:
         type: module
         description: "A custom local linter"
     depguard:
@@ -112,6 +116,16 @@ linters:
       - third_party$
       - builtin$
       - examples$
+    rules:
+      - path: stackit/internal/core/
+        linters:
+          - tfclientcollection
+      - path: stackit/internal/services/iam/rolebindings/v1/generic/
+        linters:
+          - tfclientcollection
+      - path: stackit/internal/services/iam/rolebindings/v1/services/
+        linters:
+          - tfclientcollection
 formatters:
   settings:
     goimports:

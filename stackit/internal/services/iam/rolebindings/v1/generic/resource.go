@@ -48,7 +48,7 @@ type RoleBindingResource[C any] struct {
 	ResourceType string // e.g. "instance", ...
 
 	// callbacks for lifecyle handling
-	ApiClientExtractor func(clientCollection core.RoleBindingClientCollection) C
+	ApiClientExtractor func(clientCollection core.ClientCollection) C
 	ExecReadRequest    func(ctx context.Context, client C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
 	ExecCreateRequest  func(ctx context.Context, client C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
 	ExecUpdateRequest  func(ctx context.Context, client C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)

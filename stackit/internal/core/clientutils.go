@@ -93,9 +93,9 @@ type ClientFactory interface {
 	newVpnV1Client() (vpn.DefaultAPI, error)
 }
 
-func initClientCollection(clientFactory ClientFactory) (*clientCollection, error) {
+func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error) {
 	var g errgroup.Group
-	cc := &clientCollection{}
+	cc := &ClientCollection{}
 
 	// initialize clients in parallel
 	g.Go(func() (err error) { cc.IaaSv2Client, err = clientFactory.newIaaSV2Client(); return err })

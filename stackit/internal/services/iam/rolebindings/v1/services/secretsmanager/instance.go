@@ -18,7 +18,7 @@ func NewSecretsmanagerInstanceRoleBindingResource() resource.Resource {
 	return &generic.RoleBindingResource[secretsmanagerV1Alpha.DefaultAPI]{
 		ApiName:      "secretsmanager",
 		ResourceType: "instance",
-		ApiClientExtractor: func(clientCollection core.RoleBindingClientCollection) secretsmanagerV1Alpha.DefaultAPI {
+		ApiClientExtractor: func(clientCollection core.ClientCollection) secretsmanagerV1Alpha.DefaultAPI {
 			return clientCollection.SecretsmanagerV1AlphaClient
 		},
 		ExecCreateRequest: func(ctx context.Context, client secretsmanagerV1Alpha.DefaultAPI, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
@@ -60,7 +60,7 @@ func NewSecretsmanagerInstanceRoleBindingsDatasource() datasource.DataSource {
 	return &generic.RoleBindingDatasource[secretsmanagerV1Alpha.DefaultAPI]{
 		ApiName:      "secretsmanager",
 		ResourceType: "instance",
-		ApiClientExtractor: func(clientCollection core.RoleBindingClientCollection) secretsmanagerV1Alpha.DefaultAPI {
+		ApiClientExtractor: func(clientCollection core.ClientCollection) secretsmanagerV1Alpha.DefaultAPI {
 			return clientCollection.SecretsmanagerV1AlphaClient
 		},
 		ExecReadRequest: func(ctx context.Context, client secretsmanagerV1Alpha.DefaultAPI, region, resourceId string) ([]generic.GenericRoleBindingResponse, error) {

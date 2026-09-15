@@ -131,12 +131,10 @@ func NewProviderDataInternal(providerData ProviderData, clientFactory ClientFact
 type providerDataInternal struct {
 	// providerData is the public provider data
 	providerData ProviderData
-	clients      clientCollection
+	clients      ClientCollection
 }
 
-type RoleBindingClientCollection = clientCollection
-
-type clientCollection struct {
+type ClientCollection struct {
 	IaaSv2Client                iaasv2.DefaultAPI
 	IaaSv2AlphaClient           iaasv2alpha.DefaultAPI
 	ResourceManagerClient       resourcemanager.DefaultAPI
@@ -179,16 +177,16 @@ type clientCollection struct {
 	ObservabilityV1Client       observability.DefaultAPI
 }
 
-func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, clientCollection, bool) {
+func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, ClientCollection, bool) {
 	// Prevent panic if the provider has not been configured.
 	if providerData == nil {
-		return ProviderData{}, clientCollection{}, false
+		return ProviderData{}, ClientCollection{}, false
 	}
 
 	stackitProviderDataInternal, ok := providerData.(providerDataInternal)
 	if !ok {
 		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.providerDataInternal, got %T", providerData))
-		return ProviderData{}, clientCollection{}, false
+		return ProviderData{}, ClientCollection{}, false
 	}
 	return stackitProviderDataInternal.providerData, stackitProviderDataInternal.clients, true
 }
