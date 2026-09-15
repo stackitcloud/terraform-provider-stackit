@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
@@ -398,9 +398,80 @@ func Test_UploadImage(t *testing.T) {
 			}
 
 			// Call the function
-			err = uploadImage(context.Background(), &diag.Diagnostics{}, tt.filePath, uploadURL.String())
+			err = uploadImage(context.Background(), tt.filePath, uploadURL.String())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("uploadImage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_DownloadImage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/404":
+			w.WriteHeader(http.StatusNotFound)
+		case "/empty":
+			w.WriteHeader(http.StatusOK)
+		case "/drop-conn":
+			hj, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "webserver doesn't support hijacking", http.StatusInternalServerError)
+				return
+			}
+			conn, _, _ := hj.Hijack()
+			_ = conn.Close()
+		default:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("dummy content"))
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	tests := []struct {
+		name        string
+		ctx         context.Context
+		downloadURL string
+		wantBytes   []byte
+		wantErr     bool
+	}{{
+		name:        "ok",
+		downloadURL: server.URL,
+		wantErr:     false,
+	},
+		{
+			name:        "invalid_url_format",
+			downloadURL: "http://127.0.0.1:0/invalid",
+			wantErr:     true,
+		},
+		{
+			name:        "status_404_not_found",
+			downloadURL: server.URL + "/404",
+			wantErr:     true,
+		},
+		{
+			name:        "empty_body_200_ok",
+			downloadURL: server.URL + "/empty",
+			wantErr:     false,
+		},
+		{
+			name:        "connection_dropped_mid_stream",
+			downloadURL: server.URL + "/drop-conn",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filePath, err := downloadImage(context.Background(), tt.downloadURL)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("downloadImage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if filePath != "" {
+				t.Cleanup(func() {
+					_ = os.Remove(filePath)
+				})
 			}
 		})
 	}
