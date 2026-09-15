@@ -55,15 +55,17 @@ type DataSourceModel struct {
 }
 
 type Filter struct {
-	OS         types.String `tfsdk:"os"`
-	Distro     types.String `tfsdk:"distro"`
-	Version    types.String `tfsdk:"version"`
-	UEFI       types.Bool   `tfsdk:"uefi"`
-	SecureBoot types.Bool   `tfsdk:"secure_boot"`
+	OS           types.String `tfsdk:"os"`
+	Distro       types.String `tfsdk:"distro"`
+	Version      types.String `tfsdk:"version"`
+	UEFI         types.Bool   `tfsdk:"uefi"`
+	SecureBoot   types.Bool   `tfsdk:"secure_boot"`
+	Architecture types.String `tfsdk:"architecture"`
 }
 
 // Struct corresponding to Model.Config
 type configModel struct {
+	Architecture           types.String `tfsdk:"architecture"`
 	BootMenu               types.Bool   `tfsdk:"boot_menu"`
 	CDROMBus               types.String `tfsdk:"cdrom_bus"`
 	DiskBus                types.String `tfsdk:"disk_bus"`
@@ -81,6 +83,7 @@ type configModel struct {
 
 // Types corresponding to configModel
 var configTypes = map[string]attr.Type{
+	"architecture":             basetypes.StringType{},
 	"boot_menu":                basetypes.BoolType{},
 	"cdrom_bus":                basetypes.StringType{},
 	"disk_bus":                 basetypes.StringType{},
@@ -253,6 +256,10 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 						Optional:    true,
 						Description: "Filter images with Secure Boot support. Set to `true` to match images that support Secure Boot.",
 					},
+					"architecture": schema.StringAttribute{
+						Optional:    true,
+						Description: "Filter images by CPU architecture. Possible values: `arm64`, `x86`.",
+					},
 				},
 			},
 			"disk_format": schema.StringAttribute{
@@ -279,6 +286,10 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: "Properties to set hardware and scheduling settings for an image.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
+					"architecture": schema.StringAttribute{
+						Description: "CPU architecture of the image. Possible values: `arm64`, `x86`.",
+						Computed:    true,
+					},
 					"boot_menu": schema.BoolAttribute{
 						Description: "Enables the BIOS bootmenu.",
 						Computed:    true,
@@ -509,6 +520,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	var configObject basetypes.ObjectValue
 	diags := diag.Diagnostics{}
 	if imageResp.Config != nil {
+		configModel.Architecture = types.StringPointerValue(imageResp.Config.Architecture)
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
 		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.CdromBus.Get())
 		configModel.DiskBus = types.StringPointerValue(imageResp.Config.DiskBus.Get())
@@ -524,6 +536,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 		configModel.VirtioScsi = types.BoolPointerValue(new(imageResp.Config.GetVirtioScsi()))
 
 		configObject, diags = types.ObjectValue(configTypes, map[string]attr.Value{
+			"architecture":             configModel.Architecture,
 			"boot_menu":                configModel.BootMenu,
 			"cdrom_bus":                configModel.CDROMBus,
 			"disk_bus":                 configModel.DiskBus,
@@ -617,6 +630,11 @@ func imageMatchesFilter(img *iaas.Image, filter *Filter) bool {
 
 	if !filter.SecureBoot.IsNull() &&
 		(cfg.SecureBoot == nil || filter.SecureBoot.ValueBool() != *cfg.SecureBoot) {
+		return false
+	}
+
+	if !filter.Architecture.IsNull() &&
+		(cfg.Architecture == nil || filter.Architecture.ValueString() != *cfg.Architecture) {
 		return false
 	}
 
