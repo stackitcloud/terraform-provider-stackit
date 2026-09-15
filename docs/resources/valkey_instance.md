@@ -3,12 +3,12 @@
 page_title: "stackit_valkey_instance Resource - stackit"
 subcategory: ""
 description: |-
-  Valkey instance resource schema. Must have a region specified in the provider configuration.
+  Key Value Store(valkey) instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_valkey_instance (Resource)
 
-Valkey instance resource schema. Must have a `region` specified in the provider configuration.
+Key Value Store(valkey) instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 

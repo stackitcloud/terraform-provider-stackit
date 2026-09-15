@@ -122,7 +122,7 @@ func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.Modify
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
-		"main":          "Valkey credential resource schema. Must have a `region` specified in the provider configuration.",
+		"main":          "Key Value Store(valkey) credential resource schema. Must have a `region` specified in the provider configuration.",
 		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the Valkey instance.",
