@@ -328,6 +328,41 @@ func FileExists() *Validator {
 	}
 }
 
+// FileExistsUnlessDisabled validates file existence unless a sibling boolean attribute is true.
+func FileExistsUnlessDisabled(disableFlagName string) *Validator {
+	description := "file must exist"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+				return
+			}
+
+			var disablePlanValidation types.Bool
+			disablePath := req.Path.ParentPath().AtName(disableFlagName)
+
+			diags := req.Config.GetAttribute(ctx, disablePath, &disablePlanValidation)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			if disablePlanValidation.IsUnknown() || disablePlanValidation.ValueBool() {
+				return
+			}
+
+			if _, err := os.Stat(req.ConfigValue.ValueString()); err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
 func ValidDurationString() *Validator {
 	description := "value must be in a valid duration string. Such as \"300ms\", \"-1.5h\" or \"2h45m\".\nValid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\"."
 

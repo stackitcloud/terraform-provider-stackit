@@ -842,6 +842,101 @@ func TestFileExists(t *testing.T) {
 	}
 }
 
+func TestFileExistsUnlessDisabled(t *testing.T) {
+	// Reusable low-level type mapping
+	objectType := tftypes.Object{
+		AttributeTypes: map[string]tftypes.Type{
+			"file_path":               tftypes.String,
+			"disable_plan_validation": tftypes.Bool,
+		},
+	}
+
+	// Minimal inline schema definition
+	testSchema := schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"local": schema.SingleNestedAttribute{
+				Attributes: map[string]schema.Attribute{
+					"file_path":               schema.StringAttribute{Required: true},
+					"disable_plan_validation": schema.BoolAttribute{Optional: true},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		description string
+		flag        string
+		path        path.Path
+		input       types.String
+		config      tfsdk.Config
+		isValid     bool
+	}{
+		{
+			description: "file missing BUT disable flag is TRUE -> valid",
+			flag:        "disable_plan_validation",
+			path:        path.Root("local").AtName("file_path"),
+			input:       types.StringValue("testdata/non-existing-file.txt"),
+			config: tfsdk.Config{
+				Schema: testSchema,
+				Raw: tftypes.NewValue(tftypes.Object{
+					AttributeTypes: map[string]tftypes.Type{
+						"local": objectType,
+					},
+				}, map[string]tftypes.Value{
+					"local": tftypes.NewValue(objectType, map[string]tftypes.Value{
+						"file_path":               tftypes.NewValue(tftypes.String, "testdata/non-existing-file.txt"),
+						"disable_plan_validation": tftypes.NewValue(tftypes.Bool, true),
+					}),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "file missing AND disable flag is FALSE -> invalid",
+			flag:        "disable_plan_validation",
+			path:        path.Root("local").AtName("file_path"),
+			input:       types.StringValue("testdata/non-existing-file.txt"),
+			config: tfsdk.Config{
+				Schema: testSchema,
+				Raw: tftypes.NewValue(tftypes.Object{
+					AttributeTypes: map[string]tftypes.Type{
+						"local": objectType,
+					},
+				}, map[string]tftypes.Value{
+					"local": tftypes.NewValue(objectType, map[string]tftypes.Value{
+						"file_path":               tftypes.NewValue(tftypes.String, "testdata/non-existing-file.txt"),
+						"disable_plan_validation": tftypes.NewValue(tftypes.Bool, false),
+					}),
+				}),
+			},
+			isValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+
+			FileExistsUnlessDisabled(tt.flag).ValidateString(
+				context.Background(),
+				validator.StringRequest{
+					Path:        tt.path,
+					ConfigValue: tt.input,
+					Config:      tt.config,
+				},
+				&r,
+			)
+
+			if !tt.isValid && !r.Diagnostics.HasError() {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && r.Diagnostics.HasError() {
+				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
 func TestValidTtlDuration(t *testing.T) {
 	tests := []struct {
 		description string

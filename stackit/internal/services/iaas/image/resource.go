@@ -457,10 +457,10 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 									stringplanmodifier.RequiresReplace(),
 								},
 								Validators: []validator.String{
-									validate.FileExists(), // will only be validated if parent is present since parent is optional
+									validate.FileExistsUnlessDisabled("disable_plan_validation"),
 								},
 							},
-							"disable_plan_validation": schema.BoolAttribute{ // TODO: clarify what this is for? (when would I provide a local file path without it being present besides current hacky solutions or maybe sophisticated CI?)
+							"disable_plan_validation": schema.BoolAttribute{
 								Description: "Whether to disable plan-time validation.",
 								Optional:    true,
 							},
@@ -509,7 +509,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Handle legacy option
 	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
-		filePath = model.LocalFilePath.String()
+		filePath = model.LocalFilePath.ValueString()
 	}
 
 	if filePath == "" && !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
@@ -541,7 +541,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 			if resp.Diagnostics.HasError() {
 				return
 			}
-			filePath = localModel.Path.String()
+			filePath = localModel.Path.ValueString()
 		}
 	}
 
