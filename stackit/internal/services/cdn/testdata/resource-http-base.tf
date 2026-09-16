@@ -92,6 +92,15 @@ resource "stackit_cdn_distribution" "distribution" {
     }
     blocked_countries = var.blocked_countries
     blocked_ips       = var.blocked_ips
+
+    log_sink = {
+      push_url = "http://foo.bar"
+      type     = "otlp"
+      credentials = {
+        token = "ey12345"
+        type  = "bearer"
+      }
+    }
   }
 }
 
@@ -99,3 +108,6 @@ data "stackit_cdn_distribution" "distribution" {
   project_id      = var.project_id
   distribution_id = stackit_cdn_distribution.distribution.distribution_id
 }
+
+
+

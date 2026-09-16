@@ -136,6 +136,13 @@ var testConfigVarsHttp = config.Variables{
 	"forward_host_header":           config.BoolVariable(true),
 	"monthly_limit_bytes":           config.IntegerVariable(104857600),
 	"default_cache_duration":        config.StringVariable("PT2H"),
+	// TODO XXX hammc: logsink marker
+	"log_sink_push_url":             config.StringVariable("http://foo.bar"),
+	"log_sink_type":                 config.StringVariable("otlp"),     // Options: "loki" or "otlp"
+	"log_sink_credentials_type":     config.StringVariable("bearer"),   // Options: "basic" or "bearer"
+	"log_sink_credentials_username": config.StringVariable("testuser"), // Used with loki and otlp ("basic")
+	"log_sink_credentials_password": config.StringVariable("testpw"),   // Used with loki and otlp ("basic")
+	"log_sink_credentials_token":    config.StringVariable("ey12345"),  // Only with otlp ("bearer")
 	"waf": wafConfigVariable(
 		"ENABLED",
 		"FREE",
@@ -167,6 +174,7 @@ func configVarsHttpUpdated() config.Variables {
 	// Update small features
 	updatedConfig["strip_response_cookies"] = config.BoolVariable(true)
 	updatedConfig["forward_host_header"] = config.BoolVariable(false)
+	updatedConfig["log_sink_type"] = config.StringVariable("loki")
 
 	return updatedConfig
 }
@@ -262,6 +270,13 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.strip_response_cookies", testutil.ConvertConfigVariable(testConfigVarsHttp["strip_response_cookies"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.monthly_limit_bytes", testutil.ConvertConfigVariable(testConfigVarsHttp["monthly_limit_bytes"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(testConfigVarsHttp["default_cache_duration"])),
+
+					// XXX hammc: logsink marker
+					// LogSink Checks
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.push_url", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_push_url"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_type"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_credentials_type"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_credentials_token"])),
 
 					// WAF Checks
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", testConfigVarsHttp["waf"]),
@@ -393,6 +408,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					testutil.CheckListAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.values", testConfigVarsHttp["redirect_matcher_values"]),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.value_match_condition", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_condition"])),
 
+					// LogSink Data Source
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.push_url", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_push_url"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_type"])),
+
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
@@ -432,6 +451,13 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.strip_response_cookies", testutil.ConvertConfigVariable(configVarsHttpUpdated()["strip_response_cookies"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.monthly_limit_bytes", testutil.ConvertConfigVariable(configVarsHttpUpdated()["monthly_limit_bytes"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(configVarsHttpUpdated()["default_cache_duration"])),
+
+					// XXX hammc: logsink marker
+					// LogSink Checks
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.push_url", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_push_url"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_type"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.username", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_credentials_username"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.password", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_credentials_password"])),
 
 					// Checking WAF Mutated Configurations
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", configVarsHttpUpdated()["waf"]),
@@ -527,7 +553,8 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 				// 1. API doesn't return them (security).
 				// 2. State has them (from resource creation).
 				ImportStateVerifyIgnore: []string{
-					"config.backend.credentials"},
+					"config.backend.credentials",
+				},
 			},
 			// Data Source
 			{

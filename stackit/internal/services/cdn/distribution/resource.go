@@ -110,6 +110,14 @@ var schemaDescriptions = map[string]string{
 	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
 	"config_strip_response_cookies":                "Enable this to prevent origin-level cookies from being forwarded to the end user.",
 	"config_forward_host_header":                   "Enable this allows the 'Host' header to be passed through to the origin.",
+	// TODO XXX hammc: logsink types
+	"config_log_sink_push_url":             "TODO",
+	"config_log_sink_type":                 "TODO", // Options: "loki" or "otlp"
+	"config_log_sink_credentials":          "TODO",
+	"config_log_sink_credentials_type":     "TODO", // Options: "basic" or "bearer"
+	"config_log_sink_credentials_username": "TODO", // Used with loki and otlp ("basic")
+	"config_log_sink_credentials_password": "TODO", // Used with loki and otlp ("basic")
+	"config_log_sink_credentials_token":    "TODO", // Only with otlp ("bearer")
 }
 
 type Model struct {
@@ -153,8 +161,9 @@ type distributionConfig struct {
 	Optimizer            types.Object    `tfsdk:"optimizer"`              // The optimizer configuration
 	Waf                  types.Object    `tfsdk:"waf"`                    // The WAF configuration
 	Tls                  types.Object    `tfsdk:"tls"`                    // The TLS configuration
-	StripResponseCookies types.Bool      `tfsdk:"strip_response_cookies"` // The Enable this to prevent origin-level cookies from being forwarded to the end user
-	ForwardHostHeader    types.Bool      `tfsdk:"forward_host_header"`    // The Enable this allows the 'Host' header to be passed through to the origin.
+	StripResponseCookies types.Bool      `tfsdk:"strip_response_cookies"` // Enable this to prevent origin-level cookies from being forwarded to the end user
+	ForwardHostHeader    types.Bool      `tfsdk:"forward_host_header"`    // Enable this allows the 'Host' header to be passed through to the origin.
+	LogSink              types.Object    `tfsdk:"log_sink"`               // The LogSink configuration
 }
 
 type optimizerConfig struct {
@@ -194,6 +203,20 @@ type wafConfig struct {
 	LogOnlyRuleCollectionIds   types.Set    `tfsdk:"log_only_rule_collection_ids"`
 }
 
+// XXX hammc: logsink types
+type logSinkConfig struct {
+	Type        types.String `tfsdk:"type"` // Options: "loki" or "otlp"
+	PushUrl     types.String `tfsdk:"push_url"`
+	Credentials types.Object `tfsdk:"credentials"`
+}
+
+type logSinkCredentialsConfig struct {
+	Type     types.String `tfsdk:"type"`     // Options: "basic" or "bearer"
+	Username types.String `tfsdk:"username"` // Used with loki and otlp ("basic")
+	Password types.String `tfsdk:"password"` // Used with loki and otlp ("basic")
+	Token    types.String `tfsdk:"token"`    // Only with otlp ("bearer")
+}
+
 type backendCredentials struct {
 	AccessKey *string `tfsdk:"access_key_id"` //nolint:gosec // AccessKey should be exported from this struct
 	SecretKey *string `tfsdk:"secret_access_key"`
@@ -217,6 +240,9 @@ var configTypes = map[string]attr.Type{
 	},
 	"tls": types.ObjectType{
 		AttrTypes: tlsTypes,
+	},
+	"log_sink": types.ObjectType{
+		AttrTypes: logSinkTypes,
 	},
 	"strip_response_cookies": types.BoolType,
 	"forward_host_header":    types.BoolType,
@@ -277,6 +303,19 @@ var wafTypes = map[string]attr.Type{
 	"enabled_rule_collection_ids":   types.SetType{ElemType: types.StringType},
 	"disabled_rule_collection_ids":  types.SetType{ElemType: types.StringType},
 	"log_only_rule_collection_ids":  types.SetType{ElemType: types.StringType},
+}
+
+var logSinkTypes = map[string]attr.Type{
+	"type":        types.StringType,
+	"push_url":    types.StringType,
+	"credentials": types.ObjectType{AttrTypes: logSinkCredentialsTypes},
+}
+
+var logSinkCredentialsTypes = map[string]attr.Type{
+	"password": types.StringType,
+	"username": types.StringType,
+	"token":    types.StringType,
+	"type":     types.StringType,
 }
 
 var backendTypes = map[string]attr.Type{
@@ -1869,6 +1908,42 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
 			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
 			cdnConfig.Waf.ParanoiaLevel = &pl
+		}
+	}
+
+	// XXX hammc: logsink marker
+	if !utils.IsUndefined(configModel.LogSink) {
+		var logSinkModel logSinkConfig
+		diags := configModel.LogSink.As(ctx, &logSinkModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		var logSinkCredentialsModel logSinkCredentialsConfig
+		diags = logSinkModel.Credentials.As(ctx, &logSinkCredentialsModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		// Loki
+		switch logSinkModel.Type.ValueString() {
+		case "loki":
+			cdnConfig.LogSink = &cdnSdk.ConfigLogSink{
+				LokiLogSink: &cdnSdk.LokiLogSink{
+					PushUrl: logSinkModel.PushUrl.ValueString(),
+					Type:    cdnSdk.LokiLogSinkType(logSinkModel.Type.ValueString()),
+				},
+			}
+		// OTLP
+		case "otlp":
+			cdnConfig.LogSink = &cdnSdk.ConfigLogSink{
+				OtlpLogSink: &cdnSdk.OtlpLogSink{
+					PushUrl: logSinkModel.PushUrl.ValueString(),
+					Type:    cdnSdk.OtlpLogSinkType(logSinkModel.Type.ValueString()),
+				},
+			}
+		default:
+			return nil, errors.New("unexpected log_sink type")
 		}
 	}
 

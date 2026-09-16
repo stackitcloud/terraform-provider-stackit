@@ -33,6 +33,12 @@ var dataSourceBackendTypes = map[string]attr.Type{
 	"region":                 types.StringType,
 }
 
+// dataSourcelogSinkTypes specifically leaves out the credentials
+var dataSourcelogSinkTypes = map[string]attr.Type{
+	"type":     types.StringType,
+	"push_url": types.StringType,
+}
+
 var dataSourceConfigTypes = map[string]attr.Type{
 	"backend":                types.ObjectType{AttrTypes: dataSourceBackendTypes},
 	"regions":                types.ListType{ElemType: types.StringType},
@@ -54,6 +60,9 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	},
 	"strip_response_cookies": types.BoolType,
 	"forward_host_header":    types.BoolType,
+	"log_sink": types.ObjectType{
+		AttrTypes: dataSourcelogSinkTypes, // Shared from resource.go
+	},
 }
 
 type distributionDataSource struct {

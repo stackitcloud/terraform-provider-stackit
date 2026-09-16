@@ -166,6 +166,37 @@ func TestMapDataSourceFields(t *testing.T) {
 		LogOnlyRuleCollectionIds:   []string{"rule1", "rule2"},
 	}
 
+	// LogSink config and fixture
+	// XXX hammc: logsink marker
+	testLogSinkPushUrl := "http://foo.bar"
+
+	testLogSinkLokiType := cdnSdk.LOKILOGSINKTYPE_LOKI
+	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKTYPE_OTLP
+
+	// Otlp config
+	testLogSinkOtlpConfig := types.ObjectValueMust(dataSourcelogSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
+	})
+	expectedLogSinkOtlpConfig := cdnSdk.ConfigLogSink{
+		OtlpLogSink: &cdnSdk.OtlpLogSink{
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
+
+	// Loki config
+	testLogSinkLokiConfig := types.ObjectValueMust(dataSourcelogSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkLokiType)), // loki
+	})
+	expectedLogSinkLokiConfig := cdnSdk.ConfigLogSink{
+		LokiLogSink: &cdnSdk.LokiLogSink{
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkLokiType,
+		},
+	}
+
 	expectedModel := func(mods ...func(*Model)) *Model {
 		model := &Model{
 			ID:             types.StringValue("test-project-id,test-distribution-id"),
@@ -371,6 +402,53 @@ func TestMapDataSourceFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Config.Waf = expectedWafConfig
+			}),
+			IsValid: true,
+		},
+		// XXX hammc: logsink marker
+		"happy_path_with_log_sink_otlp": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+					"log_sink":               testLogSinkOtlpConfig, // otlp
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.LogSink = &expectedLogSinkOtlpConfig // otlp
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_log_sink_loki": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+					"log_sink":               testLogSinkLokiConfig, // loki
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.LogSink = &expectedLogSinkLokiConfig // loki
 			}),
 			IsValid: true,
 		},

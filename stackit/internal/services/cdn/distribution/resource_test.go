@@ -42,6 +42,7 @@ func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
 		"redirects":              types.ObjectNull(redirectsTypes),
 		"waf":                    types.ObjectNull(wafTypes),
 		"tls":                    types.ObjectNull(tlsTypes),
+		"log_sink":               types.ObjectNull(logSinkTypes),
 		"strip_response_cookies": types.BoolUnknown(),
 		"forward_host_header":    types.BoolUnknown(),
 	}
@@ -74,7 +75,7 @@ func TestToCreatePayload(t *testing.T) {
 		"region":                 types.StringNull(),
 		"credentials":            types.ObjectNull(backendCredentialsTypes),
 	})
-	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
+	begions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
 	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
@@ -121,6 +122,84 @@ func TestToCreatePayload(t *testing.T) {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
 	redirectsAttrTypes := redirectsObjType.AttrTypes
+
+	// LogSink config and fixture
+	// XXX hammc: logsink marker
+	testLogSinkPushUrl := "http://foo.bar"
+	testLogSinkCredentialsUsername := "testuser"
+	testLogSinkCredentialsPassword := "testpw"
+	testLogSinkOtlpCredentialsToken := "ey12345"
+
+	testLogSinkLokiType := cdnSdk.LOKILOGSINKCREATETYPE_LOKI
+	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKCREATETYPE_OTLP
+
+	testLogSinkOtlpCredentialsBearerType := cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER
+	testLogSinkOtlpCredentialsBasicType := cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC
+
+	// Otlp config
+	testLogSinkOtlpBearerConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":  types.StringValue(string(testLogSinkOtlpCredentialsBearerType)), // bearer
+			"token": types.StringValue(testLogSinkOtlpCredentialsToken),
+		}),
+	})
+	expectedLogSinkOtlpBearerConfig := cdnSdk.CreateDistributionPayloadLogSink{
+		OtlpLogSinkCreate: &cdnSdk.OtlpLogSinkCreate{
+			Credentials: cdnSdk.OtlpLogSinkCreateCredentials{
+				OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
+					Token: testLogSinkOtlpCredentialsToken,
+				},
+			},
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
+
+	// Otlp with basic credentials
+	testLogSinkOtlpBasicConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":     types.StringValue(string(testLogSinkOtlpCredentialsBasicType)), // bearer
+			"username": types.StringValue(testLogSinkCredentialsUsername),
+			"password": types.StringValue(testLogSinkCredentialsPassword),
+		}),
+	})
+	expectedLogSinkOtlpBasicConfig := cdnSdk.CreateDistributionPayloadLogSink{
+		OtlpLogSinkCreate: &cdnSdk.OtlpLogSinkCreate{
+			Credentials: cdnSdk.OtlpLogSinkCreateCredentials{
+				OtlpLogSinkBasicCredentials: &cdnSdk.OtlpLogSinkBasicCredentials{
+					Password: testLogSinkCredentialsPassword,
+					Type:     testLogSinkOtlpCredentialsBasicType,
+					Username: testLogSinkCredentialsUsername,
+				},
+			},
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
+
+	// Loki config with basic credentials
+	testLogSinkLokiConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkLokiType)), // loki
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"username": types.StringValue(testLogSinkCredentialsUsername),
+			"password": types.StringValue(testLogSinkCredentialsPassword),
+		}),
+	})
+	expectedLogSinkLokiConfig := cdnSdk.CreateDistributionPayloadLogSink{
+		LokiLogSinkCreate: &cdnSdk.LokiLogSinkCreate{
+			Credentials: cdnSdk.LokiLogSinkCredentials{
+				Password: testLogSinkCredentialsPassword,
+				Username: testLogSinkCredentialsUsername,
+			},
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkLokiType,
+		},
+	}
 
 	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
@@ -369,6 +448,100 @@ func TestToCreatePayload(t *testing.T) {
 				Regions:          []cdnSdk.Region{"EU", "US"},
 				BlockedCountries: []string{"XX", "YY", "ZZ"},
 				Waf:              &expectedWafConfig,
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		// XXX hammc: logsink marker
+		"happy_path_with_log_sink_otlp_bearer": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    types.ObjectNull(tlsTypes),
+					"strip_response_cookies": types.BoolUnknown(),
+					"forward_host_header":    types.BoolUnknown(),
+					"log_sink":               testLogSinkOtlpBearerConfig, // otlp bearer
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              nil,
+				LogSink:          &expectedLogSinkOtlpBearerConfig, // otlp bearer
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_log_sink_otlp_basic": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    types.ObjectNull(tlsTypes),
+					"strip_response_cookies": types.BoolUnknown(),
+					"forward_host_header":    types.BoolUnknown(),
+					"log_sink":               testLogSinkOtlpBasicConfig, // otlp basic
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              nil,
+				LogSink:          &expectedLogSinkOtlpBasicConfig, // otlp basic
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_log_sink_loki": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    types.ObjectNull(tlsTypes),
+					"strip_response_cookies": types.BoolUnknown(),
+					"forward_host_header":    types.BoolUnknown(),
+					"log_sink":               testLogSinkLokiConfig, // loki basic
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              nil,
+				LogSink:          &expectedLogSinkLokiConfig, // loki basic
 				Backend: cdnSdk.CreateDistributionPayloadBackend{
 					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
 						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
