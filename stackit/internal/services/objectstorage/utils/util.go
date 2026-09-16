@@ -43,7 +43,7 @@ var RateLimitRetryConfig = utils.RetryConfig{
 	Attempts: 15,
 	Backoff: func(attempt int) time.Duration {
 		base := min(10*time.Second*(1<<uint(attempt-1)), 60*time.Second)
-		// Add ±25% jitter: spread = base/4, centered on base -Y [0.75×base, 1.25×base]
+		// Add ±25% jitter: random offset in [-base/4, +base/4], giving range [0.75×base, 1.25×base]
 		jitter := time.Duration(rand.Int63n(int64(base/2))) - base/4 //nolint:gosec // non-crypto jitter
 		return base + jitter
 	},
