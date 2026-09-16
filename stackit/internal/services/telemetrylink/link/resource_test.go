@@ -121,7 +121,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -138,7 +138,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "display-name",
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -153,7 +153,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "wo-access-token",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -166,7 +166,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           false,
+				Enabled:           new(false),
 			},
 		},
 		{
@@ -207,7 +207,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -224,7 +224,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "display-name",
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -239,7 +239,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "wo-access-token",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -252,7 +252,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           false,
+				Enabled:           new(false),
 			},
 		},
 		{
@@ -293,7 +293,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -310,7 +310,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "display-name",
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -325,7 +325,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "wo-access-token",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           true,
+				Enabled:           new(true),
 			},
 		},
 		{
@@ -338,7 +338,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				DisplayName:       "name",
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
-				Enabled:           false,
+				Enabled:           new(false),
 			},
 		},
 		{
