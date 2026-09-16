@@ -473,7 +473,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
 	if response.ResourcePool == nil || response.ResourcePool.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "response did not contain an ID")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", "response did not contain an ID")
 		return
 	}
 
