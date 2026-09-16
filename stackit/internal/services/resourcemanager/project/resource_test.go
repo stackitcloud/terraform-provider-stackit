@@ -279,7 +279,7 @@ func TestToUpdatePayload(t *testing.T) {
 			nil,
 			&resourcemanager.PartialUpdateProjectPayload{
 				ContainerParentId: nil,
-				Labels:            &map[string]string{},
+				Labels:            &map[string]*string{},
 				Name:              nil,
 			},
 			true,
@@ -299,9 +299,9 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&resourcemanager.PartialUpdateProjectPayload{
 				ContainerParentId: new("pid"),
-				Labels: &map[string]string{
-					"label1": "1",
-					"label2": "2",
+				Labels: &map[string]*string{
+					"label1": new("1"),
+					"label2": new("2"),
 				},
 				Name: new("name"),
 			},

@@ -296,7 +296,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
+					objectplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"provisioned": schema.BoolAttribute{
@@ -315,7 +315,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 							stringvalidator.OneOf("ALWAYS", "NEVER", "INHERIT"),
 						},
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(), // trigger recreation on change
+							stringplanmodifier.RequiresReplaceIfConfigured(), // trigger recreation on change
 						},
 					},
 				},

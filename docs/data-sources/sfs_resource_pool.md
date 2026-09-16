@@ -33,6 +33,7 @@ data "stackit_sfs_resource_pool" "resourcepool" {
 ### Optional
 
 - `region` (String) The resource region. Read-only attribute that reflects the provider region.
+- `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
 
@@ -47,6 +48,14 @@ data "stackit_sfs_resource_pool" "resourcepool" {
 - `size_reducible_at` (String) Time when the size can be reduced again.
 - `snapshot_policy` (Attributes) Name of the snapshot policy. (see [below for nested schema](#nestedatt--snapshot_policy))
 - `snapshots_are_visible` (Boolean) If set to true, snapshots are visible and accessible to users. (default: false)
+
+<a id="nestedatt--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+
 
 <a id="nestedatt--snapshot_policy"></a>
 ### Nested Schema for `snapshot_policy`
