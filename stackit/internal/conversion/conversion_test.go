@@ -730,6 +730,37 @@ func TestStringValueToPointer(t *testing.T) {
 	}
 }
 
+func TestStringPointerValueNullIfEmpty(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  *string
+		want basetypes.StringValue
+	}{
+		{
+			name: "value",
+			arg:  new("abc"),
+			want: basetypes.NewStringValue("abc"),
+		},
+		{
+			name: "nil",
+			arg:  nil,
+			want: basetypes.NewStringNull(),
+		},
+		{
+			name: "empty string treated as null",
+			arg:  new(""),
+			want: basetypes.NewStringNull(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := StringPointerValueNullIfEmpty(tt.arg); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("StringPointerValueNullIfEmpty() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestStringValueToEnumPointer(t *testing.T) {
 	type args struct {
 		s basetypes.StringValue
