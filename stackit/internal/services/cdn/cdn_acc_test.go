@@ -174,7 +174,12 @@ func configVarsHttpUpdated() config.Variables {
 	// Update small features
 	updatedConfig["strip_response_cookies"] = config.BoolVariable(true)
 	updatedConfig["forward_host_header"] = config.BoolVariable(false)
+
+	// Switch the log_sink from OTLP (bearer) to Loki (basic auth). Loki does
+	// not use credentials.type or credentials.token, so unset them.
 	updatedConfig["log_sink_type"] = config.StringVariable("loki")
+	delete(updatedConfig, "log_sink_credentials_type")
+	delete(updatedConfig, "log_sink_credentials_token")
 
 	return updatedConfig
 }

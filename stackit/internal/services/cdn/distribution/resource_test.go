@@ -23,6 +23,9 @@ func createTestConfig(vals map[string]attr.Value) types.Object {
 	if _, ok := vals["monthly_limit_bytes"]; !ok {
 		vals["monthly_limit_bytes"] = types.Int64Null()
 	}
+	if _, ok := vals["log_sink"]; !ok {
+		vals["log_sink"] = types.ObjectNull(logSinkTypes)
+	}
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -75,7 +78,7 @@ func TestToCreatePayload(t *testing.T) {
 		"region":                 types.StringNull(),
 		"credentials":            types.ObjectNull(backendCredentialsTypes),
 	})
-	begions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
+	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
 	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
@@ -136,19 +139,22 @@ func TestToCreatePayload(t *testing.T) {
 	testLogSinkOtlpCredentialsBearerType := cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER
 	testLogSinkOtlpCredentialsBasicType := cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC
 
-	// Otlp config
+	// Otlp config with bearer credentials
 	testLogSinkOtlpBearerConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
 		"push_url": types.StringValue(testLogSinkPushUrl),
 		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-			"type":  types.StringValue(string(testLogSinkOtlpCredentialsBearerType)), // bearer
-			"token": types.StringValue(testLogSinkOtlpCredentialsToken),
+			"type":     types.StringValue(string(testLogSinkOtlpCredentialsBearerType)), // bearer
+			"token":    types.StringValue(testLogSinkOtlpCredentialsToken),
+			"username": types.StringNull(),
+			"password": types.StringNull(),
 		}),
 	})
 	expectedLogSinkOtlpBearerConfig := cdnSdk.CreateDistributionPayloadLogSink{
 		OtlpLogSinkCreate: &cdnSdk.OtlpLogSinkCreate{
 			Credentials: cdnSdk.OtlpLogSinkCreateCredentials{
 				OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
+					Type:  testLogSinkOtlpCredentialsBearerType,
 					Token: testLogSinkOtlpCredentialsToken,
 				},
 			},
@@ -162,9 +168,10 @@ func TestToCreatePayload(t *testing.T) {
 		"push_url": types.StringValue(testLogSinkPushUrl),
 		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-			"type":     types.StringValue(string(testLogSinkOtlpCredentialsBasicType)), // bearer
+			"type":     types.StringValue(string(testLogSinkOtlpCredentialsBasicType)), // basic
 			"username": types.StringValue(testLogSinkCredentialsUsername),
 			"password": types.StringValue(testLogSinkCredentialsPassword),
+			"token":    types.StringNull(),
 		}),
 	})
 	expectedLogSinkOtlpBasicConfig := cdnSdk.CreateDistributionPayloadLogSink{
@@ -181,13 +188,15 @@ func TestToCreatePayload(t *testing.T) {
 		},
 	}
 
-	// Loki config with basic credentials
+	// Loki config with basic credentials (Loki only supports basic auth; no type discriminator)
 	testLogSinkLokiConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
 		"push_url": types.StringValue(testLogSinkPushUrl),
 		"type":     types.StringValue(string(testLogSinkLokiType)), // loki
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
 			"username": types.StringValue(testLogSinkCredentialsUsername),
 			"password": types.StringValue(testLogSinkCredentialsPassword),
+			"type":     types.StringNull(),
+			"token":    types.StringNull(),
 		}),
 	})
 	expectedLogSinkLokiConfig := cdnSdk.CreateDistributionPayloadLogSink{

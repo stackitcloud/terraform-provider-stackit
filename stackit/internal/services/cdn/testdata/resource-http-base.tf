@@ -25,6 +25,14 @@ variable "forward_host_header" {}
 variable "monthly_limit_bytes" {}
 variable "default_cache_duration" {}
 
+# log_sink
+variable "log_sink_push_url" {}
+variable "log_sink_type" {}
+variable "log_sink_credentials_type" { default = null }
+variable "log_sink_credentials_username" { default = null }
+variable "log_sink_credentials_password" { default = null }
+variable "log_sink_credentials_token" { default = null }
+
 # dns
 variable "dns_zone_name" {}
 variable "dns_name" {}
@@ -94,11 +102,13 @@ resource "stackit_cdn_distribution" "distribution" {
     blocked_ips       = var.blocked_ips
 
     log_sink = {
-      push_url = "http://foo.bar"
-      type     = "otlp"
+      push_url = var.log_sink_push_url
+      type     = var.log_sink_type
       credentials = {
-        token = "ey12345"
-        type  = "bearer"
+        type     = var.log_sink_credentials_type
+        username = var.log_sink_credentials_username
+        password = var.log_sink_credentials_password
+        token    = var.log_sink_credentials_token
       }
     }
   }
@@ -108,6 +118,4 @@ data "stackit_cdn_distribution" "distribution" {
   project_id      = var.project_id
   distribution_id = stackit_cdn_distribution.distribution.distribution_id
 }
-
-
 

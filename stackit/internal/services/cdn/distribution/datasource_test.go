@@ -73,6 +73,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		"redirects":              types.ObjectNull(redirectsTypes),
 		"waf":                    emptyWaf,
 		"tls":                    defaultTls,
+		"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 		"strip_response_cookies": types.BoolValue(false),
 		"forward_host_header":    types.BoolValue(false),
 	})
@@ -283,6 +284,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -316,6 +318,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -343,6 +346,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -374,6 +378,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"redirects":              redirectsConfigExpected,
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -396,6 +401,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    populatedWaf,
 					"tls":                    defaultTls,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -408,7 +414,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		// XXX hammc: logsink marker
 		"happy_path_with_log_sink_otlp": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = createTestConfig(map[string]attr.Value{
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"blocked_countries":      blockedCountriesFixture,
@@ -417,7 +423,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"monthly_limit_bytes":    types.Int64Null(),
 					"optimizer":              types.ObjectNull(optimizerTypes),
 					"redirects":              types.ObjectNull(redirectsTypes),
-					"waf":                    types.ObjectNull(wafTypes),
+					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
@@ -431,7 +437,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		"happy_path_with_log_sink_loki": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = createTestConfig(map[string]attr.Value{
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"blocked_countries":      blockedCountriesFixture,
@@ -440,7 +446,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"monthly_limit_bytes":    types.Int64Null(),
 					"optimizer":              types.ObjectNull(optimizerTypes),
 					"redirects":              types.ObjectNull(redirectsTypes),
-					"waf":                    types.ObjectNull(wafTypes),
+					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
@@ -501,6 +507,7 @@ func TestMapDataSourceFields(t *testing.T) {
 						"enable_tls_10": types.BoolValue(true),
 						"enable_tls_11": types.BoolValue(true),
 					}),
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(true),
 					"forward_host_header":    types.BoolValue(true),
 				})
