@@ -5097,6 +5097,17 @@ func TestAccImageDatasourceSearchVariants(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_image_v2.ubuntu_oldest", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("data.stackit_image_v2.ubuntu_oldest", "checksum.digest"),
 
+					resource.TestCheckResourceAttr("data.stackit_image_v2.filter_ubuntu_x86", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "image_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "name"),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "min_disk_size"),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "min_ram"),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image_v2.filter_ubuntu_x86", "checksum.digest"),
+					resource.TestCheckResourceAttr("data.stackit_image_v2.filter_ubuntu_x86", "config.architecture", "x86"),
+
 					// e2e test that ascending sort is working
 					func(s *terraform.State) error {
 						latest := s.RootModule().Resources["data.stackit_image_v2.ubuntu_latest"]
