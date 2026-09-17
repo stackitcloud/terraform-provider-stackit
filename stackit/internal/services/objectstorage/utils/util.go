@@ -53,11 +53,10 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		base = http.DefaultTransport
 	}
 
-	// Preserve request body for retries if present
-	var bodyBytes []byte
-	if req.Body != nil && req.Body != http.NoBody {
-		var err error
-		bodyBytes, err = io.ReadAll(req.Body)
+	// Preserve request body for retries if present without mutating the original request
+	getBody := req.GetBody
+	if getBody == nil && req.Body != nil && req.Body != http.NoBody {
+		bodyBytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -66,18 +65,26 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		getBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(bodyBytes)), nil
+		}
 	}
 
 	var resp *http.Response
 	var err error
 
 	for attempt := 0; attempt <= t.MaxRetries; attempt++ {
-		// Re-hydrate the request body on each attempt
-		if bodyBytes != nil {
-			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		reqClone := req.Clone(req.Context())
+		if getBody != nil {
+			var bodyErr error
+			reqClone.Body, bodyErr = getBody()
+			if bodyErr != nil {
+				return nil, bodyErr
+			}
 		}
 
-		resp, err = base.RoundTrip(req)
+		resp, err = base.RoundTrip(reqClone)
 
 		// If success or non-429 error, return immediately
 		if err != nil || resp.StatusCode != http.StatusTooManyRequests {
