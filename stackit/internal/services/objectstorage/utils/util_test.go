@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
@@ -33,6 +34,10 @@ func TestConfigureClient(t *testing.T) {
 		t.Errorf("error setting env variable: %v", err)
 	}
 
+	var roundTripper http.RoundTripper = &http.Transport{
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+	}
+
 	type args struct {
 		providerData *core.ProviderData
 	}
@@ -46,13 +51,21 @@ func TestConfigureClient(t *testing.T) {
 			name: "default endpoint",
 			args: args{
 				providerData: &core.ProviderData{
-					Version: testVersion,
+					Version:      testVersion,
+					RoundTripper: roundTripper,
 				},
 			},
 			expected: func() *objectstorage.APIClient {
 				apiClient, err := objectstorage.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
+					config.WithCustomAuth(&RetryTransport{
+						Base:        roundTripper,
+						MaxRetries:  3,
+						BaseBackoff: 1 * time.Second,
+						MaxJitter:   500 * time.Millisecond,
+					}),
 				)
+
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
 				}
@@ -65,6 +78,7 @@ func TestConfigureClient(t *testing.T) {
 			args: args{
 				providerData: &core.ProviderData{
 					Version:                     testVersion,
+					RoundTripper:                roundTripper,
 					ObjectStorageCustomEndpoint: testCustomEndpoint,
 				},
 			},
@@ -72,6 +86,12 @@ func TestConfigureClient(t *testing.T) {
 				apiClient, err := objectstorage.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
+					config.WithCustomAuth(&RetryTransport{
+						Base:        roundTripper,
+						MaxRetries:  3,
+						BaseBackoff: 1 * time.Second,
+						MaxJitter:   500 * time.Millisecond,
+					}),
 				)
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
