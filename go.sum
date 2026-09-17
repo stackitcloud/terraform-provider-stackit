@@ -231,6 +231,8 @@ github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0 h1:glsamuWG
 github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0/go.mod h1:JyuStufMDibWblEo4wPOrh3B02aMgIUEhDF7YK5WGas=
 github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.6.0 h1:7we+WpuPG8A12JHM5GrrGdPmS0gcRSeHZ59c0txxx7U=
 github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.6.0/go.mod h1:G1irvS3PFNNnf5t5ub1UUl2Iha+lv2RYu6l/rx79tcM=
+github.com/stackitcloud/stackit-sdk-go/services/ufw v0.1.1 h1:i6Act+u14x6Slg5+DqFbJ4Mt2P3OAkM9P0f1doKqmSs=
+github.com/stackitcloud/stackit-sdk-go/services/ufw v0.1.1/go.mod h1:l3IPNHG73A4iMuwmEe2JO8uGwWQH69YGglNybXk9OvU=
 github.com/stackitcloud/stackit-sdk-go/services/valkey v0.3.1 h1:zAdxoRrUB5sIz73xAyXXQlZZ46Yc1p3rW1PerOLHNOk=
 github.com/stackitcloud/stackit-sdk-go/services/valkey v0.3.1/go.mod h1:8znHnd2b6rdEHSmW/36LQa4dMMaLuN8dwo3tD6arEic=
 github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.2 h1:82VZJaJPwcBKSj8WV8v0ujBvbkbMxFXIvvv0wU+0Be0=
