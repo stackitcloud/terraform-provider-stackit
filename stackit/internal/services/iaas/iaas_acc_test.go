@@ -6633,3 +6633,87 @@ func validateImportedNameservers(expectedIPs []string) func(states []*terraform.
 		return nil
 	}
 }
+
+func TestAccNetworksDataSource(t *testing.T) {
+	name2 := fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	t.Logf("TestAccNetworksDataSource names: %s, %s", testutil.ConvertConfigVariable(testConfigNetworkVarsMin["name"]), name2)
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: testConfigNetworkVarsMin,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					resource "stackit_network" "network2" {
+						project_id = stackit_network.network.project_id
+						name       = "%s"
+						labels     = {
+							foo = "bar"
+							baz = "qux"
+						}
+					}
+
+					# No filter -> all networks returned
+					data "stackit_networks" "all" {
+						project_id = stackit_network.network.project_id
+						depends_on = [stackit_network.network2]
+					}
+
+					# name_regex -> matching returned
+					data "stackit_networks" "regex" {
+						project_id = stackit_network.network.project_id
+						name_regex = "%s"
+						depends_on = [stackit_network.network2]
+					}
+
+					# name_regex + labels -> both must be true
+					data "stackit_networks" "regex_and_labels" {
+						project_id = stackit_network.network.project_id
+						name_regex = "%s"
+						labels     = {
+							foo = "bar"
+						}
+						depends_on = [stackit_network.network2]
+					}
+
+					# 2 labels -> both must be true
+					data "stackit_networks" "two_labels" {
+						project_id = stackit_network.network.project_id
+						labels     = {
+							foo = "bar"
+							baz = "qux"
+						}
+						depends_on = [stackit_network.network2]
+					}
+					`,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork).BuildProviderConfig(),
+					resourceNetworkMinConfig,
+					name2,
+					name2,
+					name2,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// All networks
+					resource.TestCheckResourceAttrSet("data.stackit_networks.all", "id"),
+					resource.TestCheckResourceAttr("data.stackit_networks.all", "items.#", "2"),
+
+					// regex filter
+					resource.TestCheckResourceAttr("data.stackit_networks.regex", "items.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_networks.regex", "items.0.name", name2),
+
+					// regex + label
+					resource.TestCheckResourceAttr("data.stackit_networks.regex_and_labels", "items.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_networks.regex_and_labels", "items.0.name", name2),
+
+					// two labels
+					resource.TestCheckResourceAttr("data.stackit_networks.two_labels", "items.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_networks.two_labels", "items.0.name", name2),
+				),
+			},
+		},
+	})
+}
