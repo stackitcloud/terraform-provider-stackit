@@ -8,13 +8,17 @@
     - "stackit/internal/services/certificates/*"
     - "stackit/internal/services/loadbalancer/*"
     - "stackit/internal/services/vpn/*"
-# runtimes
-"domain:Runtimes":
+# kubernetes
+"domain:Kubernetes":
 - changed-files:
   - any-glob-to-any-file:
     - "stackit/internal/services/ske/*"
+    - "stackit/internal/services/edgecloud/*"
+# serverless
+"domain:Serverless":
+- changed-files:
+  - any-glob-to-any-file:
     - "stackit/internal/services/scf/*"
-    - "stackit/internal/services/edge/*"
 # support
 # no support domain sdk modules available yet
 # central services
@@ -24,7 +28,6 @@
     - "stackit/internal/services/dns/*"
     - "stackit/internal/services/git/*"
     - "stackit/internal/services/intake/*"
-    - "stackit/internal/services/kms/*"
     - "stackit/internal/services/kms/*"
     - "stackit/internal/services/logs/*"
     - "stackit/internal/services/modelserving/*"
