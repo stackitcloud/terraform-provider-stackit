@@ -1211,7 +1211,7 @@ func TestConvertConfig(t *testing.T) {
 					cmpopts.EquateEmpty(),
 				)
 				if diff != "" {
-					t.Fatalf("Create Payload not as expected: %s", diff)
+					t.Fatalf("Config payload not as expected: %s", diff)
 				}
 			}
 		})
@@ -1310,6 +1310,40 @@ func TestMapFields(t *testing.T) {
 		"disabled_rule_collection_ids":  types.SetNull(types.StringType),
 		"log_only_rule_collection_ids":  types.SetNull(types.StringType),
 	})
+
+	// LogSink config and fixture
+	// XXX hammc: logsink marker
+	testLogSinkPushUrlOld := "http://foo.bar"
+	testLogSinkPushUrl := "http://foo.bar"
+	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKTYPE_OTLP
+
+	// Otlp config with bearer credentials
+	expectedLogSinkConfigOld := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrlOld),
+		"type":     types.StringValue(string(testLogSinkOtlpType)),
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":     types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+			"token":    types.StringValue("ey1234"),
+			"username": types.StringNull(),
+			"password": types.StringNull(),
+		}),
+	})
+	expectedLogSinkConfigNew := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)),
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":     types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+			"token":    types.StringValue("ey1234"),
+			"username": types.StringNull(),
+			"password": types.StringNull(),
+		}),
+	})
+	inputLogSinkConfig := cdnSdk.ConfigLogSink{
+		OtlpLogSink: &cdnSdk.OtlpLogSink{
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
 
 	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
 		"enable_tls_10": types.BoolValue(false),
@@ -1565,6 +1599,40 @@ func TestMapFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Config.Waf = expectedWafConfig
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_log_sink": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    defaultWaf,
+					"log_sink":               expectedLogSinkConfigNew,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			InitialState: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    defaultWaf,
+					"log_sink":               expectedLogSinkConfigOld,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.LogSink = &inputLogSinkConfig
 			}),
 			IsValid: true,
 		},
