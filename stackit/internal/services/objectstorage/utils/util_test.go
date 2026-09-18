@@ -5,12 +5,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
 	"testing/synctest"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -61,7 +63,7 @@ func TestConfigureClient(t *testing.T) {
 					config.WithCustomAuth(&RetryTransport{
 						Base:        roundTripper,
 						MaxRetries:  3,
-						BaseBackoff: 1 * time.Second,
+						BaseBackoff: 10 * time.Second,
 						MaxJitter:   500 * time.Millisecond,
 					}),
 				)
@@ -89,7 +91,7 @@ func TestConfigureClient(t *testing.T) {
 					config.WithCustomAuth(&RetryTransport{
 						Base:        roundTripper,
 						MaxRetries:  3,
-						BaseBackoff: 1 * time.Second,
+						BaseBackoff: 10 * time.Second,
 						MaxJitter:   500 * time.Millisecond,
 					}),
 				)
@@ -115,6 +117,81 @@ func TestConfigureClient(t *testing.T) {
 				t.Errorf("ConfigureClient() = %v, want %v", actual, tt.expected)
 			}
 		})
+	}
+}
+
+func TestClientRetry(t *testing.T) {
+	ctx := context.Background()
+	diags := diag.Diagnostics{}
+
+	testProjectId := uuid.New().String()
+	const testRegion = "eu01"
+	const testBucketName = "karl-otto"
+
+	attempts := 0
+
+	// Create mock server returning HTTP 429 on first & second call, HTTP 200 on final retry
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+
+		if r.URL.Path != fmt.Sprintf("/v2/project/%s/regions/%s/bucket/%s", testProjectId, testRegion, testBucketName) {
+			t.Fatalf("invalid endpoint called")
+		}
+
+		// first request: HTTP 429 *with* Retry-After header
+		if attempts == 1 {
+			w.Header().Set("Retry-After", "1")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, err := w.Write([]byte(`{"error": "rate_limit_exceeded"}`))
+			if err != nil {
+				t.Fatalf("error writing response: %v", err)
+			}
+			return
+		}
+
+		// second request: HTTP 429 *without* Retry-After header (we expect base backoff to be used now)
+		if attempts == 2 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, err := w.Write([]byte(`{"error": "rate_limit_exceeded"}`))
+			if err != nil {
+				t.Fatalf("error writing response: %v", err)
+			}
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{
+  			"bucket": {
+				"name": "bucket-1",
+				"objectLockEnabled": false,
+				"region": "eu01",
+				"urlPathStyle": "https://object.storage.eu01.onstackit.cloud/bucket-1",
+				"urlVirtualHostedStyle": "https://bucket-1.object.storage.eu01.onstackit.cloud"
+			},
+			"project": "` + testProjectId + `"}`))
+		if err != nil {
+			t.Fatalf("error writing response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client := ConfigureClient(ctx, &core.ProviderData{
+		ObjectStorageCustomEndpoint: server.URL,
+	}, &diags)
+	if diags.HasError() {
+		t.Fatalf("error configuring client: %v", diags)
+	}
+
+	_, err := client.DefaultAPI.GetBucket(ctx, testProjectId, testRegion, testBucketName).Execute()
+	if err != nil {
+		t.Fatalf("unexpected request error: %v", err)
+	}
+
+	if attempts != 3 {
+		t.Fatalf("expected 3 attempts, got %d", attempts)
 	}
 }
 

@@ -151,7 +151,7 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	retryRoundTripper := &RetryTransport{
 		Base:        providerData.RoundTripper,
 		MaxRetries:  3,
-		BaseBackoff: 1 * time.Second,
+		BaseBackoff: 10 * time.Second,
 		MaxJitter:   500 * time.Millisecond, // Always added to wait time
 	}
 
