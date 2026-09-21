@@ -21,19 +21,19 @@ resource "stackit_volume_automation" "example" {
   template_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name        = "example-volume-automation"
   description = "Creates daily volume snapshots and keeps the last 7."
-  input = {
-    volume_recovery_point_management = {
-      inherit_volume_labels = true
-      recovery_point_labels = {
-        "created-by" = "terraform"
-      }
-      volume_label_selector = "backup=daily"
-      snapshot_retention_policy = {
-        kind  = "count"
-        value = 4
-      }
+  input = jsonencode({
+    kind                = "VolumeRecoveryPointManagement"
+    inheritVolumeLabels = false
+    recoveryPointLabels = {
+      "exampleLabelKey1" = "exampleLabelValue1"
+      "exampleLabelKey2" = "exampleLabelValue2"
     }
-  }
+    snapshotRetentionPolicy = {
+      kind  = "count"
+      value = 2
+    }
+    volumeLabelSelector = "myLabelkey1=myLabelValue,myLabelKey2=myOtherLabelValue"
+  })
   triggers = {
     schedule = {
       rrule = "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"
@@ -53,7 +53,7 @@ resource "stackit_volume_automation" "example" {
 ### Optional
 
 - `description` (String) The volume automation description.
-- `input` (String) Configuration input for the volume automation. Exactly one of the nested attributes must be set.
+- `input` (String) Configuration input for the volume automation. See [API Docs](https://docs.api.stackit.cloud/documentation/automation-service/version/v1#tag/Volume-Automations/operation/CreateVolumeAutomation) for possible configuration options.
 - `name` (String) The volume automation name.
 - `region` (String) The resource region. If not defined, the provider region is used.
 - `triggers` (Attributes) Triggers that determine when the automation runs. (see [below for nested schema](#nestedatt--triggers))

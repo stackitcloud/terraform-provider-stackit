@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1betaapi"
+	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -66,7 +66,7 @@ var descriptions = map[string]string{
 	"automation_id":                    "ID of the volume automation.",
 	"name":                             "The volume automation name.",
 	"description":                      "The volume automation description.",
-	"input":                            "Configuration input for the volume automation. Exactly one of the nested attributes must be set.", // TODO: update description
+	"input":                            "Configuration input for the volume automation. See [API Docs](https://docs.api.stackit.cloud/documentation/automation-service/version/v1#tag/Volume-Automations/operation/CreateVolumeAutomation) for possible configuration options.",
 	"volume_recovery_point_management": "Configuration for automated volume recovery point (snapshot) management.",
 	"inherit_volume_labels":            "Whether recovery points inherit the labels of the volume they were created from. Defaults to `false`.",
 	"recovery_point_labels":            "Labels to attach to created recovery points.",
@@ -359,7 +359,7 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	// Workaround: The input field is an open object where we don't know all keys. If some input fields where removed,
 	// we can't set them here to null. For this reason we do one update with updateMask "input", to overwrite the whole input object.
 	// Setting it to '*' would cause issue when the API gets new fields in the future and is therefore no option.
-	automationResp, err := r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
+	_, err = r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
 		PartialUpdateVolumeAutomationPayload(*payload).
 		UpdateMask("input").
 		Execute()
@@ -371,7 +371,7 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	ctx = core.LogResponse(ctx)
 
 	// Workaround: Updates all other fields accordingly, which were not already update with the previous update.
-	automationResp, err = r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
+	automationResp, err := r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
 		PartialUpdateVolumeAutomationPayload(*payload).
 		Execute()
 	if err != nil {
@@ -472,7 +472,7 @@ func mapFields(_ context.Context, apiResp *automation.VolumeAutomation, model *M
 	if apiResp.Input.Get() != nil {
 		inputJson, err := apiResp.Input.MarshalJSON()
 		if err != nil {
-			return fmt.Errorf("error marshaling input field: %v", err)
+			return fmt.Errorf("error marshaling input field: %w", err)
 		}
 		inputString = new(string(inputJson))
 	}

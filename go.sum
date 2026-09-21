@@ -91,6 +91,8 @@ github.com/hashicorp/terraform-json v0.28.0 h1:dOkJT55rWfU6T1/VklHde51ym4LfNP+9x
 github.com/hashicorp/terraform-json v0.28.0/go.mod h1:PJIRf+Yzu5iLb52c/xYp1tUOL4jzMzfIAB5gvWWKIWE=
 github.com/hashicorp/terraform-plugin-framework v1.19.0 h1:q0bwyhxAOR3vfdgbk9iplv3MlTv/dhBHTXjQOtQDoBA=
 github.com/hashicorp/terraform-plugin-framework v1.19.0/go.mod h1:YRXOBu0jvs7xp4AThBbX4mAzYaMJ1JgtFH//oGKxwLc=
+github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0 h1:SJXL5FfJJm17554Kpt9jFXngdM6fXbnUnZ6iT2IeiYA=
+github.com/hashicorp/terraform-plugin-framework-jsontypes v0.2.0/go.mod h1:p0phD0IYhsu9bR4+6OetVvvH59I6LwjXGnTVEr8ox6E=
 github.com/hashicorp/terraform-plugin-framework-timeouts v0.7.0 h1:jblRy1PkLfPm5hb5XeMa3tezusnMRziUGqtT5epSYoI=
 github.com/hashicorp/terraform-plugin-framework-timeouts v0.7.0/go.mod h1:5jm2XK8uqrdiSRfD5O47OoxyGMCnwTcl8eoiDgSa+tc=
 github.com/hashicorp/terraform-plugin-framework-validators v0.19.0 h1:Zz3iGgzxe/1XBkooZCewS0nJAaCFPFPHdNJd8FgE4Ow=
@@ -161,8 +163,8 @@ github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.4 h1:KNEcAPj66Asb00
 github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.4/go.mod h1:riXgEDfIjNdFjYk81zNnWt0npkv1+/P1iFRfFIt28Jo=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.4 h1:YRfEQJxMn9B/yCf5ZGTsBzPLv69LM/jvvLuC8vb0Uf4=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.4/go.mod h1:AVLUwOPKsoz6HvKzClu0a5OTjMOYS696gRjHUQvQH70=
-github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.1 h1:naKG2lRw9ALCNaaJabhgtuCwSBVyOOlIX3NPkIFX1i0=
-github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.1/go.mod h1:1vv2SZorcHJKxEPV15CnTDhavV+NcYSNjAX7cZGX31k=
+github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.2-0.20260921140418-216536addbae h1:QRkhohGahXpHBx9CrrI18vxo9KV4P9QHlNyNcGk7euM=
+github.com/stackitcloud/stackit-sdk-go/services/automation v0.1.2-0.20260921140418-216536addbae/go.mod h1:1vv2SZorcHJKxEPV15CnTDhavV+NcYSNjAX7cZGX31k=
 github.com/stackitcloud/stackit-sdk-go/services/cdn v1.21.0 h1:lCs1eq/OOTdwGrrkxkJ8qCnS6yLM4XZhznpML3nd1NI=
 github.com/stackitcloud/stackit-sdk-go/services/cdn v1.21.0/go.mod h1:NBgvZH5ekJ2hFCNI480C9MdJsa4989YGC1YgX5ELA48=
 github.com/stackitcloud/stackit-sdk-go/services/certificates v1.9.2 h1:QEKzHzVwZ80mNdoEWEZxgynACnlPfXwIlVz9b7xceR4=

@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1betaapi"
+	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -43,6 +43,11 @@ var (
 // template of kind "VolumeRecoveryPointManagement". Volume automation templates are not
 // created via Terraform, so acceptance tests have to discover a valid template_id at runtime.
 func lookupVolumeRecoveryPointManagementTemplateID(t *testing.T) string {
+	// skip if TF_ACC=1 is not set
+	if !testutil.E2ETestsEnabled {
+		return ""
+	}
+
 	t.Helper()
 	ctx := context.Background()
 

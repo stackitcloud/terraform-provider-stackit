@@ -38,7 +38,7 @@ data "stackit_volume_automation" "example" {
 
 - `description` (String) The volume automation description.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`automation_id`".
-- `input` (String) Configuration input for the volume automation. Exactly one of the nested attributes must be set.
+- `input` (String) Configuration input for the volume automation. See [API Docs](https://docs.api.stackit.cloud/documentation/automation-service/version/v1#tag/Volume-Automations/operation/CreateVolumeAutomation) for possible configuration options.
 - `name` (String) The volume automation name.
 - `template_id` (String) ID of the automation template this volume automation is based on.
 - `triggers` (Attributes) Triggers that determine when the automation runs. (see [below for nested schema](#nestedatt--triggers))
