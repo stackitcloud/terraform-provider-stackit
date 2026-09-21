@@ -29,14 +29,15 @@ resource "stackit_image" "example_image" {
 ### Required
 
 - `disk_format` (String) The disk format of the image.
-- `local_file_path` (String) The filepath of the raw image file to be uploaded.
 - `name` (String) The name of the image.
 - `project_id` (String) STACKIT project ID to which the image is associated.
 
 ### Optional
 
 - `config` (Attributes) Properties to set hardware and scheduling settings for an image. (see [below for nested schema](#nestedatt--config))
+- `image_file` (Attributes) Representation of an image file. (see [below for nested schema](#nestedatt--image_file))
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `local_file_path` (String) The filepath of the raw image file to be uploaded. (Deprecated: local_file_path is deprecated and will be removed after February 2027. Use image_file.local.file_path instead.)
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
 - `min_ram` (Number) The minimum RAM of the image in MB.
 - `region` (String) The resource region. If not defined, the provider region is used.
@@ -67,6 +68,35 @@ Optional:
 - `uefi` (Boolean) Enables UEFI boot.
 - `video_model` (String) Sets Graphic device model.
 - `virtio_scsi` (Boolean) Enables the use of VirtIO SCSI to provide block device access. By default instances use VirtIO Block.
+
+
+<a id="nestedatt--image_file"></a>
+### Nested Schema for `image_file`
+
+Optional:
+
+- `download` (Attributes) Remote file download settings. (see [below for nested schema](#nestedatt--image_file--download))
+- `local` (Attributes) Representation of a local image file. (see [below for nested schema](#nestedatt--image_file--local))
+
+<a id="nestedatt--image_file--download"></a>
+### Nested Schema for `image_file.download`
+
+Required:
+
+- `url` (String) URL to download the image from.
+
+
+<a id="nestedatt--image_file--local"></a>
+### Nested Schema for `image_file.local`
+
+Required:
+
+- `file_path` (String) Path to the local file.
+
+Optional:
+
+- `disable_plan_validation` (Boolean) Whether to disable plan-time validation.
+
 
 
 <a id="nestedatt--checksum"></a>
