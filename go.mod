@@ -22,7 +22,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.13.2
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.14.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.14.3
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.14.4
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.2
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.13.1
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.15.2
@@ -32,7 +32,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelexperiments v0.3.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.13.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.2
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.25.2
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.3.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.15.0
