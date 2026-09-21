@@ -53,7 +53,7 @@ resource "stackit_volume_automation" "example" {
 ### Optional
 
 - `description` (String) The volume automation description.
-- `input` (Attributes) Configuration input for the volume automation. Exactly one of the nested attributes must be set. (see [below for nested schema](#nestedatt--input))
+- `input` (String) Configuration input for the volume automation. Exactly one of the nested attributes must be set.
 - `name` (String) The volume automation name.
 - `region` (String) The resource region. If not defined, the provider region is used.
 - `triggers` (Attributes) Triggers that determine when the automation runs. (see [below for nested schema](#nestedatt--triggers))
@@ -62,40 +62,6 @@ resource "stackit_volume_automation" "example" {
 
 - `automation_id` (String) ID of the volume automation.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`automation_id`".
-
-<a id="nestedatt--input"></a>
-### Nested Schema for `input`
-
-Optional:
-
-- `volume_recovery_point_management` (Attributes) Configuration for automated volume recovery point (snapshot) management. (see [below for nested schema](#nestedatt--input--volume_recovery_point_management))
-
-<a id="nestedatt--input--volume_recovery_point_management"></a>
-### Nested Schema for `input.volume_recovery_point_management`
-
-Required:
-
-- `snapshot_retention_policy` (Attributes) Defines how long created recovery points (snapshots) are retained. (see [below for nested schema](#nestedatt--input--volume_recovery_point_management--snapshot_retention_policy))
-
-Optional:
-
-- `inherit_volume_labels` (Boolean) Whether recovery points inherit the labels of the volume they were created from. Defaults to `false`.
-- `recovery_point_labels` (Map of String) Labels to attach to created recovery points.
-- `volume_label_selector` (String) Label selector used to select the volumes this automation applies to.
-
-<a id="nestedatt--input--volume_recovery_point_management--snapshot_retention_policy"></a>
-### Nested Schema for `input.volume_recovery_point_management.snapshot_retention_policy`
-
-Required:
-
-- `kind` (String) The retention policy kind. Valid values are: `count`, `indefinitely`.
-
-Optional:
-
-- `value` (Number) Number of recovery points to retain. Required if `kind` is `count`, must not be set otherwise.
-
-
-
 
 <a id="nestedatt--triggers"></a>
 ### Nested Schema for `triggers`

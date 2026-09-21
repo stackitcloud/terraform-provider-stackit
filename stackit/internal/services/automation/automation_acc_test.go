@@ -3,6 +3,7 @@ package automation_test
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -76,23 +77,53 @@ func futureRrule(afterDuration time.Duration, intervalDays int) string {
 }
 
 func testConfigVarsMin(templateID string) config.Variables {
+	// the input variable needs a json decoded string
+	inputMap := map[string]interface{}{
+		"kind": "VolumeRecoveryPointManagement",
+		"snapshotRetentionPolicy": map[string]interface{}{
+			"kind": "indefinitely",
+		},
+	}
+	inputJson, err := json.Marshal(inputMap)
+	if err != nil {
+		return nil
+	}
+
 	return config.Variables{
 		"project_id":  config.StringVariable(testutil.ProjectId),
 		"template_id": config.StringVariable(templateID),
 		"name":        config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 		"rrule":       config.StringVariable(futureRrule(time.Hour, 1)),
+		"input":       config.StringVariable(string(inputJson)),
 	}
 }
 
 func testConfigVarsMax(templateID string) config.Variables {
+	// the input variable needs a json decoded string
+	inputMap := map[string]interface{}{
+		"kind":                "VolumeRecoveryPointManagement",
+		"inheritVolumeLabels": true,
+		"recoveryPointLabels": map[string]interface{}{
+			"created-by": "tf-acc-test",
+		},
+		"snapshotRetentionPolicy": map[string]interface{}{
+			"kind":  "count",
+			"value": 4,
+		},
+	}
+	inputJson, err := json.Marshal(inputMap)
+	if err != nil {
+		return nil
+	}
+
 	return config.Variables{
-		"project_id":      config.StringVariable(testutil.ProjectId),
-		"region":          config.StringVariable(testutil.Region),
-		"template_id":     config.StringVariable(templateID),
-		"name":            config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-		"description":     config.StringVariable("tf-acc-test description"),
-		"rrule":           config.StringVariable(futureRrule(time.Hour, 1)),
-		"retention_count": config.IntegerVariable(4),
+		"project_id":  config.StringVariable(testutil.ProjectId),
+		"region":      config.StringVariable(testutil.Region),
+		"template_id": config.StringVariable(templateID),
+		"name":        config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+		"description": config.StringVariable("tf-acc-test description"),
+		"rrule":       config.StringVariable(futureRrule(time.Hour, 1)),
+		"input":       config.StringVariable(string(inputJson)),
 	}
 }
 
@@ -104,9 +135,25 @@ func configVarsMinUpdated(base config.Variables) config.Variables {
 }
 
 func configVarsMaxUpdated(base config.Variables) config.Variables {
+	// the input variable needs a json decoded string
+	inputMap := map[string]interface{}{
+		"kind": "VolumeRecoveryPointManagement",
+		"recoveryPointLabels": map[string]interface{}{
+			"created-by": "tf-acc-test-updated",
+		},
+		"snapshotRetentionPolicy": map[string]interface{}{
+			"kind": "indefinitely",
+		},
+	}
+	inputJson, err := json.Marshal(inputMap)
+	if err != nil {
+		return nil
+	}
+
 	tempConfig := maps.Clone(base)
 	tempConfig["description"] = config.StringVariable("tf-acc-test description updated")
 	tempConfig["retention_count"] = config.IntegerVariable(5)
+	tempConfig["input"] = config.StringVariable(string(inputJson))
 	return tempConfig
 }
 
@@ -150,11 +197,7 @@ func TestAccVolumeAutomationMinResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "template_id", testutil.ConvertConfigVariable(varsMin["template_id"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "name", testutil.ConvertConfigVariable(varsMin["name"])),
 					resource.TestCheckNoResourceAttr("stackit_volume_automation.test", "description"),
-					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.inherit_volume_labels", "false"),
-					resource.TestCheckNoResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.recovery_point_labels.%"),
-					resource.TestCheckNoResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.volume_label_selector"),
-					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.snapshot_retention_policy.kind", "indefinitely"),
-					resource.TestCheckNoResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.snapshot_retention_policy.value"),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input", testutil.ConvertConfigVariable(varsMin["input"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "triggers.schedule.rrule", testutil.ConvertConfigVariable(varsMin["rrule"])),
 					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "automation_id"),
 					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "id"),
@@ -171,11 +214,7 @@ func TestAccVolumeAutomationMinResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_volume_automation.test_data", "automation_id"),
 					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "name", testutil.ConvertConfigVariable(varsMin["name"])),
 					resource.TestCheckNoResourceAttr("data.stackit_volume_automation.test_data", "description"),
-					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.inherit_volume_labels", "false"),
-					resource.TestCheckNoResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.recovery_point_labels.%"),
-					resource.TestCheckNoResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.volume_label_selector"),
-					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.snapshot_retention_policy.kind", "indefinitely"),
-					resource.TestCheckNoResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.snapshot_retention_policy.value"),
+					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input", testutil.ConvertConfigVariable(varsMin["input"])),
 					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "triggers.schedule.rrule", testutil.ConvertConfigVariable(varsMin["rrule"])),
 					resource.TestCheckResourceAttrSet("data.stackit_volume_automation.test_data", "id"),
 				),
@@ -203,9 +242,15 @@ func TestAccVolumeAutomationMinResource(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: varsMinUpdated,
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "project_id", testutil.ConvertConfigVariable(varsMinUpdated["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "region"),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "template_id", testutil.ConvertConfigVariable(varsMinUpdated["template_id"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "name", testutil.ConvertConfigVariable(varsMinUpdated["name"])),
+					resource.TestCheckNoResourceAttr("stackit_volume_automation.test", "description"),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input", testutil.ConvertConfigVariable(varsMinUpdated["input"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "triggers.schedule.rrule", testutil.ConvertConfigVariable(varsMinUpdated["rrule"])),
+					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "automation_id"),
+					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "id"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -233,11 +278,7 @@ func TestAccVolumeAutomationMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "template_id", testutil.ConvertConfigVariable(varsMax["template_id"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "name", testutil.ConvertConfigVariable(varsMax["name"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "description", testutil.ConvertConfigVariable(varsMax["description"])),
-					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.inherit_volume_labels", "true"),
-					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.recovery_point_labels.created-by", "tf-acc-test"),
-					resource.TestCheckNoResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.volume_label_selector"),
-					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.snapshot_retention_policy.kind", "count"),
-					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.snapshot_retention_policy.value", testutil.ConvertConfigVariable(varsMax["retention_count"])),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input", testutil.ConvertConfigVariable(varsMax["input"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "triggers.schedule.rrule", testutil.ConvertConfigVariable(varsMax["rrule"])),
 					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "automation_id"),
 					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "id"),
@@ -254,10 +295,7 @@ func TestAccVolumeAutomationMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_volume_automation.test_data", "automation_id"),
 					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "name", testutil.ConvertConfigVariable(varsMax["name"])),
 					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "description", testutil.ConvertConfigVariable(varsMax["description"])),
-					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.inherit_volume_labels", "true"),
-					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.recovery_point_labels.created-by", "tf-acc-test"),
-					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.snapshot_retention_policy.kind", "count"),
-					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input.volume_recovery_point_management.snapshot_retention_policy.value", testutil.ConvertConfigVariable(varsMax["retention_count"])),
+					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "input", testutil.ConvertConfigVariable(varsMax["input"])),
 					resource.TestCheckResourceAttr("data.stackit_volume_automation.test_data", "triggers.schedule.rrule", testutil.ConvertConfigVariable(varsMax["rrule"])),
 					resource.TestCheckResourceAttrSet("data.stackit_volume_automation.test_data", "id"),
 				),
@@ -285,9 +323,15 @@ func TestAccVolumeAutomationMaxResource(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: varsMaxUpdated,
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "project_id", testutil.ConvertConfigVariable(varsMaxUpdated["project_id"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "region", testutil.ConvertConfigVariable(varsMaxUpdated["region"])),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "template_id", testutil.ConvertConfigVariable(varsMaxUpdated["template_id"])),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "name", testutil.ConvertConfigVariable(varsMaxUpdated["name"])),
 					resource.TestCheckResourceAttr("stackit_volume_automation.test", "description", testutil.ConvertConfigVariable(varsMaxUpdated["description"])),
-					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input.volume_recovery_point_management.snapshot_retention_policy.value", testutil.ConvertConfigVariable(varsMaxUpdated["retention_count"])),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "input", testutil.ConvertConfigVariable(varsMaxUpdated["input"])),
+					resource.TestCheckResourceAttr("stackit_volume_automation.test", "triggers.schedule.rrule", testutil.ConvertConfigVariable(varsMaxUpdated["rrule"])),
+					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "automation_id"),
+					resource.TestCheckResourceAttrSet("stackit_volume_automation.test", "id"),
 				),
 			},
 			// Clear optional name and description
@@ -311,8 +355,17 @@ func testAccCheckVolumeAutomationDestroy(s *terraform.State) error {
 		return fmt.Errorf("creating automation client: %w", err)
 	}
 
+	var errs []error
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_volume_automation" {
+			continue
+		}
+		projectId := rs.Primary.Attributes["project_id"]
+		if projectId == "" {
+			continue
+		}
+		region := rs.Primary.Attributes["region"]
+		if region == "" {
 			continue
 		}
 		automationId := rs.Primary.Attributes["automation_id"]
@@ -320,15 +373,15 @@ func testAccCheckVolumeAutomationDestroy(s *terraform.State) error {
 			continue
 		}
 
-		_, err := client.DefaultAPI.GetVolumeAutomation(ctx, testutil.ProjectId, testutil.Region, automationId).Execute()
+		_, err = client.DefaultAPI.GetVolumeAutomation(ctx, projectId, region, automationId).Execute()
 		if err == nil {
-			return fmt.Errorf("volume automation %s still exists", automationId)
-		}
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			errs = append(errs, fmt.Errorf("volume automation %s still exists", automationId))
 			continue
 		}
-		return fmt.Errorf("checking volume automation %s destruction: %w", automationId, err)
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			continue
+		}
+		errs = append(errs, fmt.Errorf("checking volume automation %s destruction: %w", automationId, err))
 	}
-	return nil
+	return errors.Join(errs...)
 }

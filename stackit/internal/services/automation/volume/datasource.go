@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1betaapi"
@@ -106,44 +106,10 @@ func (d *volumeAutomationDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: descriptions["description"],
 				Computed:    true,
 			},
-			"input": schema.SingleNestedAttribute{
+			"input": schema.StringAttribute{
+				CustomType:  jsontypes.NormalizedType{},
 				Description: descriptions["input"],
 				Computed:    true,
-				Attributes: map[string]schema.Attribute{
-					"volume_recovery_point_management": schema.SingleNestedAttribute{
-						Description: descriptions["volume_recovery_point_management"],
-						Computed:    true,
-						Attributes: map[string]schema.Attribute{
-							"inherit_volume_labels": schema.BoolAttribute{
-								Description: descriptions["inherit_volume_labels"],
-								Computed:    true,
-							},
-							"recovery_point_labels": schema.MapAttribute{
-								Description: descriptions["recovery_point_labels"],
-								ElementType: types.StringType,
-								Computed:    true,
-							},
-							"volume_label_selector": schema.StringAttribute{
-								Description: descriptions["volume_label_selector"],
-								Computed:    true,
-							},
-							"snapshot_retention_policy": schema.SingleNestedAttribute{
-								Description: descriptions["snapshot_retention_policy"],
-								Computed:    true,
-								Attributes: map[string]schema.Attribute{
-									"kind": schema.StringAttribute{
-										Description: descriptions["snapshot_retention_policy_kind"],
-										Computed:    true,
-									},
-									"value": schema.Int32Attribute{
-										Description: descriptions["snapshot_retention_policy_value"],
-										Computed:    true,
-									},
-								},
-							},
-						},
-					},
-				},
 			},
 			"triggers": schema.SingleNestedAttribute{
 				Description: descriptions["triggers"],

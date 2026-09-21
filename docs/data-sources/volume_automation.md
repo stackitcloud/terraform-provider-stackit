@@ -38,38 +38,10 @@ data "stackit_volume_automation" "example" {
 
 - `description` (String) The volume automation description.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`automation_id`".
-- `input` (Attributes) Configuration input for the volume automation. Exactly one of the nested attributes must be set. (see [below for nested schema](#nestedatt--input))
+- `input` (String) Configuration input for the volume automation. Exactly one of the nested attributes must be set.
 - `name` (String) The volume automation name.
 - `template_id` (String) ID of the automation template this volume automation is based on.
 - `triggers` (Attributes) Triggers that determine when the automation runs. (see [below for nested schema](#nestedatt--triggers))
-
-<a id="nestedatt--input"></a>
-### Nested Schema for `input`
-
-Read-Only:
-
-- `volume_recovery_point_management` (Attributes) Configuration for automated volume recovery point (snapshot) management. (see [below for nested schema](#nestedatt--input--volume_recovery_point_management))
-
-<a id="nestedatt--input--volume_recovery_point_management"></a>
-### Nested Schema for `input.volume_recovery_point_management`
-
-Read-Only:
-
-- `inherit_volume_labels` (Boolean) Whether recovery points inherit the labels of the volume they were created from. Defaults to `false`.
-- `recovery_point_labels` (Map of String) Labels to attach to created recovery points.
-- `snapshot_retention_policy` (Attributes) Defines how long created recovery points (snapshots) are retained. (see [below for nested schema](#nestedatt--input--volume_recovery_point_management--snapshot_retention_policy))
-- `volume_label_selector` (String) Label selector used to select the volumes this automation applies to.
-
-<a id="nestedatt--input--volume_recovery_point_management--snapshot_retention_policy"></a>
-### Nested Schema for `input.volume_recovery_point_management.snapshot_retention_policy`
-
-Read-Only:
-
-- `kind` (String) The retention policy kind. Valid values are: `count`, `indefinitely`.
-- `value` (Number) Number of recovery points to retain. Required if `kind` is `count`, must not be set otherwise.
-
-
-
 
 <a id="nestedatt--triggers"></a>
 ### Nested Schema for `triggers`

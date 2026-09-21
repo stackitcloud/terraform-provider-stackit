@@ -2,17 +2,15 @@ package volume
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -32,40 +30,23 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                   = &volumeAutomationResource{}
-	_ resource.ResourceWithConfigure      = &volumeAutomationResource{}
-	_ resource.ResourceWithImportState    = &volumeAutomationResource{}
-	_ resource.ResourceWithModifyPlan     = &volumeAutomationResource{}
-	_ resource.ResourceWithValidateConfig = &volumeAutomationResource{}
+	_ resource.Resource                = &volumeAutomationResource{}
+	_ resource.ResourceWithConfigure   = &volumeAutomationResource{}
+	_ resource.ResourceWithImportState = &volumeAutomationResource{}
+	_ resource.ResourceWithModifyPlan  = &volumeAutomationResource{}
 )
 
 // Model represents the schema for the stackit_volume_automation resource and datasource.
 type Model struct {
-	ID           types.String   `tfsdk:"id"`
-	ProjectId    types.String   `tfsdk:"project_id"`
-	Region       types.String   `tfsdk:"region"`
-	TemplateId   types.String   `tfsdk:"template_id"`
-	AutomationId types.String   `tfsdk:"automation_id"`
-	Name         types.String   `tfsdk:"name"`
-	Description  types.String   `tfsdk:"description"`
-	Input        *inputModel    `tfsdk:"input"`
-	Triggers     *triggersModel `tfsdk:"triggers"`
-}
-
-type inputModel struct {
-	VolumeRecoveryPointManagement *volumeRecoveryPointManagementModel `tfsdk:"volume_recovery_point_management"`
-}
-
-type volumeRecoveryPointManagementModel struct {
-	InheritVolumeLabels     types.Bool                    `tfsdk:"inherit_volume_labels"`
-	RecoveryPointLabels     types.Map                     `tfsdk:"recovery_point_labels"`
-	VolumeLabelSelector     types.String                  `tfsdk:"volume_label_selector"`
-	SnapshotRetentionPolicy *snapshotRetentionPolicyModel `tfsdk:"snapshot_retention_policy"`
-}
-
-type snapshotRetentionPolicyModel struct {
-	Kind  types.String `tfsdk:"kind"`
-	Value types.Int32  `tfsdk:"value"`
+	ID           types.String         `tfsdk:"id"`
+	ProjectId    types.String         `tfsdk:"project_id"`
+	Region       types.String         `tfsdk:"region"`
+	TemplateId   types.String         `tfsdk:"template_id"`
+	AutomationId types.String         `tfsdk:"automation_id"`
+	Name         types.String         `tfsdk:"name"`
+	Description  types.String         `tfsdk:"description"`
+	Input        jsontypes.Normalized `tfsdk:"input"`
+	Triggers     *triggersModel       `tfsdk:"triggers"`
 }
 
 type triggersModel struct {
@@ -85,7 +66,7 @@ var descriptions = map[string]string{
 	"automation_id":                    "ID of the volume automation.",
 	"name":                             "The volume automation name.",
 	"description":                      "The volume automation description.",
-	"input":                            "Configuration input for the volume automation. Exactly one of the nested attributes must be set.",
+	"input":                            "Configuration input for the volume automation. Exactly one of the nested attributes must be set.", // TODO: update description
 	"volume_recovery_point_management": "Configuration for automated volume recovery point (snapshot) management.",
 	"inherit_volume_labels":            "Whether recovery points inherit the labels of the volume they were created from. Defaults to `false`.",
 	"recovery_point_labels":            "Labels to attach to created recovery points.",
@@ -225,55 +206,10 @@ func (r *volumeAutomationResource) Schema(_ context.Context, _ resource.SchemaRe
 				Description: descriptions["description"],
 				Optional:    true,
 			},
-			"input": schema.SingleNestedAttribute{
+			"input": schema.StringAttribute{
+				CustomType:  jsontypes.NormalizedType{},
 				Description: descriptions["input"],
 				Optional:    true,
-				Attributes: map[string]schema.Attribute{
-					"volume_recovery_point_management": schema.SingleNestedAttribute{
-						Description: descriptions["volume_recovery_point_management"],
-						Optional:    true,
-						Attributes: map[string]schema.Attribute{
-							"inherit_volume_labels": schema.BoolAttribute{
-								Description: descriptions["inherit_volume_labels"],
-								Optional:    true,
-								Computed:    true,
-								Default:     booldefault.StaticBool(false),
-							},
-							"recovery_point_labels": schema.MapAttribute{
-								Description: descriptions["recovery_point_labels"],
-								ElementType: types.StringType,
-								Optional:    true,
-							},
-							"volume_label_selector": schema.StringAttribute{
-								Description: descriptions["volume_label_selector"],
-								Optional:    true,
-							},
-							"snapshot_retention_policy": schema.SingleNestedAttribute{
-								Description: descriptions["snapshot_retention_policy"],
-								Required:    true,
-								Attributes: map[string]schema.Attribute{
-									"kind": schema.StringAttribute{
-										Description: descriptions["snapshot_retention_policy_kind"],
-										Required:    true,
-										Validators: []validator.String{
-											stringvalidator.OneOf(
-												string(automation.SNAPSHOTRETENTIONPOLICYCOUNTKIND_COUNT),
-												string(automation.SNAPSHOTRETENTIONPOLICYINDEFINITELYKIND_INDEFINITELY),
-											),
-										},
-									},
-									"value": schema.Int32Attribute{
-										Description: descriptions["snapshot_retention_policy_value"],
-										Optional:    true,
-										Validators: []validator.Int32{
-											int32validator.AtLeast(1),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
 			},
 			"triggers": schema.SingleNestedAttribute{
 				Description: descriptions["triggers"],
@@ -298,44 +234,6 @@ func (r *volumeAutomationResource) Schema(_ context.Context, _ resource.SchemaRe
 	}
 }
 
-// ValidateConfig validates cross-field constraints that can't be expressed via schema validators alone.
-func (r *volumeAutomationResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
-	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if model.Input == nil || model.Input.VolumeRecoveryPointManagement == nil {
-		return
-	}
-	srp := model.Input.VolumeRecoveryPointManagement.SnapshotRetentionPolicy
-	if srp == nil || utils.IsUndefined(srp.Kind) {
-		return
-	}
-
-	valuePath := path.Root("input").AtName("volume_recovery_point_management").AtName("snapshot_retention_policy").AtName("value")
-
-	switch srp.Kind.ValueString() {
-	case string(automation.SNAPSHOTRETENTIONPOLICYCOUNTKIND_COUNT):
-		if srp.Value.IsNull() {
-			resp.Diagnostics.AddAttributeError(
-				valuePath,
-				"Missing snapshot_retention_policy.value",
-				fmt.Sprintf("value is required when snapshot_retention_policy.kind is %q.", automation.SNAPSHOTRETENTIONPOLICYCOUNTKIND_COUNT),
-			)
-		}
-	case string(automation.SNAPSHOTRETENTIONPOLICYINDEFINITELYKIND_INDEFINITELY):
-		if !utils.IsUndefined(srp.Value) {
-			resp.Diagnostics.AddAttributeError(
-				valuePath,
-				"Unexpected snapshot_retention_policy.value",
-				fmt.Sprintf("value must not be set when snapshot_retention_policy.kind is %q.", automation.SNAPSHOTRETENTIONPOLICYINDEFINITELYKIND_INDEFINITELY),
-			)
-		}
-	}
-}
-
 // Create creates the resource and sets the initial Terraform state.
 func (r *volumeAutomationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
@@ -353,7 +251,7 @@ func (r *volumeAutomationResource) Create(ctx context.Context, req resource.Crea
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume automation", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -402,8 +300,7 @@ func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRe
 
 	automationResp, err := r.client.DefaultAPI.GetVolumeAutomation(ctx, projectId, region, automationId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -453,13 +350,28 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	ctx = tflog.SetField(ctx, "automation_id", automationId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(ctx, &plan)
+	payload, err := toUpdatePayload(&plan)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume automation", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
+	// Workaround: The input field is an open object where we don't know all keys. If some input fields where removed,
+	// we can't set them here to null. For this reason we do one update with updateMask "input", to overwrite the whole input object.
+	// Setting it to '*' would cause issue when the API gets new fields in the future and is therefore no option.
 	automationResp, err := r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
+		PartialUpdateVolumeAutomationPayload(*payload).
+		UpdateMask("input").
+		Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume automation", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	// Workaround: Updates all other fields accordingly, which were not already update with the previous update.
+	automationResp, err = r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
 		PartialUpdateVolumeAutomationPayload(*payload).
 		Execute()
 	if err != nil {
@@ -503,8 +415,7 @@ func (r *volumeAutomationResource) Delete(ctx context.Context, req resource.Dele
 
 	err := r.client.DefaultAPI.DeleteVolumeAutomation(ctx, projectId, region, automationId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume automation", fmt.Sprintf("Calling API: %v", err))
@@ -538,7 +449,7 @@ func (r *volumeAutomationResource) ImportState(ctx context.Context, req resource
 }
 
 // mapFields maps a VolumeAutomation API response to the model.
-func mapFields(ctx context.Context, apiResp *automation.VolumeAutomation, model *Model, region string) error {
+func mapFields(_ context.Context, apiResp *automation.VolumeAutomation, model *Model, region string) error {
 	if apiResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -554,180 +465,105 @@ func mapFields(ctx context.Context, apiResp *automation.VolumeAutomation, model 
 		model.TemplateId = types.StringValue(*apiResp.TemplateId)
 	}
 
-	model.Name = conversion.StringPointerValueNullIfEmpty(apiResp.Name)
-	model.Description = conversion.StringPointerValueNullIfEmpty(apiResp.Description)
+	model.Name = types.StringPointerValue(apiResp.Name)
+	model.Description = types.StringPointerValue(apiResp.Description)
 
-	input, err := mapInput(ctx, apiResp.Input, model.Input)
-	if err != nil {
-		return fmt.Errorf("mapping input: %w", err)
+	var inputString *string
+	if apiResp.Input.Get() != nil {
+		inputJson, err := apiResp.Input.MarshalJSON()
+		if err != nil {
+			return fmt.Errorf("error marshaling input field: %v", err)
+		}
+		inputString = new(string(inputJson))
 	}
-	model.Input = input
+	model.Input = jsontypes.NewNormalizedPointerValue(inputString)
 
 	model.Triggers = mapTriggers(apiResp.Triggers)
 
 	return nil
 }
 
-func mapInput(ctx context.Context, apiInput *automation.VolumeAutomationInput, currentInput *inputModel) (*inputModel, error) {
-	if apiInput == nil || apiInput.VolumeRecoveryPointManagementInput == nil {
-		return nil, nil
-	}
-	vrpm := apiInput.VolumeRecoveryPointManagementInput
-
-	currentLabels := types.MapNull(types.StringType)
-	if currentInput != nil && currentInput.VolumeRecoveryPointManagement != nil {
-		currentLabels = currentInput.VolumeRecoveryPointManagement.RecoveryPointLabels
-	}
-
-	labels, err := utils.MapLabels(ctx, vrpm.RecoveryPointLabels, currentLabels)
-	if err != nil {
-		return nil, fmt.Errorf("mapping recovery point labels: %w", err)
-	}
-
-	srp, err := mapSnapshotRetentionPolicy(vrpm.SnapshotRetentionPolicy)
-	if err != nil {
-		return nil, err
-	}
-
-	return &inputModel{
-		VolumeRecoveryPointManagement: &volumeRecoveryPointManagementModel{
-			InheritVolumeLabels:     types.BoolPointerValue(vrpm.InheritVolumeLabels),
-			RecoveryPointLabels:     labels,
-			VolumeLabelSelector:     conversion.StringPointerValueNullIfEmpty(vrpm.VolumeLabelSelector),
-			SnapshotRetentionPolicy: srp,
-		},
-	}, nil
-}
-
-func mapSnapshotRetentionPolicy(srp automation.SnapshotRetentionPolicy) (*snapshotRetentionPolicyModel, error) {
-	switch {
-	case srp.SnapshotRetentionPolicyCount != nil:
-		return &snapshotRetentionPolicyModel{
-			Kind:  types.StringValue(string(srp.SnapshotRetentionPolicyCount.Kind)),
-			Value: types.Int32Value(srp.SnapshotRetentionPolicyCount.Value),
-		}, nil
-	case srp.SnapshotRetentionPolicyIndefinitely != nil:
-		return &snapshotRetentionPolicyModel{
-			Kind:  types.StringValue(string(srp.SnapshotRetentionPolicyIndefinitely.Kind)),
-			Value: types.Int32Null(),
-		}, nil
-	default:
-		return nil, fmt.Errorf("response contains an unknown snapshot retention policy variant")
-	}
-}
-
-func mapTriggers(triggers *automation.AutomationTriggers) *triggersModel {
-	if triggers == nil || triggers.Schedule == nil {
+func mapTriggers(triggers automation.NullableAutomationTriggers) *triggersModel {
+	if triggers.Get() == nil {
 		return nil
+	}
+	if triggers.Get().Schedule.Get() == nil {
+		return &triggersModel{
+			Schedule: nil,
+		}
 	}
 	return &triggersModel{
 		Schedule: &scheduleTriggerModel{
-			Rrule: types.StringValue(triggers.Schedule.Rrule),
+			Rrule: types.StringValue(triggers.Get().Schedule.Get().Rrule),
 		},
 	}
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*automation.CreateVolumeAutomationPayload, error) {
+func toCreatePayload(model *Model) (*automation.CreateVolumeAutomationPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	input, err := toInputPayload(ctx, model.Input)
+	input, err := toInputPayload(model.Input)
 	if err != nil {
 		return nil, err
 	}
 
 	return &automation.CreateVolumeAutomationPayload{
 		TemplateId:  model.TemplateId.ValueString(),
-		Name:        conversion.StringValueToPointer(model.Name),
-		Description: conversion.StringValueToPointer(model.Description),
-		Input:       input,
-		Triggers:    toTriggersPayload(model.Triggers),
+		Name:        *automation.NewNullableString(conversion.StringValueToPointer(model.Name)),
+		Description: *automation.NewNullableString(conversion.StringValueToPointer(model.Description)),
+		Input:       *input,
+		Triggers:    *toTriggersPayload(model),
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, plan *Model) (*automation.PartialUpdateVolumeAutomationPayload, error) {
+func toUpdatePayload(plan *Model) (*automation.PartialUpdateVolumeAutomationPayload, error) {
 	if plan == nil {
 		return nil, fmt.Errorf("nil plan model")
 	}
 
-	input, err := toInputPayload(ctx, plan.Input)
+	input, err := toInputPayload(plan.Input)
 	if err != nil {
 		return nil, err
 	}
 
 	return &automation.PartialUpdateVolumeAutomationPayload{
-		// sent as explicit "" instead of omitted so clearing them actually takes effect
-		Name:        new(plan.Name.ValueString()),
-		Description: new(plan.Description.ValueString()),
-		Input:       input,
-		Triggers:    toTriggersPayload(plan.Triggers),
+		Name:        *automation.NewNullableString(conversion.StringValueToPointer(plan.Name)),
+		Description: *automation.NewNullableString(conversion.StringValueToPointer(plan.Description)),
+		Input:       *input,
+		Triggers:    *toTriggersPayload(plan),
 	}, nil
 }
 
-func toInputPayload(ctx context.Context, model *inputModel) (*automation.VolumeAutomationInput, error) {
-	if model == nil || model.VolumeRecoveryPointManagement == nil {
-		return nil, nil
+func toInputPayload(modelInput jsontypes.Normalized) (*automation.NullableVolumeAutomationInput, error) {
+	if utils.IsUndefined(modelInput) {
+		return automation.NewNullableVolumeAutomationInput(nil), nil
 	}
-	vrpm := model.VolumeRecoveryPointManagement
 
-	srp, err := toSnapshotRetentionPolicyPayload(vrpm.SnapshotRetentionPolicy)
+	inputJson := modelInput.ValueString()
+	inputPayload := &automation.NullableVolumeAutomationInput{}
+
+	err := json.Unmarshal([]byte(inputJson), inputPayload)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshaling input payload: %w", err)
+	}
+	return inputPayload, nil
+}
+
+func toTriggersPayload(model *Model) *automation.NullableAutomationTriggers {
+	if model == nil || model.Triggers == nil {
+		return automation.NewNullableAutomationTriggers(nil)
+	}
+	if model.Triggers.Schedule == nil || utils.IsUndefined(model.Triggers.Schedule.Rrule) {
+		return automation.NewNullableAutomationTriggers(&automation.AutomationTriggers{
+			Schedule: *automation.NewNullableAutomationScheduleTrigger(nil),
+		})
 	}
 
-	var recoveryPointLabels *map[string]string
-	if !utils.IsUndefined(vrpm.RecoveryPointLabels) {
-		labels, err := utils.LabelsToPayload(ctx, vrpm.RecoveryPointLabels)
-		if err != nil {
-			return nil, fmt.Errorf("converting recovery_point_labels: %w", err)
-		}
-		recoveryPointLabels = &labels
-	}
-
-	input := automation.VolumeRecoveryPointManagementInputAsVolumeAutomationInput(&automation.VolumeRecoveryPointManagementInput{
-		Kind:                    string(automation.VOLUMETEMPLATEAUTOMATIONINPUTKIND_VOLUME_RECOVERY_POINT_MANAGEMENT),
-		InheritVolumeLabels:     conversion.BoolValueToPointer(vrpm.InheritVolumeLabels),
-		RecoveryPointLabels:     recoveryPointLabels,
-		VolumeLabelSelector:     conversion.StringValueToPointer(vrpm.VolumeLabelSelector),
-		SnapshotRetentionPolicy: srp,
+	return automation.NewNullableAutomationTriggers(&automation.AutomationTriggers{
+		Schedule: *automation.NewNullableAutomationScheduleTrigger(&automation.AutomationScheduleTrigger{
+			Rrule: model.Triggers.Schedule.Rrule.ValueString(),
+		}),
 	})
-	return &input, nil
-}
-
-func toSnapshotRetentionPolicyPayload(model *snapshotRetentionPolicyModel) (automation.SnapshotRetentionPolicy, error) {
-	if model == nil {
-		return automation.SnapshotRetentionPolicy{}, fmt.Errorf("snapshot_retention_policy is required when volume_recovery_point_management is set")
-	}
-
-	switch model.Kind.ValueString() {
-	case string(automation.SNAPSHOTRETENTIONPOLICYCOUNTKIND_COUNT):
-		if utils.IsUndefined(model.Value) {
-			return automation.SnapshotRetentionPolicy{}, fmt.Errorf("value is required when snapshot_retention_policy kind is %q", automation.SNAPSHOTRETENTIONPOLICYCOUNTKIND_COUNT)
-		}
-		return automation.SnapshotRetentionPolicyCountAsSnapshotRetentionPolicy(&automation.SnapshotRetentionPolicyCount{
-			Kind:  automation.SNAPSHOTRETENTIONPOLICYCOUNTKIND_COUNT,
-			Value: model.Value.ValueInt32(),
-		}), nil
-	case string(automation.SNAPSHOTRETENTIONPOLICYINDEFINITELYKIND_INDEFINITELY):
-		if !utils.IsUndefined(model.Value) {
-			return automation.SnapshotRetentionPolicy{}, fmt.Errorf("value must not be set when snapshot_retention_policy kind is %q", automation.SNAPSHOTRETENTIONPOLICYINDEFINITELYKIND_INDEFINITELY)
-		}
-		return automation.SnapshotRetentionPolicyIndefinitelyAsSnapshotRetentionPolicy(&automation.SnapshotRetentionPolicyIndefinitely{
-			Kind: automation.SNAPSHOTRETENTIONPOLICYINDEFINITELYKIND_INDEFINITELY,
-		}), nil
-	default:
-		return automation.SnapshotRetentionPolicy{}, fmt.Errorf("unsupported snapshot_retention_policy kind %q", model.Kind.ValueString())
-	}
-}
-
-func toTriggersPayload(model *triggersModel) *automation.AutomationTriggers {
-	if model == nil || model.Schedule == nil {
-		return nil
-	}
-	return &automation.AutomationTriggers{
-		Schedule: &automation.AutomationScheduleTrigger{
-			Rrule: model.Schedule.Rrule.ValueString(),
-		},
-	}
 }
