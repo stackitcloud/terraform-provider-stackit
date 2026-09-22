@@ -110,14 +110,14 @@ var schemaDescriptions = map[string]string{
 	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
 	"config_strip_response_cookies":                "Enable this to prevent origin-level cookies from being forwarded to the end user.",
 	"config_forward_host_header":                   "Enable this allows the 'Host' header to be passed through to the origin.",
-	"config_log_sink":                      "Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations.",
-	"config_log_sink_type":                 "The log sink protocol.",
-	"config_log_sink_push_url":             "The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).",
-	"config_log_sink_credentials":          "Authentication credentials the CDN uses when pushing logs. Loki requires `username` and `password`. OTLP requires `type` to be set to `basic` (with `username` and `password`) or `bearer` (with `token`).",
-	"config_log_sink_credentials_type":     "The authentication type when using an OTLP log sink. Leave unset for Loki.",
-	"config_log_sink_credentials_username": "The username used to authenticate. Required for Loki and for OTLP when `credentials.type` is `basic`.",
-	"config_log_sink_credentials_password": "The password corresponding to `username`. Required for Loki and for OTLP when `credentials.type` is `basic`.",
-	"config_log_sink_credentials_token":    "The bearer token used to authenticate. Required for OTLP when `credentials.type` is `bearer`.",
+	"config_log_sink":                              "Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations.",
+	"config_log_sink_type":                         "The log sink protocol.",
+	"config_log_sink_push_url":                     "The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).",
+	"config_log_sink_credentials":                  "Authentication credentials the CDN uses when pushing logs. Loki requires `username` and `password`. OTLP requires `type` to be set to `basic` (with `username` and `password`) or `bearer` (with `token`).",
+	"config_log_sink_credentials_type":             "The authentication type when using an OTLP log sink. Leave unset for Loki.",
+	"config_log_sink_credentials_username":         "The username used to authenticate. Required for Loki and for OTLP when `credentials.type` is `basic`.",
+	"config_log_sink_credentials_password":         "The password corresponding to `username`. Required for Loki and for OTLP when `credentials.type` is `basic`.",
+	"config_log_sink_credentials_token":            "The bearer token used to authenticate. Required for OTLP when `credentials.type` is `bearer`.",
 }
 
 type Model struct {
@@ -864,7 +864,7 @@ func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.
 				}
 			}
 
-			validateLogSinkConfig(ctx, config, &resp.Diagnostics)
+			validateLogSinkConfig(ctx, &config, &resp.Diagnostics)
 		}
 	}
 }
@@ -874,14 +874,13 @@ func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.
 // credential fields depend on both `log_sink.type` and
 // `log_sink.credentials.type`.
 //
-// Loki:  requires credentials.username + credentials.password; credentials.type
-//        and credentials.token must not be set.
+// Loki: requires credentials.username + credentials.password; credentials.type
+// and credentials.token must not be set.
 //
-// OTLP:  requires credentials.type. When credentials.type is "basic", username
-//        and password are required and token must not be set. When
-//        credentials.type is "bearer", token is required and username/password
-//        must not be set.
-func validateLogSinkConfig(ctx context.Context, config distributionConfig, diags *diag.Diagnostics) {
+// OTLP: requires credentials.type. When credentials.type is "basic", username and
+// password are required and token must not be set. When credentials.type is "bearer",
+// token is required and username/password must not be set.
+func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diags *diag.Diagnostics) {
 	if utils.IsUndefined(config.LogSink) {
 		return
 	}
@@ -907,7 +906,10 @@ func validateLogSinkConfig(ctx context.Context, config distributionConfig, diags
 	// Skip validation while values are still unknown (e.g. plan phase with
 	// interpolated references). The validation will re-run with concrete
 	// values before apply.
-	if logSink.Type.IsUnknown() || creds.Type.IsUnknown() {
+	if logSink.PushUrl.IsUnknown() ||
+		creds.Token.IsUnknown() ||
+		creds.Username.IsUnknown() ||
+		creds.Password.IsUnknown() {
 		return
 	}
 
@@ -923,19 +925,23 @@ func validateLogSinkConfig(ctx context.Context, config distributionConfig, diags
 	case string(cdnSdk.LOKILOGSINKTYPE_LOKI):
 		if credsTypeSet {
 			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
-				"When log_sink.type is \"loki\", log_sink.credentials.type must not be set. Loki only supports basic auth (username/password).")
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.type must not be set. Loki only supports basic auth (username/password).")
 		}
 		if tokenSet {
 			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
-				"When log_sink.type is \"loki\", log_sink.credentials.token must not be set. Use username and password instead.")
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.token must not be set. Use username and password instead.")
 		}
 		if !usernameSet {
 			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
-				"When log_sink.type is \"loki\", log_sink.credentials.username is required.")
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.username is required.")
 		}
 		if !passwordSet {
 			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
-				"When log_sink.type is \"loki\", log_sink.credentials.password is required.")
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.password is required.")
 		}
 	case string(cdnSdk.OTLPLOGSINKTYPE_OTLP):
 		if !credsTypeSet {
@@ -962,7 +968,8 @@ func validateLogSinkConfig(ctx context.Context, config distributionConfig, diags
 		case string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER):
 			if usernameSet || passwordSet {
 				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
-					"When log_sink.credentials.type is \"bearer\", log_sink.credentials.username and log_sink.credentials.password must not be set.")
+					"When log_sink.credentials.type is \"bearer\", "+
+						"log_sink.credentials.username and log_sink.credentials.password must not be set.")
 			}
 			if !tokenSet {
 				core.LogAndAddError(ctx, diags, "Invalid log_sink config",

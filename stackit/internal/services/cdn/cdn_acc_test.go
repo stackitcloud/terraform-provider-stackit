@@ -136,13 +136,8 @@ var testConfigVarsHttp = config.Variables{
 	"forward_host_header":           config.BoolVariable(true),
 	"monthly_limit_bytes":           config.IntegerVariable(104857600),
 	"default_cache_duration":        config.StringVariable("PT2H"),
-	// TODO XXX hammc: logsink marker
-	"log_sink_push_url":             config.StringVariable("http://foo.bar"),
-	"log_sink_type":                 config.StringVariable("otlp"),     // Options: "loki" or "otlp"
-	"log_sink_credentials_type":     config.StringVariable("bearer"),   // Options: "basic" or "bearer"
-	"log_sink_credentials_username": config.StringVariable("testuser"), // Used with loki and otlp ("basic")
-	"log_sink_credentials_password": config.StringVariable("testpw"),   // Used with loki and otlp ("basic")
-	"log_sink_credentials_token":    config.StringVariable("ey12345"),  // Only with otlp ("bearer")
+	"logs_display_name":             config.StringVariable("TF Acc Test"),
+	"log_sink_type":                 config.StringVariable("otlp"), // Options: "loki" or "otlp"
 	"waf": wafConfigVariable(
 		"ENABLED",
 		"FREE",
@@ -174,12 +169,6 @@ func configVarsHttpUpdated() config.Variables {
 	// Update small features
 	updatedConfig["strip_response_cookies"] = config.BoolVariable(true)
 	updatedConfig["forward_host_header"] = config.BoolVariable(false)
-
-	// Switch the log_sink from OTLP (bearer) to Loki (basic auth). Loki does
-	// not use credentials.type or credentials.token, so unset them.
-	updatedConfig["log_sink_type"] = config.StringVariable("loki")
-	delete(updatedConfig, "log_sink_credentials_type")
-	delete(updatedConfig, "log_sink_credentials_token")
 
 	return updatedConfig
 }
@@ -233,6 +222,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpBase,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_logs_instance.logs", "ingest_otlp_url"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "updated_at"),
@@ -276,15 +266,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.monthly_limit_bytes", testutil.ConvertConfigVariable(testConfigVarsHttp["monthly_limit_bytes"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(testConfigVarsHttp["default_cache_duration"])),
 
-					// XXX hammc: logsink marker
-					// LogSink Checks
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.push_url", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_push_url"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_type"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_credentials_type"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_credentials_token"])),
-
 					// WAF Checks
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", testConfigVarsHttp["waf"]),
+
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_type"])),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -327,9 +312,15 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, distributionId), nil
 				},
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"domains"},
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"domains",
+					"config.log_sink.credentials.type",
+					"config.log_sink.credentials.token",
+					"config.log_sink.credentials.username",
+					"config.log_sink.credentials.password",
+				},
 			},
 			{
 				ResourceName:    "stackit_cdn_custom_domain.custom_domain",
@@ -414,8 +405,11 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.value_match_condition", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_condition"])),
 
 					// LogSink Data Source
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.push_url", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_push_url"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_type"])),
+					// Security Check: Secrets should NOT be in Data Source
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.type"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.token"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.username"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.password"),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),
@@ -457,12 +451,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.monthly_limit_bytes", testutil.ConvertConfigVariable(configVarsHttpUpdated()["monthly_limit_bytes"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(configVarsHttpUpdated()["default_cache_duration"])),
 
-					// XXX hammc: logsink marker
-					// LogSink Checks
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.push_url", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_push_url"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_type"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.username", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_credentials_username"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.password", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_credentials_password"])),
 
 					// Checking WAF Mutated Configurations
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", configVarsHttpUpdated()["waf"]),
@@ -637,8 +626,11 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 			continue
 		}
 		// terraform ID: "[project_id],[distribution_id]"
-		distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
-		distributionsToDestroy = append(distributionsToDestroy, distributionId)
+		splitId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(splitId) > 1 {
+			distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
+			distributionsToDestroy = append(distributionsToDestroy, distributionId)
+		}
 	}
 
 	for _, dist := range distributionsToDestroy {
@@ -666,7 +658,7 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
 			d := net.Dialer{
-				Timeout: time.Millisecond * time.Duration(10000),
+				Timeout: time.Second * time.Duration(10),
 			}
 			// Force query to Google DNS
 			return d.DialContext(ctx, network, "8.8.8.8:53")

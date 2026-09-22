@@ -158,6 +158,7 @@ Optional:
 - `blocked_ips` (List of String) Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.
 - `default_cache_duration` (String) Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
+- `log_sink` (Attributes) Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations. (see [below for nested schema](#nestedatt--config--log_sink))
 - `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
@@ -188,6 +189,27 @@ Required:
 
 - `access_key_id` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
 - `secret_access_key` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
+
+
+
+<a id="nestedatt--config--log_sink"></a>
+### Nested Schema for `config.log_sink`
+
+Required:
+
+- `credentials` (Attributes) Authentication credentials the CDN uses when pushing logs. Loki requires `username` and `password`. OTLP requires `type` to be set to `basic` (with `username` and `password`) or `bearer` (with `token`). (see [below for nested schema](#nestedatt--config--log_sink--credentials))
+- `push_url` (String) The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).
+- `type` (String) The log sink protocol.Possible values are: `loki`, `otlp`.
+
+<a id="nestedatt--config--log_sink--credentials"></a>
+### Nested Schema for `config.log_sink.credentials`
+
+Optional:
+
+- `password` (String, Sensitive) The password corresponding to `username`. Required for Loki and for OTLP when `credentials.type` is `basic`.
+- `token` (String, Sensitive) The bearer token used to authenticate. Required for OTLP when `credentials.type` is `bearer`.
+- `type` (String) The authentication type when using an OTLP log sink. Leave unset for Loki.Possible values are: `basic`, `bearer`.
+- `username` (String, Sensitive) The username used to authenticate. Required for Loki and for OTLP when `credentials.type` is `basic`.
 
 
 

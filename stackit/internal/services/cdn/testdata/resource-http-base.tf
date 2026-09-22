@@ -24,19 +24,30 @@ variable "strip_response_cookies" {}
 variable "forward_host_header" {}
 variable "monthly_limit_bytes" {}
 variable "default_cache_duration" {}
-
-# log_sink
-variable "log_sink_push_url" {}
 variable "log_sink_type" {}
-variable "log_sink_credentials_type" { default = null }
-variable "log_sink_credentials_username" { default = null }
-variable "log_sink_credentials_password" { default = null }
-variable "log_sink_credentials_token" { default = null }
+variable "logs_display_name" {}
 
 # dns
 variable "dns_zone_name" {}
 variable "dns_name" {}
 variable "dns_record_name" {}
+
+resource "stackit_logs_instance" "logs" {
+  project_id     = var.project_id
+  region         = "eu01"
+  display_name   = var.logs_display_name
+  retention_days = 1
+}
+
+resource "stackit_logs_access_token" "logs_token" {
+  project_id   = var.project_id
+  instance_id  = stackit_logs_instance.logs.instance_id
+  display_name = var.logs_display_name
+
+  permissions = [
+    "read", "write"
+  ]
+}
 
 resource "stackit_dns_zone" "dns_zone" {
   project_id    = var.project_id
@@ -102,13 +113,11 @@ resource "stackit_cdn_distribution" "distribution" {
     blocked_ips       = var.blocked_ips
 
     log_sink = {
-      push_url = var.log_sink_push_url
-      type     = var.log_sink_type
+      push_url = "https://${stackit_logs_instance.logs.ingest_otlp_url}"
+      type     = "otlp"
       credentials = {
-        type     = var.log_sink_credentials_type
-        username = var.log_sink_credentials_username
-        password = var.log_sink_credentials_password
-        token    = var.log_sink_credentials_token
+        type  = "bearer"
+        token = stackit_logs_access_token.logs_token.access_token
       }
     }
   }

@@ -476,7 +476,7 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 		Lifetime:    conversion.Int32ValueToPointer(model.Lifetime),
 	}
 
-	if !(tfutils.IsUndefined(model.Permissions)) {
+	if !tfutils.IsUndefined(model.Permissions) {
 		var permissions []string
 		permissionDiags := model.Permissions.ElementsAs(ctx, &permissions, false)
 		diagnostics.Append(permissionDiags...)
@@ -523,6 +523,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 
 	if accessToken.AccessToken != nil {
 		model.AccessToken = types.StringValue(*accessToken.AccessToken)
+		fmt.Printf("access token lol: %s", *accessToken.AccessToken)
 	}
 
 	permissionList := types.ListNull(types.StringType)

@@ -104,5 +104,19 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       disabled_rule_ids = ["@builtin/crs/request/942151"]
       log_only_rule_ids = ["@builtin/crs/response/954120"]
     }
+
+    log_sink = {
+      # When using STACKIT Logs, you need to prepend the protocol part (i.e. https://) to the push_url like:
+      # push_url = "https://${stackit_logs_instance.logs.ingest_otlp_url}"
+      push_url = "https://xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.logs.eu01.onstackit.cloud/otlp/v1/logs"
+      type     = "otlp"
+      credentials = {
+        type = "bearer"
+        # Use the token generated e.g. by stackit_logs_access_token:
+        # token = stackit_logs_access_token.logs_token.access_token
+        token = "eyXXXXX......"
+      }
+    }
   }
 }
+
