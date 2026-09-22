@@ -203,7 +203,6 @@ type wafConfig struct {
 	LogOnlyRuleCollectionIds   types.Set    `tfsdk:"log_only_rule_collection_ids"`
 }
 
-// XXX hammc: logsink types
 type logSinkConfig struct {
 	Type        types.String `tfsdk:"type"` // Options: "loki" or "otlp"
 	PushUrl     types.String `tfsdk:"push_url"`

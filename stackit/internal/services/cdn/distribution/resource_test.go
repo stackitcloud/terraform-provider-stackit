@@ -127,7 +127,6 @@ func TestToCreatePayload(t *testing.T) {
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 
 	// LogSink config and fixture
-	// XXX hammc: logsink marker
 	testLogSinkPushUrl := "http://foo.bar"
 	testLogSinkCredentialsUsername := "testuser"
 	testLogSinkCredentialsPassword := "testpw"
@@ -468,7 +467,6 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			IsValid: true,
 		},
-		// XXX hammc: logsink marker
 		"happy_path_with_log_sink_otlp_bearer": {
 			Input: modelFixture(func(m *Model) {
 				m.Config = createTestConfig(map[string]attr.Value{
@@ -1312,7 +1310,6 @@ func TestMapFields(t *testing.T) {
 	})
 
 	// LogSink config and fixture
-	// XXX hammc: logsink marker
 	testLogSinkPushUrlOld := "http://foo.bar"
 	testLogSinkPushUrl := "http://foo.bar"
 	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKTYPE_OTLP

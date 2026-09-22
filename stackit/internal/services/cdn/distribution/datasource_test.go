@@ -168,9 +168,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	}
 
 	// LogSink config and fixture
-	// XXX hammc: logsink marker
 	testLogSinkPushUrl := "http://foo.bar"
-
 	testLogSinkLokiType := cdnSdk.LOKILOGSINKTYPE_LOKI
 	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKTYPE_OTLP
 
@@ -411,7 +409,6 @@ func TestMapDataSourceFields(t *testing.T) {
 			}),
 			IsValid: true,
 		},
-		// XXX hammc: logsink marker
 		"happy_path_with_log_sink_otlp": {
 			Expected: expectedModel(func(m *Model) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
