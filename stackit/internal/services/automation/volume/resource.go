@@ -461,10 +461,7 @@ func mapFields(_ context.Context, apiResp *automation.VolumeAutomation, model *M
 	model.ID = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, apiResp.Id)
 	model.Region = types.StringValue(region)
 
-	if apiResp.TemplateId != nil {
-		model.TemplateId = types.StringValue(*apiResp.TemplateId)
-	}
-
+	model.TemplateId = types.StringPointerValue(apiResp.TemplateId)
 	model.Name = types.StringPointerValue(apiResp.Name)
 	model.Description = types.StringPointerValue(apiResp.Description)
 
