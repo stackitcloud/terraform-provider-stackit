@@ -368,6 +368,13 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if expired, err := edgeCloudUtils.CheckExpiration(model.ExpiresAt, types.Int64Null(), time.Now()); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("Checking expiration: %v", err))
+		return
+	} else if expired {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if !model.InstanceId.IsNull() {
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
 	} else if !model.InstanceName.IsNull() {
