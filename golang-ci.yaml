@@ -49,7 +49,7 @@ linters:
         description: "A custom local linter"
       tfstateremove:
         type: module
-        description: "A custom local linter"
+        description: "A custom local linter, checking that response.State.RemoveResource(ctx) is called in every Read method"
     depguard:
       rules:
         main:
