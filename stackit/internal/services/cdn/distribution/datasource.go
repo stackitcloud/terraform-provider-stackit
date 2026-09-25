@@ -33,6 +33,12 @@ var dataSourceBackendTypes = map[string]attr.Type{
 	"region":                 types.StringType,
 }
 
+// dataSourcelogSinkTypes specifically leaves out the credentials
+var dataSourcelogSinkTypes = map[string]attr.Type{
+	"type":     types.StringType,
+	"push_url": types.StringType,
+}
+
 var dataSourceConfigTypes = map[string]attr.Type{
 	"backend":                types.ObjectType{AttrTypes: dataSourceBackendTypes},
 	"regions":                types.ListType{ElemType: types.StringType},
@@ -54,6 +60,9 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	},
 	"strip_response_cookies": types.BoolType,
 	"forward_host_header":    types.BoolType,
+	"log_sink": types.ObjectType{
+		AttrTypes: dataSourcelogSinkTypes, // Shared from resource.go
+	},
 }
 
 type distributionDataSource struct {
@@ -247,6 +256,20 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							"enable_tls_10": schema.BoolAttribute{
 								Computed:    true,
 								Description: schemaDescriptions["config_tls_enable_tls_11"],
+							},
+						},
+					},
+					"log_sink": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_log_sink"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"type": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["config_log_sink_type"],
+							},
+							"push_url": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["config_log_sink_push_url"],
 							},
 						},
 					},
@@ -721,6 +744,13 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		monthlyLimitBytes = types.Int64Null()
 	}
 
+	// LogSink: the data source only exposes the non-sensitive attributes
+	// (type, push_url). Credentials are intentionally excluded.
+	logSinkVal, err := mapLogSinkDataSource(distribution.Config.LogSink)
+	if err != nil {
+		return err
+	}
+
 	// Use dataSourceConfigTypes
 	cfg, diags := types.ObjectValue(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":                backend,
@@ -733,6 +763,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		"redirects":              redirectsVal,
 		"waf":                    wafVal,
 		"tls":                    tlsVal,
+		"log_sink":               logSinkVal,
 		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
 		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})
@@ -774,4 +805,35 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	model.Domains = modelDomains
 
 	return nil
+}
+
+// mapLogSinkDataSource maps the API log_sink response into a data-source
+// object exposing only the non-sensitive attributes (type, push_url).
+//
+// Returns a null object when the API response has no log_sink configured.
+func mapLogSinkDataSource(apiLogSink *cdnSdk.ConfigLogSink) (types.Object, error) {
+	if apiLogSink == nil {
+		return types.ObjectNull(dataSourcelogSinkTypes), nil
+	}
+
+	var typeVal, pushUrlVal types.String
+	switch {
+	case apiLogSink.LokiLogSink != nil:
+		typeVal = types.StringValue(string(apiLogSink.LokiLogSink.Type))
+		pushUrlVal = types.StringValue(apiLogSink.LokiLogSink.PushUrl)
+	case apiLogSink.OtlpLogSink != nil:
+		typeVal = types.StringValue(string(apiLogSink.OtlpLogSink.Type))
+		pushUrlVal = types.StringValue(apiLogSink.OtlpLogSink.PushUrl)
+	default:
+		return types.ObjectNull(dataSourcelogSinkTypes), nil
+	}
+
+	logSinkObj, diags := types.ObjectValue(dataSourcelogSinkTypes, map[string]attr.Value{
+		"type":     typeVal,
+		"push_url": pushUrlVal,
+	})
+	if diags.HasError() {
+		return types.ObjectNull(dataSourcelogSinkTypes), core.DiagsToError(diags)
+	}
+	return logSinkObj, nil
 }
