@@ -52,6 +52,9 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"tls": types.ObjectType{
 		AttrTypes: tlsTypes, // Shared from resource.go
 	},
+	"cache_config": types.ObjectType{
+		AttrTypes: cacheConfigTypes, // Shared from resource.go
+	},
 	"strip_response_cookies": types.BoolType,
 	"forward_host_header":    types.BoolType,
 }
@@ -225,6 +228,26 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Computed: true,
+							},
+						},
+					},
+					"cache_config": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_cache_config"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"cache_key_headers": schema.ListAttribute{
+								Description: schemaDescriptions["config_cache_config_cache_key_headers"],
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+							"query_string_vary_enabled": schema.BoolAttribute{
+								Description: schemaDescriptions["config_cache_config_query_string_vary_enabled"],
+								Computed:    true,
+							},
+							"query_string_vary_parameters": schema.ListAttribute{
+								Description: schemaDescriptions["config_cache_config_query_string_vary_parameters"],
+								Computed:    true,
+								ElementType: types.StringType,
 							},
 						},
 					},
@@ -691,7 +714,38 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
 	if diagTls.HasError() {
-		return core.DiagsToError(diagWaf)
+		return core.DiagsToError(diagTls)
+	}
+
+	var cacheKeyHeaders []attr.Value
+	if headers := distribution.Config.CacheConfig.CacheKeyHeaders; headers != nil {
+		for _, h := range headers {
+			cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
+		}
+	}
+	cacheKeyHeadersList, diags := types.ListValue(types.StringType, cacheKeyHeaders)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	var queryStringVaryParams []attr.Value
+	if params := distribution.Config.CacheConfig.QueryStringVaryParameters; params != nil {
+		for _, p := range params {
+			queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
+		}
+	}
+	queryStringVaryParamsList, diags := types.ListValue(types.StringType, queryStringVaryParams)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	cacheConfigVal, diagCache := types.ObjectValue(cacheConfigTypes, map[string]attr.Value{
+		"cache_key_headers":            cacheKeyHeadersList,
+		"query_string_vary_enabled":    types.BoolValue(distribution.Config.CacheConfig.QueryStringVaryEnabled),
+		"query_string_vary_parameters": queryStringVaryParamsList,
+	})
+	if diagCache.HasError() {
+		return core.DiagsToError(diagCache)
 	}
 
 	// blockedIps
@@ -733,6 +787,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		"redirects":              redirectsVal,
 		"waf":                    wafVal,
 		"tls":                    tlsVal,
+		"cache_config":           cacheConfigVal,
 		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
 		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})

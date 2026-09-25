@@ -136,6 +136,9 @@ var testConfigVarsHttp = config.Variables{
 	"forward_host_header":           config.BoolVariable(true),
 	"monthly_limit_bytes":           config.IntegerVariable(104857600),
 	"default_cache_duration":        config.StringVariable("PT2H"),
+	"cache_key_headers":             config.ListVariable(config.StringVariable("Authorization")),
+	"query_string_vary_enabled":     config.BoolVariable(true),
+	"query_string_vary_parameters":  config.ListVariable(config.StringVariable("utm_source"), config.StringVariable("page")),
 	"waf": wafConfigVariable(
 		"ENABLED",
 		"FREE",
@@ -167,6 +170,7 @@ func configVarsHttpUpdated() config.Variables {
 	// Update small features
 	updatedConfig["strip_response_cookies"] = config.BoolVariable(true)
 	updatedConfig["forward_host_header"] = config.BoolVariable(false)
+	updatedConfig["query_string_vary_enabled"] = config.BoolVariable(false)
 
 	return updatedConfig
 }
@@ -262,6 +266,14 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.strip_response_cookies", testutil.ConvertConfigVariable(testConfigVarsHttp["strip_response_cookies"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.monthly_limit_bytes", testutil.ConvertConfigVariable(testConfigVarsHttp["monthly_limit_bytes"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(testConfigVarsHttp["default_cache_duration"])),
+
+					// Cache Config Checks
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.0", "Authorization"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.0", "utm_source"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.1", "page"),
 
 					// WAF Checks
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", testConfigVarsHttp["waf"]),
@@ -380,6 +392,14 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.monthly_limit_bytes", testutil.ConvertConfigVariable(testConfigVarsHttp["monthly_limit_bytes"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(testConfigVarsHttp["default_cache_duration"])),
 
+					// Cache Config Checks inside Data Source
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_enabled", "true"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.0", "Authorization"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.0", "utm_source"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.1", "page"),
+
 					// WAF Checks inside Data Source
 					testutil.CheckObjectAttr("data.stackit_cdn_distribution.distribution", "config.waf", testConfigVarsHttp["waf"]),
 
@@ -434,6 +454,14 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.strip_response_cookies", testutil.ConvertConfigVariable(configVarsHttpUpdated()["strip_response_cookies"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.monthly_limit_bytes", testutil.ConvertConfigVariable(configVarsHttpUpdated()["monthly_limit_bytes"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(configVarsHttpUpdated()["default_cache_duration"])),
+
+					// Cache Config Checks
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_enabled", "false"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.0", "Authorization"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.0", "utm_source"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.1", "page"),
 
 					// Checking WAF Mutated Configurations
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", configVarsHttpUpdated()["waf"]),

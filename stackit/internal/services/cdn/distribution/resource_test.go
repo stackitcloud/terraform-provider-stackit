@@ -23,6 +23,9 @@ func createTestConfig(vals map[string]attr.Value) types.Object {
 	if _, ok := vals["monthly_limit_bytes"]; !ok {
 		vals["monthly_limit_bytes"] = types.Int64Null()
 	}
+	if _, ok := vals["cache_config"]; !ok {
+		vals["cache_config"] = types.ObjectNull(cacheConfigTypes)
+	}
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -42,6 +45,7 @@ func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
 		"redirects":              types.ObjectNull(redirectsTypes),
 		"waf":                    types.ObjectNull(wafTypes),
 		"tls":                    types.ObjectNull(tlsTypes),
+		"cache_config":           types.ObjectNull(cacheConfigTypes),
 		"strip_response_cookies": types.BoolUnknown(),
 		"forward_host_header":    types.BoolUnknown(),
 	}
@@ -528,6 +532,81 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			IsValid: true,
 		},
+		"happy_path_with_cache_config": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["cache_config"] = types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("Authorization"),
+							types.StringValue("Accept-Language"),
+						}),
+						"query_string_vary_enabled": types.BoolValue(true),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("utm_source"),
+							types.StringValue("page"),
+						}),
+					})
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              &expectedDefaultWafConfig,
+				CacheConfig: &cdnSdk.CacheConfigCreate{
+					CacheKeyHeaders:           []string{"Authorization", "Accept-Language"},
+					QueryStringVaryEnabled:    cdnSdk.PtrBool(true),
+					QueryStringVaryParameters: []string{"utm_source", "page"},
+				},
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_cache_config_vary_disabled_with_parameters": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["cache_config"] = types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers":         types.ListNull(types.StringType),
+						"query_string_vary_enabled": types.BoolValue(false),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("utm_source"),
+						}),
+					})
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              &expectedDefaultWafConfig,
+				CacheConfig: &cdnSdk.CacheConfigCreate{
+					QueryStringVaryEnabled:    cdnSdk.PtrBool(false),
+					QueryStringVaryParameters: []string{"utm_source"},
+				},
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
 		"sad_path_model_nil": {
 			Input:    nil,
 			Expected: nil,
@@ -557,6 +636,201 @@ func TestToCreatePayload(t *testing.T) {
 				diff := cmp.Diff(res, tc.Expected, cmpopts.EquateEmpty())
 				if diff != "" {
 					t.Fatalf("Create Payload not as expected: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestToPatchPayload(t *testing.T) {
+	headersMap := map[string]string{
+		"testHeader0": "testHeaderValue0",
+		"testHeader1": "testHeaderValue1",
+	}
+	headers := map[string]attr.Value{
+		"testHeader0": types.StringValue("testHeaderValue0"),
+		"testHeader1": types.StringValue("testHeaderValue1"),
+	}
+	originRequestHeaders := types.MapValueMust(types.StringType, headers)
+	geofencingCountries := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("DE"),
+		types.StringValue("FR"),
+	})
+	geofencing := types.MapValueMust(geofencingTypes.ElemType, map[string]attr.Value{
+		"https://de.mycoolapp.com": geofencingCountries,
+	})
+	backend := types.ObjectValueMust(backendTypes, map[string]attr.Value{
+		"type":                   types.StringValue("http"),
+		"origin_url":             types.StringValue("https://www.mycoolapp.com"),
+		"origin_request_headers": originRequestHeaders,
+		"geofencing":             geofencing,
+		"bucket_url":             types.StringNull(),
+		"region":                 types.StringNull(),
+		"credentials":            types.ObjectNull(backendCredentialsTypes),
+	})
+	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
+	regionsFixture := types.ListValueMust(types.StringType, regions)
+	blockedCountries := []attr.Value{types.StringValue("XX"), types.StringValue("YY"), types.StringValue("ZZ")}
+	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
+
+	defaultWafPatch := &cdnSdk.WafConfigPatch{
+		Mode: new(cdnSdk.WAFMODE_DISABLED),
+		Type: new(cdnSdk.WAFTYPE_FREE),
+	}
+
+	modelFixture := func(mods ...func(*Model)) *Model {
+		model := &Model{
+			DistributionId: types.StringValue("test-distribution-id"),
+			ProjectId:      types.StringValue("test-project-id"),
+			Config:         configFixture(),
+		}
+		for _, mod := range mods {
+			mod(model)
+		}
+		return model
+	}
+
+	tests := map[string]struct {
+		Input    *Model
+		Expected *cdnSdk.PatchDistributionPayload
+		IsValid  bool
+	}{
+		"happy_path_without_cache_config": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+				})
+			}),
+			Expected: &cdnSdk.PatchDistributionPayload{
+				Config: &cdnSdk.ConfigPatch{
+					Regions:          []cdnSdk.Region{"EU", "US"},
+					BlockedCountries: []string{"XX", "YY", "ZZ"},
+					Waf:              defaultWafPatch,
+					CacheConfig:      defaultCacheConfigPatch(),
+					Backend: &cdnSdk.ConfigPatchBackend{
+						HttpBackendPatch: &cdnSdk.HttpBackendPatch{
+							Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+							OriginRequestHeaders: &headersMap,
+							OriginUrl:            cdnSdk.PtrString("https://www.mycoolapp.com"),
+							Type:                 "http",
+						},
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_cache_config": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["cache_config"] = types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("Authorization"),
+						}),
+						"query_string_vary_enabled": types.BoolValue(true),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("utm_source"),
+						}),
+					})
+				})
+			}),
+			Expected: &cdnSdk.PatchDistributionPayload{
+				Config: &cdnSdk.ConfigPatch{
+					Regions:          []cdnSdk.Region{"EU", "US"},
+					BlockedCountries: []string{"XX", "YY", "ZZ"},
+					Waf:              defaultWafPatch,
+					CacheConfig: &cdnSdk.CacheConfigPatch{
+						CacheKeyHeaders:           []string{"Authorization"},
+						QueryStringVaryEnabled:    cdnSdk.PtrBool(true),
+						QueryStringVaryParameters: []string{"utm_source"},
+					},
+					Backend: &cdnSdk.ConfigPatchBackend{
+						HttpBackendPatch: &cdnSdk.HttpBackendPatch{
+							Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+							OriginRequestHeaders: &headersMap,
+							OriginUrl:            cdnSdk.PtrString("https://www.mycoolapp.com"),
+							Type:                 "http",
+						},
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_cache_config_empty_lists_to_clear": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["cache_config"] = types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+						"query_string_vary_enabled":    types.BoolValue(false),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{}),
+					})
+				})
+			}),
+			Expected: &cdnSdk.PatchDistributionPayload{
+				Config: &cdnSdk.ConfigPatch{
+					Regions:          []cdnSdk.Region{"EU", "US"},
+					BlockedCountries: []string{"XX", "YY", "ZZ"},
+					Waf:              defaultWafPatch,
+					CacheConfig: &cdnSdk.CacheConfigPatch{
+						CacheKeyHeaders:           []string{},
+						QueryStringVaryEnabled:    cdnSdk.PtrBool(false),
+						QueryStringVaryParameters: []string{},
+					},
+					Backend: &cdnSdk.ConfigPatchBackend{
+						HttpBackendPatch: &cdnSdk.HttpBackendPatch{
+							Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+							OriginRequestHeaders: &headersMap,
+							OriginUrl:            cdnSdk.PtrString("https://www.mycoolapp.com"),
+							Type:                 "http",
+						},
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"sad_path_model_nil": {
+			Input:    nil,
+			Expected: nil,
+			IsValid:  false,
+		},
+		"sad_path_config_error": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = types.ObjectNull(configTypes)
+			}),
+			Expected: nil,
+			IsValid:  false,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			res, err := toPatchPayload(context.Background(), tc.Input)
+			if err != nil && tc.IsValid {
+				t.Fatalf("Error converting model to patch payload: %v", err)
+			}
+			if err == nil && !tc.IsValid {
+				t.Fatalf("Should have failed")
+			}
+			if tc.IsValid {
+				tc.Expected.IntentId = res.IntentId
+
+				diff := cmp.Diff(res, tc.Expected,
+					cmpopts.IgnoreUnexported(
+						cdnSdk.NullableString{},
+						cdnSdk.NullableInt64{},
+						cdnSdk.NullableConfigPatchLogSink{},
+					),
+					cmpopts.EquateEmpty(),
+				)
+				if diff != "" {
+					t.Fatalf("Patch Payload not as expected: %s", diff)
 				}
 			}
 		})
@@ -1133,6 +1407,11 @@ func TestMapFields(t *testing.T) {
 		"enable_tls_10": types.BoolValue(false),
 		"enable_tls_11": types.BoolValue(false),
 	})
+	defaultCacheConfig := types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+		"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+		"query_string_vary_enabled":    types.BoolValue(false),
+		"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{}),
+	})
 	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
@@ -1141,6 +1420,7 @@ func TestMapFields(t *testing.T) {
 		"redirects":              types.ObjectNull(redirectsAttrTypes),
 		"waf":                    defaultWaf,
 		"tls":                    defaultTls,
+		"cache_config":           defaultCacheConfig,
 		"strip_response_cookies": types.BoolValue(false),
 		"forward_host_header":    types.BoolValue(false),
 	})
@@ -1300,6 +1580,7 @@ func TestMapFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsAttrTypes),
 					"waf":                    defaultWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -1330,6 +1611,7 @@ func TestMapFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsAttrTypes),
 					"waf":                    defaultWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -1349,6 +1631,7 @@ func TestMapFields(t *testing.T) {
 					"redirects":              redirectsConfigExpected,
 					"waf":                    defaultWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -1377,6 +1660,7 @@ func TestMapFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsAttrTypes),
 					"waf":                    populatedWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -1399,6 +1683,7 @@ func TestMapFields(t *testing.T) {
 						"enable_tls_10": types.BoolValue(true),
 						"enable_tls_11": types.BoolValue(true),
 					}),
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -1468,6 +1753,7 @@ func TestMapFields(t *testing.T) {
 					"redirects":              types.ObjectNull(redirectsAttrTypes),
 					"waf":                    defaultWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -1482,6 +1768,7 @@ func TestMapFields(t *testing.T) {
 					v["blocked_countries"] = blockedCountriesFixture
 					v["waf"] = defaultWaf
 					v["tls"] = defaultTls
+					v["cache_config"] = defaultCacheConfig
 					v["strip_response_cookies"] = types.BoolValue(false)
 					v["forward_host_header"] = types.BoolValue(false)
 					v["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{
@@ -1503,6 +1790,7 @@ func TestMapFields(t *testing.T) {
 					v["blocked_countries"] = blockedCountriesFixture
 					v["waf"] = defaultWaf
 					v["tls"] = defaultTls
+					v["cache_config"] = defaultCacheConfig
 					v["strip_response_cookies"] = types.BoolValue(false)
 					v["forward_host_header"] = types.BoolValue(false)
 					v["default_cache_duration"] = types.StringValue("P1DT2H30M")
@@ -1521,6 +1809,7 @@ func TestMapFields(t *testing.T) {
 					v["blocked_countries"] = blockedCountriesFixture
 					v["waf"] = defaultWaf
 					v["tls"] = defaultTls
+					v["cache_config"] = defaultCacheConfig
 					v["strip_response_cookies"] = types.BoolValue(false)
 					v["forward_host_header"] = types.BoolValue(false)
 					v["monthly_limit_bytes"] = types.Int64Value(1073741824)
@@ -1528,6 +1817,86 @@ func TestMapFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Config.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(cdnSdk.PtrInt64(1073741824))
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_cache_config": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"waf":               defaultWaf,
+					"tls":               defaultTls,
+					"cache_config": types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("Authorization"),
+							types.StringValue("Accept-Language"),
+						}),
+						"query_string_vary_enabled": types.BoolValue(true),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("utm_source"),
+							types.StringValue("page"),
+						}),
+					}),
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.CacheConfig = cdnSdk.CacheConfig{
+					CacheKeyHeaders:           []string{"Authorization", "Accept-Language"},
+					QueryStringVaryEnabled:    true,
+					QueryStringVaryParameters: []string{"utm_source", "page"},
+				}
+			}),
+			IsValid: true,
+		},
+		"happy_path_cache_config_drift": {
+			InitialState: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"waf":               defaultWaf,
+					"tls":               defaultTls,
+					"cache_config": types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+						"query_string_vary_enabled":    types.BoolValue(true),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("param1")}),
+					}),
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Expected: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"waf":               defaultWaf,
+					"tls":               defaultTls,
+					"cache_config": types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+						"query_string_vary_enabled":    types.BoolValue(false),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("param1")}),
+					}),
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.CacheConfig = cdnSdk.CacheConfig{
+					CacheKeyHeaders:           []string{},
+					QueryStringVaryEnabled:    false,
+					QueryStringVaryParameters: []string{"param1"},
+				}
 			}),
 			IsValid: true,
 		},

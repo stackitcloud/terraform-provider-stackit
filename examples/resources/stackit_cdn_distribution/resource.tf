@@ -18,6 +18,12 @@ resource "stackit_cdn_distribution" "example_distribution" {
     optimizer = {
       enabled = true
     }
+
+    cache_config = {
+      cache_key_headers            = ["Accept-Language"]
+      query_string_vary_enabled    = true
+      query_string_vary_parameters = ["page", "sort"]
+    }
   }
 }
 
