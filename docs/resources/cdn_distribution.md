@@ -36,6 +36,12 @@ resource "stackit_cdn_distribution" "example_distribution" {
     optimizer = {
       enabled = true
     }
+
+    cache_config = {
+      cache_key_headers            = ["Accept-Language"]
+      query_string_vary_enabled    = true
+      query_string_vary_parameters = ["page", "sort"]
+    }
   }
 }
 
@@ -156,10 +162,11 @@ Optional:
 
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 - `blocked_ips` (List of String) Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.
+- `cache_config` (Attributes) Groups the cache options that influence how the CDN builds its cache key. Warning: enabling query-string vary produces one cache entry per unique query-string combination (unbounded when query_string_vary_parameters is empty). Each entry in cache_key_headers multiplies the number of cache variants by the number of distinct values observed for that header. Use these settings sparingly. Note: when the Image Optimizer is enabled, the CDN automatically enables query-string vary for image responses regardless of the query_string_vary_enabled setting. (see [below for nested schema](#nestedatt--config--cache_config))
 - `default_cache_duration` (String) Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
 - `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
-- `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
+- `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. Note: when the Image Optimizer is enabled, the CDN automatically enables query-string vary for image responses regardless of the query_string_vary_enabled setting. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
 - `strip_response_cookies` (Boolean) Enable this to prevent origin-level cookies from being forwarded to the end user.
 - `tls` (Attributes) Configuration for TLS protocol versions. Note: Enabling older TLS versions (1.0, 1.1) is generally discouraged for security reasons. (see [below for nested schema](#nestedatt--config--tls))
@@ -189,6 +196,16 @@ Required:
 - `access_key_id` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
 - `secret_access_key` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
 
+
+
+<a id="nestedatt--config--cache_config"></a>
+### Nested Schema for `config.cache_config`
+
+Optional:
+
+- `cache_key_headers` (List of String) HTTP request header names whose values participate in the cache key. Each entry multiplies the number of cache variants by the number of distinct values observed for that header.
+- `query_string_vary_enabled` (Boolean) When true, the CDN varies its cache by the request query string. If query_string_vary_parameters is empty, every unique query-string combination produces its own cache entry; if non-empty, only the listed parameters influence the cache key.
+- `query_string_vary_parameters` (List of String) Allowlist of query-string parameter names that participate in the cache key when query_string_vary_enabled is true. Ignored while query_string_vary_enabled is false, but still stored so it can be re-activated without losing the list.
 
 
 <a id="nestedatt--config--optimizer"></a>
