@@ -651,6 +651,11 @@ func TestToPatchPayload(t *testing.T) {
 		"testHeader0": types.StringValue("testHeaderValue0"),
 		"testHeader1": types.StringValue("testHeaderValue1"),
 	}
+	defaultCacheConfigPatch := cdnSdk.NewCacheConfigPatch()
+	defaultCacheConfigPatch.SetCacheKeyHeaders([]string{})
+	defaultCacheConfigPatch.SetQueryStringVaryParameters([]string{})
+	defaultCacheConfigPatch.SetQueryStringVaryEnabled(false)
+
 	originRequestHeaders := types.MapValueMust(types.StringType, headers)
 	geofencingCountries := types.ListValueMust(types.StringType, []attr.Value{
 		types.StringValue("DE"),
@@ -708,7 +713,7 @@ func TestToPatchPayload(t *testing.T) {
 					Regions:          []cdnSdk.Region{"EU", "US"},
 					BlockedCountries: []string{"XX", "YY", "ZZ"},
 					Waf:              defaultWafPatch,
-					CacheConfig:      defaultCacheConfigPatch(),
+					CacheConfig:      defaultCacheConfigPatch,
 					Backend: &cdnSdk.ConfigPatchBackend{
 						HttpBackendPatch: &cdnSdk.HttpBackendPatch{
 							Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
@@ -821,7 +826,8 @@ func TestToPatchPayload(t *testing.T) {
 			if tc.IsValid {
 				tc.Expected.IntentId = res.IntentId
 
-				diff := cmp.Diff(res, tc.Expected,
+				diff := cmp.Diff(
+					res, tc.Expected,
 					cmpopts.IgnoreUnexported(
 						cdnSdk.NullableString{},
 						cdnSdk.NullableInt64{},
@@ -1292,7 +1298,8 @@ func TestConvertConfig(t *testing.T) {
 				t.Fatalf("Should have failed")
 			}
 			if tc.IsValid {
-				diff := cmp.Diff(res, tc.Expected,
+				diff := cmp.Diff(
+					res, tc.Expected,
 					// The struct contains now a NullableString and NullableInt64.
 					// Previously those were pointers which could be compared but the value of those
 					// are unexported and therefore cmp cannot compare them.

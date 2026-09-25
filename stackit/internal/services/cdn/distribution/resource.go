@@ -1779,6 +1779,14 @@ func toPatchPayload(ctx context.Context, model *Model) (*cdnSdk.PatchDistributio
 		configPatch.Optimizer = optimizer
 	}
 
+	// Explicitly set default values to work around unexpected SDK behavior.
+	// Without these defaults, removing the cache_config block leaves the existing
+	// cache configuration intact rather than resetting it. Enforcing these defaults
+	// ensures the configuration accurately reflects only what the user has explicitly defined.
+	cacheConfigPatch := cdnSdk.NewCacheConfigPatch()
+	cacheConfigPatch.SetCacheKeyHeaders([]string{})
+	cacheConfigPatch.SetQueryStringVaryParameters([]string{})
+	cacheConfigPatch.SetQueryStringVaryEnabled(false)
 	if !utils.IsUndefined(configModel.CacheConfig) {
 		var cacheModel cacheConfigModel
 		diags = configModel.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
@@ -1786,7 +1794,6 @@ func toPatchPayload(ctx context.Context, model *Model) (*cdnSdk.PatchDistributio
 			return nil, core.DiagsToError(diags)
 		}
 
-		cacheConfigPatch := cdnSdk.NewCacheConfigPatch()
 		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
 			cacheConfigPatch.SetQueryStringVaryEnabled(cacheModel.QueryStringVaryEnabled.ValueBool())
 		}
@@ -1804,27 +1811,13 @@ func toPatchPayload(ctx context.Context, model *Model) (*cdnSdk.PatchDistributio
 			}
 			cacheConfigPatch.SetQueryStringVaryParameters(params)
 		}
-		configPatch.CacheConfig = cacheConfigPatch
-	} else {
-		configPatch.CacheConfig = defaultCacheConfigPatch()
 	}
+	configPatch.CacheConfig = cacheConfigPatch
 
 	return &cdnSdk.PatchDistributionPayload{
 		Config:   configPatch,
 		IntentId: new(uuid.NewString()),
 	}, nil
-}
-
-// defaultCacheConfigPatch returns a CacheConfigPatch configured with the SDK defaults
-// and empty lists to clear any previously set headers or parameters on partial update.
-func defaultCacheConfigPatch() *cdnSdk.CacheConfigPatch {
-	createDefaults := cdnSdk.NewCacheConfigCreate()
-
-	patch := cdnSdk.NewCacheConfigPatch()
-	patch.SetQueryStringVaryEnabled(createDefaults.GetQueryStringVaryEnabled())
-	patch.SetCacheKeyHeaders([]string{})
-	patch.SetQueryStringVaryParameters([]string{})
-	return patch
 }
 
 func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.RedirectConfig {
