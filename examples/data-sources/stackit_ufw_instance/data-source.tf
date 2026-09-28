@@ -1,4 +1,4 @@
-resource "stackit_ufw_instance" "rule" {
+data "stackit_ufw_instance" "example" {
   project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region      = "eu01"
   instance_id = "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"

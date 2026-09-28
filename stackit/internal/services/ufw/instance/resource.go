@@ -15,13 +15,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	ufw "github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	ufwUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ufw/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -64,11 +64,8 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 	r.providerData = providerData
 
-	apiClient, err := ufw.NewAPIClient(
-		ufwUtilsConfigureOptions(&providerData)...,
-	)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v", err))
+	apiClient := ufwUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if apiClient == nil {
 		return
 	}
 
@@ -106,8 +103,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: "The resource region.",
-				Required:    true,
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -152,7 +150,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -200,7 +198,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	err = mapFields(ruleData, &model)
+	err = mapFields(ruleData, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating UFW instance", fmt.Sprintf("Mapping fields: %v", err))
 		return
@@ -226,7 +224,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ruleId := model.RuleId.ValueString()
 
 	if ruleId == "" {
@@ -250,7 +248,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ruleData, &model)
+	err = mapFields(ruleData, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading UFW instance", fmt.Sprintf("Mapping fields: %v", err))
 		return
@@ -271,7 +269,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ruleId := model.RuleId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
@@ -303,7 +301,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	err = mapFields(ruleData, &model)
+	err = mapFields(ruleData, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating UFW instance", fmt.Sprintf("Mapping fields: %v", err))
 		return
@@ -324,7 +322,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ruleId := model.RuleId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
@@ -395,7 +393,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 }
 
-func mapFields(ruleResp *ufw.RuleResponse, model *Model) error {
+func mapFields(ruleResp *ufw.RuleResponse, model *Model, region string) error {
 	if ruleResp == nil {
 		return fmt.Errorf("response payload is nil")
 	}
@@ -403,13 +401,11 @@ func mapFields(ruleResp *ufw.RuleResponse, model *Model) error {
 		return fmt.Errorf("model pointer is nil")
 	}
 
-	if ruleResp.HasRegion() {
-		model.Region = types.StringValue(ruleResp.GetRegion())
-	}
+	model.Region = types.StringValue(region)
 
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
-		model.Region.ValueString(),
+		region,
 		model.RuleId.ValueString(),
 	)
 
@@ -444,17 +440,4 @@ func toUpdatePayload(model *Model) (*ufw.UpdateRulePayload, error) {
 	payload := ufw.NewUpdateRulePayload(model.SourceIP.ValueString())
 
 	return payload, nil
-}
-
-func ufwUtilsConfigureOptions(providerData *core.ProviderData) []config.ConfigurationOption {
-	options := []config.ConfigurationOption{
-		config.WithCustomAuth(providerData.RoundTripper),
-		utils.UserAgentConfigOption(providerData.Version),
-	}
-
-	if providerData.UfwCustomEndpoint != "" {
-		options = append(options, config.WithEndpoint(providerData.UfwCustomEndpoint))
-	}
-
-	return options
 }

@@ -15,46 +15,56 @@ func TestAccUfwInstanceResource(t *testing.T) {
 	providerConfig := testutil.NewConfigBuilder().BuildProviderConfig()
 
 	tfConfig := fmt.Sprintf(`
+       %s
+
+       resource "stackit_edgecloud_instance" "target" {
+          project_id = "%s"
+          display_name = "edge"
+          plan_id      = "4916c0e2-e719-445a-9920-58e491cd06c5"
+          description  = "cats live on the edge"
+          region       = "eu01"
+       }
+
+       resource "stackit_ufw_instance" "example" {
+          project_id  = "%s"
+          region      = "eu01"
+          instance_id = stackit_edgecloud_instance.target.instance_id
+          product     = "edge-cloud"
+          source_ip   = "192.168.0.0/24"
+          type        = "ACL"
+       }
+    `, providerConfig, projectId, projectId)
+
+	tfConfigDataSource := fmt.Sprintf(`
 		%s
 
-		resource "stackit_edgecloud_instance" "target" {
-			project_id = "%s"
-			display_name = "edge"
-  			plan_id      = "4916c0e2-e719-445a-9920-58e491cd06c5"
-  			description  = "cats live on the edge"
-  			region       = "eu01"
+		data "stackit_ufw_instance" "example" {
+			project_id = stackit_ufw_instance.example.project_id
+			region     = stackit_ufw_instance.example.region
+			rule_id    = stackit_ufw_instance.example.rule_id
 		}
-
-		resource "stackit_ufw_instance" "example" {
-			project_id  = "%s"
-			region      = "eu01"
-			instance_id = stackit_edgecloud_instance.target.instance_id
-			product     = "edge-cloud"
-			source_ip   = "192.168.0.0/24"
-			type        = "ACL"
-		}
-	`, providerConfig, projectId, projectId)
+	`, tfConfig)
 
 	tfConfigUpdated := fmt.Sprintf(`
-		%s
+       %s
 
-		resource "stackit_edgecloud_instance" "target" {
-			project_id = "%s"
-			display_name = "edge"
-  			plan_id      = "4916c0e2-e719-445a-9920-58e491cd06c5"
-  			description  = "cats live on the edge"
-  			region       = "eu01"
-		}
+       resource "stackit_edgecloud_instance" "target" {
+          project_id = "%s"
+          display_name = "edge"
+          plan_id      = "4916c0e2-e719-445a-9920-58e491cd06c5"
+          description  = "cats live on the edge"
+          region       = "eu01"
+       }
 
-		resource "stackit_ufw_instance" "example" {
-			project_id  = "%s"
-			region      = "eu01"
-			instance_id = stackit_edgecloud_instance.target.instance_id
-			product     = "edge-cloud"
-			source_ip   = "10.0.0.0/8"
-			type        = "ACL"
-		}
-	`, providerConfig, projectId, projectId)
+       resource "stackit_ufw_instance" "example" {
+          project_id  = "%s"
+          region      = "eu01"
+          instance_id = stackit_edgecloud_instance.target.instance_id
+          product     = "edge-cloud"
+          source_ip   = "10.0.0.0/8"
+          type        = "ACL"
+       }
+    `, providerConfig, projectId, projectId)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -65,6 +75,24 @@ func TestAccUfwInstanceResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "project_id", projectId),
 					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
 					resource.TestCheckResourceAttrSet("stackit_ufw_instance.example", "rule_id"),
+				),
+			},
+			{
+				Config: tfConfigDataSource,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "project_id", projectId),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "region", "eu01"),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "product", "edge-cloud"),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "type", "ACL"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_ufw_instance.example", "rule_id",
+						"data.stackit_ufw_instance.example", "rule_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_ufw_instance.example", "instance_id",
+						"data.stackit_ufw_instance.example", "instance_id",
+					),
 				),
 			},
 			{

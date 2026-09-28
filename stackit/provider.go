@@ -815,6 +815,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
 		telemetryLink.NewTelemetryLinkDataSource,
+		ufwInstance.NewInstanceDataSource,
 		valkeyInstance.NewInstanceDataSource,
 		valkeyCredential.NewCredentialDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
