@@ -68,6 +68,7 @@ type ProviderData struct {
 	ScfCustomEndpoint               string
 	SecretsManagerCustomEndpoint    string
 	SQLServerFlexCustomEndpoint     string
+	RunCommandCustomEndpoint        string
 	ServerBackupCustomEndpoint      string
 	ServerUpdateCustomEndpoint      string
 	SKECustomEndpoint               string
