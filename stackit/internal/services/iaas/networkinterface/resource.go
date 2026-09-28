@@ -263,10 +263,8 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 			},
 			"type": schema.StringAttribute{
 				Description: "Type of network interface. Some of the possible values are: " + utils.FormatPossibleValues(typeOptions...),
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				// UseStateForUnknown should never be set here. This value can change during updates and cause an error.
+				Computed: true,
 			},
 		},
 	}

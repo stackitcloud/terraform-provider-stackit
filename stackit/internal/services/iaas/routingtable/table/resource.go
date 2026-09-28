@@ -302,17 +302,12 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 
 	routingTableResp, err := r.client.DefaultAPI.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
-		utils.LogError(
-			ctx,
-			&resp.Diagnostics,
-			err,
-			"Reading routing table",
-			fmt.Sprintf("routing table with ID %q does not exist in organization %q.", routingTableId, organizationId),
-			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Organization with ID %q not found or forbidden access", organizationId),
-			},
-		)
-		resp.State.RemoveResource(ctx)
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 

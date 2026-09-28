@@ -206,10 +206,8 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"server_id": schema.StringAttribute{
 				Description: "The server ID of the server to which the volume is attached to.",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				// UseStateForUnknown should never be set here. This value can change during updates and cause an error.
+				Computed: true,
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),

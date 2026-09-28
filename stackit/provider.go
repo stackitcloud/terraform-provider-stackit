@@ -27,6 +27,7 @@ import (
 	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	automationTemplates "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/templates"
+	automationVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/volume"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
@@ -703,6 +704,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		albWafManagedRuleSet.NewManagedRuleSetDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		automationTemplates.NewAutomationTemplatesDataSource,
+		automationVolume.NewVolumeAutomationDataSource,
 		cdn.NewDistributionDataSource,
 		cert.NewCertificatesDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
@@ -825,6 +827,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		albWaf.NewWafConfigurationResource,
 		albWafManagedRuleSet.NewManagedRuleSetResource,
 		alertGroup.NewAlertGroupResource,
+		automationVolume.NewVolumeAutomationResource,
 		cdn.NewDistributionResource,
 		cert.NewCertificatesResource,
 		cdnCustomDomain.NewCustomDomainResource,

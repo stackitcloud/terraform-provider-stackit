@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1betaapi"
+	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
 )
 
 var testTimestampValue = "2006-01-02T15:04:05Z"

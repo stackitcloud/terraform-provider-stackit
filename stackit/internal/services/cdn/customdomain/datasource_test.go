@@ -14,7 +14,8 @@ func TestMapDataSourceFields(t *testing.T) {
 
 	// Expected certificate object when a custom certificate is returned
 	certAttributes := map[string]attr.Value{
-		"version": types.Int32Value(3),
+		"version":        types.Int32Value(3),
+		"skip_dns_check": types.BoolValue(false),
 	}
 	certificateObj, _ := types.ObjectValue(certificateDataSourceTypes, certAttributes)
 
@@ -40,8 +41,9 @@ func TestMapDataSourceFields(t *testing.T) {
 	customVersion := int32(3)
 	getRespCustom := cdnSdk.GetCustomDomainResponseCertificate{
 		GetCustomDomainCustomCertificate: &cdnSdk.GetCustomDomainCustomCertificate{
-			Type:    customType,
-			Version: customVersion,
+			Type:         customType,
+			Version:      customVersion,
+			SkipDnsCheck: false,
 		},
 	}
 
@@ -81,6 +83,24 @@ func TestMapDataSourceFields(t *testing.T) {
 				m.Certificate = certificateObj
 			}),
 			Input:   customDomainFixture(),
+			IsValid: true,
+		},
+		"happy_path_custom_cert_skip_dns_check_true": {
+			Expected: expectedModel(func(m *customDomainDataSourceModel) {
+				m.Certificate = types.ObjectValueMust(certificateDataSourceTypes, map[string]attr.Value{
+					"version":        types.Int32Value(3),
+					"skip_dns_check": types.BoolValue(true),
+				})
+			}),
+			Input: customDomainFixture(func(gcdr *cdnSdk.GetCustomDomainResponse) {
+				gcdr.Certificate = cdnSdk.GetCustomDomainResponseCertificate{
+					GetCustomDomainCustomCertificate: &cdnSdk.GetCustomDomainCustomCertificate{
+						Type:         customType,
+						Version:      customVersion,
+						SkipDnsCheck: true,
+					},
+				}
+			}),
 			IsValid: true,
 		},
 		"happy_path_managed_cert": {
