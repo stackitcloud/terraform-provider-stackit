@@ -465,7 +465,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								},
 							},
 							"disable_plan_validation": schema.BoolAttribute{
-								Description: "Whether to disable plan-time validation.",
+								Description: "Whether to disable plan-time validation. (default: false)",
 								Optional:    true,
 							},
 						},
