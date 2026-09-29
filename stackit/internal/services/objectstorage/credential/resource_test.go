@@ -168,7 +168,7 @@ func TestReadCredentials(t *testing.T) {
 					},
 					{
 						KeyId:   "cid",
-						Expires: now.Format(time.RFC3339Nano),
+						Expires: *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -195,17 +195,17 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "foo-cid",
 						DisplayName: "foo-name",
-						Expires:     now.Add(time.Hour).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Hour).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "bar-cid",
 						DisplayName: "bar-name",
-						Expires:     now.Add(time.Minute).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Minute).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "cid",
 						DisplayName: "name",
-						Expires:     now.Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -232,17 +232,17 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "foo-cid",
 						DisplayName: "foo-name",
-						Expires:     now.Add(time.Hour).Format(time.RFC3339Nano),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Hour).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "bar-cid",
 						DisplayName: "bar-name",
-						Expires:     now.Add(time.Minute).Format(time.RFC3339Nano),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Minute).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "cid",
 						DisplayName: "name",
-						Expires:     now.Format(time.RFC3339Nano),
+						Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -290,12 +290,12 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "foo-cid",
 						DisplayName: "foo-name",
-						Expires:     now.Add(time.Hour).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Hour).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "bar-cid",
 						DisplayName: "bar-name",
-						Expires:     now.Add(time.Minute).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Minute).Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -314,7 +314,7 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "cid",
 						DisplayName: "name",
-						Expires:     now.Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
