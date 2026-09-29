@@ -494,6 +494,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
