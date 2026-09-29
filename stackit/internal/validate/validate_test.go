@@ -843,7 +843,6 @@ func TestFileExists(t *testing.T) {
 }
 
 func TestFileExistsUnlessDisabled(t *testing.T) {
-	// Reusable low-level type mapping
 	objectType := tftypes.Object{
 		AttributeTypes: map[string]tftypes.Type{
 			"file_path":               tftypes.String,
@@ -851,7 +850,6 @@ func TestFileExistsUnlessDisabled(t *testing.T) {
 		},
 	}
 
-	// Minimal inline schema definition
 	testSchema := schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"local": schema.SingleNestedAttribute{
