@@ -95,7 +95,7 @@ Required:
 
 Optional:
 
-- `disable_plan_validation` (Boolean) Whether to disable plan-time validation.
+- `disable_plan_validation` (Boolean) Whether to disable plan-time validation. (default: false)
 
 
 
