@@ -26,6 +26,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.14.5
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.2
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.13.1
+	github.com/stackitcloud/stackit-sdk-go/services/lbiplists v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.15.2
 	github.com/stackitcloud/stackit-sdk-go/services/logme v1.3.1
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.2
