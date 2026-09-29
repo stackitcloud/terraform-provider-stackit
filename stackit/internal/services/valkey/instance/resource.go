@@ -174,7 +174,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Valkey instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Key Value Store(valkey) instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the Valkey instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
