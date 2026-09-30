@@ -188,18 +188,20 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 	var credentialId string
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
-	} else {
+	} else if credentialResp.KeyId != "" {
 		credentialId = credentialResp.KeyId
+	} else {
+		return fmt.Errorf("credential id not present")
 	}
 
-	if credentialResp.Expires == "" {
+	if credentialResp.Expires.Get() == nil || *credentialResp.Expires.Get() == "" {
 		model.ExpirationTimestamp = types.StringNull()
 	} else {
 		// Harmonize the timestamp format
 		// E.g. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
-		expirationTimestamp, err := time.Parse(time.RFC3339, credentialResp.Expires)
+		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires.Get())
 		if err != nil {
-			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", credentialResp.Expires, err)
+			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires.Get(), err)
 		}
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
