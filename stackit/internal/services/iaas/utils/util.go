@@ -11,7 +11,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	iaasLegacy "github.com/stackitcloud/stackit-sdk-go/services/iaas" //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -28,25 +27,6 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 
 	apiClient, err := iaas.NewAPIClient(apiClientConfigOptions...)
-	if err != nil {
-		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
-		return nil
-	}
-
-	return apiClient
-}
-
-// Deprecated: Use ConfigureClient instead
-func ConfigureClientLegacy(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *iaasLegacy.APIClient { //nolint:staticcheck // TODO: will be done within STACKITTPR-713
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(providerData.RoundTripper),
-		utils.UserAgentConfigOption(providerData.Version),
-	}
-	if providerData.IaaSCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.IaaSCustomEndpoint))
-	}
-
-	apiClient, err := iaasLegacy.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
 		return nil

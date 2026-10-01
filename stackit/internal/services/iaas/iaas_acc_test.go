@@ -121,6 +121,9 @@ var (
 
 	//go:embed testdata/resource-routingtable-route-max.tf
 	resourceRoutingTableRouteMaxConfig string
+
+	//go:embed testdata/datasource-iaas-project.tf
+	datasourceIaasProjectConfig string
 )
 
 const (
@@ -667,6 +670,13 @@ var testConfigRoutingTableRouteMaxUpdated = func() config.Variables {
 	updatedConfig["label"] = config.StringVariable("route-updated-label-01")
 	return updatedConfig
 }()
+
+var testConfigIaasProject = config.Variables{
+	"organization_id":     config.StringVariable(testutil.OrganizationId),
+	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
+	"name":                config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
+}
 
 // if no local file is provided the test should create a default file and work with this instead of failing
 var localFileForIaasImage os.File
@@ -5979,6 +5989,54 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["label"])),
 					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "updated_at"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccDatasourceIaaSProject(t *testing.T) {
+	t.Logf("TestAccDatasourceIaaSProject name: %s", testutil.ConvertConfigVariable(testConfigIaasProject["name"]))
+	const (
+		publicProject = "data.stackit_iaas_project.public"
+		snaProject    = "data.stackit_iaas_project.sna"
+	)
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Datasource
+			{
+				ConfigVariables: testConfigIaasProject,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), datasourceIaasProjectConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Datasource public project
+					resource.TestCheckResourceAttrSet(publicProject, "id"),
+					resource.TestCheckResourceAttrPair(
+						publicProject, "project_id",
+						"stackit_resourcemanager_project.with_public_network", "project_id",
+					),
+					resource.TestCheckResourceAttr(publicProject, "area_id", "PUBLIC"),
+					resource.TestCheckResourceAttrSet(publicProject, "created_at"),
+					resource.TestCheckResourceAttrSet(publicProject, "updated_at"),
+					resource.TestCheckResourceAttr(publicProject, "internet_access", "true"),
+					resource.TestCheckResourceAttr(publicProject, "status", "CREATED"),
+
+					// Datasource SNA project
+					resource.TestCheckResourceAttrSet(snaProject, "id"),
+					resource.TestCheckResourceAttrPair(
+						snaProject, "project_id",
+						"stackit_resourcemanager_project.with_network_area", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						snaProject, "area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet(snaProject, "created_at"),
+					resource.TestCheckResourceAttrSet(snaProject, "updated_at"),
+					resource.TestCheckResourceAttr(snaProject, "internet_access", "true"),
+					resource.TestCheckResourceAttr(snaProject, "status", "CREATED"),
 				),
 			},
 			// Deletion is done by the framework implicitly
