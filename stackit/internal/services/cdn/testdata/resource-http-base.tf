@@ -24,11 +24,30 @@ variable "strip_response_cookies" {}
 variable "forward_host_header" {}
 variable "monthly_limit_bytes" {}
 variable "default_cache_duration" {}
+variable "log_sink_type" {}
+variable "logs_display_name" {}
 
 # dns
 variable "dns_zone_name" {}
 variable "dns_name" {}
 variable "dns_record_name" {}
+
+resource "stackit_logs_instance" "logs" {
+  project_id     = var.project_id
+  region         = "eu01"
+  display_name   = var.logs_display_name
+  retention_days = 1
+}
+
+resource "stackit_logs_access_token" "logs_token" {
+  project_id   = var.project_id
+  instance_id  = stackit_logs_instance.logs.instance_id
+  display_name = var.logs_display_name
+
+  permissions = [
+    "read", "write"
+  ]
+}
 
 resource "stackit_dns_zone" "dns_zone" {
   project_id    = var.project_id
@@ -92,6 +111,15 @@ resource "stackit_cdn_distribution" "distribution" {
     }
     blocked_countries = var.blocked_countries
     blocked_ips       = var.blocked_ips
+
+    log_sink = {
+      push_url = "https://${stackit_logs_instance.logs.ingest_otlp_url}"
+      type     = "otlp"
+      credentials = {
+        type  = "bearer"
+        token = stackit_logs_access_token.logs_token.access_token
+      }
+    }
   }
 }
 
@@ -99,3 +127,4 @@ data "stackit_cdn_distribution" "distribution" {
   project_id      = var.project_id
   distribution_id = stackit_cdn_distribution.distribution.distribution_id
 }
+

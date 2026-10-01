@@ -110,6 +110,14 @@ var schemaDescriptions = map[string]string{
 	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
 	"config_strip_response_cookies":                "Enable this to prevent origin-level cookies from being forwarded to the end user.",
 	"config_forward_host_header":                   "Enable this allows the 'Host' header to be passed through to the origin.",
+	"config_log_sink":                              "Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations.",
+	"config_log_sink_type":                         "The log sink protocol.",
+	"config_log_sink_push_url":                     "The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).",
+	"config_log_sink_credentials":                  "Authentication credentials the CDN uses when pushing logs. Loki requires `username` and `password`. OTLP requires `type` to be set to `basic` (with `username` and `password`) or `bearer` (with `token`).",
+	"config_log_sink_credentials_type":             "The authentication type when using an OTLP log sink. Leave unset for Loki.",
+	"config_log_sink_credentials_username":         "The username used to authenticate. Required for Loki and for OTLP when `credentials.type` is `basic`.",
+	"config_log_sink_credentials_password":         "The password corresponding to `username`. Required for Loki and for OTLP when `credentials.type` is `basic`.",
+	"config_log_sink_credentials_token":            "The bearer token used to authenticate. Required for OTLP when `credentials.type` is `bearer`.",
 }
 
 type Model struct {
@@ -153,8 +161,9 @@ type distributionConfig struct {
 	Optimizer            types.Object    `tfsdk:"optimizer"`              // The optimizer configuration
 	Waf                  types.Object    `tfsdk:"waf"`                    // The WAF configuration
 	Tls                  types.Object    `tfsdk:"tls"`                    // The TLS configuration
-	StripResponseCookies types.Bool      `tfsdk:"strip_response_cookies"` // The Enable this to prevent origin-level cookies from being forwarded to the end user
-	ForwardHostHeader    types.Bool      `tfsdk:"forward_host_header"`    // The Enable this allows the 'Host' header to be passed through to the origin.
+	StripResponseCookies types.Bool      `tfsdk:"strip_response_cookies"` // Enable this to prevent origin-level cookies from being forwarded to the end user
+	ForwardHostHeader    types.Bool      `tfsdk:"forward_host_header"`    // Enable this allows the 'Host' header to be passed through to the origin.
+	LogSink              types.Object    `tfsdk:"log_sink"`               // The LogSink configuration
 }
 
 type optimizerConfig struct {
@@ -194,6 +203,19 @@ type wafConfig struct {
 	LogOnlyRuleCollectionIds   types.Set    `tfsdk:"log_only_rule_collection_ids"`
 }
 
+type logSinkConfig struct {
+	Type        types.String `tfsdk:"type"` // Options: "loki" or "otlp"
+	PushUrl     types.String `tfsdk:"push_url"`
+	Credentials types.Object `tfsdk:"credentials"`
+}
+
+type logSinkCredentialsConfig struct {
+	Type     types.String `tfsdk:"type"`     // Options: "basic" or "bearer"
+	Username types.String `tfsdk:"username"` // Used with loki and otlp ("basic")
+	Password types.String `tfsdk:"password"` // Used with loki and otlp ("basic")
+	Token    types.String `tfsdk:"token"`    // Only with otlp ("bearer")
+}
+
 type backendCredentials struct {
 	AccessKey *string `tfsdk:"access_key_id"` //nolint:gosec // AccessKey should be exported from this struct
 	SecretKey *string `tfsdk:"secret_access_key"`
@@ -217,6 +239,9 @@ var configTypes = map[string]attr.Type{
 	},
 	"tls": types.ObjectType{
 		AttrTypes: tlsTypes,
+	},
+	"log_sink": types.ObjectType{
+		AttrTypes: logSinkTypes,
 	},
 	"strip_response_cookies": types.BoolType,
 	"forward_host_header":    types.BoolType,
@@ -277,6 +302,19 @@ var wafTypes = map[string]attr.Type{
 	"enabled_rule_collection_ids":   types.SetType{ElemType: types.StringType},
 	"disabled_rule_collection_ids":  types.SetType{ElemType: types.StringType},
 	"log_only_rule_collection_ids":  types.SetType{ElemType: types.StringType},
+}
+
+var logSinkTypes = map[string]attr.Type{
+	"type":        types.StringType,
+	"push_url":    types.StringType,
+	"credentials": types.ObjectType{AttrTypes: logSinkCredentialsTypes},
+}
+
+var logSinkCredentialsTypes = map[string]attr.Type{
+	"password": types.StringType,
+	"username": types.StringType,
+	"token":    types.StringType,
+	"type":     types.StringType,
 }
 
 var backendTypes = map[string]attr.Type{
@@ -445,6 +483,51 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Optional:    true,
 								Computed:    true,
 								Description: schemaDescriptions["config_tls_enable_tls_11"],
+							},
+						},
+					},
+					"log_sink": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_log_sink"],
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"type": schema.StringAttribute{
+								Required:    true,
+								Description: schemaDescriptions["config_log_sink_type"] + utils.FormatPossibleValues(string(cdnSdk.LOKILOGSINKTYPE_LOKI), string(cdnSdk.OTLPLOGSINKTYPE_OTLP)),
+								Validators: []validator.String{
+									stringvalidator.OneOf(string(cdnSdk.LOKILOGSINKTYPE_LOKI), string(cdnSdk.OTLPLOGSINKTYPE_OTLP)),
+								},
+							},
+							"push_url": schema.StringAttribute{
+								Required:    true,
+								Description: schemaDescriptions["config_log_sink_push_url"],
+							},
+							"credentials": schema.SingleNestedAttribute{
+								Required:    true,
+								Description: schemaDescriptions["config_log_sink_credentials"],
+								Attributes: map[string]schema.Attribute{
+									"type": schema.StringAttribute{
+										Optional:    true,
+										Description: schemaDescriptions["config_log_sink_credentials_type"] + utils.FormatPossibleValues(string(cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC), string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+										Validators: []validator.String{
+											stringvalidator.OneOf(string(cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC), string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+										},
+									},
+									"username": schema.StringAttribute{
+										Optional:    true,
+										Sensitive:   true,
+										Description: schemaDescriptions["config_log_sink_credentials_username"],
+									},
+									"password": schema.StringAttribute{
+										Optional:    true,
+										Sensitive:   true,
+										Description: schemaDescriptions["config_log_sink_credentials_password"],
+									},
+									"token": schema.StringAttribute{
+										Optional:    true,
+										Sensitive:   true,
+										Description: schemaDescriptions["config_log_sink_credentials_token"],
+									},
+								},
 							},
 						},
 					},
@@ -779,6 +862,118 @@ func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.
 					}
 				}
 			}
+
+			validateLogSinkConfig(ctx, &config, &resp.Diagnostics)
+		}
+	}
+}
+
+// validateLogSinkConfig enforces cross-attribute rules on the log_sink block
+// that Terraform's declarative validators cannot express because the required
+// credential fields depend on both `log_sink.type` and
+// `log_sink.credentials.type`.
+//
+// Loki: requires credentials.username + credentials.password; credentials.type
+// and credentials.token must not be set.
+//
+// OTLP: requires credentials.type. When credentials.type is "basic", username and
+// password are required and token must not be set. When credentials.type is "bearer",
+// token is required and username/password must not be set.
+func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diags *diag.Diagnostics) {
+	if utils.IsUndefined(config.LogSink) {
+		return
+	}
+
+	var logSink logSinkConfig
+	d := config.LogSink.As(ctx, &logSink, basetypes.ObjectAsOptions{})
+	if d.HasError() {
+		diags.Append(d...)
+		return
+	}
+
+	if utils.IsUndefined(logSink.Credentials) {
+		return
+	}
+
+	var creds logSinkCredentialsConfig
+	d = logSink.Credentials.As(ctx, &creds, basetypes.ObjectAsOptions{})
+	if d.HasError() {
+		diags.Append(d...)
+		return
+	}
+
+	// Skip validation while values are still unknown (e.g. plan phase with
+	// interpolated references). The validation will re-run with concrete
+	// values before apply.
+	if logSink.PushUrl.IsUnknown() ||
+		creds.Token.IsUnknown() ||
+		creds.Username.IsUnknown() ||
+		creds.Password.IsUnknown() {
+		return
+	}
+
+	sinkType := logSink.Type.ValueString()
+	credsType := creds.Type.ValueString()
+
+	usernameSet := !creds.Username.IsNull() && !creds.Username.IsUnknown()
+	passwordSet := !creds.Password.IsNull() && !creds.Password.IsUnknown()
+	tokenSet := !creds.Token.IsNull() && !creds.Token.IsUnknown()
+	credsTypeSet := !creds.Type.IsNull() && !creds.Type.IsUnknown()
+
+	switch sinkType {
+	case string(cdnSdk.LOKILOGSINKTYPE_LOKI):
+		if credsTypeSet {
+			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.type must not be set. Loki only supports basic auth (username/password).")
+		}
+		if tokenSet {
+			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.token must not be set. Use username and password instead.")
+		}
+		if !usernameSet {
+			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.username is required.")
+		}
+		if !passwordSet {
+			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+				"When log_sink.type is \"loki\" "+
+					"log_sink.credentials.password is required.")
+		}
+	case string(cdnSdk.OTLPLOGSINKTYPE_OTLP):
+		if !credsTypeSet {
+			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+				fmt.Sprintf("When log_sink.type is \"otlp\", log_sink.credentials.type is required (%q or %q).",
+					cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
+					cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER))
+			return
+		}
+		switch credsType {
+		case string(cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC):
+			if tokenSet {
+				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+					"When log_sink.credentials.type is \"basic\", log_sink.credentials.token must not be set.")
+			}
+			if !usernameSet {
+				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+					"When log_sink.credentials.type is \"basic\", log_sink.credentials.username is required.")
+			}
+			if !passwordSet {
+				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+					"When log_sink.credentials.type is \"basic\", log_sink.credentials.password is required.")
+			}
+		case string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER):
+			if usernameSet || passwordSet {
+				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+					"When log_sink.credentials.type is \"bearer\", "+
+						"log_sink.credentials.username and log_sink.credentials.password must not be set.")
+			}
+			if !tokenSet {
+				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
+					"When log_sink.credentials.type is \"bearer\", log_sink.credentials.token is required.")
+			}
 		}
 	}
 }
@@ -1086,6 +1281,19 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
 		}
 		configPatch.Optimizer = optimizer
+	}
+
+	// LogSink: set the value when the user provided one, or explicitly set it
+	// to null so the API removes any existing log_sink configuration.
+	if utils.IsUndefined(configModel.LogSink) {
+		configPatch.SetLogSinkNil()
+	} else {
+		logSinkPatch, err := toPatchLogSinkPayload(ctx, configModel.LogSink)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Mapping log_sink: %v", err))
+			return
+		}
+		configPatch.SetLogSink(*logSinkPatch)
 	}
 
 	_, err := r.client.DefaultAPI.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdnSdk.PatchDistributionPayload{
@@ -1505,6 +1713,14 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	defaultCacheDuration := types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
 	monthlyLimitBytes := types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
 
+	// LogSink: the API never returns raw credentials. Preserve any secrets
+	// (username/password/token) from the existing state while refreshing the
+	// non-sensitive fields (type, push_url) from the API response.
+	logSinkVal, err := mapLogSinkResource(ctx, distribution.Config.LogSink, oldConfig.LogSink)
+	if err != nil {
+		return err
+	}
+
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend":                backend,
 		"regions":                modelRegions,
@@ -1516,6 +1732,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		"redirects":              redirectsVal,
 		"waf":                    wafVal,
 		"tls":                    tlsVal,
+		"log_sink":               logSinkVal,
 		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
 		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})
@@ -1654,7 +1871,165 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		payload.MonthlyLimitBytes = conversion.Int64ValueToPointer(rawConfig.MonthlyLimitBytes)
 	}
 
+	if !utils.IsUndefined(rawConfig.LogSink) {
+		logSinkPayload, err := toCreateLogSinkPayload(ctx, rawConfig.LogSink)
+		if err != nil {
+			return nil, fmt.Errorf("mapping log_sink: %w", err)
+		}
+		payload.LogSink = logSinkPayload
+	}
+
 	return payload, nil
+}
+
+// toCreateLogSinkPayload converts the log_sink Terraform object into the
+// CreateDistributionPayloadLogSink SDK type. The Terraform schema uses a
+// single log_sink block with a "type" discriminator ("loki" or "otlp"),
+// so this function branches on that value.
+func toCreateLogSinkPayload(ctx context.Context, logSinkObj types.Object) (*cdnSdk.CreateDistributionPayloadLogSink, error) {
+	var logSinkModel logSinkConfig
+	diags := logSinkObj.As(ctx, &logSinkModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	var credsModel logSinkCredentialsConfig
+	diags = logSinkModel.Credentials.As(ctx, &credsModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	switch logSinkModel.Type.ValueString() {
+	case string(cdnSdk.LOKILOGSINKCREATETYPE_LOKI):
+		return &cdnSdk.CreateDistributionPayloadLogSink{
+			LokiLogSinkCreate: &cdnSdk.LokiLogSinkCreate{
+				Credentials: cdnSdk.LokiLogSinkCredentials{
+					Username: credsModel.Username.ValueString(),
+					Password: credsModel.Password.ValueString(),
+				},
+				PushUrl: logSinkModel.PushUrl.ValueString(),
+				Type:    cdnSdk.LokiLogSinkCreateType(logSinkModel.Type.ValueString()),
+			},
+		}, nil
+	case string(cdnSdk.OTLPLOGSINKCREATETYPE_OTLP):
+		otlpCreds, err := toOtlpCreateCredentials(&credsModel)
+		if err != nil {
+			return nil, err
+		}
+		return &cdnSdk.CreateDistributionPayloadLogSink{
+			OtlpLogSinkCreate: &cdnSdk.OtlpLogSinkCreate{
+				Credentials: *otlpCreds,
+				PushUrl:     logSinkModel.PushUrl.ValueString(),
+				Type:        cdnSdk.OtlpLogSinkCreateType(logSinkModel.Type.ValueString()),
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected log_sink type %q; must be one of %q or %q",
+			logSinkModel.Type.ValueString(),
+			cdnSdk.LOKILOGSINKCREATETYPE_LOKI,
+			cdnSdk.OTLPLOGSINKCREATETYPE_OTLP)
+	}
+}
+
+// toOtlpCreateCredentials builds the OtlpLogSinkCreateCredentials union based
+// on the credentials.type discriminator ("basic" or "bearer").
+func toOtlpCreateCredentials(creds *logSinkCredentialsConfig) (*cdnSdk.OtlpLogSinkCreateCredentials, error) {
+	switch creds.Type.ValueString() {
+	case string(cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC):
+		return &cdnSdk.OtlpLogSinkCreateCredentials{
+			OtlpLogSinkBasicCredentials: &cdnSdk.OtlpLogSinkBasicCredentials{
+				Type:     cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
+				Username: creds.Username.ValueString(),
+				Password: creds.Password.ValueString(),
+			},
+		}, nil
+	case string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER):
+		return &cdnSdk.OtlpLogSinkCreateCredentials{
+			OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
+				Type:  cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER,
+				Token: creds.Token.ValueString(),
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected otlp credentials type %q; must be one of %q or %q",
+			creds.Type.ValueString(),
+			cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
+			cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)
+	}
+}
+
+// toPatchLogSinkPayload converts the log_sink Terraform object into the
+// ConfigPatchLogSink SDK type used by the Update path.
+func toPatchLogSinkPayload(ctx context.Context, logSinkObj types.Object) (*cdnSdk.ConfigPatchLogSink, error) {
+	var logSinkModel logSinkConfig
+	diags := logSinkObj.As(ctx, &logSinkModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	var credsModel logSinkCredentialsConfig
+	diags = logSinkModel.Credentials.As(ctx, &credsModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	pushUrl := logSinkModel.PushUrl.ValueString()
+
+	switch logSinkModel.Type.ValueString() {
+	case string(cdnSdk.LOKILOGSINKPATCHTYPE_LOKI):
+		return &cdnSdk.ConfigPatchLogSink{
+			LokiLogSinkPatch: &cdnSdk.LokiLogSinkPatch{
+				Credentials: &cdnSdk.LokiLogSinkCredentials{
+					Username: credsModel.Username.ValueString(),
+					Password: credsModel.Password.ValueString(),
+				},
+				PushUrl: &pushUrl,
+				Type:    cdnSdk.LokiLogSinkPatchType(logSinkModel.Type.ValueString()),
+			},
+		}, nil
+	case string(cdnSdk.OTLPLOGSINKPATCHTYPE_OTLP):
+		otlpCreds, err := toOtlpPatchCredentials(&credsModel)
+		if err != nil {
+			return nil, err
+		}
+		return &cdnSdk.ConfigPatchLogSink{
+			OtlpLogSinkPatch: &cdnSdk.OtlpLogSinkPatch{
+				Credentials: otlpCreds,
+				PushUrl:     &pushUrl,
+				Type:        cdnSdk.OtlpLogSinkPatchType(logSinkModel.Type.ValueString()),
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected log_sink type %q; must be one of %q or %q",
+			logSinkModel.Type.ValueString(),
+			cdnSdk.LOKILOGSINKPATCHTYPE_LOKI,
+			cdnSdk.OTLPLOGSINKPATCHTYPE_OTLP)
+	}
+}
+
+func toOtlpPatchCredentials(creds *logSinkCredentialsConfig) (*cdnSdk.OtlpLogSinkPatchCredentials, error) {
+	switch creds.Type.ValueString() {
+	case string(cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC):
+		return &cdnSdk.OtlpLogSinkPatchCredentials{
+			OtlpLogSinkBasicCredentials: &cdnSdk.OtlpLogSinkBasicCredentials{
+				Type:     cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
+				Username: creds.Username.ValueString(),
+				Password: creds.Password.ValueString(),
+			},
+		}, nil
+	case string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER):
+		return &cdnSdk.OtlpLogSinkPatchCredentials{
+			OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
+				Type:  cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER,
+				Token: creds.Token.ValueString(),
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected otlp credentials type %q; must be one of %q or %q",
+			creds.Type.ValueString(),
+			cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
+			cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)
+	}
 }
 
 func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.RedirectConfig {
@@ -1905,6 +2280,90 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	}
 
 	return cdnConfig, nil
+}
+
+// mapLogSinkResource maps the API log_sink response into a Terraform object
+// suitable for the resource schema. Credentials are preserved from the prior
+// Terraform state (`oldLogSink`) because the API never returns raw secrets.
+//
+// Returns a null object when the API response has no log_sink configured.
+func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, oldLogSink types.Object) (types.Object, error) {
+	if apiLogSink == nil {
+		return types.ObjectNull(logSinkTypes), nil
+	}
+
+	// Extract the prior credentials so we can preserve secrets that the API
+	// does not return.
+	var oldCreds logSinkCredentialsConfig
+	if !utils.IsUndefined(oldLogSink) {
+		var oldLogSinkModel logSinkConfig
+		diags := oldLogSink.As(ctx, &oldLogSinkModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return types.ObjectNull(logSinkTypes), core.DiagsToError(diags)
+		}
+		if !utils.IsUndefined(oldLogSinkModel.Credentials) {
+			diags = oldLogSinkModel.Credentials.As(ctx, &oldCreds, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return types.ObjectNull(logSinkTypes), core.DiagsToError(diags)
+			}
+		}
+	}
+
+	var typeVal, pushUrlVal types.String
+	credsAttrs := map[string]attr.Value{
+		"type":     types.StringNull(),
+		"username": types.StringNull(),
+		"password": types.StringNull(),
+		"token":    types.StringNull(),
+	}
+
+	switch {
+	case apiLogSink.LokiLogSink != nil:
+		typeVal = types.StringValue(string(apiLogSink.LokiLogSink.Type))
+		pushUrlVal = types.StringValue(apiLogSink.LokiLogSink.PushUrl)
+		// Loki only supports basic auth (username/password). Preserve both
+		// secrets from the prior state.
+		if !oldCreds.Username.IsNull() {
+			credsAttrs["username"] = oldCreds.Username
+		}
+		if !oldCreds.Password.IsNull() {
+			credsAttrs["password"] = oldCreds.Password
+		}
+	case apiLogSink.OtlpLogSink != nil:
+		typeVal = types.StringValue(string(apiLogSink.OtlpLogSink.Type))
+		pushUrlVal = types.StringValue(apiLogSink.OtlpLogSink.PushUrl)
+		// OTLP supports both basic and bearer credentials. Restore whichever
+		// the user previously configured.
+		if !oldCreds.Type.IsNull() {
+			credsAttrs["type"] = oldCreds.Type
+		}
+		if !oldCreds.Username.IsNull() {
+			credsAttrs["username"] = oldCreds.Username
+		}
+		if !oldCreds.Password.IsNull() {
+			credsAttrs["password"] = oldCreds.Password
+		}
+		if !oldCreds.Token.IsNull() {
+			credsAttrs["token"] = oldCreds.Token
+		}
+	default:
+		return types.ObjectNull(logSinkTypes), nil
+	}
+
+	credsObj, diags := types.ObjectValue(logSinkCredentialsTypes, credsAttrs)
+	if diags.HasError() {
+		return types.ObjectNull(logSinkTypes), core.DiagsToError(diags)
+	}
+
+	logSinkObj, diags := types.ObjectValue(logSinkTypes, map[string]attr.Value{
+		"type":        typeVal,
+		"push_url":    pushUrlVal,
+		"credentials": credsObj,
+	})
+	if diags.HasError() {
+		return types.ObjectNull(logSinkTypes), core.DiagsToError(diags)
+	}
+	return logSinkObj, nil
 }
 
 // validateCountryCode checks for a valid country user input. This is just a quick check
