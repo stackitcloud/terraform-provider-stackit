@@ -40,5 +40,4 @@ resource "stackit_ufw_instance" "rule" {
 
 ### Read-Only
 
-- `id` (String) Terraform internal resource identifier in format 'project_id,region,rule_id'.
 - `rule_id` (String) The rule UUID.
