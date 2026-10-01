@@ -125,7 +125,9 @@ func (t *RetryTransport) getWaitDuration(resp *http.Response, attempt int) time.
 
 func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *lbiplists.APIClient {
 	// Add middleware to retry on HTTP 429 rate limits (the upload endpoint is limited to 1 req/min).
-	// This solution is copied from objectstorage, which should not be done, but the resource is pretty much unusable without this
+	// This solution is copied from objectstorage, which should not be done, but the resource is pretty much unusable without this.
+	// This should be rolled out centrally instead, should be easily doable after
+	// this refactoring: https://github.com/stackitcloud/terraform-provider-stackit/pull/1663
 	retryRoundTripper := &RetryTransport{
 		Base:        providerData.RoundTripper,
 		MaxRetries:  5,

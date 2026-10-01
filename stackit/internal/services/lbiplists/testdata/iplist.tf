@@ -5,7 +5,7 @@ variable "file_content_version" {}
 variable "label_key" {}
 variable "label_value" {}
 
-resource "stackit_lb_ip_list" "iplist" {
+resource "stackit_loadbalancer_ip_list" "iplist" {
   project_id           = var.project_id
   name                 = var.name
   file_content         = var.file_content

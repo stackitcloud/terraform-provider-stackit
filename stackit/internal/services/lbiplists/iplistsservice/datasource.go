@@ -49,7 +49,7 @@ func NewIPListsServiceDataSource() datasource.DataSource {
 
 // Metadata implements [datasource.DataSource].
 func (d *ipListsServiceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_lb_ip_list"
+	resp.TypeName = req.ProviderTypeName + "_loadbalancer_ip_list"
 }
 
 // Configure implements [datasource.DataSourceWithConfigure].
@@ -60,7 +60,7 @@ func (d *ipListsServiceDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_lb_ip_list", "datasource")
+	features.CheckExperimentEnabled(ctx, &d.providerData, features.LoadbalancerIPList, "stackit_loadbalancer_ip_list", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -77,16 +77,16 @@ func (d *ipListsServiceDataSource) Configure(ctx context.Context, req datasource
 func (d *ipListsServiceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":          "Load Balancer IP Lists data source schema. " + core.DatasourceRegionFallbackDocstring,
-		"id":            "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
+		"id":            "Terraform's internal resource ID. It is structured as \"`project_id`,region,`name`\".",
 		"project_id":    "STACKIT project ID to which the Load Balancer is associated.",
 		"region":        "STACKIT region.",
 		"labels":        "User-defined metadata as key-value pairs.",
 		"name":          "Name of the Load Balancer IP List.",
 		"number_of_ips": "The number of IP addresses in this IP list.",
-		"content_hash":  "The hash of the configured IP list.",
+		"content_hash":  "Unique SHA-256 hex fingerprint used to verify the stored IP list file content.",
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Load Balancer IP Lists resource schema.", core.Datasource),
+		MarkdownDescription: features.AddExperimentDescription("Load Balancer IP Lists resource schema.", features.LoadbalancerIPList, core.Datasource),
 		Description:         descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -150,10 +150,10 @@ func (d *ipListsServiceDataSource) Read(ctx context.Context, req datasource.Read
 	ipList, err := d.client.DefaultAPI.GetIPList(ctx, projectId, region, name).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Load Balancer IP list", fmt.Sprintf("IP list %q not found", name))
+			utils.LogError(ctx, &resp.Diagnostics, err, "Error reading Load Balancer IP list", fmt.Sprintf("Calling API: %v", err), map[int]string{http.StatusNotFound: fmt.Sprintf("Load Balancer IP list %q not found", name)})
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Load Balancer IP list", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(ctx, &resp.Diagnostics, err, "Error reading Load Balancer IP list", fmt.Sprintf("Calling API: %v", err), nil)
 		return
 	}
 
@@ -193,15 +193,10 @@ func mapDataSourceFields(ctx context.Context, ipList *lbiplists.GetIPListRespons
 	model.Name = types.StringValue(name)
 	model.Region = types.StringValue(region)
 
-	// no need to look at the errors here since the fields are not required
-	contentHash, _ := ipList.GetContentHashOk()
-	model.ContentHash = types.StringPointerValue(contentHash)
+	model.ContentHash = types.StringPointerValue(ipList.ContentHash)
+	model.NumberOfIPs = types.Int32PointerValue(ipList.NumberOfIps)
 
-	numberOfIps, _ := ipList.GetNumberOfIpsOk()
-	model.NumberOfIPs = types.Int32PointerValue(numberOfIps)
-
-	respLabels, _ := ipList.GetLabelsOk()
-	labels, err := utils.MapLabels(ctx, respLabels, model.Labels)
+	labels, err := utils.MapLabels(ctx, ipList.Labels, model.Labels)
 	if err != nil {
 		return fmt.Errorf("mapping labels: %w", err)
 	}

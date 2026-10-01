@@ -67,13 +67,13 @@ func TestAccIpListResource(t *testing.T) {
 				ConfigVariables: ipListVars,
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), ipListConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "region", ipListRegion),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVars["name"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "file_content_version", testutil.ConvertConfigVariable(ipListVars["file_content_version"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVars["label_key"]), testutil.ConvertConfigVariable(ipListVars["label_value"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "number_of_ips", "2"),
-					resource.TestCheckResourceAttrSet("stackit_lb_ip_list.iplist", "content_hash"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "region", ipListRegion),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVars["name"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "file_content_version", testutil.ConvertConfigVariable(ipListVars["file_content_version"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVars["label_key"]), testutil.ConvertConfigVariable(ipListVars["label_value"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "number_of_ips", "2"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_ip_list.iplist", "content_hash"),
 				),
 			},
 			// Data source
@@ -83,25 +83,25 @@ func TestAccIpListResource(t *testing.T) {
 						%s
 						%s
 
-						data "stackit_lb_ip_list" "iplist" {
-							project_id = stackit_lb_ip_list.iplist.project_id
-							name       = stackit_lb_ip_list.iplist.name
+						data "stackit_loadbalancer_ip_list" "iplist" {
+							project_id = stackit_loadbalancer_ip_list.iplist.project_id
+							name       = stackit_loadbalancer_ip_list.iplist.name
 						}
 						`,
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), ipListConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.stackit_lb_ip_list.iplist", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttr("data.stackit_lb_ip_list.iplist", "region", ipListRegion),
-					resource.TestCheckResourceAttr("data.stackit_lb_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVars["name"])),
-					resource.TestCheckResourceAttr("data.stackit_lb_ip_list.iplist", "number_of_ips", "2"),
-					resource.TestCheckResourceAttrSet("data.stackit_lb_ip_list.iplist", "content_hash"),
-					resource.TestCheckResourceAttr("data.stackit_lb_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVars["label_key"]), testutil.ConvertConfigVariable(ipListVars["label_value"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer_ip_list.iplist", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer_ip_list.iplist", "region", ipListRegion),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVars["name"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer_ip_list.iplist", "number_of_ips", "2"),
+					resource.TestCheckResourceAttrSet("data.stackit_loadbalancer_ip_list.iplist", "content_hash"),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVars["label_key"]), testutil.ConvertConfigVariable(ipListVars["label_value"])),
 
-					resource.TestCheckResourceAttrPair("data.stackit_lb_ip_list.iplist", "id", "stackit_lb_ip_list.iplist", "id"),
-					resource.TestCheckResourceAttrPair("data.stackit_lb_ip_list.iplist", "region", "stackit_lb_ip_list.iplist", "region"),
-					resource.TestCheckResourceAttrPair("data.stackit_lb_ip_list.iplist", "content_hash", "stackit_lb_ip_list.iplist", "content_hash"),
-					resource.TestCheckResourceAttrPair("data.stackit_lb_ip_list.iplist", "number_of_ips", "stackit_lb_ip_list.iplist", "number_of_ips"),
+					resource.TestCheckResourceAttrPair("data.stackit_loadbalancer_ip_list.iplist", "id", "stackit_loadbalancer_ip_list.iplist", "id"),
+					resource.TestCheckResourceAttrPair("data.stackit_loadbalancer_ip_list.iplist", "region", "stackit_loadbalancer_ip_list.iplist", "region"),
+					resource.TestCheckResourceAttrPair("data.stackit_loadbalancer_ip_list.iplist", "content_hash", "stackit_loadbalancer_ip_list.iplist", "content_hash"),
+					resource.TestCheckResourceAttrPair("data.stackit_loadbalancer_ip_list.iplist", "number_of_ips", "stackit_loadbalancer_ip_list.iplist", "number_of_ips"),
 				),
 			},
 			// Labels-only update - file_content_version unchanged
@@ -109,12 +109,12 @@ func TestAccIpListResource(t *testing.T) {
 				ConfigVariables: ipListVarsLabelsUpdated,
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), ipListConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["name"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "file_content_version", testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["file_content_version"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["label_key"]), testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["label_value"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "number_of_ips", "2"),
-					resource.TestCheckResourceAttrSet("stackit_lb_ip_list.iplist", "content_hash"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "file_content_version", testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["file_content_version"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["label_key"]), testutil.ConvertConfigVariable(ipListVarsLabelsUpdated["label_value"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "number_of_ips", "2"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_ip_list.iplist", "content_hash"),
 				),
 			},
 			// Content rotation - file_content replaced, version bumped 1 → 2
@@ -122,23 +122,23 @@ func TestAccIpListResource(t *testing.T) {
 				ConfigVariables: ipListVarsContentRotated,
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), ipListConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "file_content_version", testutil.ConvertConfigVariable(ipListVarsContentRotated["file_content_version"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "number_of_ips", "2"),
-					resource.TestCheckResourceAttrSet("stackit_lb_ip_list.iplist", "content_hash"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "file_content_version", testutil.ConvertConfigVariable(ipListVarsContentRotated["file_content_version"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "number_of_ips", "2"),
+					resource.TestCheckResourceAttrSet("stackit_loadbalancer_ip_list.iplist", "content_hash"),
 					// all other fields must be unchanged
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVarsContentRotated["name"])),
-					resource.TestCheckResourceAttr("stackit_lb_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVarsContentRotated["label_key"]), testutil.ConvertConfigVariable(ipListVarsContentRotated["label_value"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "name", testutil.ConvertConfigVariable(ipListVarsContentRotated["name"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer_ip_list.iplist", "labels."+testutil.ConvertConfigVariable(ipListVarsContentRotated["label_key"]), testutil.ConvertConfigVariable(ipListVarsContentRotated["label_value"])),
 				),
 			},
 			// Import
 			{
 				ConfigVariables: ipListVars,
-				ResourceName:    "stackit_lb_ip_list.iplist",
+				ResourceName:    "stackit_loadbalancer_ip_list.iplist",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_lb_ip_list.iplist"]
+					r, ok := s.RootModule().Resources["stackit_loadbalancer_ip_list.iplist"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_lb_ip_list.iplist")
+						return "", fmt.Errorf("couldn't find resource stackit_loadbalancer_ip_list.iplist")
 					}
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
@@ -170,14 +170,14 @@ func testAccCheckIpListsDestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_lb_ip_list" {
+		if rs.Type != "stackit_loadbalancer_ip_list" {
 			continue
 		}
 
 		// terraform ID: "[project_id],[region],[name]"
 		parts := strings.Split(rs.Primary.ID, core.Separator)
 		if len(parts) != 3 {
-			return fmt.Errorf("unexpected terraform ID %q for stackit_lb_ip_list", rs.Primary.ID)
+			return fmt.Errorf("unexpected terraform ID %q for stackit_loadbalancer_ip_list", rs.Primary.ID)
 		}
 		projectId, region, name := parts[0], parts[1], parts[2]
 

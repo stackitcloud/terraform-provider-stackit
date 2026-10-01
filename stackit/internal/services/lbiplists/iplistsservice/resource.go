@@ -60,7 +60,7 @@ func NewIPListsServiceResource() resource.Resource {
 
 // Metadata implements [resource.Resource].
 func (r *ipListsServiceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_lb_ip_list"
+	resp.TypeName = req.ProviderTypeName + "_loadbalancer_ip_list"
 }
 
 // ModifyPlan implements [resource.ResourceWithModifyPlan].
@@ -100,7 +100,7 @@ func (r *ipListsServiceResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_lb_ip_list", "resource")
+	features.CheckExperimentEnabled(ctx, &r.providerData, features.LoadbalancerIPList, "stackit_loadbalancer_ip_list", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -117,18 +117,18 @@ func (r *ipListsServiceResource) Configure(ctx context.Context, req resource.Con
 func (r *ipListsServiceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                 "Load Balancer IP Lists resource schema." + core.ResourceRegionFallbackDocstring,
-		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
+		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`,region,`name`\".",
 		"project_id":           "STACKIT project ID to which the Load Balancer is associated.",
 		"region":               "STACKIT region.",
 		"labels":               "User-defined metadata as key-value pairs. Should not exceed 64 entries.",
 		"name":                 "Name of the Load Balancer IP List.",
 		"number_of_ips":        "The number of IP addresses in this IP list.",
-		"content_hash":         "The hash of the configured IP list.",
+		"content_hash":         "Unique SHA-256 hex fingerprint used to verify the stored IP list file content.",
 		"file_content":         "Raw upload payload as a plain UTF-8 string. Newline-separated .txt list of IPv4 CIDR entries, or CSV with cidr,labels columns (any other columns are ignored). Write-only - never stored in state and never returned by the API. To rotate the content, update this value AND increment file_content_version. Changing this field alone will NOT trigger an update.",
 		"file_content_version": "User-managed rotation counter for the file_content. Must be incremented every time file_content is changed. Terraform diffs this field to detect changes in the defined IP list - changing file_content alone will NOT trigger an update because it is write-only and never stored in state.",
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Load Balancer IP Lists resource schema.", core.Resource),
+		MarkdownDescription: features.AddExperimentDescription("Load Balancer IP Lists resource schema.", features.LoadbalancerIPList, core.Resource),
 		Description:         descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -167,7 +167,6 @@ func (r *ipListsServiceResource) Schema(_ context.Context, _ resource.SchemaRequ
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[0-9a-z](?:(?:[0-9a-z]|-){0,49}[0-9a-z])?$`), "must start and end with an alphanumeric character, may contain hyphens, and be 1-51 characters long",
 					),
-					validate.NoSeparator(),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -453,12 +452,8 @@ func mapFields(ctx context.Context, ipList *lbiplists.GetIPListResponse, model *
 	model.Name = types.StringValue(name)
 	model.Region = types.StringValue(region)
 
-	// no need to look at the errors here since the fields are not required
-	contentHash, _ := ipList.GetContentHashOk()
-	model.ContentHash = types.StringPointerValue(contentHash)
-
-	numberOfIps, _ := ipList.GetNumberOfIpsOk()
-	model.NumberOfIPs = types.Int32PointerValue(numberOfIps)
+	model.ContentHash = types.StringPointerValue(ipList.ContentHash)
+	model.NumberOfIPs = types.Int32PointerValue(ipList.NumberOfIps)
 
 	respLabels, _ := ipList.GetLabelsOk()
 	labels, err := utils.MapLabels(ctx, respLabels, model.Labels)

@@ -1,7 +1,6 @@
 package iplists
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -106,7 +105,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapDataSourceFields(context.Background(), tt.input, tt.state, testRegion)
+			err := mapDataSourceFields(t.Context(), tt.input, tt.state, testRegion)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
