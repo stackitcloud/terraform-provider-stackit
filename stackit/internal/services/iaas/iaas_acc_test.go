@@ -6000,7 +6000,7 @@ func TestAccDatasourceIaaSProject(t *testing.T) {
 	t.Logf("TestAccDatasourceIaaSProject name: %s", testutil.ConvertConfigVariable(testConfigIaasProject["name"]))
 	const (
 		publicProject = "data.stackit_iaas_project.public"
-		snaProject  = "data.stackit_iaas_project.sna"
+		snaProject    = "data.stackit_iaas_project.sna"
 	)
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,

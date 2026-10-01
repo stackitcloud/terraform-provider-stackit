@@ -41,7 +41,7 @@ resource "stackit_resourcemanager_project" "with_network_area" {
     "networkArea" = stackit_network_area.network_area.network_area_id
   }
   owner_email = var.owner_email
-  depends_on = [stackit_network_area_region.network_area_region]
+  depends_on  = [stackit_network_area_region.network_area_region]
 }
 
 
