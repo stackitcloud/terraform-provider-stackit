@@ -24,7 +24,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"default_values",
 			&objectstorage.AccessKey{
-				Expires: now.Format(time.RFC3339Nano),
+				Expires: *objectstorage.NewNullableString(new(now.Format(time.RFC3339))),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -41,7 +41,7 @@ func TestMapDatasourceFields(t *testing.T) {
 			"simple_values",
 			&objectstorage.AccessKey{
 				DisplayName: "name",
-				Expires:     now.Format(time.RFC3339),
+				Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339))),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -58,7 +58,7 @@ func TestMapDatasourceFields(t *testing.T) {
 			"empty_strings",
 			&objectstorage.AccessKey{
 				DisplayName: "",
-				Expires:     now.Format(time.RFC3339),
+				Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339))),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -74,7 +74,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"expiration_timestamp_with_fractional_seconds",
 			&objectstorage.AccessKey{
-				Expires: now.Format(time.RFC3339Nano),
+				Expires: *objectstorage.NewNullableString(new(now.Format(time.RFC3339))),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -96,7 +96,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"bad_time",
 			&objectstorage.AccessKey{
-				Expires: "foo-bar",
+				Expires: *objectstorage.NewNullableString(new("foo-bar")),
 			},
 			DataSourceModel{},
 			false,

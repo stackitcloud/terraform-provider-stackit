@@ -508,7 +508,7 @@ func toCreatePayload(model *Model) (*objectstorage.CreateAccessKeyPayload, error
 		return nil, fmt.Errorf("unable to parse expiration timestamp '%v': %w", *expirationTimestampValue, err)
 	}
 	return &objectstorage.CreateAccessKeyPayload{
-		Expires: &expirationTimestamp,
+		Expires: *objectstorage.NewNullableTime(&expirationTimestamp),
 	}, nil
 }
 
@@ -583,12 +583,12 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 		model.Id = utils.BuildInternalTerraformId(projectId, region, credentialsGroupId, credentialId)
 		model.Name = types.StringValue(credential.DisplayName)
 
-		if credential.Expires == "" {
+		if credential.Expires.Get() == nil || *credential.Expires.Get() == "" {
 			model.ExpirationTimestamp = types.StringNull()
 		} else {
 			// Harmonize the timestamp format
 			// E.g. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
-			expirationTimestamp, err := time.Parse(time.RFC3339, credential.Expires)
+			expirationTimestamp, err := time.Parse(time.RFC3339, *credential.Expires.Get())
 			if err != nil {
 				return foundCredential, fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", credential.Expires, err)
 			}
