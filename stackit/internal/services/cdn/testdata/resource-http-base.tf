@@ -24,6 +24,18 @@ variable "strip_response_cookies" {}
 variable "forward_host_header" {}
 variable "monthly_limit_bytes" {}
 variable "default_cache_duration" {}
+variable "cache_key_headers" {
+  type    = list(string)
+  default = null
+}
+variable "query_string_vary_enabled" {
+  type    = bool
+  default = null
+}
+variable "query_string_vary_parameters" {
+  type    = list(string)
+  default = null
+}
 
 # dns
 variable "dns_zone_name" {}
@@ -79,7 +91,12 @@ resource "stackit_cdn_distribution" "distribution" {
     forward_host_header    = var.forward_host_header
     monthly_limit_bytes    = var.monthly_limit_bytes
     default_cache_duration = var.default_cache_duration
-    waf                    = var.waf
+    cache_config = {
+      cache_key_headers            = var.cache_key_headers
+      query_string_vary_enabled    = var.query_string_vary_enabled
+      query_string_vary_parameters = var.query_string_vary_parameters
+    }
+    waf = var.waf
     backend = {
       type       = var.backend_http_type
       origin_url = var.backend_origin_url
