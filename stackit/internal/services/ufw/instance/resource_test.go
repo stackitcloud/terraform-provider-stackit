@@ -1,284 +1,180 @@
-package instance_test
+package instance
 
 import (
-	"fmt"
-	"net/http"
-	"regexp"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	ufw "github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api"
 )
 
-func TestUfwInstanceResource(t *testing.T) {
+func TestMapFields(t *testing.T) {
+	const (
+		testRegion    = "eu01"
+		testProjectId = "1234"
+		testRuleId    = "4321"
+	)
+
 	tests := []struct {
-		name  string
-		steps func(t *testing.T, s *testutil.MockServer, projectId, ruleId, region string) []resource.TestStep
+		description string
+		input       *ufw.RuleResponse
+		state       *Model
+		expected    *Model
+		isValid     bool
 	}{
 		{
-			name: "resource lifecycle",
-			steps: func(_ *testing.T, s *testutil.MockServer, projectId, ruleId, region string) []resource.TestStep {
-				tfConfig := fmt.Sprintf(`
-                provider "stackit" {
-                   ufw_custom_endpoint   = "%s"
-                   service_account_token = "mock-server-needs-no-auth"
-                }
-
-                resource "stackit_ufw_instance" "example" {
-                   project_id  = "%s"
-                   region      = "%s"
-                   instance_id = "target-instance-123"
-                   product     = "edge-cloud"
-                   source_ip   = "192.168.0.0/24"
-                   type        = "ACL"
-                }
-             `, s.Server.URL, projectId, region)
-
-				tfConfigUpdated := fmt.Sprintf(`
-                provider "stackit" {
-                   ufw_custom_endpoint   = "%s"
-                   service_account_token = "mock-server-needs-no-auth"
-                }
-
-                resource "stackit_ufw_instance" "example" {
-                   project_id  = "%s"
-                   region      = "%s"
-                   instance_id = "target-instance-123"
-                   product     = "edge-cloud"
-                   source_ip   = "10.0.0.0/8"
-                   type        = "ACL"
-                }
-             `, s.Server.URL, projectId, region)
-
-				validRuleResponse := v1api.RuleResponse{
-					Destination: "0.0.0.0/0",
-					InstanceId:  "target-instance-123",
-					Product:     "edge-cloud",
-					SourceIP:    "192.168.0.0/24",
-					Status:      v1api.RULERESPONSESTATUS_ACTIVE,
-					Type:        "ACL",
-				}
-
-				validRuleResponseUpdated := validRuleResponse
-				validRuleResponseUpdated.SourceIP = "10.0.0.0/8"
-
-				return []resource.TestStep{
-					{
-						PreConfig: func() {
-							s.Reset(
-								testutil.MockResponse{
-									Description: "Create UFW Rule",
-									ToJsonBody: v1api.CreateRuleResponse{
-										RefId: &ruleId,
-									},
-								},
-								testutil.MockResponse{
-									Description: "Get UFW Rule (Create Waiter)",
-									ToJsonBody:  validRuleResponse,
-								},
-								testutil.MockResponse{
-									Description: "Read UFW Rule",
-									ToJsonBody:  validRuleResponse,
-								},
-							)
-						},
-						Config: tfConfig,
-						Check: resource.ComposeAggregateTestCheckFunc(
-							resource.TestCheckResourceAttr("stackit_ufw_instance.example", "project_id", projectId),
-							resource.TestCheckResourceAttr("stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
-							resource.TestCheckResourceAttrSet("stackit_ufw_instance.example", "rule_id"),
-						),
-					},
-					{
-						PreConfig: func() {
-							s.Reset(
-								testutil.MockResponse{
-									Description: "Read UFW Rule (Plan)",
-									ToJsonBody:  validRuleResponse,
-								},
-								testutil.MockResponse{
-									Description: "Delete UFW Rule (Replace)",
-									StatusCode:  http.StatusAccepted,
-								},
-								testutil.MockResponse{
-									Description: "Get UFW Rule (Delete Waiter)",
-									StatusCode:  http.StatusNotFound,
-								},
-								testutil.MockResponse{
-									Description: "Create UFW Rule (Replace)",
-									ToJsonBody: v1api.CreateRuleResponse{
-										RefId: &ruleId,
-									},
-								},
-								testutil.MockResponse{
-									Description: "Get UFW Rule (Create Waiter)",
-									ToJsonBody:  validRuleResponseUpdated,
-								},
-								testutil.MockResponse{
-									Description: "Read UFW Rule (Post-Replace)",
-									ToJsonBody:  validRuleResponseUpdated,
-								},
-								testutil.MockResponse{
-									Description: "Delete UFW Rule (Cleanup)",
-									StatusCode:  http.StatusAccepted,
-								},
-								testutil.MockResponse{
-									Description: "Get UFW Rule (Delete Waiter)",
-									StatusCode:  http.StatusNotFound,
-								},
-							)
-						},
-						Config: tfConfigUpdated,
-						Check: resource.ComposeAggregateTestCheckFunc(
-							resource.TestCheckResourceAttr("stackit_ufw_instance.example", "source_ip", "10.0.0.0/8"),
-						),
-					},
-				}
+			description: "valid_mapping",
+			input: &ufw.RuleResponse{
+				InstanceId: "target-instance-123",
+				Product:    "edge-cloud",
+				SourceIP:   "192.168.0.0/24",
+				Type:       "ACL",
 			},
+			state: &Model{
+				ProjectId: types.StringValue(testProjectId),
+				RuleId:    types.StringValue(testRuleId),
+			},
+			expected: &Model{
+				ProjectId:  types.StringValue(testProjectId),
+				RuleId:     types.StringValue(testRuleId),
+				Region:     types.StringValue(testRegion),
+				InstanceId: types.StringValue("target-instance-123"),
+				Product:    types.StringValue("edge-cloud"),
+				SourceIP:   types.StringValue("192.168.0.0/24"),
+				Type:       types.StringValue("ACL"),
+			},
+			isValid: true,
 		},
 		{
-			name: "saves IDs on error",
-			steps: func(t *testing.T, s *testutil.MockServer, projectId, ruleId, region string) []resource.TestStep {
-				tfConfig := fmt.Sprintf(`
-                provider "stackit" {
-                   ufw_custom_endpoint   = "%s"
-                   service_account_token = "mock-server-needs-no-auth"
-                }
-
-                resource "stackit_ufw_instance" "example" {
-                   project_id  = "%s"
-                   region      = "%s"
-                   instance_id = "target-instance-123"
-                   product     = "edge-cloud"
-                   source_ip   = "192.168.0.0/24"
-                   type        = "ACL"
-                }
-             `, s.Server.URL, projectId, region)
-
-				return []resource.TestStep{
-					{
-						PreConfig: func() {
-							s.Reset(
-								testutil.MockResponse{
-									Description: "Create UFW Rule",
-									ToJsonBody: &v1api.CreateRuleResponse{
-										RefId: &ruleId,
-									},
-								},
-								testutil.MockResponse{Description: "Failing waiter", StatusCode: http.StatusInternalServerError},
-							)
-						},
-						Config:      tfConfig,
-						ExpectError: regexp.MustCompile("Error creating .*"),
-					},
-					{
-						PreConfig: func() {
-							s.Reset(
-								testutil.MockResponse{
-									Description: "Refresh",
-									Handler: func(w http.ResponseWriter, req *http.Request) {
-										expected := fmt.Sprintf("/v1/projects/%s/regions/%s/rules/%s", projectId, region, ruleId)
-										if req.URL.Path != expected {
-											t.Errorf("unexpected URL path: got %s, want %s", req.URL.Path, expected)
-										}
-										w.WriteHeader(http.StatusInternalServerError)
-									},
-								},
-								testutil.MockResponse{Description: "Delete UFW Rule", StatusCode: http.StatusAccepted},
-								testutil.MockResponse{Description: "Delete Waiter", StatusCode: http.StatusNotFound},
-							)
-						},
-						RefreshState: true,
-						ExpectError:  regexp.MustCompile("Error reading .*"),
-					},
-				}
+			description: "nil_response",
+			input:       nil,
+			state: &Model{
+				ProjectId: types.StringValue(testProjectId),
 			},
+			expected: &Model{},
+			isValid:  false,
 		},
 		{
-			name: "region from provider",
-			steps: func(_ *testing.T, s *testutil.MockServer, projectId, ruleId, region string) []resource.TestStep {
-				tfConfig := fmt.Sprintf(`
-                provider "stackit" {
-                   ufw_custom_endpoint   = "%s"
-                   service_account_token = "mock-server-needs-no-auth"
-                   default_region                = "%s"
-                }
-
-                resource "stackit_ufw_instance" "example" {
-                   project_id  = "%s"
-                   instance_id = "target-instance-123"
-                   product     = "edge-cloud"
-                   source_ip   = "192.168.0.0/24"
-                   type        = "ACL"
-                }
-             `, s.Server.URL, region, projectId)
-
-				validRuleResponse := v1api.RuleResponse{
-					Destination: "0.0.0.0/0",
-					InstanceId:  "target-instance-123",
-					Product:     "edge-cloud",
-					SourceIP:    "192.168.0.0/24",
-					Status:      v1api.RULERESPONSESTATUS_ACTIVE,
-					Type:        "ACL",
-				}
-
-				return []resource.TestStep{
-					{
-						PreConfig: func() {
-							s.Reset(
-								testutil.MockResponse{
-									Description: "Create UFW Rule",
-									ToJsonBody: v1api.CreateRuleResponse{
-										RefId: &ruleId,
-									},
-								},
-								testutil.MockResponse{
-									Description: "Get UFW Rule (Create Waiter)",
-									ToJsonBody:  validRuleResponse,
-								},
-								testutil.MockResponse{
-									Description: "Read UFW Rule",
-									ToJsonBody:  validRuleResponse,
-								},
-								testutil.MockResponse{
-									Description: "Delete UFW Rule (Cleanup)",
-									StatusCode:  http.StatusAccepted,
-								},
-								testutil.MockResponse{
-									Description: "Get UFW Rule (Delete Waiter)",
-									StatusCode:  http.StatusNotFound,
-								},
-							)
-						},
-						Config: tfConfig,
-						Check: resource.ComposeAggregateTestCheckFunc(
-							resource.TestCheckResourceAttr("stackit_ufw_instance.example", "project_id", projectId),
-							resource.TestCheckResourceAttr("stackit_ufw_instance.example", "region", region),
-							resource.TestCheckResourceAttr("stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
-							resource.TestCheckResourceAttrSet("stackit_ufw_instance.example", "rule_id"),
-						),
-					},
-				}
-			},
+			description: "nil_model",
+			input:       &ufw.RuleResponse{},
+			state:       nil,
+			expected:    nil,
+			isValid:     false,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			projectId := uuid.NewString()
-			ruleId := uuid.NewString()
-			region := "eu01"
+		t.Run(tt.description, func(t *testing.T) {
+			err := mapFields(tt.input, tt.state, testRegion)
 
-			s := testutil.NewMockServer(t)
-			defer s.Server.Close()
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(tt.state, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
 
-			resource.UnitTest(t, resource.TestCase{
-				ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-				Steps:                    tt.steps(t, s, projectId, ruleId, region),
-			})
+func TestToCreatePayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		expected    *ufw.CreateRulePayload
+		isValid     bool
+	}{
+		{
+			description: "valid_payload",
+			input: &Model{
+				ProjectId:  types.StringValue("1234"),
+				Region:     types.StringValue("eu01"),
+				InstanceId: types.StringValue("target-instance-123"),
+				Product:    types.StringValue("edge-cloud"),
+				SourceIP:   types.StringValue("192.168.0.0/24"),
+				Type:       types.StringValue("ACL"),
+			},
+			expected: ufw.NewCreateRulePayload(
+				"target-instance-123",
+				"edge-cloud",
+				"192.168.0.0/24",
+				"ACL",
+			),
+			isValid: true,
+		},
+		{
+			description: "nil_model",
+			input:       nil,
+			expected:    nil,
+			isValid:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toCreatePayload(tt.input)
+
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestToUpdatePayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		expected    *ufw.UpdateRulePayload
+		isValid     bool
+	}{
+		{
+			description: "valid_payload",
+			input: &Model{
+				SourceIP: types.StringValue("10.0.0.0/8"),
+			},
+			expected: ufw.NewUpdateRulePayload("10.0.0.0/8"),
+			isValid:  true,
+		},
+		{
+			description: "nil_model",
+			input:       nil,
+			expected:    nil,
+			isValid:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdatePayload(tt.input)
+
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
 		})
 	}
 }

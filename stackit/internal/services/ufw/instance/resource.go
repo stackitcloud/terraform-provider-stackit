@@ -34,7 +34,6 @@ var (
 )
 
 type Model struct {
-	Id         types.String `tfsdk:"id"`
 	RuleId     types.String `tfsdk:"rule_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Region     types.String `tfsdk:"region"`
@@ -77,13 +76,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Description: "UFW Instance (Rule) resource schema.",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Description: "Terraform internal resource identifier in format 'project_id,region,rule_id'.",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			"rule_id": schema.StringAttribute{
 				Description: "The rule UUID.",
 				Computed:    true,
@@ -186,7 +178,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		"project_id": projectId,
 		"region":     region,
 		"rule_id":    ruleId,
-		"id":         utils.BuildInternalTerraformId(projectId, region, ruleId).ValueString(),
 	})
 	if resp.Diagnostics.HasError() {
 		return
@@ -402,12 +393,6 @@ func mapFields(ruleResp *ufw.RuleResponse, model *Model, region string) error {
 	}
 
 	model.Region = types.StringValue(region)
-
-	model.Id = utils.BuildInternalTerraformId(
-		model.ProjectId.ValueString(),
-		region,
-		model.RuleId.ValueString(),
-	)
 
 	model.InstanceId = types.StringValue(ruleResp.InstanceId)
 	model.Product = types.StringValue(ruleResp.Product)
