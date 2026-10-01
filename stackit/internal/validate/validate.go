@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -327,6 +328,41 @@ func FileExists() *Validator {
 	}
 }
 
+// FileExistsUnlessDisabled validates file existence unless a sibling boolean attribute is true.
+func FileExistsUnlessDisabled(disableFlagName string) *Validator {
+	description := "file must exist"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+				return
+			}
+
+			var disablePlanValidation types.Bool
+			disablePath := req.Path.ParentPath().AtName(disableFlagName)
+
+			diags := req.Config.GetAttribute(ctx, disablePath, &disablePlanValidation)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+
+			if disablePlanValidation.IsUnknown() || disablePlanValidation.ValueBool() {
+				return
+			}
+
+			if _, err := os.Stat(req.ConfigValue.ValueString()); err != nil {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+			}
+		},
+	}
+}
+
 func ValidDurationString() *Validator {
 	description := "value must be in a valid duration string. Such as \"300ms\", \"-1.5h\" or \"2h45m\".\nValid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\"."
 
@@ -457,6 +493,49 @@ func NoLeadingOrTrailingWhitespace() *Validator {
 					description,
 					val,
 				))
+			}
+		},
+	}
+}
+
+// URL returns a validator that checks if the string is a valid URL.
+// If allowedSchemes are provided, the URL's scheme must match one of them.
+func URL(allowedSchemes ...string) *Validator {
+	var description string
+	if len(allowedSchemes) > 0 {
+		description = fmt.Sprintf("value must be a valid URL with scheme %s", strings.Join(allowedSchemes, " or "))
+	} else {
+		description = "value must be a valid URL"
+	}
+
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			u, err := url.ParseRequestURI(req.ConfigValue.ValueString())
+			if err != nil || u.Host == "" || u.Scheme == "" {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
+				return
+			}
+
+			if len(allowedSchemes) > 0 {
+				schemeValid := false
+				for _, scheme := range allowedSchemes {
+					if strings.EqualFold(u.Scheme, scheme) {
+						schemeValid = true
+						break
+					}
+				}
+				if !schemeValid {
+					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+						req.Path,
+						description,
+						req.ConfigValue.ValueString(),
+					))
+				}
 			}
 		},
 	}

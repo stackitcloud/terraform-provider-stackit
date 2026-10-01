@@ -4781,7 +4781,7 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
 					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMin["name"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMin["disk_format"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMin["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testConfigImageVarsMin["local_file_path"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
@@ -4834,7 +4834,7 @@ func TestAccImageMin(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"local_file_path"},
+				ImportStateVerifyIgnore: []string{"image"},
 			},
 			// Update
 			{
@@ -4845,7 +4845,7 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
 					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["name"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["disk_format"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["local_file_path"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
@@ -4873,7 +4873,7 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
 					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMax["name"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMax["disk_format"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMax["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testConfigImageVarsMax["local_file_path"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "min_disk_size", testutil.ConvertConfigVariable(testConfigImageVarsMax["min_disk_size"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", testutil.ConvertConfigVariable(testConfigImageVarsMax["min_ram"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "labels.acc-test", testutil.ConvertConfigVariable(testConfigImageVarsMax["label"])),
@@ -4958,7 +4958,7 @@ func TestAccImageMax(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"local_file_path"},
+				ImportStateVerifyIgnore: []string{"image"},
 			},
 			// Update
 			{
@@ -4969,7 +4969,7 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
 					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["name"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["disk_format"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["local_file_path"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "min_disk_size", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["min_disk_size"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "min_ram", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["min_ram"])),
 					resource.TestCheckResourceAttr("stackit_image.image", "labels.acc-test", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["label"])),
