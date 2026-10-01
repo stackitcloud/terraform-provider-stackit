@@ -75,6 +75,7 @@ import (
 	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
 	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
 	kmsWrappingKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/wrapping-key"
+	iplists "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/lbiplists/iplistsservice"
 	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
@@ -812,6 +813,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 		vpnConnection.NewVPNConnectionDataSource,
+		iplists.NewIPListsServiceDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -928,6 +930,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		valkeyCredential.NewCredentialResource,
 		vpnConnection.NewVpnConnectionResource,
 		vpnGateway.NewGatewayResource,
+		iplists.NewIPListsServiceResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

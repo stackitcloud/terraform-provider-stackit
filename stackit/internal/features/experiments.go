@@ -19,9 +19,10 @@ const (
 	DremioExperiment        = "dremio"
 	VpcExperiment           = "vpc"
 	SkeExperiment           = "ske"
+	LoadbalancerIPList      = "loadbalancer-ip-list"
 )
 
-var AvailableExperiments = []string{DremioExperiment, IamExperiment, NetworkExperiment, RoutingTablesExperiment, VpcExperiment, SkeExperiment}
+var AvailableExperiments = []string{DremioExperiment, IamExperiment, NetworkExperiment, RoutingTablesExperiment, VpcExperiment, SkeExperiment, LoadbalancerIPList}
 
 // Check if an experiment is valid.
 func ValidExperiment(experiment string, diags *diag.Diagnostics) bool {
