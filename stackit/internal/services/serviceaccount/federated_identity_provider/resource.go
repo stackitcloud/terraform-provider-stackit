@@ -72,7 +72,7 @@ func NewServiceAccountFederatedIdentityProviderResource() resource.Resource {
 }
 
 type serviceAccountFederatedIdentityProviderResource struct {
-	client *serviceaccount.APIClient
+	client serviceaccount.DefaultAPI
 }
 
 func (r *serviceAccountFederatedIdentityProviderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -159,16 +159,13 @@ func (r *serviceAccountFederatedIdentityProviderResource) Schema(_ context.Conte
 }
 
 func (r *serviceAccountFederatedIdentityProviderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ServiceAccountV2Client
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -193,7 +190,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 		return
 	}
 
-	apiResp, err := r.client.DefaultAPI.CreateFederatedIdentityProvider(ctx, projectId, serviceAccountEmail).
+	apiResp, err := r.client.CreateFederatedIdentityProvider(ctx, projectId, serviceAccountEmail).
 		CreateFederatedIdentityProviderPayload(*payload).
 		Execute()
 	if err != nil {
@@ -225,7 +222,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	federationId := model.FederationId.ValueString()
 
-	apiResp, err := r.client.DefaultAPI.GetFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
+	apiResp, err := r.client.GetFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		Execute()
 
 	if err != nil {
@@ -280,7 +277,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 		return
 	}
 
-	apiResp, err := r.client.DefaultAPI.PartialUpdateServiceAccountFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
+	apiResp, err := r.client.PartialUpdateServiceAccountFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		PartialUpdateServiceAccountFederatedIdentityProviderPayload(*payload).
 		Execute()
 	if err != nil {
@@ -312,7 +309,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Delete(ctx context.Con
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	federationId := model.FederationId.ValueString()
 
-	err := r.client.DefaultAPI.DeleteServiceFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
+	err := r.client.DeleteServiceFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting federated identity provider", fmt.Sprintf("Calling API: %v", err))

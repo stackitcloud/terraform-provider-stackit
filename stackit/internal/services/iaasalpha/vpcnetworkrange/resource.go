@@ -28,7 +28,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -70,7 +69,7 @@ func NewVpcNetworkRangeResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type vpcNetworkRangeResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -81,18 +80,15 @@ func (r *vpcNetworkRangeResource) Metadata(_ context.Context, req resource.Metad
 
 // Configure adds the provider configured client to the resource.
 func (r *vpcNetworkRangeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_network_range", core.Resource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2AlphaClient
 
-	r.client = iaasAlphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_network_range", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -256,7 +252,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	waiterTimeout := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -282,7 +278,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	// Create new network range
-	networkRange, err := r.client.DefaultAPI.CreateVPCNetworkRange(ctx, projectId, vpcId, region).CreateVPCNetworkRangePayload(*payload).Execute()
+	networkRange, err := r.client.CreateVPCNetworkRange(ctx, projectId, vpcId, region).CreateVPCNetworkRangePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -306,7 +302,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	waitResp, err := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, projectId, vpcId, region, *networkRange.VPCNetworkRangeIPv4.Id).WaitWithContext(ctx)
+	waitResp, err := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client, projectId, vpcId, region, *networkRange.VPCNetworkRangeIPv4.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Waiting for network range become ready: %v", err))
 		return
@@ -360,7 +356,7 @@ func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadReq
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_range_id", networkRangeId)
 
-	networkRangeResp, err := r.client.DefaultAPI.GetVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).Execute()
+	networkRangeResp, err := r.client.GetVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -396,7 +392,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	waiterTimeout := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -431,7 +427,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 	// Update existing network
-	_, err = r.client.DefaultAPI.UpdateVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).UpdateVPCNetworkRangePayload(*payload).Execute()
+	_, err = r.client.UpdateVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).UpdateVPCNetworkRangePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network range", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -439,7 +435,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, projectId, vpcId, region, networkRangeId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client, projectId, vpcId, region, networkRangeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error update network range", fmt.Sprintf("Waiting for network range become ready: %v", err))
 		return
@@ -468,7 +464,7 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	waiterTimeout := wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -490,7 +486,7 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 	ctx = tflog.SetField(ctx, "network_range_id", networkRangeId)
 
 	// Delete existing vpc
-	err := r.client.DefaultAPI.DeleteVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).Execute()
+	err := r.client.DeleteVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -502,7 +498,7 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, projectId, vpcId, region, networkRangeId).WaitWithContext(ctx)
+	_, err = wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client, projectId, vpcId, region, networkRangeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network range", fmt.Sprintf("Waiting for network range become deleted: %v", err))
 		return

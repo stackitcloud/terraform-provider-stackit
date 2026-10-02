@@ -23,7 +23,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -70,7 +69,7 @@ func NewVpcRoutingTableResource() resource.Resource {
 
 // vpcRoutingTableResource is the resource implementation.
 type vpcRoutingTableResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -82,21 +81,19 @@ func (r *vpcRoutingTableResource) Metadata(_ context.Context, req resource.Metad
 // Configure adds the provider configured client to the resource.
 func (r *vpcRoutingTableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasAlphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "IaaS v2alpha client configured")
 }
 
@@ -248,7 +245,7 @@ func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	routingTable, err := r.client.DefaultAPI.AddVPCRoutingTable(ctx, projectId, vpcId, region).AddVPCRoutingTablePayload(*payload).Execute()
+	routingTable, err := r.client.AddVPCRoutingTable(ctx, projectId, vpcId, region).AddVPCRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc routing table", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -309,7 +306,7 @@ func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadReq
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 
-	routingTableResp, err := r.client.DefaultAPI.GetVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).Execute()
+	routingTableResp, err := r.client.GetVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -379,7 +376,7 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	routingTable, err := r.client.DefaultAPI.UpdateVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).UpdateVPCRoutingTablePayload(*payload).Execute()
+	routingTable, err := r.client.UpdateVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).UpdateVPCRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc routing table", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -425,7 +422,7 @@ func (r *vpcRoutingTableResource) Delete(ctx context.Context, req resource.Delet
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 
 	// Delete existing routing table
-	err := r.client.DefaultAPI.DeleteVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).Execute()
+	err := r.client.DeleteVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)

@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -36,7 +33,7 @@ func NewPublicIpRangesDataSource() datasource.DataSource {
 
 // publicIpRangesDataSource is the data source implementation.
 type publicIpRangesDataSource struct {
-	client *iaas.APIClient
+	client iaas.DefaultAPI
 }
 
 type Model struct {
@@ -55,16 +52,13 @@ func (d *publicIpRangesDataSource) Metadata(_ context.Context, req datasource.Me
 }
 
 func (d *publicIpRangesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -119,7 +113,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 
 	ctx = core.InitProviderContext(ctx)
 
-	publicIpRangeResp, err := d.client.DefaultAPI.ListPublicIPRanges(ctx).Execute()
+	publicIpRangeResp, err := d.client.ListPublicIPRanges(ctx).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

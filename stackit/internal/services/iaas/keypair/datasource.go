@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -29,7 +26,7 @@ func NewKeyPairDataSource() datasource.DataSource {
 
 // keyPairDataSource is the data source implementation.
 type keyPairDataSource struct {
-	client *iaas.APIClient
+	client iaas.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -38,16 +35,13 @@ func (d *keyPairDataSource) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *keyPairDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -98,7 +92,7 @@ func (d *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	ctx = tflog.SetField(ctx, "name", name)
 
-	keypairResp, err := d.client.DefaultAPI.GetKeyPair(ctx, name).Execute()
+	keypairResp, err := d.client.GetKeyPair(ctx, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

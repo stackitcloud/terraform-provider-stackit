@@ -491,7 +491,7 @@ func TestUpdateACL(t *testing.T) {
 			}
 
 			// Run test
-			err = updateACL(context.Background(), "pid", "iid", tt.acl, client)
+			err = updateACL(context.Background(), "pid", "iid", tt.acl, client.DefaultAPI)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

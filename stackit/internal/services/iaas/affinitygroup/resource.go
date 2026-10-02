@@ -8,12 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -53,7 +49,7 @@ func NewAffinityGroupResource() resource.Resource {
 
 // affinityGroupResource is the resource implementation.
 type affinityGroupResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -94,17 +90,14 @@ func (r *affinityGroupResource) ModifyPlan(ctx context.Context, req resource.Mod
 
 // Configure adds the provider configured client to the resource.
 func (r *affinityGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -210,7 +203,7 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	affinityGroupResp, err := r.client.DefaultAPI.CreateAffinityGroup(ctx, projectId, region).CreateAffinityGroupPayload(*payload).Execute()
+	affinityGroupResp, err := r.client.CreateAffinityGroup(ctx, projectId, region).CreateAffinityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -258,7 +251,7 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
-	affinityGroupResp, err := r.client.DefaultAPI.GetAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
+	affinityGroupResp, err := r.client.GetAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -309,7 +302,7 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
 	// Delete existing affinity group
-	err := r.client.DefaultAPI.DeleteAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
+	err := r.client.DeleteAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

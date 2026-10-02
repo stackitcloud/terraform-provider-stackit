@@ -14,9 +14,8 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -42,7 +41,7 @@ func NewSnapshotPoliciesDataSource() datasource.DataSource {
 }
 
 type policiesDataSource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -52,21 +51,19 @@ func (r *policiesDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 func (r *policiesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_snapshot_policies", core.Datasource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured.")
 }
 
@@ -201,7 +198,7 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	listRequest := r.client.DefaultAPI.ListSnapshotPolicies(ctx, projectId)
+	listRequest := r.client.ListSnapshotPolicies(ctx, projectId)
 	if !utils.IsUndefined(model.Immutable) {
 		switch model.Immutable.ValueString() {
 		case ImmutableFilterImmutableOnly:

@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -31,7 +28,7 @@ func NewSecurityGroupRuleDataSource() datasource.DataSource {
 
 // securityGroupRuleDataSource is the data source implementation.
 type securityGroupRuleDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -41,17 +38,14 @@ func (d *securityGroupRuleDataSource) Metadata(_ context.Context, req datasource
 }
 
 func (d *securityGroupRuleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -183,7 +177,7 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
-	securityGroupRuleResp, err := d.client.DefaultAPI.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
+	securityGroupRuleResp, err := d.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

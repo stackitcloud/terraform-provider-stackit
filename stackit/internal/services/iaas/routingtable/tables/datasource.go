@@ -7,9 +7,6 @@ import (
 
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,7 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -44,7 +42,7 @@ func NewRoutingTablesDataSource() datasource.DataSource {
 
 // routingTableDataSource is the data source implementation.
 type routingTablesDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -54,22 +52,19 @@ func (d *routingTablesDataSource) Metadata(_ context.Context, req datasource.Met
 }
 
 func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_tables", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -135,7 +130,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	routingTablesResp, err := d.client.DefaultAPI.ListRoutingTablesOfArea(ctx, organizationId, networkAreaId, region).Execute()
+	routingTablesResp, err := d.client.ListRoutingTablesOfArea(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

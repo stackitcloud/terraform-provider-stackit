@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -32,7 +29,7 @@ func NewNetworkAreaRouteDataSource() datasource.DataSource {
 
 // networkDataSource is the data source implementation.
 type networkAreaRouteDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -42,17 +39,14 @@ func (d *networkAreaRouteDataSource) Metadata(_ context.Context, req datasource.
 }
 
 func (d *networkAreaRouteDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -155,7 +149,7 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
-	networkAreaRouteResp, err := d.client.DefaultAPI.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
+	networkAreaRouteResp, err := d.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

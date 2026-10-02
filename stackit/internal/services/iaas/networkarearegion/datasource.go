@@ -9,9 +9,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -34,7 +31,7 @@ func NewNetworkAreaRegionDataSource() datasource.DataSource {
 
 // networkAreaRegionDataSource is the data source implementation.
 type networkAreaRegionDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,17 +41,14 @@ func (d *networkAreaRegionDataSource) Metadata(_ context.Context, req datasource
 }
 
 func (d *networkAreaRegionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -163,7 +157,7 @@ func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.R
 
 	ctx = core.InitProviderContext(ctx)
 
-	networkAreaRegionResp, err := d.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	networkAreaRegionResp, err := d.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "Reading network area region", fmt.Sprintf("Region configuration for %q for network area %q does not exist.", region, networkAreaId), nil)
 		resp.State.RemoveResource(ctx)

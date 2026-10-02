@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
-	serverupdateUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -25,7 +23,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -60,7 +57,7 @@ func NewScheduleResource() resource.Resource {
 
 // scheduleResource is the resource implementation.
 type scheduleResource struct {
-	client       *serverupdate.APIClient
+	client       serverupdate.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -101,17 +98,14 @@ func (r *scheduleResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *scheduleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serverupdateUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ServerUpdateV2Client
+
 	tflog.Info(ctx, "Server update client configured.")
 }
 
@@ -246,7 +240,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	scheduleResp, err := r.client.DefaultAPI.CreateUpdateSchedule(ctx, projectId, serverId, region).CreateUpdateSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.CreateUpdateSchedule(ctx, projectId, serverId, region).CreateUpdateSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -295,7 +289,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 
-	scheduleResp, err := r.client.DefaultAPI.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
+	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -351,7 +345,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	scheduleResp, err := r.client.DefaultAPI.UpdateUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).UpdateUpdateSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.UpdateUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).UpdateUpdateSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -393,7 +387,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 
-	err := r.client.DefaultAPI.DeleteUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
+	err := r.client.DeleteUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -460,13 +454,13 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model, region strin
 // If already enabled, just continues
 
 // Deprecated: This function will be removed on 26.09.2026. Use `server_update_enable` resource instead.
-func enableUpdatesService(ctx context.Context, model *Model, client *serverupdate.APIClient, region string) error {
+func enableUpdatesService(ctx context.Context, model *Model, client serverupdate.DefaultAPI, region string) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	payload := serverupdate.EnableServiceResourcePayload{}
 
 	tflog.Debug(ctx, "Enabling server update service")
-	err := client.DefaultAPI.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(payload).Execute()
+	err := client.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(payload).Execute()
 	if err != nil {
 		if strings.Contains(err.Error(), "Tried to activate already active service") {
 			tflog.Debug(ctx, "Service for server update already enabled")

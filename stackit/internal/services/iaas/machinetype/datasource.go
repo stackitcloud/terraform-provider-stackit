@@ -18,10 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -48,7 +46,7 @@ func NewMachineTypeDataSource() datasource.DataSource {
 }
 
 type machineTypeDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -57,22 +55,18 @@ func (d *machineTypeDataSource) Metadata(_ context.Context, req datasource.Metad
 }
 
 func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	client := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = client
 
 	tflog.Info(ctx, "IAAS client configured")
 }
@@ -163,7 +157,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "filter_is_null", model.Filter.IsNull())
 	ctx = tflog.SetField(ctx, "filter_is_unknown", model.Filter.IsUnknown())
 
-	listMachineTypeReq := d.client.DefaultAPI.ListMachineTypes(ctx, projectId, region)
+	listMachineTypeReq := d.client.ListMachineTypes(ctx, projectId, region)
 
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() && strings.TrimSpace(model.Filter.ValueString()) != "" {
 		listMachineTypeReq = listMachineTypeReq.Filter(strings.TrimSpace(model.Filter.ValueString()))

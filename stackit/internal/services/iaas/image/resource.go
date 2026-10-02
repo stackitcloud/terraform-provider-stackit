@@ -10,9 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -114,7 +113,7 @@ func NewImageResource() resource.Resource {
 
 // imageResource is the resource implementation.
 type imageResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -155,17 +154,14 @@ func (r *imageResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 
 // Configure adds the provider configured client to the resource.
 func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -436,7 +432,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new image
-	imageCreateResp, err := r.client.DefaultAPI.CreateImage(ctx, projectId, region).CreateImagePayload(*payload).Execute()
+	imageCreateResp, err := r.client.CreateImage(ctx, projectId, region).CreateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -447,7 +443,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "image_id", imageCreateResp.Id)
 
 	// Get the image object, as the creation response does not contain all fields
-	image, err := r.client.DefaultAPI.GetImage(ctx, projectId, region, imageCreateResp.Id).Execute()
+	image, err := r.client.GetImage(ctx, projectId, region, imageCreateResp.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -475,8 +471,8 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Wait for image to become available
-	waiter := wait.UploadImageWaitHandler(ctx, r.client.DefaultAPI, projectId, region, imageCreateResp.Id) //nolint:tfwriteid // false positive - id fields are actually stored already using the mapFields() call above
-	waiter = waiter.SetTimeout(7 * 24 * time.Hour)                                                         // Set timeout to one week, to make the timeout useless
+	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, region, imageCreateResp.Id) //nolint:tfwriteid // false positive - id fields are actually stored already using the mapFields() call above
+	waiter = waiter.SetTimeout(7 * 24 * time.Hour)                                              // Set timeout to one week, to make the timeout useless
 	waitResp, err := waiter.WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Waiting for image to become available: %v", err))
@@ -523,7 +519,7 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
-	imageResp, err := r.client.DefaultAPI.GetImage(ctx, projectId, region, imageId).Execute()
+	imageResp, err := r.client.GetImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -586,7 +582,7 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 	// Update existing image
-	updatedImage, err := r.client.DefaultAPI.UpdateImage(ctx, projectId, region, imageId).UpdateImagePayload(*payload).Execute()
+	updatedImage, err := r.client.UpdateImage(ctx, projectId, region, imageId).UpdateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -627,7 +623,7 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing image
-	err := r.client.DefaultAPI.DeleteImage(ctx, projectId, region, imageId).Execute()
+	err := r.client.DeleteImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -640,7 +636,7 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteImageWaitHandler(ctx, r.client.DefaultAPI, projectId, region, imageId).WaitWithContext(ctx)
+	_, err = wait.DeleteImageWaitHandler(ctx, r.client, projectId, region, imageId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("image deletion waiting: %v", err))
 		return

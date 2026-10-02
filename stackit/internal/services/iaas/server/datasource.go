@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -66,7 +65,7 @@ func NewServerDataSource() datasource.DataSource {
 
 // serverDataSource is the data source implementation.
 type serverDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -76,17 +75,14 @@ func (d *serverDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 }
 
 func (d *serverDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -218,7 +214,7 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := d.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
+	serverReq := d.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	serverResp, err := serverReq.Execute()
 	if err != nil {
