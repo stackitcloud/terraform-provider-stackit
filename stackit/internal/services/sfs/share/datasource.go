@@ -16,7 +16,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -53,11 +52,6 @@ func (r *shareDataSource) Configure(ctx context.Context, req datasource.Configur
 	var ok bool
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		return
-	}
-
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_share", core.Datasource)
-	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -127,7 +121,7 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 func (r *shareDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "SFS Share schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
+		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
