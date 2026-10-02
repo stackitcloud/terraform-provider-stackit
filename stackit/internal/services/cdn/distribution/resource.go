@@ -447,13 +447,6 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 					"redirects": schema.SingleNestedAttribute{
 						Optional:    true,
 						Description: schemaDescriptions["config_redirects"],
-						Validators: []validator.Object{
-							objectvalidator.ConflictsWith(
-								// Redirects are only supported for backend type HTTP
-								// Bucket backends can be identified by the required attribute bucket_url
-								path.MatchRoot("config").AtName("backend").AtName("bucket_url"),
-							),
-						},
 						Attributes: map[string]schema.Attribute{
 							"rules": schema.ListNestedAttribute{
 								Description: schemaDescriptions["config_redirects_rules"],
@@ -750,6 +743,22 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 }
 
 func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	// Redirects are only supported for backend type http
+	var backendType types.String
+	var redirects types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("backend").AtName("type"), &backendType)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("redirects"), &redirects)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !utils.IsUndefined(backendType) && backendType.ValueString() != "http" && !redirects.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("config").AtName("redirects"),
+			"Invalid redirects config",
+			fmt.Sprintf("Redirects can only be configured for backend type \"http\", got %q.", backendType.ValueString()),
+		)
+	}
+
 	var model Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
