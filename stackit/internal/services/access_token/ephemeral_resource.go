@@ -28,7 +28,7 @@ type accessTokenEphemeralResource struct {
 }
 
 func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
-	ephemeralProviderData, ok := core.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	ephemeralProviderData, _, ok := core.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}

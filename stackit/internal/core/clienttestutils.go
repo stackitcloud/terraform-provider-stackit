@@ -4,6 +4,7 @@ import (
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
+	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	certificates "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
@@ -40,6 +41,7 @@ import (
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
+	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
@@ -47,6 +49,7 @@ var _ ClientFactory = &MockClientFactory{}
 
 type MockClientFactory struct {
 	AlbCertificatesV2ClientMock     certificates.DefaultAPI
+	AutomationV1ClientMock          automation.DefaultAPI
 	AlbV2ClientMock                 albSdk.DefaultAPI
 	AlbWafV1ClientMock              albWaf.DefaultAPI
 	AuthorizationV2ClientMock       authorization.DefaultAPI
@@ -85,7 +88,24 @@ type MockClientFactory struct {
 	SqlServerFlexV3ClientMock       sqlserverflex.DefaultAPI
 	TelemetryLinkV1ClientMock       telemetrylink.DefaultAPI
 	TelemetryRouterV1ClientMock     telemetryrouter.DefaultAPI
+	ValkeyV2ClientMock              valkey.DefaultAPI
 	VpnV1ClientMock                 vpn.DefaultAPI
+}
+
+func (m *MockClientFactory) newValkeyV2Client() (valkey.DefaultAPI, error) {
+	if m.ValkeyV2ClientMock != nil {
+		return m.ValkeyV2ClientMock, nil
+	}
+
+	return valkey.DefaultAPIServiceMock{}, nil
+}
+
+func (m *MockClientFactory) newAutomationV1Client() (automation.DefaultAPI, error) {
+	if m.AutomationV1ClientMock != nil {
+		return m.AutomationV1ClientMock, nil
+	}
+
+	return automation.DefaultAPIServiceMock{}, nil
 }
 
 func (m *MockClientFactory) newAlbV2Client() (albSdk.DefaultAPI, error) {

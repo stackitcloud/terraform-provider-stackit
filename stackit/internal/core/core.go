@@ -72,11 +72,6 @@ const (
 var DefaultTimeoutMargin = 3 * time.Minute
 var DefaultOperationTimeout = 30 * time.Minute
 
-type EphemeralProviderData struct {
-	ProviderData
-	RoundTripper http.RoundTripper
-}
-
 type CustomEndpointConfig struct {
 	ALBCertificatesCustomEndpoint   string
 	ALBCustomEndpoint               string
@@ -120,6 +115,58 @@ type CustomEndpointConfig struct {
 	VpnCustomEndpoint               string
 }
 
+type ProviderData struct {
+	ServiceAccountEmail string
+	DefaultRegion       string
+	EnableBetaResources bool
+	Experiments         []string
+}
+
+// GetRegion returns the effective region for the provider, falling back to the deprecated _region_ attribute
+func (pd *ProviderData) GetRegion() string {
+	if pd.DefaultRegion != "" {
+		return pd.DefaultRegion
+	}
+	return "eu01"
+}
+
+func (pd *ProviderData) GetRegionWithOverride(overrideRegion types.String) string {
+	if overrideRegion.IsUnknown() || overrideRegion.IsNull() {
+		return pd.GetRegion()
+	}
+	return overrideRegion.ValueString()
+}
+
+// providerDataInternal encapsulates the provider data and the client collection. The Terraform plugin framework
+// only allows for one struct to be passed as provider data. Therefore, we use a non-exposed struct type to pass both
+// the struct types we need (provider data and client collection) to each resource and datasource. The encapsulated
+// structs can only be accessed by using core.ParseProviderData within the resource and datasource implementations.
+type providerDataInternal struct {
+	// The client collection isn't intended to be stored inside resource & datasource implementations, the provider data
+	// struct is intended for that. That's why the client collection is **not** part of the provider data itself.
+	// This is the whole reason to have the "ProviderData" struct type and a "providerDataInternal" struct type.
+
+	// providerData is the public provider data
+	providerData ProviderData
+	clients      ClientCollection
+}
+
+// ephemeralProviderDataInternal is the same as providerDataInternal, just for ephemeral resources instead of regular
+// resources and datasources. The encapsulated structs can only be accessed by using core.ParseEphemeralProviderData
+// within the ephemeral resource implementations.
+type ephemeralProviderDataInternal struct {
+	// ephemeralProviderData is the public ephemeralprovider data
+	ephemeralProviderData EphemeralProviderData
+	clients               ClientCollection
+}
+
+// EphemeralProviderData is the provider data which should be accessible within ephemeral resource implementations.
+type EphemeralProviderData struct {
+	ProviderData
+	RoundTripper http.RoundTripper
+}
+
+// NewProviderDataInternal creates a new providerDataInternal struct using the passed ClientFactory implementation.
 func NewProviderDataInternal(providerData ProviderData, clientFactory ClientFactory) (providerDataInternal, error) {
 	clients, err := initClientCollection(clientFactory)
 	if err != nil {
@@ -132,12 +179,25 @@ func NewProviderDataInternal(providerData ProviderData, clientFactory ClientFact
 	}, nil
 }
 
-type providerDataInternal struct {
-	// providerData is the public provider data
-	providerData ProviderData
-	clients      ClientCollection
+// NewEphemeralProviderDataInternal creates a new ephemeralProviderDataInternal struct using the passed ClientFactory
+// implementation.
+func NewEphemeralProviderDataInternal(providerData ProviderData, clientFactory ClientFactory, rt http.RoundTripper) (ephemeralProviderDataInternal, error) {
+	clients, err := initClientCollection(clientFactory)
+	if err != nil {
+		return ephemeralProviderDataInternal{}, err
+	}
+
+	return ephemeralProviderDataInternal{
+		ephemeralProviderData: EphemeralProviderData{
+			ProviderData: providerData,
+			RoundTripper: rt,
+		},
+		clients: *clients,
+	}, nil
 }
 
+// ClientCollection is a collection of clients which are available within each resource, datasource and ephemeral
+// resource implementation.
 type ClientCollection struct {
 	AlbCertificatesV2Client     certSdk.DefaultAPI
 	AlbV2Client                 alb.DefaultAPI
@@ -183,6 +243,8 @@ type ClientCollection struct {
 	VpnV1Client                 vpn.DefaultAPI
 }
 
+// ParseProviderData is used to extract the ProviderData struct and the ClientCollection struct from a
+// providerDataInternal struct. Terraform plugin framework doesn't allow for more type safety, that's why any is used.
 func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, ClientCollection, bool) {
 	// Prevent panic if the provider has not been configured.
 	if providerData == nil {
@@ -197,40 +259,22 @@ func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagno
 	return stackitProviderDataInternal.providerData, stackitProviderDataInternal.clients, true
 }
 
-func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (EphemeralProviderData, bool) {
+// ParseEphemeralProviderData is used to extract the EphemeralProviderData struct and the ClientCollection struct from a
+// ephemeralProviderDataInternal struct. Terraform plugin framework doesn't allow for more type safety, that's why any
+// is used.
+func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (EphemeralProviderData, ClientCollection, bool) {
 	// Prevent panic if the provider has not been configured.
 	if providerData == nil {
-		return EphemeralProviderData{}, false
+		return EphemeralProviderData{}, ClientCollection{}, false
 	}
 
-	stackitProviderData, ok := providerData.(EphemeralProviderData)
+	stackitEphemeralProviderDataInternal, ok := providerData.(ephemeralProviderDataInternal)
 	if !ok {
-		LogAndAddError(ctx, diags, "Error configuring API client", "Expected configure type core.EphemeralProviderData")
-		return EphemeralProviderData{}, false
+		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.ephemeralProviderDataInternal, got %T", providerData))
+		return EphemeralProviderData{}, ClientCollection{}, false
 	}
-	return stackitProviderData, true
-}
 
-type ProviderData struct {
-	ServiceAccountEmail string
-	DefaultRegion       string
-	EnableBetaResources bool
-	Experiments         []string
-}
-
-// GetRegion returns the effective region for the provider, falling back to the deprecated _region_ attribute
-func (pd *ProviderData) GetRegion() string {
-	if pd.DefaultRegion != "" {
-		return pd.DefaultRegion
-	}
-	return "eu01"
-}
-
-func (pd *ProviderData) GetRegionWithOverride(overrideRegion types.String) string {
-	if overrideRegion.IsUnknown() || overrideRegion.IsNull() {
-		return pd.GetRegion()
-	}
-	return overrideRegion.ValueString()
+	return stackitEphemeralProviderDataInternal.ephemeralProviderData, stackitEphemeralProviderDataInternal.clients, true
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.

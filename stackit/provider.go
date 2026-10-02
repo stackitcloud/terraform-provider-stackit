@@ -659,10 +659,18 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		resp.DataSourceData = providerDataInternal
 		resp.ResourceData = providerDataInternal
 
-		// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
-		var ephemeralProviderData core.EphemeralProviderData
-		ephemeralProviderData.ProviderData = providerData
-		resp.EphemeralResourceData = ephemeralProviderData
+		mockRoundTripper, err := sdkauth.NoAuth()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up round tripper for ephemeral provider data: %v", err))
+			return
+		}
+
+		ephemeralProviderDataInternal, err := core.NewEphemeralProviderDataInternal(providerData, p.clientFactory, mockRoundTripper)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up ephemeral provider data: %v", err))
+		}
+
+		resp.EphemeralResourceData = ephemeralProviderDataInternal
 
 		return
 	}
@@ -730,10 +738,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	resp.ResourceData = providerDataInternal
 
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
-	var ephemeralProviderData core.EphemeralProviderData
-	ephemeralProviderData.ProviderData = providerData
-	ephemeralProviderData.RoundTripper = roundTripper
-	resp.EphemeralResourceData = ephemeralProviderData
+	ephemeralProviderDataInternal, err := core.NewEphemeralProviderDataInternal(providerData, &clientFactory, roundTripper)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up ephemeral provider data: %v", err))
+	}
+
+	resp.EphemeralResourceData = ephemeralProviderDataInternal
 }
 
 // DataSources defines the data sources implemented in the provider.

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -12,6 +13,7 @@ import (
 	alb "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
+	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
 	cdn "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	certificates "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
@@ -48,6 +50,7 @@ import (
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
+	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
@@ -291,6 +294,44 @@ func TestDefaultClientFactory_newAlbV2Client(t *testing.T) {
 	test.run(t)
 }
 
+func TestDefaultClientFactory_newAutomationV1Client(t *testing.T) {
+	test := testHelper[automation.DefaultAPI]{
+		factoryMethod: (*DefaultClientFactory).newAutomationV1Client,
+		clientInitFunc: func(opts ...config.ConfigurationOption) automation.DefaultAPI {
+			client, err := automation.NewAPIClient(opts...)
+			if err != nil {
+				t.Fatalf("error creating client: %v", err)
+			}
+
+			return client.DefaultAPI
+		},
+		customEndpointSetter: func(cfg *CustomEndpointConfig) {
+			cfg.AutomationCustomEndpoint = testCustomEndpoint
+		},
+	}
+
+	test.run(t)
+}
+
+func TestDefaultClientFactory_newValkeyV2Client(t *testing.T) {
+	test := testHelper[valkey.DefaultAPI]{
+		factoryMethod: (*DefaultClientFactory).newValkeyV2Client,
+		clientInitFunc: func(opts ...config.ConfigurationOption) valkey.DefaultAPI {
+			client, err := valkey.NewAPIClient(opts...)
+			if err != nil {
+				t.Fatalf("error creating client: %v", err)
+			}
+
+			return client.DefaultAPI
+		},
+		customEndpointSetter: func(cfg *CustomEndpointConfig) {
+			cfg.ValkeyCustomEndpoint = testCustomEndpoint
+		},
+	}
+
+	test.run(t)
+}
+
 func TestDefaultClientFactory_newGitV1BetaClient(t *testing.T) {
 	test := testHelper[git.DefaultAPI]{
 		factoryMethod: (*DefaultClientFactory).newGitV1BetaClient,
@@ -437,25 +478,6 @@ func TestDefaultClientFactory_newMongoDbFlexV2Client(t *testing.T) {
 		},
 		customEndpointSetter: func(cfg *CustomEndpointConfig) {
 			cfg.MongoDBFlexCustomEndpoint = testCustomEndpoint
-		},
-	}
-
-	test.run(t)
-}
-
-func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
-	test := testHelper[objectstorage.DefaultAPI]{
-		factoryMethod: (*DefaultClientFactory).newObjectStorageV2Client,
-		clientInitFunc: func(opts ...config.ConfigurationOption) objectstorage.DefaultAPI {
-			client, err := objectstorage.NewAPIClient(opts...)
-			if err != nil {
-				t.Fatalf("error creating client: %v", err)
-			}
-
-			return client.DefaultAPI
-		},
-		customEndpointSetter: func(cfg *CustomEndpointConfig) {
-			cfg.ObjectStorageCustomEndpoint = testCustomEndpoint
 		},
 	}
 
@@ -1284,6 +1306,96 @@ func TestDefaultClientFactory_newObservabilityV1Client(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("newObservabilityV1Client() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
+	var testRoundTripper http.RoundTripper = &http.Transport{
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+	}
+
+	type fields struct {
+		RoundTripper          http.RoundTripper
+		UserAgent             string
+		CustomEndpoints       CustomEndpointConfig
+		ProviderDefaultRegion string
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		want    objectstorage.DefaultAPI
+		wantErr bool
+	}{
+		{
+			name: "without custom endpoint",
+			fields: fields{
+				RoundTripper: testRoundTripper,
+				UserAgent:    "stackit-terraform-provider/1.2.3",
+				CustomEndpoints: CustomEndpointConfig{
+					ObjectStorageCustomEndpoint: "",
+				},
+			},
+			want: func() objectstorage.DefaultAPI {
+				apiClient, err := objectstorage.NewAPIClient(
+					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
+					config.WithCustomAuth(&RetryTransport{
+						Base:        testRoundTripper,
+						MaxRetries:  3,
+						BaseBackoff: 10 * time.Second,
+						MaxJitter:   500 * time.Millisecond,
+					}),
+				)
+				if err != nil {
+					t.Fatalf("error configuring client: %v", err)
+				}
+				return apiClient.DefaultAPI
+			}(),
+		},
+		{
+			name: "with custom endpoint",
+			fields: fields{
+				RoundTripper: testRoundTripper,
+				UserAgent:    "stackit-terraform-provider/1.2.3",
+				CustomEndpoints: CustomEndpointConfig{
+					ObjectStorageCustomEndpoint: testCustomEndpoint,
+				},
+			},
+			want: func() objectstorage.DefaultAPI {
+				apiClient, err := objectstorage.NewAPIClient(
+					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
+					config.WithEndpoint(testCustomEndpoint),
+					config.WithCustomAuth(&RetryTransport{
+						Base:        testRoundTripper,
+						MaxRetries:  3,
+						BaseBackoff: 10 * time.Second,
+						MaxJitter:   500 * time.Millisecond,
+					}),
+				)
+				if err != nil {
+					t.Fatalf("error configuring client: %v", err)
+				}
+				return apiClient.DefaultAPI
+			}(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &DefaultClientFactory{
+				RoundTripper:          tt.fields.RoundTripper,
+				UserAgent:             tt.fields.UserAgent,
+				CustomEndpoints:       tt.fields.CustomEndpoints,
+				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
+			}
+			got, err := f.newObjectStorageV2Client()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("newObjectStorageV2Client() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("newObjectStorageV2Client() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
