@@ -42,6 +42,7 @@ import (
 	gitInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/instance"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
 	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
+	iaasImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/images"
 	iaasImageV2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/imagev2"
 	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
 	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
@@ -723,6 +724,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasImage.NewImageDataSource,
 		iaasImageV2.NewImageV2DataSource,
+		iaasImages.NewImagesDataSource,
 		iaasNetwork.NewNetworkDataSource,
 		iaasNetworkArea.NewNetworkAreaDataSource,
 		iaasNetworkAreaRegion.NewNetworkAreaRegionDataSource,
