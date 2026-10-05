@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -78,7 +77,7 @@ type DataSourceModel struct {
 }
 
 type imagesDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -99,16 +98,18 @@ func (d *imagesDataSource) Configure(
 	req datasource.ConfigureRequest,
 	resp *datasource.ConfigureResponse,
 ) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_images", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	tflog.Info(ctx, "iaas client configured")
 }
 
 var configAttrTypes = map[string]attr.Type{
@@ -299,7 +300,7 @@ func (d *imagesDataSource) Read(
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", model.ProjectID.ValueString())
 	ctx = tflog.SetField(ctx, "region", region)
-	request, err := toRequest(ctx, d.client.DefaultAPI, &model, &d.providerData)
+	request, err := toRequest(ctx, d.client, &model, &d.providerData)
 	if err != nil {
 		resp.Diagnostics.AddError("Error constructing image list request", err.Error())
 		return
