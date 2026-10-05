@@ -55,7 +55,7 @@ Read-Only:
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
 - `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
-- `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
+- `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution. Currently, this feature is only available for distributions of backend type HTTP. (see [below for nested schema](#nestedatt--config--redirects))
 - `regions` (List of String) The configured regions where content will be hosted
 - `strip_response_cookies` (Boolean) Enable this to prevent origin-level cookies from being forwarded to the end user.
 - `tls` (Attributes) Configuration for TLS protocol versions. Note: Enabling older TLS versions (1.0, 1.1) is generally discouraged for security reasons. (see [below for nested schema](#nestedatt--config--tls))
