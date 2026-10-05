@@ -24,7 +24,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	gitUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -58,7 +58,7 @@ func NewGitResource() resource.Resource {
 
 // gitResource implements the resource interface for git instances.
 type gitResource struct {
-	client *git.APIClient
+	client git.DefaultAPI
 }
 
 // descriptions for the attributes in the Schema
@@ -78,7 +78,7 @@ var descriptions = map[string]string{
 
 // Configure sets up the API client for the git instance resource.
 func (g *gitResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -88,11 +88,8 @@ func (g *gitResource) Configure(ctx context.Context, req resource.ConfigureReque
 		return
 	}
 
-	apiClient := gitUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	g.client = apiClient
+	g.client = clients.GitV1BetaClient
+
 	tflog.Info(ctx, "git client configured")
 }
 
@@ -210,7 +207,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	// Create the new git instance via the API client.
-	gitInstanceResp, err := g.client.DefaultAPI.CreateInstance(ctx, projectId).
+	gitInstanceResp, err := g.client.CreateInstance(ctx, projectId).
 		CreateInstancePayload(payload).
 		Execute()
 	if err != nil {
@@ -230,7 +227,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	_, err = wait.CreateGitInstanceWaitHandler(ctx, g.client.DefaultAPI, projectId, gitInstanceId).WaitWithContext(ctx)
+	_, err = wait.CreateGitInstanceWaitHandler(ctx, g.client, projectId, gitInstanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", fmt.Sprintf("Git instance creation waiting: %v", err))
 		return
@@ -273,7 +270,7 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	// Read the current git instance via id
-	gitInstanceResp, err := g.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	gitInstanceResp, err := g.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -328,7 +325,7 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Call API to delete the existing git instance.
-	err := g.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := g.client.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -340,7 +337,7 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteGitInstanceWaitHandler(ctx, g.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteGitInstanceWaitHandler(ctx, g.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for instance deletion", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

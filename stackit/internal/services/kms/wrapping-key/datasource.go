@@ -12,9 +12,8 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -28,7 +27,7 @@ func NewWrappingKeyDataSource() datasource.DataSource {
 }
 
 type wrappingKeyDataSource struct {
-	client       *kms.APIClient
+	client       kms.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -37,16 +36,13 @@ func (w *wrappingKeyDataSource) Metadata(_ context.Context, request datasource.M
 }
 
 func (w *wrappingKeyDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
-	var ok bool
-	w.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	w.client = kmsUtils.ConfigureClient(ctx, &w.providerData, &response.Diagnostics)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	w.providerData = providerData
+	w.client = clients.KmsV1Client
 
 	tflog.Info(ctx, "KMS client configured")
 }
@@ -148,7 +144,7 @@ func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.Rea
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "wrapping_key_id", wrappingKeyId)
 
-	wrappingKeyResponse, err := w.client.DefaultAPI.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	wrappingKeyResponse, err := w.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

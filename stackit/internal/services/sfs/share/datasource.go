@@ -14,10 +14,9 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -40,7 +39,7 @@ type dataSourceModel struct {
 	Labels                  types.Map    `tfsdk:"labels"`
 }
 type shareDataSource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -50,22 +49,19 @@ func NewShareDataSource() datasource.DataSource {
 
 // Configure implements datasource.DataSourceWithConfigure.
 func (r *shareDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_share", core.Datasource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -93,7 +89,7 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.DefaultAPI.GetShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
+	response, err := r.client.GetShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {

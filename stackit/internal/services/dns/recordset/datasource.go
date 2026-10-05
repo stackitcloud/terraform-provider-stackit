@@ -7,9 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -39,7 +36,7 @@ func NewRecordSetDataSource() datasource.DataSource {
 
 // recordSetDataSource is the data source implementation.
 type recordSetDataSource struct {
-	client *dns.APIClient
+	client dns.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -49,16 +46,13 @@ func (d *recordSetDataSource) Metadata(_ context.Context, req datasource.Metadat
 
 // Configure adds the provider configured client to the data source.
 func (d *recordSetDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := dnsUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.DnsV1Client
+
 	tflog.Info(ctx, "DNS record set client configured")
 }
 
@@ -162,7 +156,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
-	recordSetResp, err := d.client.DefaultAPI.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
+	recordSetResp, err := d.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -24,7 +24,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -60,7 +60,7 @@ func NewKeyResource() resource.Resource {
 }
 
 type keyResource struct {
-	client       *kms.APIClient
+	client       kms.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -69,16 +69,13 @@ func (r *keyResource) Metadata(_ context.Context, req resource.MetadataRequest, 
 }
 
 func (r *keyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = kmsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.KmsV1Client
 
 	tflog.Info(ctx, "KMS client configured")
 }
@@ -260,7 +257,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createResponse, err := r.client.DefaultAPI.CreateKey(ctx, projectId, region, keyRingId).CreateKeyPayload(*payload).Execute()
+	createResponse, err := r.client.CreateKey(ctx, projectId, region, keyRingId).CreateKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -281,7 +278,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"key_id":     createResponse.Id,
 	})
 
-	waitHandlerResp, err := wait.CreateOrUpdateKeyWaitHandler(ctx, r.client.DefaultAPI, projectId, region, keyRingId, createResponse.Id).WaitWithContext(ctx)
+	waitHandlerResp, err := wait.CreateOrUpdateKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, createResponse.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for key creation", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -326,7 +323,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
-	keyResponse, err := r.client.DefaultAPI.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	keyResponse, err := r.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -372,7 +369,7 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyId := model.KeyId.ValueString()
 
-	err := r.client.DefaultAPI.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	err := r.client.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

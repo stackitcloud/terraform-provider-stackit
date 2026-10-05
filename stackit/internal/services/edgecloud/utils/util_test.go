@@ -1,98 +1,11 @@
 package utils
 
 import (
-	"context"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
-
-const (
-	testVersion        = "1.2.3"
-	testCustomEndpoint = "https://edge-custom-endpoint.api.stackit.cloud"
-)
-
-func TestConfigureClient(t *testing.T) {
-	os.Clearenv()
-	err := os.Setenv(sdkClients.ServiceAccountToken, "mock-val")
-	if err != nil {
-		t.Errorf("error setting env variable: %v", err)
-	}
-
-	type args struct {
-		providerData *core.ProviderData
-	}
-	tests := []struct {
-		name     string
-		args     args
-		wantErr  bool
-		expected *edge.APIClient
-	}{
-		{
-			name: "default endpoint",
-			args: args{
-				providerData: &core.ProviderData{
-					Version: testVersion,
-				},
-			},
-			expected: func() *edge.APIClient {
-				apiClient, err := edge.NewAPIClient(
-					utils.UserAgentConfigOption(testVersion),
-				)
-				if err != nil {
-					t.Errorf("error configuring client: %v", err)
-				}
-				return apiClient
-			}(),
-			wantErr: false,
-		},
-		{
-			name: "custom endpoint",
-			args: args{
-				providerData: &core.ProviderData{
-					Version:                 testVersion,
-					EdgeCloudCustomEndpoint: testCustomEndpoint,
-				},
-			},
-			expected: func() *edge.APIClient {
-				apiClient, err := edge.NewAPIClient(
-					utils.UserAgentConfigOption(testVersion),
-					config.WithEndpoint(testCustomEndpoint),
-				)
-				if err != nil {
-					t.Errorf("error configuring client: %v", err)
-				}
-				return apiClient
-			}(),
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			diags := diag.Diagnostics{}
-
-			actual := ConfigureClient(ctx, tt.args.providerData, &diags)
-			if diags.HasError() != tt.wantErr {
-				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
-			}
-
-			// Verify that a client was successfully created
-			if actual == nil && !tt.wantErr {
-				t.Errorf("ConfigureClient() returned nil client, expected non-nil")
-			}
-		})
-	}
-}
 
 func TestCheckExpiration(t *testing.T) {
 	// Reference time for testing

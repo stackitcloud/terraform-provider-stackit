@@ -14,9 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -52,7 +50,7 @@ type storageClass struct {
 }
 
 type flavors struct {
-	client       *sqlserverflex.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -65,17 +63,13 @@ func (f *flavors) Metadata(_ context.Context, req datasource.MetadataRequest, re
 }
 
 func (f *flavors) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	f.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &f.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	f.client = apiClient
+	f.client = clients.SqlServerFlexV3Client
+
 	tflog.Info(ctx, "SqlserverFlex client configured")
 }
 
@@ -187,7 +181,7 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	ctx = core.InitProviderContext(ctx)
 
 	const pageSize = 100
-	flavorsResp, err := f.client.DefaultAPI.ListFlavors(ctx, projectId, region).Size(pageSize).Execute()
+	flavorsResp, err := f.client.ListFlavors(ctx, projectId, region).Size(pageSize).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", fmt.Sprintf("Error calling ListFlavors: %v", err))
 		return

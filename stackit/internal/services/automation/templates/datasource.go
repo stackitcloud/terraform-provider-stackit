@@ -15,10 +15,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/experimental/paginate"
 	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	automationUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -43,7 +41,7 @@ type template struct {
 }
 
 type templatesDataSource struct {
-	client       *automation.APIClient
+	client       automation.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -56,21 +54,19 @@ func (d *templatesDataSource) Metadata(_ context.Context, req datasource.Metadat
 }
 
 func (d *templatesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_automation_templates", core.Datasource)
+
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_automation_templates", core.Datasource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := automationUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.AutomationV1Client
+
 	tflog.Info(ctx, "Automation templates client configured")
 }
 
@@ -144,7 +140,7 @@ func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	ctx = core.InitProviderContext(ctx)
 
-	templatesReq := d.client.DefaultAPI.ListVolumeTemplates(ctx, projectId, region)
+	templatesReq := d.client.ListVolumeTemplates(ctx, projectId, region)
 	templates, err := paginate.All(templatesReq)
 
 	if err != nil {

@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,7 +28,7 @@ func NewCredentialsGroupDataSource() datasource.DataSource {
 
 // credentialsGroupDataSource is the data source implementation.
 type credentialsGroupDataSource struct {
-	client       *objectstorage.APIClient
+	client       objectstorage.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -42,17 +39,14 @@ func (r *credentialsGroupDataSource) Metadata(_ context.Context, req datasource.
 
 // Configure adds the provider configured client to the data source.
 func (r *credentialsGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := objectstorageUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ObjectStorageV2Client
+
 	tflog.Info(ctx, "ObjectStorage credentials group client configured")
 }
 
@@ -123,7 +117,7 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	found, err := readCredentialsGroups(ctx, &model, region, r.client.DefaultAPI)
+	found, err := readCredentialsGroups(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return

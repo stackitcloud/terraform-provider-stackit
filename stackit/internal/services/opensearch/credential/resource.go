@@ -9,9 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	opensearchUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -64,7 +61,7 @@ func NewCredentialResource() resource.Resource {
 
 // credentialResource is the resource implementation.
 type credentialResource struct {
-	client       *opensearch.APIClient
+	client       opensearch.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -75,17 +72,14 @@ func (r *credentialResource) Metadata(_ context.Context, req resource.MetadataRe
 
 // Configure adds the provider configured client to the resource.
 func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := opensearchUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.OpensearchV2Client
+
 	tflog.Info(ctx, "OpenSearch credential client configured")
 }
 
@@ -243,7 +237,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Create new recordset
-	credentialsResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, region, instanceId).Execute()
+	credentialsResp, err := r.client.CreateCredentials(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -259,7 +253,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		"credential_id": credentialId,
 	})
 
-	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -304,7 +298,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
+	recordSetResp, err := r.client.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -360,7 +354,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
 	// Delete existing record set
-	err := r.client.DefaultAPI.DeleteCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
+	err := r.client.DeleteCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -372,7 +366,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
+	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
