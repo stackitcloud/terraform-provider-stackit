@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -47,7 +44,7 @@ func NewUserDataSource() datasource.DataSource {
 
 // userDataSource is the data source implementation.
 type userDataSource struct {
-	client       *sqlserverflex.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -58,17 +55,14 @@ func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 
 // Configure adds the provider configured client to the data source.
 func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SqlServerFlexV3Client
+
 	tflog.Info(ctx, "SQLServer Flex user client configured")
 }
 
@@ -166,7 +160,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	recordSetResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -8,8 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -23,6 +21,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -62,7 +62,7 @@ func NewNetworkInterfaceResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkInterfaceResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -116,17 +116,14 @@ func (r *networkInterfaceResource) Metadata(_ context.Context, req resource.Meta
 
 // Configure adds the provider configured client to the resource.
 func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -297,7 +294,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network interface
-	networkInterface, err := r.client.DefaultAPI.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
+	networkInterface, err := r.client.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -349,7 +346,7 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := r.client.DefaultAPI.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, err := r.client.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -413,7 +410,7 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network
-	nicResp, err := r.client.DefaultAPI.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
+	nicResp, err := r.client.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -457,7 +454,7 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Delete existing network interface
-	err := r.client.DefaultAPI.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
+	err := r.client.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

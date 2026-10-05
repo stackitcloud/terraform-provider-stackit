@@ -13,10 +13,8 @@ import (
 
 	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	automationUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -33,7 +31,7 @@ func NewVolumeAutomationDataSource() datasource.DataSource {
 
 // volumeAutomationDataSource is the data source implementation.
 type volumeAutomationDataSource struct {
-	client       *automation.APIClient
+	client       automation.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,7 +42,7 @@ func (d *volumeAutomationDataSource) Metadata(_ context.Context, req datasource.
 
 // Configure adds the provider configured client to the data source.
 func (d *volumeAutomationDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -54,12 +52,9 @@ func (d *volumeAutomationDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	apiClient := automationUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	d.providerData = providerData
-	d.client = apiClient
+	d.client = clients.AutomationV1Client
+
 	tflog.Info(ctx, "Volume automation client configured.")
 }
 
@@ -150,7 +145,7 @@ func (d *volumeAutomationDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "automation_id", automationId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	automationResp, err := d.client.DefaultAPI.GetVolumeAutomation(ctx, projectId, region, automationId).Execute()
+	automationResp, err := d.client.GetVolumeAutomation(ctx, projectId, region, automationId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

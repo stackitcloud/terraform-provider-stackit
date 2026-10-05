@@ -94,7 +94,7 @@ func NewVolumeResource() resource.Resource {
 
 // volumeResource is the resource implementation.
 type volumeResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -146,16 +146,14 @@ func (r *volumeResource) ConfigValidators(_ context.Context) []resource.ConfigVa
 // Configure adds the provider configured client to the resource.
 func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -466,7 +464,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new volume
 
-	volume, err := r.client.DefaultAPI.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
+	volume, err := r.client.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -489,7 +487,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, volumeId).WaitWithContext(ctx)
+	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("volume creation waiting: %v", err))
 		return
@@ -534,7 +532,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	volumeResp, err := r.client.DefaultAPI.GetVolume(ctx, projectId, region, volumeId).Execute()
+	volumeResp, err := r.client.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -596,7 +594,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	// Update existing volume
-	updatedVolume, err := r.client.DefaultAPI.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
+	updatedVolume, err := r.client.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -614,7 +612,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			resizePayload := iaas.ResizeVolumePayload{
 				Size: *modelSize,
 			}
-			err = r.client.DefaultAPI.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(resizePayload).Execute()
+			err = r.client.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(resizePayload).Execute()
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Resizing the volume, calling API: %v", err))
 			}
@@ -656,7 +654,7 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Delete existing volume
-	err := r.client.DefaultAPI.DeleteVolume(ctx, projectId, region, volumeId).Execute()
+	err := r.client.DeleteVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -669,7 +667,7 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, volumeId).WaitWithContext(ctx)
+	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("volume deletion waiting: %v", err))
 		return

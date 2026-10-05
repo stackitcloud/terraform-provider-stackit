@@ -11,9 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -31,23 +30,20 @@ func NewProjectLockDatasource() datasource.DataSource {
 
 // projectlockDatasource is the resource implementation.
 type projectlockDatasource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
 // Configure adds the provider configured client to the resource.
 func (r *projectlockDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
+
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -110,7 +106,7 @@ func (r *projectlockDatasource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	projectResp, err := r.client.DefaultAPI.GetLock(ctx, region, projectId).Execute()
+	projectResp, err := r.client.GetLock(ctx, region, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

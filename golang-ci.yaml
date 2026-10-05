@@ -15,6 +15,7 @@ linters:
     - tfwriteid # custom local linter
     - tfmodifyplan # custom local linter
     - tfstateremove # custom local linter
+    - tfclientcollection # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -50,6 +51,9 @@ linters:
       tfstateremove:
         type: module
         description: "A custom local linter, checking that response.State.RemoveResource(ctx) is called in every Read method"
+      tfclientcollection:
+        type: module
+        description: "A custom local linter"
     depguard:
       rules:
         main:
@@ -116,6 +120,16 @@ linters:
       - third_party$
       - builtin$
       - examples$
+    rules:
+      - path: stackit/internal/core/
+        linters:
+          - tfclientcollection
+      - path: stackit/internal/services/iam/rolebindings/v1/generic/
+        linters:
+          - tfclientcollection
+      - path: stackit/internal/services/iam/rolebindings/v1/services/
+        linters:
+          - tfclientcollection
 formatters:
   settings:
     goimports:

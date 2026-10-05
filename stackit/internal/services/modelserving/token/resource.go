@@ -8,9 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	modelservingUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/utils"
-	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -72,9 +69,9 @@ func NewTokenResource() resource.Resource {
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client                  *modelserving.APIClient
+	client                  modelserving.DefaultAPI
 	providerData            core.ProviderData
-	serviceEnablementClient *serviceenablement.APIClient
+	serviceEnablementClient serviceenablement.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -84,22 +81,15 @@ func (r *tokenResource) Metadata(_ context.Context, req resource.MetadataRequest
 
 // Configure adds the provider configured client to the resource.
 func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := modelservingUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	serviceEnablementClient := serviceenablementUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
-	r.serviceEnablementClient = serviceEnablementClient
+	r.providerData = providerData
+	r.client = clients.ModelservingV1Client
+	r.serviceEnablementClient = clients.ServiceEnablementV2Client
+
 	tflog.Info(ctx, "Model-Serving auth token client configured")
 }
 
@@ -248,7 +238,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// If AI model serving is not enabled, enable it
-	err := r.serviceEnablementClient.DefaultAPI.EnableServiceRegional(ctx, region, projectId, utils.ModelServingServiceId).
+	err := r.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelServingServiceId).
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -269,7 +259,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, r.serviceEnablementClient.DefaultAPI, region, projectId, utils.ModelServingServiceId).
+	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, r.serviceEnablementClient, region, projectId, utils.ModelServingServiceId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
@@ -289,7 +279,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new AI model serving auth token
-	createTokenResp, err := r.client.DefaultAPI.CreateToken(ctx, region, projectId).
+	createTokenResp, err := r.client.CreateToken(ctx, region, projectId).
 		CreateTokenPayload(*payload).
 		Execute()
 	if err != nil {
@@ -320,7 +310,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client.DefaultAPI, region, projectId, tokenId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Waiting for token to be active: %v", err))
 		return
@@ -367,7 +357,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getTokenResp, err := r.client.DefaultAPI.GetToken(ctx, region, projectId, tokenId).
+	getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -445,7 +435,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Update AI model serving auth token
-	updateTokenResp, err := r.client.DefaultAPI.PartialUpdateToken(ctx, region, projectId, tokenId).PartialUpdateTokenPayload(*payload).Execute()
+	updateTokenResp, err := r.client.PartialUpdateToken(ctx, region, projectId, tokenId).PartialUpdateTokenPayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -479,7 +469,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client.DefaultAPI, region, projectId, tokenId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Waiting for token to be updated: %v", err))
 		return
@@ -524,7 +514,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing AI model serving auth token. We will ignore the state 'deleting' for now.
-	_, err := r.client.DefaultAPI.DeleteToken(ctx, region, projectId, tokenId).Execute()
+	_, err := r.client.DeleteToken(ctx, region, projectId, tokenId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -540,7 +530,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client.DefaultAPI, region, projectId, tokenId).
+	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Waiting for token to be deleted: %v", err))

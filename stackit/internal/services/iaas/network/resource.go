@@ -86,7 +86,7 @@ func NewNetworkResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -97,17 +97,14 @@ func (r *networkResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -480,7 +477,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new network
 
-	network, err := r.client.DefaultAPI.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
+	network, err := r.client.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -499,7 +496,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	network, err = wait.CreateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
@@ -543,7 +540,7 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	networkResp, err := r.client.DefaultAPI.GetNetwork(ctx, projectId, region, networkId).Execute()
+	networkResp, err := r.client.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -606,13 +603,13 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// Update existing network
-	err = r.client.DefaultAPI.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
+	err = r.client.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
 		return
@@ -653,7 +650,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing network
-	err := r.client.DefaultAPI.DeleteNetwork(ctx, projectId, region, networkId).Execute()
+	err := r.client.DeleteNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -666,7 +663,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))
 		return
