@@ -773,7 +773,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasAlphaVpcRegion.NewVPCRegionDatasource,
 		iaasAlphaVpcStaticRoute.NewStaticRouteDatasource,
 		iaasProject.NewProjectDataSource,
-    iaasImages.NewImagesDataSource,
+		iaasImages.NewImagesDataSource,
 		intakeRunner.NewRunnerDataSource,
 		kmsKey.NewKeyDataSource,
 		kmsKeyRing.NewKeyRingDataSource,
