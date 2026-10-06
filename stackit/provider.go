@@ -110,6 +110,7 @@ import (
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
 	resourceManagerFolder "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/folder"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
+	scaApplication "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sca/application"
 	scfOrganization "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organization"
 	scfOrganizationmanager "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organizationmanager"
 	scfPlatform "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/platform"
@@ -228,6 +229,7 @@ type providerModel struct {
 	RabbitMQCustomEndpoint          types.String `tfsdk:"rabbitmq_custom_endpoint"`
 	RedisCustomEndpoint             types.String `tfsdk:"redis_custom_endpoint"`
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
+	ScaCustomEndpoint               types.String `tfsdk:"sca_custom_endpoint"`
 	ScfCustomEndpoint               types.String `tfsdk:"scf_custom_endpoint"`
 	SecretsManagerCustomEndpoint    types.String `tfsdk:"secretsmanager_custom_endpoint"`
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
@@ -297,6 +299,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"server_update_custom_endpoint":        "Custom endpoint for the Server Update service",
 		"service_account_custom_endpoint":      "Custom endpoint for the Service Account service",
 		"resourcemanager_custom_endpoint":      "Custom endpoint for the Resource Manager service",
+		"sca_custom_endpoint":                  "Custom endpoint for the Container Applications (SCA) service",
 		"scf_custom_endpoint":                  "Custom endpoint for the Cloud Foundry (SCF) service",
 		"secretsmanager_custom_endpoint":       "Custom endpoint for the Secrets Manager service",
 		"sqlserverflex_custom_endpoint":        "Custom endpoint for the SQL Server Flex service",
@@ -487,6 +490,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["redis_custom_endpoint"],
 			},
+			"sca_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["sca_custom_endpoint"],
+			},
 			"scf_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["scf_custom_endpoint"],
@@ -633,6 +640,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { customEndpointConfig.ServiceEnablementCustomEndpoint = v })
 	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { customEndpointConfig.SfsCustomEndpoint = v })
 	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { customEndpointConfig.SKECustomEndpoint = v })
+	setStringField(providerConfig.ScaCustomEndpoint, func(v string) { customEndpointConfig.ScaCustomEndpoint = v })
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { customEndpointConfig.SQLServerFlexCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { customEndpointConfig.TelemetryRouterCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { customEndpointConfig.TelemetryLinkCustomEndpoint = v })
@@ -930,6 +938,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		redisInstance.NewInstanceResource,
 		redisCredential.NewCredentialResource,
 		resourceManagerProject.NewProjectResource,
+		scaApplication.NewApplicationResource,
 		scfOrganization.NewScfOrganizationResource,
 		scfOrganizationmanager.NewScfOrganizationManagerResource,
 		resourceManagerFolder.NewFolderResource,

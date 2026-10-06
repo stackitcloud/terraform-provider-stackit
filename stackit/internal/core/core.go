@@ -39,6 +39,7 @@ import (
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	sca "github.com/stackitcloud/stackit-sdk-go/services/sca/v1alphaapi"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
 	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
@@ -100,6 +101,7 @@ type CustomEndpointConfig struct {
 	RabbitMQCustomEndpoint          string
 	RedisCustomEndpoint             string
 	ResourceManagerCustomEndpoint   string
+	ScaCustomEndpoint               string
 	ScfCustomEndpoint               string
 	SecretsManagerCustomEndpoint    string
 	SQLServerFlexCustomEndpoint     string
@@ -227,6 +229,7 @@ type ClientCollection struct {
 	RabbitMqV2Client            rabbitmq.DefaultAPI
 	RedisV2Client               redis.DefaultAPI
 	ResourceManagerClient       resourcemanager.DefaultAPI
+	ScaV1AlphaClient            sca.DefaultAPI
 	ScfV1Client                 scf.DefaultAPI
 	SecretsmanagerV1AlphaClient secretsmanagerV1Alpha.DefaultAPI
 	SecretsmanagerV1Client      secretsmanager.DefaultAPI
