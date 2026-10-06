@@ -44,6 +44,7 @@ type DataSourceModel struct {
 	Labels            types.Map    `tfsdk:"labels"`
 	AffinityGroup     types.String `tfsdk:"affinity_group"`
 	UserData          types.String `tfsdk:"user_data"`
+	ConfigDrive       types.Bool   `tfsdk:"config_drive"`
 	CreatedAt         types.String `tfsdk:"created_at"`
 	LaunchedAt        types.String `tfsdk:"launched_at"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`
@@ -178,6 +179,10 @@ func (d *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"user_data": schema.StringAttribute{
 				Description: "User data that is passed via cloud-init to the server.",
+				Computed:    true,
+			},
+			"config_drive": schema.BoolAttribute{
+				Description: "Whether the server was created with a config drive.",
 				Computed:    true,
 			},
 			"created_at": schema.StringAttribute{
@@ -338,6 +343,7 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
 	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
 	model.AffinityGroup = types.StringPointerValue(serverResp.AffinityGroup)
+	model.ConfigDrive = types.BoolPointerValue(serverResp.ConfigDrive)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	model.LaunchedAt = launchedAt

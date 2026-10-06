@@ -394,6 +394,7 @@ resource "stackit_server" "example" {
 - `agent` (Attributes) The STACKIT Server Agent configured for the server (see [below for nested schema](#nestedatt--agent))
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
+- `config_drive` (Boolean) Whether the server is created with a config drive.
 - `desired_status` (String) The desired status of the server resource. Possible values are: `active`, `inactive`, `deallocated`.
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
 - `keypair_name` (String) The name of the keypair used during server creation.

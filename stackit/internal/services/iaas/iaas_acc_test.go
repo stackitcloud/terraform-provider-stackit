@@ -168,6 +168,7 @@ var testConfigServerVarsMax = config.Variables{
 	"public_key":           config.StringVariable(keypairPublicKey),
 	"desired_status":       config.StringVariable("active"),
 	"agent_policy":         config.StringVariable("ALWAYS"),
+	"config_drive":         config.BoolVariable(true),
 	"owner_email":          config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"parent_container_id":  config.StringVariable(testutil.TestProjectParentContainerID),
 	"ipv4_nameservers":     config.ListVariable(config.StringVariable("10.2.2.2"), config.StringVariable("10.2.2.3")),
@@ -2528,6 +2529,7 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_server.server", "availability_zone"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "desired_status"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "user_data"),
+					resource.TestCheckResourceAttr("stackit_server.server", "config_drive", "false"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "keypair_name"),
 					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
 					resource.TestCheckResourceAttrPair(
@@ -2588,6 +2590,7 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_server.server", "availability_zone"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "desired_status"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "user_data"),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "config_drive", "false"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "keypair_name"),
 					resource.TestCheckResourceAttr("data.stackit_server.server", "network_interfaces.#", "1"),
 					resource.TestCheckResourceAttrPair(
@@ -2648,6 +2651,7 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_server.server", "availability_zone"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "desired_status"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "user_data"),
+					resource.TestCheckResourceAttr("stackit_server.server", "config_drive", "false"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "keypair_name"),
 					resource.TestCheckResourceAttr("stackit_server.server", "network_interfaces.#", "1"),
 					resource.TestCheckResourceAttrPair(
@@ -2819,6 +2823,7 @@ func TestAccServerMax(t *testing.T) {
 						"stackit_network_interface.network_interface_init", "network_interface_id",
 					),
 					resource.TestCheckResourceAttr("stackit_server.server", "user_data", testutil.ConvertConfigVariable(testConfigServerVarsMax["user_data"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "config_drive", testutil.ConvertConfigVariable(testConfigServerVarsMax["config_drive"])),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "volume"),
 					resource.TestCheckResourceAttrPair(
@@ -2878,6 +2883,7 @@ func TestAccServerMax(t *testing.T) {
 						"stackit_network_interface.network_interface_second", "network_interface_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_server.server", "user_data", testutil.ConvertConfigVariable(testConfigServerVarsMax["user_data"])),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "config_drive", testutil.ConvertConfigVariable(testConfigServerVarsMax["config_drive"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server.server", "boot_volume.id"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_type"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_id"),
@@ -3257,6 +3263,7 @@ func TestAccServerMax(t *testing.T) {
 						"stackit_network_interface.network_interface_init", "network_interface_id",
 					),
 					resource.TestCheckResourceAttr("stackit_server.server", "user_data", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["user_data"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "config_drive", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["config_drive"])),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "volume"),
 					resource.TestCheckResourceAttrPair(
@@ -3381,6 +3388,7 @@ func TestAccServerMax(t *testing.T) {
 						"stackit_network_interface.network_interface_init", "network_interface_id",
 					),
 					resource.TestCheckResourceAttr("stackit_server.server", "user_data", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdatedDesiredStatus["user_data"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "config_drive", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdatedDesiredStatus["config_drive"])),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "volume"),
 					resource.TestCheckResourceAttrPair(

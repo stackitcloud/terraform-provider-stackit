@@ -37,6 +37,7 @@ data "stackit_server" "example" {
 - `agent` (Attributes) STACKIT Server Agent as setup on the server (see [below for nested schema](#nestedatt--agent))
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
+- `config_drive` (Boolean) Whether the server was created with a config drive.
 - `created_at` (String) Date-time when the server was created
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`".
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.

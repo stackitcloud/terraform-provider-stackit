@@ -75,6 +75,7 @@ type Model struct {
 	Labels            types.Map    `tfsdk:"labels"`
 	AffinityGroup     types.String `tfsdk:"affinity_group"`
 	UserData          types.String `tfsdk:"user_data"`
+	ConfigDrive       types.Bool   `tfsdk:"config_drive"`
 	CreatedAt         types.String `tfsdk:"created_at"`
 	LaunchedAt        types.String `tfsdk:"launched_at"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`
@@ -443,6 +444,15 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"config_drive": schema.BoolAttribute{
+				Description: "Whether the server is created with a config drive.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseNonNullStateForUnknown(),
+					boolplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"created_at": schema.StringAttribute{
@@ -1098,6 +1108,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
 	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
 	model.AffinityGroup = types.StringPointerValue(serverResp.AffinityGroup)
+	model.ConfigDrive = types.BoolPointerValue(serverResp.ConfigDrive)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	model.LaunchedAt = launchedAt
@@ -1196,6 +1207,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		Agent:            agentPayload,
 		BootVolume:       bootVolumePayload,
+		ConfigDrive:      conversion.BoolValueToPointer(model.ConfigDrive),
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
 		KeypairName:      conversion.StringValueToPointer(model.KeypairName),
 		Labels:           labels,

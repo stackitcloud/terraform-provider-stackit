@@ -15,6 +15,7 @@ variable "size" {}
 variable "public_key" {}
 variable "service_account_mail" {}
 variable "agent_policy" {}
+variable "config_drive" {}
 
 variable "parent_container_id" {}
 variable "project_name" {}
@@ -87,6 +88,7 @@ resource "stackit_server" "server" {
   desired_status     = var.desired_status
   network_interfaces = [stackit_network_interface.network_interface_init.network_interface_id]
   user_data          = var.user_data
+  config_drive       = var.config_drive
   boot_volume = {
     source_type = "volume"
     source_id   = stackit_volume.base_volume.volume_id

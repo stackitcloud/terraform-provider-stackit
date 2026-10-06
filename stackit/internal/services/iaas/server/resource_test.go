@@ -104,6 +104,7 @@ func TestMapFields(t *testing.T) {
 					},
 					KeypairName:   new("keypair_name"),
 					AffinityGroup: new("group_id"),
+					ConfigDrive:   new(true),
 					CreatedAt:     new(testTimestamp()),
 					UpdatedAt:     new(testTimestamp()),
 					LaunchedAt:    new(testTimestamp()),
@@ -129,6 +130,7 @@ func TestMapFields(t *testing.T) {
 					"provisioning_policy": types.StringValue("INHERIT"),
 				}),
 				AffinityGroup: types.StringValue("group_id"),
+				ConfigDrive:   types.BoolValue(true),
 				CreatedAt:     types.StringValue(testTimestampValue),
 				UpdatedAt:     types.StringValue(testTimestampValue),
 				LaunchedAt:    types.StringValue(testTimestampValue),
@@ -231,6 +233,7 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: types.StringValue("keypair"),
 				MachineType: types.StringValue("machine_type"),
 				UserData:    types.StringValue(userData),
+				ConfigDrive: types.BoolValue(true),
 				NetworkInterfaces: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("nic1"),
 					types.StringValue("nic2"),
@@ -258,6 +261,7 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: new("keypair"),
 				MachineType: "machine_type",
 				UserData:    new(base64EncodedUserData),
+				ConfigDrive: new(true),
 				Networking: iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
 						NicIds: []string{"nic1", "nic2"},
@@ -289,6 +293,7 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: types.StringValue("keypair"),
 				MachineType: types.StringValue("machine_type"),
 				UserData:    types.StringValue(userData),
+				ConfigDrive: types.BoolValue(false),
 				NetworkInterfaces: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("nic1"),
 					types.StringValue("nic2"),
@@ -317,6 +322,7 @@ func TestToCreatePayload(t *testing.T) {
 				KeypairName: new("keypair"),
 				MachineType: "machine_type",
 				UserData:    new(base64EncodedUserData),
+				ConfigDrive: new(false),
 				Networking: iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
 						NicIds: []string{"nic1", "nic2"},
