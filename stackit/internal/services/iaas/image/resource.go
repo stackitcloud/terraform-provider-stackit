@@ -259,8 +259,9 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"local_file_path": schema.StringAttribute{ // Deprecated: local_file_path is deprecated and will be removed after February 2027.
-				Description: "The filepath of the raw image file to be uploaded. (Deprecated: local_file_path is deprecated and will be removed after February 2027. Use image_file.local.file_path instead.)",
-				Optional:    true,
+				Description:        "The filepath of the raw image file to be uploaded.",
+				DeprecationMessage: "local_file_path is deprecated and will be removed after February 2027. Use image_file.local.file_path instead.",
+				Optional:           true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
