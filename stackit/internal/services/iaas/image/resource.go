@@ -445,7 +445,6 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"image_file": schema.SingleNestedAttribute{
 				Description: "Representation of an image file.",
-				Computed:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
