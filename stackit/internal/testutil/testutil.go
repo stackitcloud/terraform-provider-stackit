@@ -101,6 +101,7 @@ var (
 	RabbitMQCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_RABBITMQ_CUSTOM_ENDPOINT", providerName: "rabbitmq_custom_endpoint"}
 	RedisCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_REDIS_CUSTOM_ENDPOINT", providerName: "redis_custom_endpoint"}
 	ResourceManagerCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT", providerName: "resourcemanager_custom_endpoint"}
+	ScaCustomEndpoint               = customEndpointConfig{envVarName: "TF_ACC_SCA_CUSTOM_ENDPOINT", providerName: "sca_custom_endpoint"}
 	ScfCustomEndpoint               = customEndpointConfig{envVarName: "TF_ACC_SCF_CUSTOM_ENDPOINT", providerName: "scf_custom_endpoint"}
 	SecretsManagerCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT", providerName: "secretsmanager_custom_endpoint"}
 	SQLServerFlexCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT", providerName: "sqlserverflex_custom_endpoint"}
@@ -143,6 +144,7 @@ var (
 		RabbitMQCustomEndpoint,
 		RedisCustomEndpoint,
 		ResourceManagerCustomEndpoint,
+		ScaCustomEndpoint,
 		ScfCustomEndpoint,
 		SecretsManagerCustomEndpoint,
 		SQLServerFlexCustomEndpoint,
