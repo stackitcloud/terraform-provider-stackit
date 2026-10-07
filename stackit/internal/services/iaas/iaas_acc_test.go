@@ -140,7 +140,7 @@ var testConfigServerVarsMin = config.Variables{
 	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-server-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"machine_type":        config.StringVariable("t1.1"),
 	"image_id":            config.StringVariable("fb5b3fa8-5e20-478a-929a-2b7da1676b18"),
-	"name":                config.StringVariable(fmt.Sprintf("tfe2e-project-server-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name":                config.StringVariable(fmt.Sprintf("tf-acc-project-server-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
 }
@@ -158,7 +158,7 @@ var testConfigServerVarsMinUpdated = func() config.Variables {
 var testConfigServerVarsMax = config.Variables{
 	"network_name":         config.StringVariable(fmt.Sprintf("tf-acc-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"server_name":          config.StringVariable(fmt.Sprintf("tf-acc-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"project_name":         config.StringVariable(fmt.Sprintf("tfe2e-project-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"project_name":         config.StringVariable(fmt.Sprintf("tf-acc-project-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"name_not_updated":     config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"machine_type":         config.StringVariable("t1.1"),
 	"image_id":             config.StringVariable("fb5b3fa8-5e20-478a-929a-2b7da1676b18"),
@@ -209,7 +209,7 @@ var testConfigAffinityGroupVarsMin = config.Variables{
 // NETWORK INTERFACE - MIN
 
 var testConfigNetworkInterfaceVarsMin = config.Variables{
-	"name":                config.StringVariable(fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name":                config.StringVariable(fmt.Sprintf("tf-acc-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"ipv4_prefix":         config.StringVariable("10.2.10.0/24"),
 	"ipv4_nameservers":    config.ListVariable(config.StringVariable("10.2.2.2"), config.StringVariable("10.2.2.3")),
@@ -220,7 +220,7 @@ var testConfigNetworkInterfaceVarsMin = config.Variables{
 // NETWORK INTERFACE - MAX
 
 var testConfigNetworkInterfaceVarsMax = config.Variables{
-	"name":                config.StringVariable(fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name":                config.StringVariable(fmt.Sprintf("tf-acc-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"allowed_address":     config.StringVariable("10.2.10.0/24"),
 	"ipv4":                config.StringVariable("10.2.10.20"),
@@ -286,7 +286,7 @@ var testConfigVolumeVarsMaxUpdated = func() config.Variables {
 var testConfigNetworkVarsMin = config.Variables{
 	"project_id":          config.StringVariable(testutil.ProjectId),
 	"name":                config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"project_name":        config.StringVariable(fmt.Sprintf("tfe2e-project-network-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"project_name":        config.StringVariable(fmt.Sprintf("tf-acc-project-network-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
 }
