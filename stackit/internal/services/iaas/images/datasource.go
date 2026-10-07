@@ -295,19 +295,19 @@ func (d *imagesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	request, err := toRequest(ctx, d.client, &model, &d.providerData)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error constructing image list request", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Creating API request: %v", err))
 		return
 	}
 
 	apiResponse, err := request.Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing images", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	ctx = core.LogResponse(ctx)
 
 	if err = mapFields(ctx, apiResponse, &model, region); err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping images", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
