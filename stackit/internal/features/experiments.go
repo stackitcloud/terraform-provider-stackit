@@ -18,9 +18,10 @@ const (
 	IamExperiment           = "iam"
 	DremioExperiment        = "dremio"
 	VpcExperiment           = "vpc"
+	IaasExperiment          = "iaas"
 )
 
-var AvailableExperiments = []string{DremioExperiment, IamExperiment, NetworkExperiment, RoutingTablesExperiment, VpcExperiment}
+var AvailableExperiments = []string{DremioExperiment, IamExperiment, NetworkExperiment, RoutingTablesExperiment, VpcExperiment, IaasExperiment}
 
 // Check if an experiment is valid.
 func ValidExperiment(experiment string, diags *diag.Diagnostics) bool {

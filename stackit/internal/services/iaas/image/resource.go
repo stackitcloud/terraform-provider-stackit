@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -160,18 +161,28 @@ func (r *imageResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	if !configModel.ImageFile.IsNull() && !configModel.ImageFile.IsUnknown() {
+		var imageFileModel imageFileModel
+		resp.Diagnostics.Append(configModel.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
+			features.CheckExperimentEnabled(ctx, &r.providerData, features.IaasExperiment, "stackit_iaas_image", core.Resource, &resp.Diagnostics)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	}
 	var planModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -185,7 +196,6 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 	if !ok {
 		return
 	}
-
 	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -445,6 +455,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"image_file": schema.SingleNestedAttribute{
 				Description: "Representation of an image file.",
+				Computed:    false,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),

@@ -68,11 +68,11 @@ When creating the service account key, a new pair can be created automatically, 
 
 To configure the key flow, follow this steps:
 
-1.  Create a service account key:
+1. Create a service account key:
 
 - Use the [STACKIT Portal](https://portal.stackit.cloud/): go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-keys/)
 
-2.  Save the content of the service account key by copying it and saving it in a JSON file.
+1. Save the content of the service account key by copying it and saving it in a JSON file.
 
     The expected format of the service account key is a **JSON** with the following structure:
 
@@ -96,7 +96,7 @@ To configure the key flow, follow this steps:
 }
 ```
 
-3. Configure the service account key for authentication in the provider by following one of the alternatives below:
+1. Configure the service account key for authentication in the provider by following one of the alternatives below:
 
    - setting the fields in the provider block: `service_account_key` or `service_account_key_path`
    - setting the environment variable: `STACKIT_SERVICE_ACCOUNT_KEY_PATH` or `STACKIT_SERVICE_ACCOUNT_KEY`
@@ -211,7 +211,7 @@ This feature enables experimental routing table capabilities in the Terraform Pr
 
 #### `network`
 
-The `stackit_network` provides the fields `region` and `routing_table_id` when the experiment flag `network` is set. 
+The `stackit_network` provides the fields `region` and `routing_table_id` when the experiment flag `network` is set.
 The underlying API is not stable yet and could change in the future.  
 If you don't need these fields, don't set the experiment flag `network`, to use the stable api.
 
@@ -220,6 +220,10 @@ If you don't need these fields, don't set the experiment flag `network`, to use 
 Enables the usage and provisioning of STACKIT Dremio resources.
 The STACKIT Dremio API is currently in alpha state.
 The fields of the resources are still subject to change.
+
+#### iaas
+
+Enables downloading files from a specified URL to the local machine before uploading them as an image resource. The underlying image fetching feature is experimental and subject to change.
 
 ## Acceptance Tests
 
@@ -253,27 +257,33 @@ Additionally:
 > These resource must be removed manually with the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli) or the STACKIT Portal.
 
 For running the acceptance tests of a single service, set the required env vars from above.
-Set the env var `TF_ACC=1`, to enable the acceptance tests. 
+Set the env var `TF_ACC=1`, to enable the acceptance tests.
 
 Start the acceptance tests:
 
 1. Configure your env vars in a file, e.g.
+
    ```sh
    # acc-tests.env
    export TF_ACC="1"
    export TF_ACC_REGION="eu01"
    ...
    ```
+
 2. Read the env vars from the file
+
    ```sh
    source acc-tests.env
    ```
+
 3. Start the acceptance tests
+
     ```sh
-    $ go test -timeout=60m -v stackit/internal/services/<service>/<service>_acc_test.go
+    go test -timeout=60m -v stackit/internal/services/<service>/<service>_acc_test.go
     ```
 
 Alternative, set your env vars inline and start the acceptance test:
+
 ```sh
 $ TF_ACC=1 \
   TF_ACC_PROJECT_ID=<PROJECT_ID> \
@@ -281,7 +291,6 @@ $ TF_ACC=1 \
   STACKIT_SERVICE_ACCOUNT_KEY_PATH=<PATH/TO/SA_KEY.json> \
   go test -timeout=60m -v stackit/internal/services/<service>/<service>_acc_test.go
 ```
-
 
 For some services the acceptance tests take more time. By setting the timeout via the flag `-timeout=` to a higher time, you ensure that the tests will not be stopped.
 
