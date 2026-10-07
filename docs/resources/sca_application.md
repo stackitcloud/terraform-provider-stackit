@@ -117,8 +117,8 @@ Optional:
 
 Optional:
 
-- `auto` (Attributes) Configuration for the dynamic scaling of the number of instances running. (see [below for nested schema](#nestedatt--scaling--auto))
-- `manual` (Attributes) Configuration for a static, fixed number of running instances. (see [below for nested schema](#nestedatt--scaling--manual))
+- `auto` (Attributes) Configuration for dynamic autoscaling of the running instances. Note: Exactly one of `manual` or `auto` must be specified. (see [below for nested schema](#nestedatt--scaling--auto))
+- `manual` (Attributes) Configuration for a static, fixed number of running instances. Note: Exactly one of `manual` or `auto` must be specified. (see [below for nested schema](#nestedatt--scaling--manual))
 
 <a id="nestedatt--scaling--auto"></a>
 ### Nested Schema for `scaling.auto`
@@ -131,17 +131,20 @@ Required:
 Optional:
 
 - `allow_scale_to_zero` (Boolean) Enables scaling down to zero instances. When enabled and the defined rules evaluate to 0, the application enters an idle state. Defaults to `false`. Note: Applications scaled to zero require additional spin-up time (a cold start) for the first rule that evaluates positively.
-- `http_rule` (Attributes) An HTTP-based scaling rule triggered by incoming traffic to the exposed URLs. Note: When the application is scaled to zero (see: `allow_scale_to_zero`), all incoming requests will be held until the application starts listening to the port. And, therefore, when no traffic is received in a period of time, the application will scale down to zero. (see [below for nested schema](#nestedatt--scaling--auto--http_rule))
-- `native_rules` (Attributes List) Custom scaling rules based on native KEDA scalers. Refer to the official KEDA documentation for specific trigger configuration details. (see [below for nested schema](#nestedatt--scaling--auto--native_rules))
+- `http_rule` (Attributes) An HTTP-based scaling rule triggered by incoming traffic to the exposed URLs. Note: At least one of `http_rule` or `native_rules` must be specified when configuring auto-scaling. Also, when the application is scaled to zero (see: `allow_scale_to_zero`), all incoming requests will be held until the application starts listening to the port. Therefore, when no traffic is received in a period of time, the application will scale down to zero. (see [below for nested schema](#nestedatt--scaling--auto--http_rule))
+- `native_rules` (Attributes List) Custom scaling rules based on native KEDA scalers. Refer to the official KEDA documentation for specific trigger configuration details. Note: At least one of `http_rule` or `native_rules` must be specified when configuring auto-scaling. (see [below for nested schema](#nestedatt--scaling--auto--native_rules))
 
 <a id="nestedatt--scaling--auto--http_rule"></a>
 ### Nested Schema for `scaling.auto.http_rule`
 
 Required:
 
-- `concurrency` (Number) The target number of concurrent HTTP requests per instance.
 - `name` (String) The name of the scaling rule.
-- `rps` (Number) The target number of requests per second (RPS) per instance.
+
+Optional:
+
+- `concurrency` (Number) The target number of concurrent HTTP requests per instance. Note: At least one of `concurrency` or `rps` must be specified.
+- `rps` (Number) The target number of requests per second (RPS) per instance. Note: At least one of `concurrency` or `rps` must be specified.
 
 
 <a id="nestedatt--scaling--auto--native_rules"></a>

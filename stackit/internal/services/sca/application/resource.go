@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -259,6 +261,11 @@ func (r *applicationResource) Schema(ctx context.Context, _ resource.SchemaReque
 					"auto": schema.SingleNestedAttribute{
 						Description: descriptionScalingAuto,
 						Optional:    true,
+						Validators: []validator.Object{
+							objectvalidator.ExactlyOneOf(
+								path.MatchRelative().AtParent().AtName("manual"),
+							),
+						},
 						Attributes: map[string]schema.Attribute{
 							"min_instances": schema.Int32Attribute{
 								Description: descriptionScalingMinInstances,
@@ -275,6 +282,11 @@ func (r *applicationResource) Schema(ctx context.Context, _ resource.SchemaReque
 							"http_rule": schema.SingleNestedAttribute{
 								Description: descriptionScalingHttpRule,
 								Optional:    true,
+								Validators: []validator.Object{
+									objectvalidator.AtLeastOneOf(
+										path.MatchRelative().AtParent().AtName("native_rules"),
+									),
+								},
 								Attributes: map[string]schema.Attribute{
 									"name": schema.StringAttribute{
 										Description: descriptionRuleName,
@@ -282,17 +294,32 @@ func (r *applicationResource) Schema(ctx context.Context, _ resource.SchemaReque
 									},
 									"concurrency": schema.Int32Attribute{
 										Description: descriptionRuleConcurrency,
-										Required:    true,
+										Optional:    true,
+										Validators: []validator.Int32{
+											int32validator.AtLeastOneOf(
+												path.MatchRelative().AtParent().AtName("rps"),
+											),
+										},
 									},
 									"rps": schema.Int32Attribute{
 										Description: descriptionRuleRps,
-										Required:    true,
+										Optional:    true,
+										Validators: []validator.Int32{
+											int32validator.AtLeastOneOf(
+												path.MatchRelative().AtParent().AtName("concurrency"),
+											),
+										},
 									},
 								},
 							},
 							"native_rules": schema.ListNestedAttribute{
 								Description: descriptionScalingNativeRules,
 								Optional:    true,
+								Validators: []validator.List{
+									listvalidator.AtLeastOneOf(
+										path.MatchRelative().AtParent().AtName("http_rule"),
+									),
+								},
 								NestedObject: schema.NestedAttributeObject{
 									Attributes: map[string]schema.Attribute{
 										"name": schema.StringAttribute{
@@ -717,11 +744,10 @@ func mapContainers(ctx context.Context, apiContainers []sca.Container, m *Resour
 				}
 			}
 
-			envStruct := envModel{
-				FromValue:     plainTextMap,
-				FromSecretRef: secretEnvMap,
-			}
-			envObj, diags = types.ObjectValueFrom(ctx, envTypes, envStruct)
+			envObj, diags = types.ObjectValue(envTypes, map[string]attr.Value{
+				"from_value":      plainTextMap,
+				"from_secret_ref": secretEnvMap,
+			})
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
@@ -810,18 +836,37 @@ func mapScaling(ctx context.Context, apiScaling sca.Scaling, m *ResourceModel) e
 		httpRuleVal := types.ObjectNull(httpRuleTypes)
 		var tfNativeRules []attr.Value
 		for _, apiRule := range apiAuto.Rules {
-			if apiRule.Type == sca.RULETYPE_RULE_TYPE_HTTP && apiRule.HttpRule != nil {
+			switch apiRule.Type {
+			case sca.RULETYPE_RULE_TYPE_HTTP:
+				if apiRule.HttpRule == nil {
+					continue
+				}
+
+				// concurrency and rps have 0 as default/disabled in the API
+				concurrency := types.Int32Null()
+				if apiRule.HttpRule.Concurrency != nil && *apiRule.HttpRule.Concurrency > 0 {
+					concurrency = types.Int32Value(*apiRule.HttpRule.Concurrency)
+				}
+				rps := types.Int32Null()
+				if apiRule.HttpRule.Rps != nil && *apiRule.HttpRule.Rps > 0 {
+					rps = types.Int32Value(*apiRule.HttpRule.Rps)
+				}
+
 				httpModel := httpRuleModel{
 					Name:        types.StringValue(apiRule.Name),
-					Concurrency: types.Int32PointerValue(apiRule.HttpRule.Concurrency),
-					Rps:         types.Int32PointerValue(apiRule.HttpRule.Rps),
+					Concurrency: concurrency,
+					Rps:         rps,
 				}
 				obj, diags := types.ObjectValueFrom(ctx, httpRuleTypes, httpModel)
 				if diags.HasError() {
 					return core.DiagsToError(diags)
 				}
 				httpRuleVal = obj
-			} else if apiRule.Type == sca.RULETYPE_RULE_TYPE_CUSTOM && apiRule.CustomRule != nil {
+			case sca.RULETYPE_RULE_TYPE_CUSTOM:
+				if apiRule.CustomRule == nil {
+					continue
+				}
+
 				paramsMap := make(map[string]string)
 				for _, p := range apiRule.CustomRule.Parameters {
 					paramsMap[p.Name] = p.Value
@@ -830,7 +875,6 @@ func mapScaling(ctx context.Context, apiScaling sca.Scaling, m *ResourceModel) e
 				if diags.HasError() {
 					return core.DiagsToError(diags)
 				}
-
 				secretsMap := make(map[string]string)
 				for _, s := range apiRule.CustomRule.SecretsMapping {
 					secretsMap[s.Parameter] = s.Secret
@@ -851,11 +895,20 @@ func mapScaling(ctx context.Context, apiScaling sca.Scaling, m *ResourceModel) e
 					return core.DiagsToError(diags)
 				}
 				tfNativeRules = append(tfNativeRules, obj)
+			default:
+				tflog.Warn(ctx, "Encountered unknown scaling rule type from API", map[string]any{
+					"name": apiRule.Name,
+					"type": string(apiRule.Type),
+				})
 			}
 		}
-		nativeRulesList, diags := types.ListValue(basetypes.ObjectType{AttrTypes: nativeRuleTypes}, tfNativeRules)
-		if diags.HasError() {
-			return core.DiagsToError(diags)
+		nativeRulesList := types.ListNull(types.ObjectType{AttrTypes: nativeRuleTypes})
+		if len(tfNativeRules) > 0 {
+			var diags diag.Diagnostics
+			nativeRulesList, diags = types.ListValue(types.ObjectType{AttrTypes: nativeRuleTypes}, tfNativeRules)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
 		}
 
 		autoModel := autoScalingModel{
