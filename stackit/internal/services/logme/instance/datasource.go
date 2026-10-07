@@ -167,7 +167,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["ism_deletion_after"],
 						Computed:    true,
 					},
-					"ism_jitter": schema.Float32Attribute{
+					"ism_jitter": schema.Float64Attribute{
 						Description: parametersDescriptions["ism_jitter"],
 						Computed:    true,
 					},
