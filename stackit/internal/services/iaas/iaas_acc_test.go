@@ -41,6 +41,9 @@ var (
 	//go:embed testdata/datasource-image-v2-variants.tf
 	dataSourceImageVariants string
 
+	//go:embed testdata/datasource-images.tf
+	dataSourceImages string
+
 	//go:embed testdata/datasource-public-ip-ranges.tf
 	datasourcePublicIpRanges string
 
@@ -5004,6 +5007,23 @@ func TestAccImageMax(t *testing.T) {
 			},
 			// Deletion is done by the framework implicitly
 		},
+	})
+}
+
+func TestAccImagesDatasource(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{{
+			ConfigVariables: config.Variables{"project_id": config.StringVariable(testutil.ProjectId)},
+			Config:          fmt.Sprintf("%s\n%s", dataSourceImages, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "id"),
+				resource.TestCheckResourceAttr("data.stackit_images.all", "region", testutil.Region),
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "results.#"),
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "results.0.image_id"),
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "results.0.name"),
+			),
+		}},
 	})
 }
 

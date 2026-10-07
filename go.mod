@@ -27,7 +27,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.2
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.13.1
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.15.2
-	github.com/stackitcloud/stackit-sdk-go/services/logme v1.3.1
+	github.com/stackitcloud/stackit-sdk-go/services/logme v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.2
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.3.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelexperiments v0.3.1
@@ -106,7 +106,7 @@ require (
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.23.0
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
