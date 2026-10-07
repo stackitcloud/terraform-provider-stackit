@@ -46,7 +46,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.6
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.21.1
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.3
-	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.3
+	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.4
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.21.2
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.18.1
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0
