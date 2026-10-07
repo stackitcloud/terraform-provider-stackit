@@ -113,6 +113,9 @@ var (
 	//go:embed testdata/datasource-machinetype.tf
 	dataSourceMachineTypeConfig string
 
+	//go:embed testdata/datasource-machine-types.tf
+	dataSourceMachineTypesConfig string
+
 	//go:embed testdata/resource-routingtable-min.tf
 	resourceRoutingTableMinConfig string
 
@@ -5202,6 +5205,33 @@ func TestAccProject(t *testing.T) {
 				),
 			},
 		},
+	})
+}
+
+func TestAccMachineTypesDatasource(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{{
+			ConfigVariables: config.Variables{
+				"project_id": config.StringVariable(testutil.ProjectId),
+			},
+			Config: fmt.Sprintf("%s\n%s", dataSourceMachineTypesConfig, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("data.stackit_machine_types.all", "id", testutil.ProjectId+","+testutil.Region),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.all", "region", testutil.Region),
+				resource.TestCheckResourceAttrSet("data.stackit_machine_types.all", "results.0.name"),
+				resource.TestCheckResourceAttrSet("data.stackit_machine_types.all", "results.0.vcpus"),
+				resource.TestCheckResourceAttrSet("data.stackit_machine_types.all", "results.0.ram"),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.exact", "results.#", "1"),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.no_match", "results.#", "0"),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.no_match", "region", testutil.Region),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.no_match", "id", testutil.ProjectId+","+testutil.Region),
+				resource.TestCheckOutput("machine_types_sorted", "true"),
+				resource.TestCheckOutput("machine_types_empty_filter_matches_all", "true"),
+				resource.TestCheckOutput("machine_types_hardware_matches", "true"),
+				resource.TestCheckOutput("machine_types_exact_matches", "true"),
+			),
+		}},
 	})
 }
 
