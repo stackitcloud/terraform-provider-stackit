@@ -81,37 +81,6 @@ type imagesDataSource struct {
 	providerData core.ProviderData
 }
 
-func NewImagesDataSource() datasource.DataSource {
-	return &imagesDataSource{}
-}
-
-func (d *imagesDataSource) Metadata(
-	_ context.Context,
-	req datasource.MetadataRequest,
-	resp *datasource.MetadataResponse,
-) {
-	resp.TypeName = req.ProviderTypeName + "_images"
-}
-
-func (d *imagesDataSource) Configure(
-	ctx context.Context,
-	req datasource.ConfigureRequest,
-	resp *datasource.ConfigureResponse,
-) {
-	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-	if !ok {
-		return
-	}
-
-	d.providerData = providerData
-	d.client = clients.IaaSv2Client
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_images", "datasource")
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	tflog.Info(ctx, "iaas client configured")
-}
-
 var configAttrTypes = map[string]attr.Type{
 	"boot_menu":                types.BoolType,
 	"cdrom_bus":                types.StringType,
@@ -147,15 +116,37 @@ var imageAttrTypes = map[string]attr.Type{
 	"checksum":      types.ObjectType{AttrTypes: checksumAttrTypes},
 }
 
-func (d *imagesDataSource) Schema(
-	ctx context.Context,
-	_ datasource.SchemaRequest,
-	resp *datasource.SchemaResponse,
-) {
+func NewImagesDataSource() datasource.DataSource {
+	return &imagesDataSource{}
+}
+
+func (d *imagesDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_images"
+}
+
+func (d *imagesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_images", "datasource")
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Info(ctx, "iaas client configured")
+}
+
+func (d *imagesDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := features.AddBetaDescription(
 		"Lists all IaaS images in a project and region. Results are sorted by image ID.",
 		core.Datasource,
 	)
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -264,6 +255,7 @@ func toRequest(ctx context.Context, client iaas.DefaultAPI, model *DataSourceMod
 	if model == nil {
 		return iaas.ApiListImagesRequest{}, fmt.Errorf("data source model is nil")
 	}
+
 	request := client.ListImages(ctx, model.ProjectID.ValueString(), providerData.GetRegionWithOverride(model.Region)).All(true)
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
 		var filter filterModel
@@ -271,24 +263,23 @@ func toRequest(ctx context.Context, client iaas.DefaultAPI, model *DataSourceMod
 		if diags.HasError() {
 			return iaas.ApiListImagesRequest{}, fmt.Errorf("converting filter: %w", core.DiagsToError(diags))
 		}
+
 		if !filter.LabelSelector.IsNull() && !filter.LabelSelector.IsUnknown() && filter.LabelSelector.ValueString() != "" {
 			request = request.LabelSelector(filter.LabelSelector.ValueString())
 		}
 	}
+
 	return request, nil
 }
 
 // nolint:gocritic // framework signature required
-func (d *imagesDataSource) Read(
-	ctx context.Context,
-	req datasource.ReadRequest,
-	resp *datasource.ReadResponse,
-) {
+func (d *imagesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var model DataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -296,26 +287,36 @@ func (d *imagesDataSource) Read(
 	}
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
+
 	ctx = core.InitProviderContext(ctx)
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", model.ProjectID.ValueString())
 	ctx = tflog.SetField(ctx, "region", region)
+
 	request, err := toRequest(ctx, d.client, &model, &d.providerData)
 	if err != nil {
-		resp.Diagnostics.AddError("Error constructing image list request", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error constructing image list request", err.Error())
 		return
 	}
+
 	apiResponse, err := request.Execute()
 	if err != nil {
-		resp.Diagnostics.AddError("Error listing images", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing images", err.Error())
 		return
 	}
 	ctx = core.LogResponse(ctx)
+
 	if err = mapFields(ctx, apiResponse, &model, region); err != nil {
-		resp.Diagnostics.AddError("Error mapping images", err.Error())
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error mapping images", err.Error())
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Info(ctx, "images read")
 }
 
 func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *DataSourceModel, region string) error {
@@ -325,6 +326,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 	if model == nil {
 		return fmt.Errorf("data source model is nil")
 	}
+
 	items := response.Items
 	for i := range items {
 		if items[i].Id == nil || *items[i].Id == "" {
@@ -332,6 +334,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 		}
 	}
 	slices.SortFunc(items, func(a, b iaas.Image) int { return strings.Compare(*a.Id, *b.Id) })
+
 	values := make([]imageModel, 0, len(items))
 	for i := range items {
 		item, err := mapImage(ctx, &items[i])
@@ -340,13 +343,16 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 		}
 		values = append(values, item)
 	}
+
 	list, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: imageAttrTypes}, values)
 	if diags.HasError() {
 		return fmt.Errorf("converting image results: %w", core.DiagsToError(diags))
 	}
+
 	model.Results = list
 	model.Region = types.StringValue(region)
 	model.ID = utils.BuildInternalTerraformId(model.ProjectID.ValueString(), region)
+
 	return nil
 }
 
@@ -357,6 +363,7 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 	if image.Id == nil || *image.Id == "" {
 		return imageModel{}, fmt.Errorf("image ID is missing")
 	}
+
 	m := imageModel{
 		ImageID:     types.StringValue(*image.Id),
 		Name:        types.StringValue(image.Name),
@@ -367,11 +374,13 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 		Scope:       types.StringPointerValue(image.Scope),
 		Status:      types.StringPointerValue(image.Status),
 	}
+
 	labels, err := iaasUtils.MapLabels(ctx, image.Labels, types.MapNull(types.StringType))
 	if err != nil {
 		return m, fmt.Errorf("mapping labels: %w", err)
 	}
 	m.Labels = labels
+
 	if image.Config == nil {
 		m.Config = types.ObjectNull(configAttrTypes)
 	} else {
@@ -397,6 +406,7 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 		}
 		m.Config = obj
 	}
+
 	if image.Checksum == nil {
 		m.Checksum = types.ObjectNull(checksumAttrTypes)
 	} else {
@@ -410,5 +420,6 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 		}
 		m.Checksum = obj
 	}
+
 	return m, nil
 }
