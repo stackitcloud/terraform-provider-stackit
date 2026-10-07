@@ -50,6 +50,8 @@ var (
 	_ resource.ResourceWithConfigValidators = &imageResource{}
 )
 
+const tmpDirPrefix = "com.stackit.terraform-provider-download-*"
+
 type Model struct {
 	Id            types.String `tfsdk:"id"` // needed by TF
 	ProjectId     types.String `tfsdk:"project_id"`
@@ -520,12 +522,10 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	var filePath string
 	var err error
 
-	// Handle legacy option
+	// Handle deprecated option
 	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
 		filePath = model.LocalFilePath.ValueString()
-	}
-
-	if filePath == "" && !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
+	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
 		var imageFileModel imageFileModel
 		diags = model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
@@ -604,6 +604,16 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	// Cleanup on exit
+	tmpDir := filepath.Dir(filePath)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			tflog.Warn(ctx, "failed to cleanup downloaded temp image dir", map[string]interface{}{
+				"dir":   tmpDir,
+				"error": err.Error(),
+			})
+		}
+	}()
 	// Wait for image to become available
 	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, region, imageCreateResp.Id) //nolint:tfwriteid // false positive - id fields are actually stored already using the mapFields() call above
 	waiter = waiter.SetTimeout(7 * 24 * time.Hour)                                              // Set timeout to one week, to make the timeout useless
@@ -1054,7 +1064,7 @@ func downloadImage(ctx context.Context, downloadURL string) (fileName string, er
 	//nolint:gosec // G401: weak crypto is acceptable here for hash generation
 	md5sum := fmt.Sprintf("%x", md5.Sum([]byte(downloadURL)))
 
-	tmpDir, err := os.MkdirTemp("", "tf-provider-download-*")
+	tmpDir, err := os.MkdirTemp("", tmpDirPrefix)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
