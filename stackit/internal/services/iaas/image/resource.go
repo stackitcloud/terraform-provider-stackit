@@ -159,7 +159,19 @@ func (r *imageResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	if !configModel.ImageFile.IsNull() && !configModel.ImageFile.IsUnknown() {
+		var imageFileModel imageFileModel
+		resp.Diagnostics.Append(configModel.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
+			features.CheckExperimentEnabled(ctx, &r.providerData, features.IaasExperiment, "stackit_iaas_image", core.Resource, &resp.Diagnostics)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	}
 	var planModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
