@@ -582,7 +582,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 										path.MatchRelative().AtParent().AtName("os_version"),
 										path.MatchRelative().AtParent().AtName("name"),
 									),
-									"sets `UseStateForUnknown` only if `os_name`, `os_version_min`, and `os_version` have not changed",
+									"sets `UseStateForUnknown` only if `os_name`, `os_version_min`, `os_version` and `name` have not changed",
 								),
 							},
 						},
