@@ -46,6 +46,7 @@ import (
 	iaasImageV2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/imagev2"
 	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
 	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
+	iaasMachineTypes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetypes"
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
 	iaasNetworkAreaRegion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearegion"
@@ -793,6 +794,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logsAccessToken.NewLogsAccessTokenDataSource,
 		logAlertGroup.NewLogAlertGroupDataSource,
 		machineType.NewMachineTypeDataSource,
+		iaasMachineTypes.NewMachineTypesDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
 		modelExperimentsInstance.NewInstanceDataSource,
