@@ -70,7 +70,7 @@ var schemaDescriptions = map[string]string{
 	"config_blocked_ips":                           "Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.",
 	"config_default_cache_duration":                "Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
 	"config_monthly_limit_bytes":                   "Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
-	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
+	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution. Currently, this feature is only available for distributions of backend type HTTP.",
 	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
 	"config_redirects_rule_description":            "An optional description for the redirect rule",
 	"config_redirects_rule_enabled":                "A toggle to enable or disable the redirect rule. Default to true",
@@ -743,6 +743,22 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 }
 
 func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	// Redirects are only supported for backend type http
+	var backendType types.String
+	var redirects types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("backend").AtName("type"), &backendType)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("redirects"), &redirects)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !utils.IsUndefined(backendType) && backendType.ValueString() != "http" && !redirects.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("config").AtName("redirects"),
+			"Invalid redirects config",
+			fmt.Sprintf("Redirects can only be configured for backend type \"http\", got %q.", backendType.ValueString()),
+		)
+	}
+
 	var model Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {

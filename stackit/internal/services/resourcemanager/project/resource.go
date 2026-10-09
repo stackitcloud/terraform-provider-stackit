@@ -294,8 +294,16 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
-	var model ResourceModel
-	diags := req.Plan.Get(ctx, &model)
+	var planModel ResourceModel
+	diags := req.Plan.Get(ctx, &planModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Retrieve values from state
+	var stateModel ResourceModel
+	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -303,11 +311,11 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	ctx = core.InitProviderContext(ctx)
 
-	containerId := model.ContainerId.ValueString()
+	containerId := planModel.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model)
+	// Generate API request body from plan model and state model
+	payload, err := toUpdatePayload(ctx, &planModel, &stateModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -328,13 +336,13 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	err = mapProjectFields(ctx, projectResp, &model.Model, &resp.State)
+	err = mapProjectFields(ctx, projectResp, &planModel.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -505,19 +513,21 @@ func toCreatePayload(ctx context.Context, model *ResourceModel) (*resourcemanage
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *ResourceModel) (*resourcemanager.PartialUpdateProjectPayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
+func toUpdatePayload(ctx context.Context, planModel, stateModel *ResourceModel) (*resourcemanager.PartialUpdateProjectPayload, error) {
+	if planModel == nil {
+		return nil, fmt.Errorf("nil plan model")
+	} else if stateModel == nil {
+		return nil, fmt.Errorf("nil state model")
 	}
 
-	labels, err := utils.LabelsToNullableValuePayload(ctx, model.Labels)
+	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
 	if err != nil {
 		return nil, err
 	}
 
 	return &resourcemanager.PartialUpdateProjectPayload{
-		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
-		Name:              conversion.StringValueToPointer(model.Name),
+		ContainerParentId: conversion.StringValueToPointer(planModel.ContainerParentId),
+		Name:              conversion.StringValueToPointer(planModel.Name),
 		Labels:            &labels,
 	}, nil
 }
