@@ -36,6 +36,7 @@ data "stackit_postgresflex_instance" "example" {
 - `acl` (List of String, Deprecated) The Access Control List (ACL) for the PostgresFlex instance.
 - `backup_schedule` (String) The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.
 - `connection_info` (Attributes) The connection info for the PostgresFlex instance. (see [below for nested schema](#nestedatt--connection_info))
+- `deletion_protection` (Boolean) Whether the instance is protected from deletion.
 - `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
 - `flavor` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--flavor))
 - `flavor_id` (String)
