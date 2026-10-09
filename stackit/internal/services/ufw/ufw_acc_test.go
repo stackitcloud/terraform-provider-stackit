@@ -63,9 +63,12 @@ func TestAccUfwInstanceMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceConfigMin),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "product", "edge-cloud"),
 					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
+					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "type", "ACL"),
+					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "region", testutil.Region),
 					resource.TestCheckResourceAttrSet("stackit_ufw_instance.example", "rule_id"),
+					resource.TestCheckResourceAttrSet("stackit_ufw_instance.example", "instance_id"),
 				),
 			},
 			{
@@ -86,9 +89,15 @@ func TestAccUfwInstanceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "region", testutil.Region),
 					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "product", "edge-cloud"),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "type", "ACL"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_ufw_instance.example", "rule_id",
 						"data.stackit_ufw_instance.example", "rule_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_ufw_instance.example", "instance_id",
+						"data.stackit_ufw_instance.example", "instance_id",
 					),
 				),
 			},
@@ -141,8 +150,11 @@ func TestAccUfwInstanceMax(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "product", "edge-cloud"),
 					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
+					resource.TestCheckResourceAttr("stackit_ufw_instance.example", "type", "ACL"),
 					resource.TestCheckResourceAttrSet("stackit_ufw_instance.example", "rule_id"),
+					resource.TestCheckResourceAttrSet("stackit_ufw_instance.example", "instance_id"),
 				),
 			},
 			{
@@ -163,10 +175,18 @@ func TestAccUfwInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "region", testutil.Region),
 					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "source_ip", "192.168.0.0/24"),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "product", "edge-cloud"),
+					resource.TestCheckResourceAttr("data.stackit_ufw_instance.example", "type", "ACL"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_ufw_instance.example", "rule_id",
 						"data.stackit_ufw_instance.example", "rule_id",
 					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_ufw_instance.example", "instance_id",
+						"data.stackit_ufw_instance.example", "instance_id",
+					),
+					resource.TestCheckNoResourceAttr("data.stackit_ufw_instance.example", "description"),
+					resource.TestCheckNoResourceAttr("data.stackit_ufw_instance.example", "direction"),
 				),
 			},
 			{
