@@ -50,6 +50,7 @@ import (
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
+	ufw "github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api"
 	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 	"golang.org/x/sync/errgroup"
@@ -98,6 +99,7 @@ type ClientFactory interface {
 	newSqlServerFlexV3Client() (sqlserverflex.DefaultAPI, error)
 	newTelemetryLinkV1Client() (telemetrylink.DefaultAPI, error)
 	newTelemetryRouterV1Client() (telemetryrouter.DefaultAPI, error)
+	newUfwV1Client() (ufw.DefaultAPI, error)
 	newValkeyV2Client() (valkey.DefaultAPI, error)
 	newVpnV1Client() (vpn.DefaultAPI, error)
 }
@@ -136,6 +138,7 @@ func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error
 	g.Go(func() (err error) { cc.IntakeV1BetaClient, err = clientFactory.newIntakeV1BetaClient(); return err })
 	g.Go(func() (err error) { cc.ValkeyV2Client, err = clientFactory.newValkeyV2Client(); return err })
 	g.Go(func() (err error) { cc.DremioV1BetaClient, err = clientFactory.newDremioV1BetaClient(); return err })
+	g.Go(func() (err error) { cc.UfwV1Client, err = clientFactory.newUfwV1Client(); return err })
 	g.Go(func() (err error) {
 		cc.ResourceManagerClient, err = clientFactory.newResourceManagerClient()
 		return err
@@ -833,6 +836,17 @@ func (f *DefaultClientFactory) newObjectStorageV2Client() (objectstorage.Default
 	}
 
 	apiClient, err := objectstorage.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newUfwV1Client() (ufw.DefaultAPI, error) {
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.UfwCustomEndpoint)
+
+	apiClient, err := ufw.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}

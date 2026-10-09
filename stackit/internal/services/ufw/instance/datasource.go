@@ -12,12 +12,9 @@ import (
 
 	ufw "github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
-	ufwUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ufw/utils"
 )
 
 var (
@@ -50,19 +47,17 @@ func (d *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 }
 
 func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	if req.ProviderData == nil {
+		return
+	}
+
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	d.providerData = providerData
 
-	apiClient := ufwUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if apiClient == nil {
-		return
-	}
-
-	d.client = apiClient.DefaultAPI
-	tflog.Info(ctx, "UFW instance datasource client configured")
+	d.client = clients.UfwV1Client
+	tflog.Info(ctx, "UFW client configured for datasource")
 }
 
 func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {

@@ -51,6 +51,7 @@ import (
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
+	ufw "github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api"
 	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
@@ -240,6 +241,7 @@ type ClientCollection struct {
 	SqlServerFlexV3Client       sqlserverflex.DefaultAPI
 	TelemetryLinkV1Client       telemetrylink.DefaultAPI
 	TelemetryRouterV1Client     telemetryrouter.DefaultAPI
+	UfwV1Client                 ufw.DefaultAPI
 	ValkeyV2Client              valkey.DefaultAPI
 	VpnV1Client                 vpn.DefaultAPI
 }
