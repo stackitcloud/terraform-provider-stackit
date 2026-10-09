@@ -12,6 +12,7 @@ variable "flavor_cpu" {}
 variable "flavor_ram" {}
 variable "replicas" {}
 variable "region" {}
+variable "deletion_protection" {}
 
 resource "stackit_postgresflex_instance" "with_flavor_id" {
   project_id = var.project_id
@@ -26,8 +27,9 @@ resource "stackit_postgresflex_instance" "with_flavor_id" {
     class = var.storage_class
     size  = var.storage_size
   }
-  version        = var.instance_version
-  retention_days = var.retention_days
+  version             = var.instance_version
+  retention_days      = var.retention_days
+  deletion_protection = var.deletion_protection
 }
 
 resource "stackit_postgresflex_instance" "with_flavor" {
