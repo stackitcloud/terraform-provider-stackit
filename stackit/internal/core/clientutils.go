@@ -38,6 +38,7 @@ import (
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	sca "github.com/stackitcloud/stackit-sdk-go/services/sca/v1alphaapi"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
 	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
@@ -86,6 +87,7 @@ type ClientFactory interface {
 	newRabbitMqV2Client() (rabbitmq.DefaultAPI, error)
 	newRedisV2Client() (redis.DefaultAPI, error)
 	newResourceManagerClient() (resourcemanager.DefaultAPI, error)
+	newScaV1AlphaClient() (sca.DefaultAPI, error)
 	newScfV1Client() (scf.DefaultAPI, error)
 	newSecretsManagerV1AlphaClient() (secretsmanagerV1Alpha.DefaultAPI, error)
 	newSecretsManagerV1Client() (secretsmanager.DefaultAPI, error)
@@ -136,6 +138,7 @@ func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error
 	g.Go(func() (err error) { cc.IntakeV1BetaClient, err = clientFactory.newIntakeV1BetaClient(); return err })
 	g.Go(func() (err error) { cc.ValkeyV2Client, err = clientFactory.newValkeyV2Client(); return err })
 	g.Go(func() (err error) { cc.DremioV1BetaClient, err = clientFactory.newDremioV1BetaClient(); return err })
+	g.Go(func() (err error) { cc.ScaV1AlphaClient, err = clientFactory.newScaV1AlphaClient(); return err })
 	g.Go(func() (err error) {
 		cc.ResourceManagerClient, err = clientFactory.newResourceManagerClient()
 		return err
@@ -383,6 +386,17 @@ func (f *DefaultClientFactory) newScfV1Client() (scf.DefaultAPI, error) {
 	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.ScfCustomEndpoint)
 
 	apiClient, err := scf.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newScaV1AlphaClient() (sca.DefaultAPI, error) {
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.ScaCustomEndpoint)
+
+	apiClient, err := sca.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
