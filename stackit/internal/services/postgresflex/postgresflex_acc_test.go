@@ -77,20 +77,21 @@ var testConfigInstanceVarsMinUpdated = func() config.Variables {
 
 // Instance - MAX
 var testConfigInstanceVarsMax = config.Variables{
-	"project_id":       config.StringVariable(testutil.ProjectId),
-	"name":             config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"acl":              config.StringVariable("192.168.0.0/24"),
-	"access_scope":     config.StringVariable(string(postgresflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
-	"backup_schedule":  config.StringVariable("0 16 * * *"),
-	"flavor_id":        config.StringVariable("4.8-replica"),
-	"flavor_cpu":       config.IntegerVariable(4),
-	"flavor_ram":       config.IntegerVariable(8),
-	"replicas":         config.IntegerVariable(3),
-	"storage_class":    config.StringVariable("premium-perf2-stackit"),
-	"storage_size":     config.IntegerVariable(5),
-	"instance_version": config.StringVariable("16"),
-	"retention_days":   config.IntegerVariable(40),
-	"region":           config.StringVariable(testutil.Region),
+	"project_id":          config.StringVariable(testutil.ProjectId),
+	"name":                config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"acl":                 config.StringVariable("192.168.0.0/24"),
+	"access_scope":        config.StringVariable(string(postgresflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+	"backup_schedule":     config.StringVariable("0 16 * * *"),
+	"flavor_id":           config.StringVariable("4.8-replica"),
+	"flavor_cpu":          config.IntegerVariable(4),
+	"flavor_ram":          config.IntegerVariable(8),
+	"replicas":            config.IntegerVariable(3),
+	"storage_class":       config.StringVariable("premium-perf2-stackit"),
+	"storage_size":        config.IntegerVariable(5),
+	"instance_version":    config.StringVariable("16"),
+	"retention_days":      config.IntegerVariable(40),
+	"region":              config.StringVariable(testutil.Region),
+	"deletion_protection": config.BoolVariable(true),
 }
 
 var testConfigInstanceVarsMaxUpdated = func() config.Variables {
@@ -108,6 +109,8 @@ var testConfigInstanceVarsMaxUpdated = func() config.Variables {
 	updatedConfig["storage_size"] = config.IntegerVariable(11)
 	updatedConfig["instance_version"] = config.StringVariable("17")
 	updatedConfig["retention_days"] = config.IntegerVariable(32)
+	// protection must be disabled again, otherwise the instance can't be destroyed at the end of the test
+	updatedConfig["deletion_protection"] = config.BoolVariable(false)
 	return updatedConfig
 }()
 
@@ -349,6 +352,7 @@ func TestAccPostgresFlexInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_postgresflex_instance.with_flavor_id", "connection_info.write.port"),
 					resource.TestCheckNoResourceAttr("stackit_postgresflex_instance.with_flavor_id", "replicas"),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "retention_days", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["retention_days"])),
+					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "deletion_protection", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["deletion_protection"])),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "storage.class", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["storage_class"])),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "storage.size", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["storage_size"])),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "version", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["instance_version"])),
@@ -424,6 +428,7 @@ func TestAccPostgresFlexInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_postgresflex_instance.with_flavor_id", "connection_info.write.port"),
 					resource.TestCheckResourceAttrSet("data.stackit_postgresflex_instance.with_flavor_id", "replicas"),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.with_flavor_id", "retention_days", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["retention_days"])),
+					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.with_flavor_id", "deletion_protection", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["deletion_protection"])),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.with_flavor_id", "storage.class", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["storage_class"])),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.with_flavor_id", "storage.size", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["storage_size"])),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.with_flavor_id", "version", testutil.ConvertConfigVariable(testConfigInstanceVarsMax["instance_version"])),
@@ -539,6 +544,7 @@ func TestAccPostgresFlexInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_postgresflex_instance.with_flavor_id", "connection_info.write.port"),
 					resource.TestCheckNoResourceAttr("stackit_postgresflex_instance.with_flavor_id", "replicas"),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "retention_days", retentionDaysDefault),
+					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "deletion_protection", testutil.ConvertConfigVariable(testConfigInstanceVarsMaxUpdated["deletion_protection"])),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "storage.class", testutil.ConvertConfigVariable(testConfigInstanceVarsMaxUpdated["storage_class"])),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "storage.size", testutil.ConvertConfigVariable(testConfigInstanceVarsMaxUpdated["storage_size"])),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.with_flavor_id", "version", testutil.ConvertConfigVariable(testConfigInstanceVarsMaxUpdated["instance_version"])),
