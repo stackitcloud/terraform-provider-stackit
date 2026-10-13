@@ -81,6 +81,10 @@ func TestAccUfwInstanceMin(t *testing.T) {
                   project_id = stackit_ufw_instance.example.project_id
                   region     = stackit_ufw_instance.example.region
                   rule_id    = stackit_ufw_instance.example.rule_id
+				  instance_id = stackit_ufw_instance.example.instance_id
+                  product     = stackit_ufw_instance.example.product
+                  source_ip   = stackit_ufw_instance.example.source_ip
+                  type        = stackit_ufw_instance.example.type
                 }
                 `,
 					testutil.NewConfigBuilder().BuildProviderConfig(), resourceConfigMin,
@@ -167,6 +171,10 @@ func TestAccUfwInstanceMax(t *testing.T) {
                   project_id = stackit_ufw_instance.example.project_id
                   region     = stackit_ufw_instance.example.region
                   rule_id    = stackit_ufw_instance.example.rule_id
+				  instance_id = stackit_ufw_instance.example.instance_id
+                  product     = stackit_ufw_instance.example.product
+                  source_ip   = stackit_ufw_instance.example.source_ip
+                  type        = stackit_ufw_instance.example.type
                 }
                 `,
 					testutil.NewConfigBuilder().BuildProviderConfig(), resourceConfigMax,

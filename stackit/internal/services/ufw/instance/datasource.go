@@ -89,19 +89,19 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 			"instance_id": schema.StringAttribute{
 				Description: "The target service instance ID.",
-				Computed:    true,
+				Required:    true,
 			},
 			"product": schema.StringAttribute{
 				Description: "The source service product (e.g. 'edge-cloud').",
-				Computed:    true,
+				Required:    true,
 			},
 			"source_ip": schema.StringAttribute{
 				Description: "The source IP (CIDR) to which the rule applies.",
-				Computed:    true,
+				Required:    true,
 			},
 			"type": schema.StringAttribute{
 				Description: "The type of the rule (e.g., 'ACL').",
-				Computed:    true,
+				Required:    true,
 			},
 		},
 	}

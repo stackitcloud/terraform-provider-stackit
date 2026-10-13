@@ -28,8 +28,12 @@ data "stackit_ufw_instance" "example" {
 
 ### Required
 
+- `instance_id` (String) The target service instance ID.
+- `product` (String) The source service product (e.g. 'edge-cloud').
 - `project_id` (String) STACKIT Project ID associated with the rule.
 - `rule_id` (String) The rule UUID.
+- `source_ip` (String) The source IP (CIDR) to which the rule applies.
+- `type` (String) The type of the rule (e.g., 'ACL').
 
 ### Optional
 
@@ -38,7 +42,3 @@ data "stackit_ufw_instance" "example" {
 ### Read-Only
 
 - `id` (String) Terraform internal resource identifier in format 'project_id,region,rule_id'.
-- `instance_id` (String) The target service instance ID.
-- `product` (String) The source service product (e.g. 'edge-cloud').
-- `source_ip` (String) The source IP (CIDR) to which the rule applies.
-- `type` (String) The type of the rule (e.g., 'ACL').
