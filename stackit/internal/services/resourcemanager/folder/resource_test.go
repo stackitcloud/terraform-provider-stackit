@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 
@@ -266,38 +267,59 @@ func TestToCreatePayload(t *testing.T) {
 }
 
 func TestToUpdatePayload(t *testing.T) {
+	type args struct {
+		planModel  *ResourceModel
+		stateModel *ResourceModel
+	}
+
 	tests := []struct {
 		description string
-		input       *ResourceModel
-		inputLabels *map[string]string
+		args        args
 		expected    *resourcemanager.PartialUpdateFolderPayload
 		isValid     bool
 	}{
 		{
-			"default_ok",
-			&ResourceModel{},
-			nil,
-			&resourcemanager.PartialUpdateFolderPayload{
+			description: "default_ok",
+			args: args{
+				planModel: &ResourceModel{
+					Model: Model{
+						Labels: types.MapNull(types.StringType),
+					},
+				},
+				stateModel: &ResourceModel{
+					Model: Model{
+						Labels: types.MapNull(types.StringType),
+					},
+				},
+			},
+			expected: &resourcemanager.PartialUpdateFolderPayload{
 				ContainerParentId: nil,
 				Labels:            &map[string]*string{},
 				Name:              nil,
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"mapping_with_conversions_ok",
-			&ResourceModel{
-				Model: Model{
-					ContainerParentId: types.StringValue("pid"),
-					Name:              types.StringValue("name"),
+			description: "mapping_with_conversions_ok",
+			args: args{
+				planModel: &ResourceModel{
+					Model: Model{
+						ContainerParentId: types.StringValue("pid"),
+						Name:              types.StringValue("name"),
+						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+							"label1": types.StringValue("1"),
+							"label2": types.StringValue("2"),
+						}),
+					},
+					OwnerEmail: types.StringValue("owner_email"),
 				},
-				OwnerEmail: types.StringValue("owner_email"),
+				stateModel: &ResourceModel{
+					Model: Model{
+						Labels: types.MapNull(types.StringType),
+					},
+				},
 			},
-			&map[string]string{
-				"label1": "1",
-				"label2": "2",
-			},
-			&resourcemanager.PartialUpdateFolderPayload{
+			expected: &resourcemanager.PartialUpdateFolderPayload{
 				ContainerParentId: new("pid"),
 				Labels: &map[string]*string{
 					"label1": new("1"),
@@ -305,41 +327,78 @@ func TestToUpdatePayload(t *testing.T) {
 				},
 				Name: new("name"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_model",
-			nil,
-			nil,
-			nil,
-			false,
+			description: "remove labels not included in the TF config, update existing ones",
+			args: args{
+				planModel: &ResourceModel{
+					Model: Model{
+						ContainerParentId: types.StringValue("pid"),
+						Name:              types.StringValue("name"),
+						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+							"label1": types.StringValue("1"),
+							"label2": types.StringValue("2-new"),
+						}),
+					},
+					OwnerEmail: types.StringValue("owner_email"),
+				},
+				stateModel: &ResourceModel{
+					Model: Model{
+						Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+							"label1": types.StringValue("1"),
+							"label2": types.StringValue("2"),
+							"label3": types.StringValue("3"),
+							"label4": types.StringValue(""),
+						}),
+					},
+				},
+			},
+			expected: &resourcemanager.PartialUpdateFolderPayload{
+				ContainerParentId: new("pid"),
+				Labels: &map[string]*string{
+					"label1": new("1"),
+					"label2": new("2-new"),
+					"label3": nil,
+					"label4": nil,
+				},
+				Name: new("name"),
+			},
+			isValid: true,
+		},
+		{
+			description: "nil_plan_model",
+			args: args{
+				planModel:  nil,
+				stateModel: &ResourceModel{},
+			},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			description: "nil_state_model",
+			args: args{
+				planModel:  &ResourceModel{},
+				stateModel: nil,
+			},
+			expected: nil,
+			isValid:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			if tt.input != nil {
-				if tt.inputLabels == nil {
-					tt.input.Labels = types.MapNull(types.StringType)
-				} else {
-					convertedLabels, err := conversion.ToTerraformStringMap(context.Background(), *tt.inputLabels)
-					if err != nil {
-						t.Fatalf("Error converting to terraform string map: %v", err)
-					}
-					tt.input.Labels = convertedLabels
-				}
-			}
-			output, err := toUpdatePayload(context.Background(), tt.input)
+			output, err := toUpdatePayload(context.Background(), tt.args.planModel, tt.args.stateModel)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
-			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected)
-				if diff != "" {
-					t.Fatalf("Data does not match: %s", diff)
-				}
+
+			diff := cmp.Diff(output, tt.expected)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
 			}
 		})
 	}
