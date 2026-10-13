@@ -37,22 +37,22 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.25.3
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.15.0
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.3.1
-	github.com/stackitcloud/stackit-sdk-go/services/redis v1.4.1
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/redis v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.26.1
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.10.2
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.19.2
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.7.3
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.6
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.21.1
-	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.3
+	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.4
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.21.2
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.18.1
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/ufw v0.1.1
-	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.3.1
+	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.2
 	github.com/teambition/rrule-go v1.8.2
 	go.uber.org/mock v0.6.0
@@ -99,14 +99,14 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.2.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.5
+	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.16.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
