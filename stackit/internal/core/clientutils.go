@@ -394,7 +394,16 @@ func (f *DefaultClientFactory) newScfV1Client() (scf.DefaultAPI, error) {
 }
 
 func (f *DefaultClientFactory) newScaV1AlphaClient() (sca.DefaultAPI, error) {
-	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.ScaCustomEndpoint)
+	apiClientConfigOptions := []config.ConfigurationOption{
+		config.WithCustomAuth(f.RoundTripper),
+		config.WithUserAgent(f.UserAgent),
+	}
+
+	if f.CustomEndpoints.ScaCustomEndpoint != "" {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.ScaCustomEndpoint))
+	} else {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(f.ProviderDefaultRegion))
+	}
 
 	apiClient, err := sca.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {

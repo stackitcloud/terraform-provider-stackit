@@ -142,7 +142,7 @@ func TestAccSCAApplication(t *testing.T) {
 
 func testAccCheckSCAApplicationDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := scaSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ScaCustomEndpoint, false)...)
+	client, err := scaSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ScaCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
