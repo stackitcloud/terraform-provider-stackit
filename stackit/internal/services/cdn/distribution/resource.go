@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -243,6 +244,12 @@ var cacheConfigTypes = map[string]attr.Type{
 	"query_string_vary_parameters": types.ListType{ElemType: types.StringType},
 }
 
+var defaultCacheConfig = types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+	"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+	"query_string_vary_enabled":    types.BoolValue(false),
+	"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{}),
+})
+
 var optimizerTypes = map[string]attr.Type{
 	"enabled": types.BoolType,
 }
@@ -446,11 +453,13 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Description: schemaDescriptions["config_cache_config"],
 						Optional:    true,
 						Computed:    true,
+						Default:     objectdefault.StaticValue(defaultCacheConfig),
 						Attributes: map[string]schema.Attribute{
 							"cache_key_headers": schema.ListAttribute{
 								Description: schemaDescriptions["config_cache_config_cache_key_headers"],
 								Optional:    true,
 								Computed:    true,
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 								ElementType: types.StringType,
 								Validators: []validator.List{
 									listvalidator.NoNullValues(),
@@ -466,6 +475,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Description: schemaDescriptions["config_cache_config_query_string_vary_parameters"],
 								Optional:    true,
 								Computed:    true,
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 								ElementType: types.StringType,
 								Validators: []validator.List{
 									listvalidator.NoNullValues(),
@@ -1779,14 +1789,7 @@ func toPatchPayload(ctx context.Context, model *Model) (*cdnSdk.PatchDistributio
 		configPatch.Optimizer = optimizer
 	}
 
-	// Explicitly set default values to work around unexpected SDK behavior.
-	// Without these defaults, removing the cache_config block leaves the existing
-	// cache configuration intact rather than resetting it. Enforcing these defaults
-	// ensures the configuration accurately reflects only what the user has explicitly defined.
-	cacheConfigPatch := cdnSdk.NewCacheConfigPatch()
-	cacheConfigPatch.SetCacheKeyHeaders([]string{})
-	cacheConfigPatch.SetQueryStringVaryParameters([]string{})
-	cacheConfigPatch.SetQueryStringVaryEnabled(false)
+	var cacheConfigPatch *cdnSdk.CacheConfigPatch
 	if !utils.IsUndefined(configModel.CacheConfig) {
 		var cacheModel cacheConfigModel
 		diags = configModel.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
@@ -1794,6 +1797,7 @@ func toPatchPayload(ctx context.Context, model *Model) (*cdnSdk.PatchDistributio
 			return nil, core.DiagsToError(diags)
 		}
 
+		cacheConfigPatch = cdnSdk.NewCacheConfigPatch()
 		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
 			cacheConfigPatch.SetQueryStringVaryEnabled(cacheModel.QueryStringVaryEnabled.ValueBool())
 		}

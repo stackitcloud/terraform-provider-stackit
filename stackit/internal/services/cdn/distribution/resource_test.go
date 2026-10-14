@@ -713,6 +713,33 @@ func TestToPatchPayload(t *testing.T) {
 					Regions:          []cdnSdk.Region{"EU", "US"},
 					BlockedCountries: []string{"XX", "YY", "ZZ"},
 					Waf:              defaultWafPatch,
+					CacheConfig:      nil,
+					Backend: &cdnSdk.ConfigPatchBackend{
+						HttpBackendPatch: &cdnSdk.HttpBackendPatch{
+							Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+							OriginRequestHeaders: &headersMap,
+							OriginUrl:            cdnSdk.PtrString("https://www.mycoolapp.com"),
+							Type:                 "http",
+						},
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_cache_config_resolved_defaults": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["cache_config"] = defaultCacheConfig
+				})
+			}),
+			Expected: &cdnSdk.PatchDistributionPayload{
+				Config: &cdnSdk.ConfigPatch{
+					Regions:          []cdnSdk.Region{"EU", "US"},
+					BlockedCountries: []string{"XX", "YY", "ZZ"},
+					Waf:              defaultWafPatch,
 					CacheConfig:      defaultCacheConfigPatch,
 					Backend: &cdnSdk.ConfigPatchBackend{
 						HttpBackendPatch: &cdnSdk.HttpBackendPatch{
@@ -1674,6 +1701,48 @@ func TestMapFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Config.Waf = expectedWafConfig
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_waf_empty_rule_groups": {
+			Expected: expectedModel(func(m *Model) {
+				emptySet := types.SetValueMust(types.StringType, []attr.Value{})
+				wafWithEmptyGroups := types.ObjectValueMust(wafTypes, map[string]attr.Value{
+					"mode":                          types.StringValue("ENABLED"),
+					"type":                          types.StringValue("PREMIUM"),
+					"paranoia_level":                types.StringValue("L2"),
+					"allowed_http_versions":         populatedWafSet,
+					"allowed_request_content_types": populatedWafSet,
+					"allowed_http_methods":          populatedWafSet,
+					"enabled_rule_ids":              populatedWafSet,
+					"disabled_rule_ids":             populatedWafSet,
+					"log_only_rule_ids":             populatedWafSet,
+					"enabled_rule_group_ids":        emptySet,
+					"disabled_rule_group_ids":       emptySet,
+					"log_only_rule_group_ids":       emptySet,
+					"enabled_rule_collection_ids":   populatedWafSet,
+					"disabled_rule_collection_ids":  populatedWafSet,
+					"log_only_rule_collection_ids":  populatedWafSet,
+				})
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    wafWithEmptyGroups,
+					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				wafCopy := expectedWafConfig
+				wafCopy.EnabledRuleGroupIds = []string{}
+				wafCopy.DisabledRuleGroupIds = []string{}
+				wafCopy.LogOnlyRuleGroupIds = []string{}
+				d.Config.Waf = wafCopy
 			}),
 			IsValid: true,
 		},
