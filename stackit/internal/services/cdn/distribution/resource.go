@@ -989,7 +989,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	_, err = r.client.DefaultAPI.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(*patchPayload).Execute()
+	_, err = r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(*patchPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Patch distribution: %v", err))
 		return
