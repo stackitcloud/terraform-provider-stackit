@@ -119,7 +119,7 @@ var endpointsAttrTypes = map[string]attr.Type{
 }
 
 var descriptions = map[string]string{ //nolint:gosec // no hardcoded credentials in here
-	"main":                       "Manages a STACKIT Dremio instance.",
+	"main":                       "Manages a STACKIT Dremio instance. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 	"id":                         "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
 	"project_id":                 "STACKIT Project ID to which the resource is associated.",
 	"instance_id":                "The Dremio instance ID.",
@@ -194,6 +194,10 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Dremio", &resp.Diagnostics) {
 		return
 	}
 
