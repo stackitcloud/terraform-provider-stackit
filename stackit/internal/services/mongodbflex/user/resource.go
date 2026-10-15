@@ -13,8 +13,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	mongodbflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -67,7 +65,7 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client       *mongodbflex.APIClient
+	client       mongodbflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -78,17 +76,14 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 // Configure adds the provider configured client to the resource.
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mongodbflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.MongoDbFlexV2Client
+
 	tflog.Info(ctx, "MongoDB Flex user client configured")
 }
 
@@ -276,7 +271,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, instanceId, region).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.CreateUser(ctx, projectId, instanceId, region).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -339,7 +334,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -414,7 +409,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Update existing instance
-	err = r.client.DefaultAPI.UpdateUser(ctx, projectId, instanceId, userId, region).UpdateUserPayload(*payload).Execute()
+	err = r.client.UpdateUser(ctx, projectId, instanceId, userId, region).UpdateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
@@ -422,7 +417,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -466,7 +461,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Delete user
-	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, instanceId, userId, region).Execute()
+	err := r.client.DeleteUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

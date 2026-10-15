@@ -11,9 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -40,17 +38,14 @@ func (i *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 // provider-defined DataSource type. It is separately executed for each
 // ReadDataSource RPC.
 func (i *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	i.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := modelexperimentsutils.ConfigureClient(ctx, &i.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	i.client = apiClient.DefaultAPI
+	i.providerData = providerData
+	i.client = clients.ModelExperimentsV1Client
+
 	tflog.Info(ctx, "Model Experiments instance client configured for data source")
 }
 

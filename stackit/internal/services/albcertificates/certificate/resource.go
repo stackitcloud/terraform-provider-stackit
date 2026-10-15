@@ -21,7 +21,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	certUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -57,7 +56,7 @@ func NewCertificatesResource() resource.Resource {
 
 // certificatesResource is the resource implementation.
 type certificatesResource struct {
-	client       *certSdk.APIClient
+	client       certSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -99,16 +98,14 @@ func (r *certificatesResource) ModifyPlan(ctx context.Context, req resource.Modi
 // Configure adds the provider configured client to the resource.
 func (r *certificatesResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := certUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.AlbCertificatesV2Client
+
 	tflog.Info(ctx, "Certificate client configured")
 }
 
@@ -228,7 +225,7 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Create a new Certificate
-	createResp, err := r.client.DefaultAPI.CreateCertificate(ctx, projectId, region).CreateCertificatePayload(*payload).Execute()
+	createResp, err := r.client.CreateCertificate(ctx, projectId, region).CreateCertificatePayload(*payload).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Certificate", fmt.Sprintf("Calling API for create: %v", errStr))
@@ -278,7 +275,7 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "cert_id", certId)
 
-	readResp, err := r.client.DefaultAPI.GetCertificate(ctx, projectId, region, certId).Execute()
+	readResp, err := r.client.GetCertificate(ctx, projectId, region, certId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -334,7 +331,7 @@ func (r *certificatesResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete Certificate
-	_, err := r.client.DefaultAPI.DeleteCertificate(ctx, projectId, region, certId).Execute()
+	_, err := r.client.DeleteCertificate(ctx, projectId, region, certId).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Certificate", fmt.Sprintf("Calling API for delete: %v", errStr))

@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	redisUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,7 +30,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client       *redis.APIClient
+	client       redis.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,24 +41,23 @@ func (r *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := redisUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.RedisV2Client
+
 	tflog.Info(ctx, "Redis instance client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Redis instance data source schema. Must have a `region` specified in the provider configuration. This data source is deprecated and will be removed after August 2027, use stackit_valkey_instance instead. For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
+		"main": "Redis instance data source schema. Must have a `region` specified in the provider configuration.",
+		"warning_message": "The `stackit_redis_instance` data source is deprecated and will be removed after August 2027, use `stackit_valkey_instance` (Key Value Store) instead. \n" +
+			"For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
 		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the Redis instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
@@ -98,8 +94,9 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	}
 
 	resp.Schema = schema.Schema{
-		Description:        descriptions["main"],
-		DeprecationMessage: "The stackit_redis_instance data source is deprecated and will be removed after August 2027. Use the stackit_valkey_instance data source instead. For more information on how to migrate, see the migration guide: https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/",
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["warning_message"]),
+		Description:         fmt.Sprintf("%s\n\n%s", descriptions["main"], descriptions["warning_message"]),
+		DeprecationMessage:  descriptions["warning_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -280,7 +277,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

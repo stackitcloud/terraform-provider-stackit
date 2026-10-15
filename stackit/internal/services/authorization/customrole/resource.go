@@ -54,7 +54,7 @@ type Model struct {
 // customRoleResource is the resource implementation.
 type customRoleResource struct {
 	resourceType string
-	client       *authorization.APIClient
+	client       authorization.DefaultAPI
 }
 
 // NewProjectRoleAssignmentResources is a helper function generate custom role
@@ -86,18 +86,12 @@ var descriptions = map[string]string{
 
 // Configure adds the provider configured client to the resource.
 func (r *customRoleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := authorizationUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	r.client = apiClient
+	r.client = clients.AuthorizationV2Client
 
 	tflog.Info(ctx, "authorization client configured")
 }
@@ -177,7 +171,7 @@ func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.AddRole(ctx, r.resourceType, model.ResourceId.ValueString()).AddRolePayload(*payload).Execute()
+	createResp, err := r.client.AddRole(ctx, r.resourceType, model.ResourceId.ValueString()).AddRolePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating custom role", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -222,7 +216,7 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	roleResp, err := r.client.DefaultAPI.GetRole(ctx, r.resourceType, model.ResourceId.ValueString(), roleId).Execute()
+	roleResp, err := r.client.GetRole(ctx, r.resourceType, model.ResourceId.ValueString(), roleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 
@@ -273,7 +267,7 @@ func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Update existing custom role
-	roleResp, err := r.client.DefaultAPI.UpdateRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).UpdateRolePayload(*payload).Execute()
+	roleResp, err := r.client.UpdateRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).UpdateRolePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating custom role", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -311,7 +305,7 @@ func (r *customRoleResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	ctx = r.annotateLogger(ctx, &model)
 
-	_, err := r.client.DefaultAPI.DeleteRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).Execute()
+	_, err := r.client.DeleteRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

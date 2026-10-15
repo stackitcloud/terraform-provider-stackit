@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -53,7 +52,7 @@ func NewVolumeDataSource() datasource.DataSource {
 
 // volumeDataSource is the data source implementation.
 type volumeDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -63,17 +62,14 @@ func (d *volumeDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 }
 
 func (d *volumeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -182,7 +178,7 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	volumeResp, err := d.client.DefaultAPI.GetVolume(ctx, projectId, region, volumeId).Execute()
+	volumeResp, err := d.client.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

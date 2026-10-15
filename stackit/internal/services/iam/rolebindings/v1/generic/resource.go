@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -15,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -44,17 +42,17 @@ type GenericRoleBindingResponse interface {
 // RoleBindingResource is the resource implementation.
 type RoleBindingResource[C any] struct {
 	providerData core.ProviderData
-	apiClient    *C
+	apiClient    C
 
 	ApiName      string // e.g. "iaas", "secretsmanager", ...
 	ResourceType string // e.g. "instance", ...
 
 	// callbacks for lifecyle handling
-	ApiClientFactory  func(context.Context, *core.ProviderData, *diag.Diagnostics) *C
-	ExecReadRequest   func(ctx context.Context, client *C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
-	ExecCreateRequest func(ctx context.Context, client *C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
-	ExecUpdateRequest func(ctx context.Context, client *C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
-	ExecDeleteRequest func(ctx context.Context, client *C, region, resourceId, role, subject string) error
+	ApiClientExtractor func(clientCollection core.ClientCollection) C
+	ExecReadRequest    func(ctx context.Context, client C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
+	ExecCreateRequest  func(ctx context.Context, client C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
+	ExecUpdateRequest  func(ctx context.Context, client C, region, resourceId, role, subject string) (GenericRoleBindingResponse, error)
+	ExecDeleteRequest  func(ctx context.Context, client C, region, resourceId, role, subject string) error
 }
 
 // Metadata returns the resource type name.
@@ -64,7 +62,7 @@ func (r *RoleBindingResource[C]) Metadata(_ context.Context, req resource.Metada
 
 // Configure adds the provider configured client to the resource.
 func (r *RoleBindingResource[C]) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clientCollection, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -74,10 +72,8 @@ func (r *RoleBindingResource[C]) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	r.apiClient = r.ApiClientFactory(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.apiClient = r.ApiClientExtractor(clientCollection)
+
 	tflog.Info(ctx, fmt.Sprintf("%s %s client configured", r.ApiName, r.ResourceType))
 }
 

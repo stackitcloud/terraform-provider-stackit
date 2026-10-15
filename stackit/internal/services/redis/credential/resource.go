@@ -9,9 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	redisUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -64,7 +61,7 @@ func NewCredentialResource() resource.Resource {
 
 // credentialResource is the resource implementation.
 type credentialResource struct {
-	client       *redis.APIClient
+	client       redis.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -105,24 +102,23 @@ func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.Modify
 
 // Configure adds the provider configured client to the resource.
 func (r *credentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := redisUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.RedisV2Client
+
 	tflog.Info(ctx, "Redis credential client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
-		"main":          "Redis credential resource schema. Must have a `region` specified in the provider configuration. This resource is deprecated and will be removed after August 2027, use stackit_valkey_credential instead. For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
+		"main": "Redis credential resource schema. Must have a `region` specified in the provider configuration.",
+		"warning_message": "The `stackit_redis_credential` resource is deprecated and will be removed after August 2027, use `stackit_valkey_credential` (Key Value Store) instead. \n" +
+			"For more information on how to migrate, see the [migration guide](https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/).",
 		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the Redis instance.",
@@ -132,8 +128,9 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 
 	resp.Schema = schema.Schema{
-		Description:        descriptions["main"],
-		DeprecationMessage: "The stackit_redis_credential resource is deprecated and will be removed after August 2027. Use the stackit_valkey_credential resource instead. For more information on how to migrate, see the migration guide: https://docs.stackit.cloud/products/databases/key-value-store/tutorials/migrate-data-to-a-new-instance/",
+		MarkdownDescription: fmt.Sprintf("%s\n\n!> %s", descriptions["main"], descriptions["warning_message"]),
+		Description:         fmt.Sprintf("%s\n\n%s", descriptions["main"], descriptions["warning_message"]),
+		DeprecationMessage:  descriptions["warning_message"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -246,7 +243,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Create new recordset
-	credentialsResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, region, instanceId).Execute()
+	credentialsResp, err := r.client.CreateCredentials(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -270,7 +267,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -315,7 +312,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
+	recordSetResp, err := r.client.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -371,7 +368,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
 	// Delete existing record set
-	err := r.client.DefaultAPI.DeleteCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
+	err := r.client.DeleteCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -383,7 +380,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
+	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

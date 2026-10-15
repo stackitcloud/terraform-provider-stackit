@@ -17,7 +17,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -34,7 +33,7 @@ func NewKubeconfigEphemeralResource() ephemeral.EphemeralResource {
 
 // kubeconfigEphemeralResource is the ephemeral resource implementation.
 type kubeconfigEphemeralResource struct {
-	client       *ske.APIClient
+	client       ske.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -45,19 +44,18 @@ func (e *kubeconfigEphemeralResource) Metadata(_ context.Context, req ephemeral.
 
 // Configure adds the provider configured client to the resource.
 func (e *kubeconfigEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
-	ephemeralProviderData, ok := conversion.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	ephemeralProviderData, clients, ok := core.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	e.providerData = ephemeralProviderData.ProviderData
-
-	features.CheckExperimentEnabled(ctx, &e.providerData, features.SkeExperiment, "stackit_ske_kubeconfig", core.EphemeralResource, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &ephemeralProviderData.ProviderData, features.SkeExperiment, "stackit_ske_kubeconfig", core.EphemeralResource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	e.client = skeUtils.ConfigureClient(ctx, &e.providerData, &resp.Diagnostics)
+	e.providerData = ephemeralProviderData.ProviderData
+	e.client = clients.SkeV2Client
 
 	tflog.Info(ctx, "SKE kubeconfig client configured")
 }
@@ -142,7 +140,7 @@ func (e *kubeconfigEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 	clusterName := model.ClusterName.ValueString()
 	region := e.providerData.GetRegionWithOverride(model.Region)
 
-	kubeconfigResp, err := getKubeconfig(ctx, e.client.DefaultAPI, projectId, region, clusterName, conversion.Int64ValueToPointer(model.Expiration))
+	kubeconfigResp, err := getKubeconfig(ctx, e.client, projectId, region, clusterName, conversion.Int64ValueToPointer(model.Expiration))
 
 	ctx = core.LogResponse(ctx)
 

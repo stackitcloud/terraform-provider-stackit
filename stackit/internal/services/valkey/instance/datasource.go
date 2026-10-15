@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	valkeyUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,7 +30,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client       *valkey.APIClient
+	client       valkey.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,24 +41,21 @@ func (r *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := valkeyUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ValkeyV2Client
+
 	tflog.Info(ctx, "Valkey instance client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Valkey instance data source schema. Must have a `region` specified in the provider configuration.",
+		"main":        "Key Value Store(valkey) instance data source schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the Valkey instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
@@ -273,7 +267,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

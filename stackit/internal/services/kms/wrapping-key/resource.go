@@ -26,7 +26,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -60,7 +60,7 @@ func NewWrappingKeyResource() resource.Resource {
 }
 
 type wrappingKeyResource struct {
-	client       *kms.APIClient
+	client       kms.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -69,16 +69,13 @@ func (r *wrappingKeyResource) Metadata(_ context.Context, request resource.Metad
 }
 
 func (r *wrappingKeyResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.KmsV1Client
 
 	tflog.Info(ctx, "KMS client configured")
 }
@@ -265,7 +262,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createWrappingKeyResp, err := r.client.DefaultAPI.CreateWrappingKey(ctx, projectId, region, keyRingId).CreateWrappingKeyPayload(*payload).Execute()
+	createWrappingKeyResp, err := r.client.CreateWrappingKey(ctx, projectId, region, keyRingId).CreateWrappingKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -288,7 +285,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		"wrapping_key_id": wrappingKeyId,
 	})
 
-	wrappingKey, err := wait.CreateWrappingKeyWaitHandler(ctx, r.client.DefaultAPI, projectId, region, keyRingId, wrappingKeyId).WaitWithContext(ctx)
+	wrappingKey, err := wait.CreateWrappingKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, wrappingKeyId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for wrapping key creation", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -333,7 +330,7 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "wrapping_key_id", wrappingKeyId)
 
-	wrappingKeyResponse, err := r.client.DefaultAPI.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	wrappingKeyResponse, err := r.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -379,7 +376,7 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	wrappingKeyId := model.WrappingKeyId.ValueString()
 
-	err := r.client.DefaultAPI.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	err := r.client.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

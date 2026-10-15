@@ -39,7 +39,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -72,7 +71,7 @@ var schemaDescriptions = map[string]string{
 	"config_blocked_ips":                           "Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.",
 	"config_default_cache_duration":                "Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
 	"config_monthly_limit_bytes":                   "Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
-	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
+	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution. Currently, this feature is only available for distributions of backend type HTTP.",
 	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
 	"config_redirects_rule_description":            "An optional description for the redirect rule",
 	"config_redirects_rule_enabled":                "A toggle to enable or disable the redirect rule. Default to true",
@@ -330,7 +329,7 @@ var domainTypes = map[string]attr.Type{
 }
 
 type distributionResource struct {
-	client       *cdnSdk.APIClient
+	client       cdnSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -339,22 +338,19 @@ func NewDistributionResource() resource.Resource {
 }
 
 func (r *distributionResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.CdnV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_cdn_distribution", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "CDN client configured")
 }
 
@@ -809,6 +805,22 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 }
 
 func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	// Redirects are only supported for backend type http
+	var backendType types.String
+	var redirects types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("backend").AtName("type"), &backendType)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("redirects"), &redirects)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !utils.IsUndefined(backendType) && backendType.ValueString() != "http" && !redirects.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("config").AtName("redirects"),
+			"Invalid redirects config",
+			fmt.Sprintf("Redirects can only be configured for backend type \"http\", got %q.", backendType.ValueString()),
+		)
+	}
+
 	var model Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
@@ -864,7 +876,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
+	createResp, err := r.client.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -886,7 +898,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client.DefaultAPI, projectId, createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Waiting for create: %v", err))
 		return
@@ -926,7 +938,7 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	cdnResp, err := r.client.DefaultAPI.GetDistribution(ctx, projectId, distributionId).Execute()
+	cdnResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
@@ -985,7 +997,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Waiting for update: %v", err))
 		return
@@ -1020,14 +1032,14 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	_, err := r.client.DefaultAPI.DeleteDistribution(ctx, projectId, distributionId).Execute()
+	_, err := r.client.DeleteDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Delete distribution: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
+	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Waiting for deletion: %v", err))
 		return

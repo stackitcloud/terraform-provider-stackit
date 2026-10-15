@@ -6,8 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas" //nolint:staticcheck // TODO: will be done within STACKITTPR-713
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 const (
@@ -34,11 +33,13 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				Id: utils.Ptr(projectId),
+				Id:     projectId,
+				Status: "CREATED",
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),
 				ProjectId: types.StringValue(projectId),
+				Status:    types.StringValue("CREATED"),
 			},
 			isValid: true,
 		},
@@ -48,11 +49,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				AreaId:         new(iaas.AreaId{String: new("aid")}),
+				AreaId:         iaas.AreaId{String: new("aid")},
 				CreatedAt:      new(testTimestamp()),
 				InternetAccess: new(true),
-				Id:             utils.Ptr(projectId),
-				Status:         new("CREATED"),
+				Id:             projectId,
+				Status:         "CREATED",
 				UpdatedAt:      new(testTimestamp()),
 			},
 			expected: &DatasourceModel{
@@ -60,7 +61,6 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId:      types.StringValue(projectId),
 				AreaId:         types.StringValue("aid"),
 				InternetAccess: types.BoolValue(true),
-				State:          types.StringValue("CREATED"),
 				Status:         types.StringValue("CREATED"),
 				CreatedAt:      types.StringValue(testTimestampValue),
 				UpdatedAt:      types.StringValue(testTimestampValue),
@@ -73,15 +73,17 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				AreaId: new(iaas.AreaId{
-					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(), //nolint:staticcheck // TODO: will be done within STACKITTPR-713
-				}),
-				Id: utils.Ptr(projectId),
+				AreaId: iaas.AreaId{
+					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(),
+				},
+				Id:     projectId,
+				Status: "CREATED",
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),
 				ProjectId: types.StringValue(projectId),
 				AreaId:    types.StringValue("PUBLIC"),
+				Status:    types.StringValue("CREATED"),
 			},
 			isValid: true,
 		},

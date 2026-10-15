@@ -96,7 +96,7 @@ func (r *barResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 
 // Configure adds the provider configured client to the resource.
 func (r *barResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}

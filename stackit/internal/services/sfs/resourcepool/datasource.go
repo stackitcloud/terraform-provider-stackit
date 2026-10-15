@@ -18,10 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -50,7 +47,7 @@ type dataSourceModel struct {
 }
 
 type resourcePoolDataSource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -60,22 +57,14 @@ func NewResourcePoolDataSource() datasource.DataSource {
 
 // Configure implements datasource.DataSourceWithConfigure.
 func (r *resourcePoolDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool", core.Datasource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -110,7 +99,7 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
+	response, err := r.client.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -144,7 +133,7 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 func (r *resourcePoolDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Resource-pool datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
+		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

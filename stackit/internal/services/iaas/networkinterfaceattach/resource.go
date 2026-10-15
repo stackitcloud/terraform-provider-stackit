@@ -9,9 +9,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -49,7 +46,7 @@ func NewNetworkInterfaceAttachResource() resource.Resource {
 
 // networkInterfaceAttachResource is the resource implementation.
 type networkInterfaceAttachResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -90,17 +87,14 @@ func (r *networkInterfaceAttachResource) ModifyPlan(ctx context.Context, req res
 
 // Configure adds the provider configured client to the resource.
 func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -186,7 +180,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Create new network interface attachment
-	err := r.client.DefaultAPI.AddNicToServer(ctx, projectId, region, serverId, networkInterfaceId).Execute()
+	err := r.client.AddNicToServer(ctx, projectId, region, serverId, networkInterfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching network interface to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -225,7 +219,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	nics, err := r.client.DefaultAPI.ListServerNICs(ctx, projectId, region, serverId).Execute()
+	nics, err := r.client.ListServerNICs(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -293,7 +287,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 	ctx = tflog.SetField(ctx, "network_interface_id", network_interfaceId)
 
 	// Remove network_interface from server
-	err := r.client.DefaultAPI.RemoveNicFromServer(ctx, projectId, region, serverId, network_interfaceId).Execute()
+	err := r.client.RemoveNicFromServer(ctx, projectId, region, serverId, network_interfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

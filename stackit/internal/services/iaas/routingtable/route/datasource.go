@@ -10,11 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -30,7 +28,7 @@ func NewRoutingTableRouteDataSource() datasource.DataSource {
 
 // routingTableRouteDataSource is the data source implementation.
 type routingTableRouteDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -40,22 +38,19 @@ func (d *routingTableRouteDataSource) Metadata(_ context.Context, req datasource
 }
 
 func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -92,7 +87,7 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	routeResp, err := d.client.DefaultAPI.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
+	routeResp, err := d.client.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, err.Error(), err.Error())
 		utils.LogError(

@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -65,7 +64,7 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client       *sqlserverflex.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -76,17 +75,14 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 // Configure adds the provider configured client to the resource.
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SqlServerFlexV3Client
+
 	tflog.Info(ctx, "SQLServer Flex user client configured")
 }
 
@@ -266,7 +262,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// Create new user
 	// Workaround: The user creation will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
-	userResp, err := utils.RetryRequest(ctx, r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
+	userResp, err := utils.RetryRequest(ctx, r.client.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -286,7 +282,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"user_id":     userId,
 	})
 
-	_, err = wait.CreateUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
+	_, err = wait.CreateUserWaitHandler(ctx, r.client, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("user creation waiting: %v", err))
 		return
@@ -337,7 +333,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	userResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -401,7 +397,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	// Delete existing user
 	// Workaround: The user deletion will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
-	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, sqlserverflexUtils.RetryConfig)
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
@@ -412,7 +408,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userId).WaitWithContext(ctx)
+	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("user deletion waiting: %v", err))
 		return

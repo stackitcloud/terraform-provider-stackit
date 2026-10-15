@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	serverupdateUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -34,7 +31,7 @@ func NewScheduleDataSource() datasource.DataSource {
 
 // scheduleDataSource is the data source implementation.
 type scheduleDataSource struct {
-	client       *serverupdate.APIClient
+	client       serverupdate.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -45,17 +42,14 @@ func (r *scheduleDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *scheduleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serverupdateUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ServerUpdateV2Client
+
 	tflog.Info(ctx, "Server update client configured")
 }
 
@@ -133,7 +127,7 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.DefaultAPI.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
+	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

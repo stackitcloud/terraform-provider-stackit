@@ -11,6 +11,48 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
+	alb "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
+	albwaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
+	automation "github.com/stackitcloud/stackit-sdk-go/services/automation/v1api"
+	cdn "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
+	certSdk "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
+	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
+	dremio "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
+	iaasv2alpha "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
+	iaasv2 "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
+	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
+	logme "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v2api"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	observability "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
+	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
+	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
+	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
+	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
+	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
 type ResourceType string
@@ -30,14 +72,7 @@ const (
 var DefaultTimeoutMargin = 3 * time.Minute
 var DefaultOperationTimeout = 30 * time.Minute
 
-type EphemeralProviderData struct {
-	ProviderData
-}
-
-type ProviderData struct {
-	RoundTripper                    http.RoundTripper
-	ServiceAccountEmail             string
-	DefaultRegion                   string
+type CustomEndpointConfig struct {
 	ALBCertificatesCustomEndpoint   string
 	ALBCustomEndpoint               string
 	AlbWafCustomEndpoint            string
@@ -78,10 +113,13 @@ type ProviderData struct {
 	TelemetryRouterCustomEndpoint   string
 	ValkeyCustomEndpoint            string
 	VpnCustomEndpoint               string
-	EnableBetaResources             bool
-	Experiments                     []string
+}
 
-	Version string // version of the STACKIT Terraform provider
+type ProviderData struct {
+	ServiceAccountEmail string
+	DefaultRegion       string
+	EnableBetaResources bool
+	Experiments         []string
 }
 
 // GetRegion returns the effective region for the provider, falling back to the deprecated _region_ attribute
@@ -97,6 +135,146 @@ func (pd *ProviderData) GetRegionWithOverride(overrideRegion types.String) strin
 		return pd.GetRegion()
 	}
 	return overrideRegion.ValueString()
+}
+
+// providerDataInternal encapsulates the provider data and the client collection. The Terraform plugin framework
+// only allows for one struct to be passed as provider data. Therefore, we use a non-exposed struct type to pass both
+// the struct types we need (provider data and client collection) to each resource and datasource. The encapsulated
+// structs can only be accessed by using core.ParseProviderData within the resource and datasource implementations.
+type providerDataInternal struct {
+	// The client collection isn't intended to be stored inside resource & datasource implementations, the provider data
+	// struct is intended for that. That's why the client collection is **not** part of the provider data itself.
+	// This is the whole reason to have the "ProviderData" struct type and a "providerDataInternal" struct type.
+
+	// providerData is the public provider data
+	providerData ProviderData
+	clients      ClientCollection
+}
+
+// ephemeralProviderDataInternal is the same as providerDataInternal, just for ephemeral resources instead of regular
+// resources and datasources. The encapsulated structs can only be accessed by using core.ParseEphemeralProviderData
+// within the ephemeral resource implementations.
+type ephemeralProviderDataInternal struct {
+	// ephemeralProviderData is the public ephemeralprovider data
+	ephemeralProviderData EphemeralProviderData
+	clients               ClientCollection
+}
+
+// EphemeralProviderData is the provider data which should be accessible within ephemeral resource implementations.
+type EphemeralProviderData struct {
+	ProviderData
+	RoundTripper http.RoundTripper
+}
+
+// NewProviderDataInternal creates a new providerDataInternal struct using the passed ClientFactory implementation.
+func NewProviderDataInternal(providerData ProviderData, clientFactory ClientFactory) (providerDataInternal, error) {
+	clients, err := initClientCollection(clientFactory)
+	if err != nil {
+		return providerDataInternal{}, err
+	}
+
+	return providerDataInternal{
+		clients:      *clients,
+		providerData: providerData,
+	}, nil
+}
+
+// NewEphemeralProviderDataInternal creates a new ephemeralProviderDataInternal struct using the passed ClientFactory
+// implementation.
+func NewEphemeralProviderDataInternal(providerData ProviderData, clientFactory ClientFactory, rt http.RoundTripper) (ephemeralProviderDataInternal, error) {
+	clients, err := initClientCollection(clientFactory)
+	if err != nil {
+		return ephemeralProviderDataInternal{}, err
+	}
+
+	return ephemeralProviderDataInternal{
+		ephemeralProviderData: EphemeralProviderData{
+			ProviderData: providerData,
+			RoundTripper: rt,
+		},
+		clients: *clients,
+	}, nil
+}
+
+// ClientCollection is a collection of clients which are available within each resource, datasource and ephemeral
+// resource implementation.
+type ClientCollection struct {
+	AlbCertificatesV2Client     certSdk.DefaultAPI
+	AlbV2Client                 alb.DefaultAPI
+	AlbWafV1CLient              albwaf.DefaultAPI
+	AuthorizationV2Client       authorization.DefaultAPI
+	AutomationV1Client          automation.DefaultAPI
+	CdnV1Client                 cdn.DefaultAPI
+	DnsV1Client                 dns.DefaultAPI
+	DremioV1BetaClient          dremio.DefaultAPI
+	EdgeV1Client                edge.DefaultAPI
+	GitV1BetaClient             git.DefaultAPI
+	IaaSv2AlphaClient           iaasv2alpha.DefaultAPI
+	IaaSv2Client                iaasv2.DefaultAPI
+	IntakeV1BetaClient          intake.DefaultAPI
+	KmsV1Client                 kms.DefaultAPI
+	LoadbalancerV2Client        loadbalancer.DefaultAPI
+	LogmeV2Client               logme.DefaultAPI
+	LogsV1Client                logs.DefaultAPI
+	MariadbV2Client             mariadb.DefaultAPI
+	ModelExperimentsV1Client    modelexperiments.DefaultAPI
+	ModelservingV1Client        modelserving.DefaultAPI
+	MongoDbFlexV2Client         mongodbflex.DefaultAPI
+	ObjectStorageV2Client       objectstorage.DefaultAPI
+	ObservabilityV1Client       observability.DefaultAPI
+	OpensearchV2Client          opensearch.DefaultAPI
+	PostgresflexV3Client        postgresflex.DefaultAPI
+	RabbitMqV2Client            rabbitmq.DefaultAPI
+	RedisV2Client               redis.DefaultAPI
+	ResourceManagerClient       resourcemanager.DefaultAPI
+	ScfV1Client                 scf.DefaultAPI
+	SecretsmanagerV1AlphaClient secretsmanagerV1Alpha.DefaultAPI
+	SecretsmanagerV1Client      secretsmanager.DefaultAPI
+	ServerBackupV2Client        serverbackup.DefaultAPI
+	ServerUpdateV2Client        serverupdate.DefaultAPI
+	ServiceAccountV2Client      serviceaccount.DefaultAPI
+	ServiceEnablementV2Client   serviceenablement.DefaultAPI
+	SfsV1Client                 sfs.DefaultAPI
+	SkeV2Client                 ske.DefaultAPI
+	SqlServerFlexV3Client       sqlserverflex.DefaultAPI
+	TelemetryLinkV1Client       telemetrylink.DefaultAPI
+	TelemetryRouterV1Client     telemetryrouter.DefaultAPI
+	ValkeyV2Client              valkey.DefaultAPI
+	VpnV1Client                 vpn.DefaultAPI
+}
+
+// ParseProviderData is used to extract the ProviderData struct and the ClientCollection struct from a
+// providerDataInternal struct. Terraform plugin framework doesn't allow for more type safety, that's why any is used.
+func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, ClientCollection, bool) {
+	// Prevent panic if the provider has not been configured.
+	if providerData == nil {
+		return ProviderData{}, ClientCollection{}, false
+	}
+
+	stackitProviderDataInternal, ok := providerData.(providerDataInternal)
+	if !ok {
+		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.providerDataInternal, got %T", providerData))
+		return ProviderData{}, ClientCollection{}, false
+	}
+	return stackitProviderDataInternal.providerData, stackitProviderDataInternal.clients, true
+}
+
+// ParseEphemeralProviderData is used to extract the EphemeralProviderData struct and the ClientCollection struct from a
+// ephemeralProviderDataInternal struct. Terraform plugin framework doesn't allow for more type safety, that's why any
+// is used.
+func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (EphemeralProviderData, ClientCollection, bool) {
+	// Prevent panic if the provider has not been configured.
+	if providerData == nil {
+		return EphemeralProviderData{}, ClientCollection{}, false
+	}
+
+	stackitEphemeralProviderDataInternal, ok := providerData.(ephemeralProviderDataInternal)
+	if !ok {
+		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.ephemeralProviderDataInternal, got %T", providerData))
+		return EphemeralProviderData{}, ClientCollection{}, false
+	}
+
+	return stackitEphemeralProviderDataInternal.ephemeralProviderData, stackitEphemeralProviderDataInternal.clients, true
 }
 
 // DiagsToError Converts TF diagnostics' errors into an error with a human-readable description.

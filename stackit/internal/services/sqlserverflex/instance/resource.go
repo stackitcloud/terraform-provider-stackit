@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
 	int32planmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/int32planmodifier"
 	listplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
 	objectplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/objectplanmodifier"
@@ -156,7 +155,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client       *sqlserverflex.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -167,17 +166,14 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SqlServerFlexV3Client
+
 	tflog.Info(ctx, "SQLServer Flex instance client configured")
 }
 
@@ -685,7 +681,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
+		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -725,7 +721,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -750,7 +746,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
 	// which can be avoided by sleeping before wait
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -804,7 +800,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -826,7 +822,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	} else {
 		// Read the flavor here from the API, because during an import the flavor should be set
-		flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
+		flavorResp, err := getFlavor(ctx, r.client, projectId, region, instanceResp.FlavorId)
 		if err != nil {
 			core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
 		} else if flavorResp != nil {
@@ -889,7 +885,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
+		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -929,7 +925,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -937,7 +933,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -977,7 +973,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing instance
-	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	err := r.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -989,7 +985,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

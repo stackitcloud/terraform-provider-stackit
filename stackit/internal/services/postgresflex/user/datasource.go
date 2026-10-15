@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -49,7 +46,7 @@ func NewUserDataSource() datasource.DataSource {
 
 // userDataSource is the data source implementation.
 type userDataSource struct {
-	client       *postgresflex.APIClient
+	client       postgresflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -61,16 +58,14 @@ func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 // Configure adds the provider configured client to the data source.
 func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.PostgresflexV3Client
+
 	tflog.Info(ctx, "Postgres Flex user client configured")
 }
 
@@ -166,7 +161,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	recordSetResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -185,7 +180,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
 		return

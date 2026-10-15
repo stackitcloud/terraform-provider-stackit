@@ -10,14 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
-
-	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 )
 
 var (
@@ -64,7 +61,7 @@ type OAuthDatasourceModel struct {
 }
 
 type instanceDataSource struct {
-	client       *dremioSdk.APIClient
+	client       dremioSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -81,7 +78,7 @@ func (d *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 // provider-defined DataSource type. It is separately executed for each
 // ReadDataSource RPC.
 func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -91,11 +88,8 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	apiClient := dremioUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.DremioV1BetaClient
+
 	tflog.Info(ctx, "Dremio instance client configured for data source")
 }
 
@@ -326,7 +320,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := d.client.DefaultAPI.GetDremioInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := d.client.GetDremioInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

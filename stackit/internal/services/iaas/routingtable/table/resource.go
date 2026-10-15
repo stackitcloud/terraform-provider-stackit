@@ -61,7 +61,7 @@ func NewRoutingTableResource() resource.Resource {
 
 // routingTableResource is the resource implementation.
 type routingTableResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -72,22 +72,19 @@ func (r *routingTableResource) Metadata(_ context.Context, req resource.Metadata
 
 // Configure adds the provider configured client to the resource.
 func (r *routingTableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "IaaS alpha client configured")
 }
 
@@ -251,7 +248,7 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	routingTable, err := r.client.DefaultAPI.AddRoutingTableToArea(ctx, organizationId, networkAreaId, region).AddRoutingTableToAreaPayload(*payload).Execute()
+	routingTable, err := r.client.AddRoutingTableToArea(ctx, organizationId, networkAreaId, region).AddRoutingTableToAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -300,7 +297,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	routingTableResp, err := r.client.DefaultAPI.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	routingTableResp, err := r.client.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -365,7 +362,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	routingTable, err := r.client.DefaultAPI.UpdateRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).UpdateRoutingTableOfAreaPayload(*payload).Execute()
+	routingTable, err := r.client.UpdateRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).UpdateRoutingTableOfAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -410,7 +407,7 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
 	// Delete existing routing table
-	err := r.client.DefaultAPI.DeleteRoutingTableFromArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	err := r.client.DeleteRoutingTableFromArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

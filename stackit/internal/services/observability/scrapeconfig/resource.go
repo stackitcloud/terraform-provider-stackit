@@ -10,8 +10,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -109,7 +107,7 @@ func NewScrapeConfigResource() resource.Resource {
 
 // scrapeConfigResource is the resource implementation.
 type scrapeConfigResource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -119,16 +117,13 @@ func (r *scrapeConfigResource) Metadata(_ context.Context, req resource.Metadata
 
 // Configure adds the provider configured client to the resource.
 func (r *scrapeConfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ObservabilityV1Client
+
 	tflog.Info(ctx, "Observability scrape config client configured")
 }
 
@@ -344,7 +339,7 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	_, err = r.client.DefaultAPI.CreateScrapeConfig(ctx, instanceId, projectId).CreateScrapeConfigPayload(*payload).Execute()
+	_, err = r.client.CreateScrapeConfig(ctx, instanceId, projectId).CreateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -362,13 +357,13 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	_, err = wait.CreateScrapeConfigWaitHandler(ctx, r.client.DefaultAPI, instanceId, scName, projectId).WaitWithContext(ctx)
+	_, err = wait.CreateScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Scrape config creation waiting: %v", err))
 		return
 	}
 
-	got, err := r.client.DefaultAPI.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
+	got, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
@@ -403,7 +398,7 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
 
-	scResp, err := r.client.DefaultAPI.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
+	scResp, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -480,7 +475,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	_, err = r.client.DefaultAPI.UpdateScrapeConfig(ctx, instanceId, scName, projectId).UpdateScrapeConfigPayload(*payload).Execute()
+	_, err = r.client.UpdateScrapeConfig(ctx, instanceId, scName, projectId).UpdateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -492,7 +487,7 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	time.Sleep(15 * time.Second)
 
 	// Fetch updated ScrapeConfig
-	scResp, err := r.client.DefaultAPI.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
+	scResp, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
@@ -527,7 +522,7 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 	scName := model.Name.ValueString()
 
 	// Delete existing ScrapeConfig
-	_, err := r.client.DefaultAPI.DeleteScrapeConfig(ctx, instanceId, scName, projectId).Execute()
+	_, err := r.client.DeleteScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -540,7 +535,7 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteScrapeConfigWaitHandler(ctx, r.client.DefaultAPI, instanceId, scName, projectId).WaitWithContext(ctx)
+	_, err = wait.DeleteScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Scrape config deletion waiting: %v", err))
 		return

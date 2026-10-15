@@ -2,15 +2,11 @@ package conversion
 
 import (
 	"context"
-	"crypto/tls"
-	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -89,6 +85,74 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 	}
 }
 
+func TestToStringStringPointerMap(t *testing.T) {
+	type args struct {
+		m basetypes.MapValue
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    map[string]*string
+		wantErr bool
+	}{
+		{
+			name: "base",
+			args: args{
+				m: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key":  types.StringValue("value"),
+					"key2": types.StringValue("value2"),
+					"key3": types.StringValue("value3"),
+				}),
+			},
+			want: map[string]*string{
+				"key":  new("value"),
+				"key2": new("value2"),
+				"key3": new("value3"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty",
+			args: args{
+				m: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+			},
+			want:    map[string]*string{},
+			wantErr: false,
+		},
+		{
+			name: "nil",
+			args: args{
+				m: types.MapNull(types.StringType),
+			},
+			want:    map[string]*string{},
+			wantErr: false,
+		},
+		{
+			name: "invalid type map (non-string)",
+			args: args{
+				m: types.MapValueMust(types.Int64Type, map[string]attr.Value{
+					"key": types.Int64Value(1),
+				}),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ToStringStringPointerMap(context.Background(), tt.args.m)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ToStringStringPointerMap() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ToStringStringPointerMap() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestToOptStringPointerMap(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -151,112 +215,112 @@ func TestToJSONMapUpdatePayload(t *testing.T) {
 		isValid       bool
 	}{
 		{
-			"nothing_to_update",
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description: "nothing_to_update",
+			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key": types.StringValue("value"),
 			}),
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key": types.StringValue("value"),
 			}),
-			map[string]any{
+			expected: map[string]any{
 				"key": "value",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"update_key_value",
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description: "update_key_value",
+			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key": types.StringValue("value"),
 			}),
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key": types.StringValue("updated_value"),
 			}),
-			map[string]any{
+			expected: map[string]any{
 				"key": "updated_value",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"remove_key",
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description: "remove_key",
+			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key":  types.StringValue("value"),
 				"key2": types.StringValue("value2"),
 			}),
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key": types.StringValue("value"),
 			}),
-			map[string]any{
+			expected: map[string]any{
 				"key":  "value",
 				"key2": nil,
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"add_new_key",
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description: "add_new_key",
+			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key": types.StringValue("value"),
 			}),
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key":  types.StringValue("value"),
 				"key2": types.StringValue("value2"),
 			}),
-			map[string]any{
+			expected: map[string]any{
 				"key":  "value",
 				"key2": "value2",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"empty_desired_map",
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description: "empty_desired_map",
+			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key":  types.StringValue("value"),
 				"key2": types.StringValue("value2"),
 			}),
-			types.MapValueMust(types.StringType, map[string]attr.Value{}),
-			map[string]any{
+			desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+			expected: map[string]any{
 				"key":  nil,
 				"key2": nil,
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_desired_map",
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description: "nil_desired_map",
+			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key":  types.StringValue("value"),
 				"key2": types.StringValue("value2"),
 			}),
-			types.MapNull(types.StringType),
-			map[string]any{
+			desiredLabels: types.MapNull(types.StringType),
+			expected: map[string]any{
 				"key":  nil,
 				"key2": nil,
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"empty_current_map",
-			types.MapValueMust(types.StringType, map[string]attr.Value{}),
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description:   "empty_current_map",
+			currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+			desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key":  types.StringValue("value"),
 				"key2": types.StringValue("value2"),
 			}),
-			map[string]any{
+			expected: map[string]any{
 				"key":  "value",
 				"key2": "value2",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_current_map",
-			types.MapNull(types.StringType),
-			types.MapValueMust(types.StringType, map[string]attr.Value{
+			description:   "nil_current_map",
+			currentLabels: types.MapNull(types.StringType),
+			desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
 				"key":  types.StringValue("value"),
 				"key2": types.StringValue("value2"),
 			}),
-			map[string]any{
+			expected: map[string]any{
 				"key":  "value",
 				"key2": "value2",
 			},
-			true,
+			isValid: true,
 		},
 	}
 	for _, tt := range tests {
@@ -265,9 +329,11 @@ func TestToJSONMapUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -278,172 +344,151 @@ func TestToJSONMapUpdatePayload(t *testing.T) {
 	}
 }
 
-func TestParseProviderData(t *testing.T) {
+func TestToLabelsMapPartialUpdatePayload(t *testing.T) {
 	type args struct {
-		providerData any
-	}
-	type want struct {
-		ok           bool
-		providerData core.ProviderData
+		currentLabels types.Map
+		desiredLabels types.Map
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    want
-		wantErr bool
+		description string
+		args        args
+		expected    map[string]*string
+		isValid     bool
 	}{
 		{
-			name: "provider has not been configured",
+			description: "nothing_to_update",
 			args: args{
-				providerData: nil,
+				currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
-			want: want{
-				ok: false,
+			expected: map[string]*string{
+				"key": new("value"),
 			},
-			wantErr: false,
+			isValid: true,
 		},
 		{
-			name: "invalid provider data",
+			description: "update_key_value",
 			args: args{
-				providerData: struct{}{},
+				currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("updated_value"),
+				}),
 			},
-			want: want{
-				ok: false,
+			expected: map[string]*string{
+				"key": new("updated_value"),
 			},
-			wantErr: true,
+			isValid: true,
 		},
 		{
-			name: "valid provider data 1",
+			description: "remove_key",
 			args: args{
-				providerData: core.ProviderData{},
+				currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key":  types.StringValue("value"),
+					"key2": types.StringValue("value2"),
+				}),
+				desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
 			},
-			want: want{
-				ok:           true,
-				providerData: core.ProviderData{},
+			expected: map[string]*string{
+				"key":  new("value"),
+				"key2": nil,
 			},
-			wantErr: false,
+			isValid: true,
 		},
 		{
-			name: "valid provider data 2",
+			description: "add_new_key",
 			args: args{
-				providerData: core.ProviderData{
-					DefaultRegion:          "eu02",
-					RabbitMQCustomEndpoint: "https://rabbitmq-custom-endpoint.api.stackit.cloud",
-					Version:                "1.2.3",
-				},
+				currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key": types.StringValue("value"),
+				}),
+				desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key":  types.StringValue("value"),
+					"key2": types.StringValue("value2"),
+				}),
 			},
-			want: want{
-				ok: true,
-				providerData: core.ProviderData{
-					DefaultRegion:          "eu02",
-					RabbitMQCustomEndpoint: "https://rabbitmq-custom-endpoint.api.stackit.cloud",
-					Version:                "1.2.3",
-				},
+			expected: map[string]*string{
+				"key":  new("value"),
+				"key2": new("value2"),
 			},
-			wantErr: false,
+			isValid: true,
+		},
+		{
+			description: "empty_desired_map",
+			args: args{
+				currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key":  types.StringValue("value"),
+					"key2": types.StringValue("value2"),
+				}),
+				desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+			},
+			expected: map[string]*string{
+				"key":  nil,
+				"key2": nil,
+			},
+			isValid: true,
+		},
+		{
+			description: "nil_desired_map",
+			args: args{
+				currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key":  types.StringValue("value"),
+					"key2": types.StringValue("value2"),
+				}),
+				desiredLabels: types.MapNull(types.StringType),
+			},
+			expected: map[string]*string{
+				"key":  nil,
+				"key2": nil,
+			},
+			isValid: true,
+		},
+		{
+			description: "empty_current_map",
+			args: args{
+				currentLabels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key":  types.StringValue("value"),
+					"key2": types.StringValue("value2"),
+				}),
+			},
+			expected: map[string]*string{
+				"key":  new("value"),
+				"key2": new("value2"),
+			},
+			isValid: true,
+		},
+		{
+			description: "nil_current_map",
+			args: args{
+				currentLabels: types.MapNull(types.StringType),
+				desiredLabels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"key":  types.StringValue("value"),
+					"key2": types.StringValue("value2"),
+				}),
+			},
+			expected: map[string]*string{
+				"key":  new("value"),
+				"key2": new("value2"),
+			},
+			isValid: true,
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			diags := diag.Diagnostics{}
-
-			actual, ok := ParseProviderData(ctx, tt.args.providerData, &diags)
-			if diags.HasError() != tt.wantErr {
-				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
+		t.Run(tt.description, func(t *testing.T) {
+			got, err := ToLabelsMapPartialUpdatePayload(context.Background(), tt.args.currentLabels, tt.args.desiredLabels)
+			if (err != nil) == tt.isValid {
+				t.Errorf("ToLabelsMapPartialUpdatePayload() error = %v, isValid %v", err, tt.isValid)
+				return
 			}
-			if ok != tt.want.ok {
-				t.Errorf("ParseProviderData() got = %v, want %v", ok, tt.want.ok)
-			}
-			if !reflect.DeepEqual(actual, tt.want.providerData) {
-				t.Errorf("ParseProviderData() got = %v, want %v", actual, tt.want)
-			}
-		})
-	}
-}
-
-func TestParseEphemeralProviderData(t *testing.T) {
-	var randomRoundTripper http.RoundTripper = &http.Transport{
-		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
-	}
-	type args struct {
-		providerData any
-	}
-	type want struct {
-		ok           bool
-		providerData core.EphemeralProviderData
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    want
-		wantErr bool
-	}{
-		{
-			name: "provider has not been configured",
-			args: args{
-				providerData: nil,
-			},
-			want: want{
-				ok: false,
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid provider data",
-			args: args{
-				providerData: struct{}{},
-			},
-			want: want{
-				ok: false,
-			},
-			wantErr: true,
-		},
-		{
-			name: "valid provider data 1",
-			args: args{
-				providerData: core.EphemeralProviderData{},
-			},
-			want: want{
-				ok:           true,
-				providerData: core.EphemeralProviderData{},
-			},
-			wantErr: false,
-		},
-		{
-			name: "valid provider data 2",
-			args: args{
-				providerData: core.EphemeralProviderData{
-					ProviderData: core.ProviderData{
-						RoundTripper: randomRoundTripper,
-					},
-				},
-			},
-			want: want{
-				ok: true,
-				providerData: core.EphemeralProviderData{
-					ProviderData: core.ProviderData{
-						RoundTripper: randomRoundTripper,
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			diags := diag.Diagnostics{}
-
-			actual, ok := ParseEphemeralProviderData(ctx, tt.args.providerData, &diags)
-			if diags.HasError() != tt.wantErr {
-				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
-			}
-			if ok != tt.want.ok {
-				t.Errorf("ParseProviderData() got = %v, want %v", ok, tt.want.ok)
-			}
-			if !reflect.DeepEqual(actual, tt.want.providerData) {
-				t.Errorf("ParseProviderData() got = %v, want %v", actual, tt.want)
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("ToLabelsMapPartialUpdatePayload() got = %v, want %v", got, tt.expected)
 			}
 		})
 	}

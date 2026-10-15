@@ -9,8 +9,8 @@ on:
     paths: [".github/workflows/stale.yaml"]
 
 env:
-  DAYS_BEFORE_PR_STALE: 7
-  DAYS_BEFORE_PR_CLOSE: 7
+  DAYS_BEFORE_PR_STALE: 14
+  DAYS_BEFORE_PR_CLOSE: 14
   EXEMPT_PR_LABELS: "ignore-stale"
 
 permissions:

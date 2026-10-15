@@ -15,9 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -47,7 +45,7 @@ func NewLogsAccessTokenDataSource() datasource.DataSource {
 }
 
 type logsAccessTokenDataSource struct {
-	client       *logs.APIClient
+	client       logs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -56,17 +54,14 @@ func (d *logsAccessTokenDataSource) Metadata(_ context.Context, req datasource.M
 }
 
 func (d *logsAccessTokenDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	d.providerData = providerData
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.LogsV1Client
+
 	tflog.Info(ctx, "Logs client configured")
 }
 
@@ -161,7 +156,7 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenID)
 
-	accessTokenResponse, err := d.client.DefaultAPI.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
+	accessTokenResponse, err := d.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		tfutils.LogError(
 			ctx,

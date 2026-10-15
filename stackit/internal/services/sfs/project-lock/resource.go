@@ -17,9 +17,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -50,7 +49,7 @@ func NewProjectLockResource() resource.Resource {
 
 // projectlockResource is the resource implementation.
 type projectlockResource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -86,17 +85,14 @@ func (r *projectlockResource) ModifyPlan(ctx context.Context, req resource.Modif
 
 // Configure adds the provider configured client to the resource.
 func (r *projectlockResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
+
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -171,7 +167,7 @@ func (r *projectlockResource) Create(ctx context.Context, req resource.CreateReq
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var projectResp sfsLockResponse
-	projectResp, err := r.client.DefaultAPI.EnableLock(ctx, region, projectId).Execute()
+	projectResp, err := r.client.EnableLock(ctx, region, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -182,7 +178,7 @@ func (r *projectlockResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		tflog.Info(ctx, "Project lock is already enabled for this project. Please check duplicate resources.")
-		projectResp, err = r.client.DefaultAPI.GetLock(ctx, region, projectId).Execute()
+		projectResp, err = r.client.GetLock(ctx, region, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project lock", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -222,7 +218,7 @@ func (r *projectlockResource) Read(ctx context.Context, req resource.ReadRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	projectResp, err := r.client.DefaultAPI.GetLock(ctx, region, projectId).Execute()
+	projectResp, err := r.client.GetLock(ctx, region, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -275,7 +271,7 @@ func (r *projectlockResource) Delete(ctx context.Context, req resource.DeleteReq
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := r.client.DefaultAPI.DisableLock(ctx, region, projectId).Execute()
+	_, err := r.client.DisableLock(ctx, region, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project lock", fmt.Sprintf("Calling API: %v", err))
 		return

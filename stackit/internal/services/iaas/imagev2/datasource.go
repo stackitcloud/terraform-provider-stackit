@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -115,7 +114,7 @@ func NewImageV2DataSource() datasource.DataSource {
 
 // imageDataV2Source is the data source implementation.
 type imageDataV2Source struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -125,23 +124,19 @@ func (d *imageDataV2Source) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *imageDataV2Source) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_image_v2", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	d.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -394,7 +389,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Case 1: Direct lookup by image ID
 	if imageID != "" {
-		imageResp, err = d.client.DefaultAPI.GetImage(ctx, projectID, region, imageID).Execute()
+		imageResp, err = d.client.GetImage(ctx, projectID, region, imageID).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "Reading image",
 				fmt.Sprintf("Image with ID %q does not exist in project %q.", imageID, projectID),
@@ -420,7 +415,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		// Fetch all available images
-		imageList, err := d.client.DefaultAPI.ListImages(ctx, projectID, region).Execute()
+		imageList, err := d.client.ListImages(ctx, projectID, region).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "List images", "Unable to fetch images", nil)
 			return

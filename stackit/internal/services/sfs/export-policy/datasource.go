@@ -14,10 +14,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -27,7 +24,7 @@ var (
 )
 
 type exportPolicyDataSource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -38,22 +35,14 @@ func (d *exportPolicyDataSource) Metadata(_ context.Context, req datasource.Meta
 
 // Configure implements datasource.DataSourceWithConfigure.
 func (d *exportPolicyDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_sfs_export_policy", core.Datasource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.SfsV1Client
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -79,7 +68,7 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = core.InitProviderContext(ctx)
 
 	// get export policy
-	exportPolicyResp, err := d.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	exportPolicyResp, err := d.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -116,7 +105,7 @@ func (d *exportPolicyDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	description := "SFS export policy datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
+		MarkdownDescription: description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`policy_id`\".",

@@ -17,10 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -56,7 +54,7 @@ func NewVPCRegion() resource.Resource {
 }
 
 type vpcRegion struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -65,18 +63,15 @@ func (v *vpcRegion) Metadata(_ context.Context, request resource.MetadataRequest
 }
 
 func (v *vpcRegion) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	v.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &v.providerData, features.VpcExperiment, "stackit_vpc_region", core.Resource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	v.providerData = providerData
+	v.client = clients.IaaSv2AlphaClient
 
-	v.client = iaasAlphaUtils.ConfigureClient(ctx, &v.providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &v.providerData, features.VpcExperiment, "stackit_vpc_region", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -166,7 +161,7 @@ func (v *vpcRegion) Create(ctx context.Context, request resource.CreateRequest, 
 		return
 	}
 
-	waiterTimeout := wait.CreateVPCRegionWaitHandler(ctx, v.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.CreateVPCRegionWaitHandler(ctx, v.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
@@ -190,7 +185,7 @@ func (v *vpcRegion) Create(ctx context.Context, request resource.CreateRequest, 
 		return
 	}
 
-	regionalVPC, err := v.client.DefaultAPI.CreateVPCRegion(ctx, projectId, vpcId, region).CreateVPCRegionPayload(*payload).Execute()
+	regionalVPC, err := v.client.CreateVPCRegion(ctx, projectId, vpcId, region).CreateVPCRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating VPC region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -204,7 +199,7 @@ func (v *vpcRegion) Create(ctx context.Context, request resource.CreateRequest, 
 		"region":     region,
 	})
 
-	_, err = wait.CreateVPCRegionWaitHandler(ctx, v.client.DefaultAPI, projectId, vpcId, region).WaitWithContext(ctx)
+	_, err = wait.CreateVPCRegionWaitHandler(ctx, v.client, projectId, vpcId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating VPC region", fmt.Sprintf("VPC region creation waiting: %v", err))
 		return
@@ -246,7 +241,7 @@ func (v *vpcRegion) Read(ctx context.Context, request resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	regionalVPC, err := v.client.DefaultAPI.GetVPCRegion(ctx, projectId, vpcId, region).Execute()
+	regionalVPC, err := v.client.GetVPCRegion(ctx, projectId, vpcId, region).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
@@ -302,7 +297,7 @@ func (v *vpcRegion) Update(ctx context.Context, request resource.UpdateRequest, 
 		return
 	}
 
-	regionalVPC, err := v.client.DefaultAPI.UpdateVPCRegion(ctx, projectId, vpcId, region).UpdateVPCRegionPayload(payload).Execute()
+	regionalVPC, err := v.client.UpdateVPCRegion(ctx, projectId, vpcId, region).UpdateVPCRegionPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error updating VPC region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -331,7 +326,7 @@ func (v *vpcRegion) Delete(ctx context.Context, request resource.DeleteRequest, 
 		return
 	}
 
-	waiterTimeout := wait.DeleteVPCRegionWaitHandler(ctx, v.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.DeleteVPCRegionWaitHandler(ctx, v.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
@@ -349,7 +344,7 @@ func (v *vpcRegion) Delete(ctx context.Context, request resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := v.client.DefaultAPI.DeleteVPCRegion(ctx, projectId, vpcId, region).Execute()
+	err := v.client.DeleteVPCRegion(ctx, projectId, vpcId, region).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
@@ -361,7 +356,7 @@ func (v *vpcRegion) Delete(ctx context.Context, request resource.DeleteRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteVPCRegionWaitHandler(ctx, v.client.DefaultAPI, projectId, vpcId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteVPCRegionWaitHandler(ctx, v.client, projectId, vpcId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting VPC region", fmt.Sprintf("VPC region deletion waiting: %v", err))
 		return

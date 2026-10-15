@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	logmeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -32,7 +29,7 @@ func NewCredentialDataSource() datasource.DataSource {
 
 // credentialDataSource is the data source implementation.
 type credentialDataSource struct {
-	client       *logmeSdk.APIClient
+	client       logmeSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -43,17 +40,14 @@ func (d *credentialDataSource) Metadata(_ context.Context, req datasource.Metada
 
 // Configure adds the provider configured client to the data source.
 func (d *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := logmeUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.LogmeV2Client
+
 	tflog.Info(ctx, "LogMe credential client configured")
 }
 
@@ -146,7 +140,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := d.client.DefaultAPI.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
+	recordSetResp, err := d.client.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

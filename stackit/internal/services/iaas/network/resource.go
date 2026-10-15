@@ -42,15 +42,6 @@ var (
 	_ resource.ResourceWithModifyPlan  = &networkResource{}
 )
 
-const (
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	ipv4BehaviorChangeTitle = "Behavior of not configured `ipv4_nameservers` has changed"
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	ipv4BehaviorChangeDescription = "When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.\n" +
-		"To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.\n" +
-		"In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged."
-)
-
 type Model struct {
 	Id                    types.String `tfsdk:"id"` // needed by TF
 	ProjectId             types.String `tfsdk:"project_id"`
@@ -86,7 +77,7 @@ func NewNetworkResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -97,17 +88,14 @@ func (r *networkResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -128,12 +116,6 @@ func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	// Warning should only be shown during the plan of the creation. This can be detected by checking if the ID is set.
-	if utils.IsUndefined(planModel.Id) && utils.IsUndefined(planModel.IPv4Nameservers) {
-		addIPv4Warning(&resp.Diagnostics)
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
@@ -223,9 +205,8 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 // Schema defines the schema for the resource.
 func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network resource schema. Must have a `region` specified in the provider configuration."
-	descriptionNote := fmt.Sprintf("~> %s. %s", ipv4BehaviorChangeTitle, ipv4BehaviorChangeDescription)
 	resp.Schema = schema.Schema{
-		MarkdownDescription: fmt.Sprintf("%s\n%s", description, descriptionNote),
+		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -465,12 +446,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	// When IPv4Nameserver is not set, print warning that the behavior of ipv4_nameservers has changed
-	if utils.IsUndefined(model.IPv4Nameservers) {
-		addIPv4Warning(&resp.Diagnostics)
-	}
-
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
@@ -480,7 +455,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new network
 
-	network, err := r.client.DefaultAPI.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
+	network, err := r.client.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -499,7 +474,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	network, err = wait.CreateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
@@ -543,7 +518,7 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	networkResp, err := r.client.DefaultAPI.GetNetwork(ctx, projectId, region, networkId).Execute()
+	networkResp, err := r.client.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -606,13 +581,13 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// Update existing network
-	err = r.client.DefaultAPI.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
+	err = r.client.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
 		return
@@ -653,7 +628,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing network
-	err := r.client.DefaultAPI.DeleteNetwork(ctx, projectId, region, networkId).Execute()
+	err := r.client.DeleteNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -666,7 +641,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))
 		return
@@ -1049,11 +1024,4 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 
 func (m *Model) isIPv4UpdateConfigSet() bool {
 	return !utils.IsUndefined(m.IPv4Nameservers) || m.NoIPv4Gateway.ValueBool() || !utils.IsUndefined(m.IPv4Gateway)
-}
-
-// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-func addIPv4Warning(diags *diag.Diagnostics) {
-	diags.AddAttributeWarning(path.Root("ipv4_nameservers"),
-		ipv4BehaviorChangeTitle,
-		ipv4BehaviorChangeDescription)
 }

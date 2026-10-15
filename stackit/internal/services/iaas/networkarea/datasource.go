@@ -8,9 +8,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -35,7 +32,7 @@ func NewNetworkAreaDataSource() datasource.DataSource {
 
 // networkDataSource is the data source implementation.
 type networkAreaDataSource struct {
-	client *iaas.APIClient
+	client iaas.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -44,16 +41,13 @@ func (d *networkAreaDataSource) Metadata(_ context.Context, req datasource.Metad
 }
 
 func (d *networkAreaDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -125,7 +119,7 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	networkAreaResp, err := d.client.DefaultAPI.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
+	networkAreaResp, err := d.client.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -27,7 +27,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -66,7 +66,7 @@ func NewFolderResource() resource.Resource {
 
 // folderResource is the resource implementation.
 type folderResource struct {
-	client *resourcemanager.APIClient
+	client resourcemanager.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -76,16 +76,12 @@ func (r *folderResource) Metadata(_ context.Context, req resource.MetadataReques
 
 // Configure adds the provider configured client to the resource.
 func (r *folderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ResourceManagerClient
 
 	tflog.Info(ctx, "Resource Manager client configured")
 }
@@ -207,7 +203,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	folderCreateResp, err := r.client.DefaultAPI.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
+	folderCreateResp, err := r.client.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -231,7 +227,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		// continue
 	}
 
-	folderGetResponse, err := r.client.DefaultAPI.GetFolderDetails(ctx, folderCreateResp.ContainerId).Execute()
+	folderGetResponse, err := r.client.GetFolderDetails(ctx, folderCreateResp.ContainerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -268,7 +264,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	folderResp, err := r.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
+	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
@@ -299,8 +295,16 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
-	var model ResourceModel
-	diags := req.Plan.Get(ctx, &model)
+	var planModel ResourceModel
+	diags := req.Plan.Get(ctx, &planModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Retrieve values from state
+	var stateModel ResourceModel
+	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -308,17 +312,17 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	ctx = core.InitProviderContext(ctx)
 
-	containerId := model.ContainerId.ValueString()
+	containerId := planModel.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(ctx, &model)
+	payload, err := toUpdatePayload(ctx, &planModel, &stateModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update existing folder
-	_, err = r.client.DefaultAPI.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -327,19 +331,19 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Fetch updated folder
-	folderResp, err := r.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
+	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
 	}
 
-	err = mapFolderFields(ctx, folderResp, &model.Model, &resp.State)
+	err = mapFolderFields(ctx, folderResp, &planModel.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Processing API response: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -363,7 +367,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing folder
-	err := r.client.DefaultAPI.DeleteFolder(ctx, containerId).Execute()
+	err := r.client.DeleteFolder(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -511,19 +515,21 @@ func toCreatePayload(ctx context.Context, model *ResourceModel) (*resourcemanage
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *ResourceModel) (*resourcemanager.PartialUpdateFolderPayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
+func toUpdatePayload(ctx context.Context, planModel, stateModel *ResourceModel) (*resourcemanager.PartialUpdateFolderPayload, error) {
+	if planModel == nil {
+		return nil, fmt.Errorf("nil plan model")
+	} else if stateModel == nil {
+		return nil, fmt.Errorf("nil state model")
 	}
 
-	labels, err := utils.LabelsToNullableValuePayload(ctx, model.Labels)
+	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
 	if err != nil {
 		return nil, err
 	}
 
 	return &resourcemanager.PartialUpdateFolderPayload{
-		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
-		Name:              conversion.StringValueToPointer(model.Name),
+		ContainerParentId: conversion.StringValueToPointer(planModel.ContainerParentId),
+		Name:              conversion.StringValueToPointer(planModel.Name),
 		Labels:            &labels,
 	}, nil
 }

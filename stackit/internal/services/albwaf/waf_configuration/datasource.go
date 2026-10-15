@@ -16,9 +16,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	albwafUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -28,7 +26,7 @@ var (
 )
 
 type wafDatasource struct {
-	client       *albWaf.APIClient
+	client       albWaf.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -37,16 +35,14 @@ func NewWafConfigurationDatasource() datasource.DataSource {
 }
 
 func (d *wafDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) { // nolint:gocritic // function signature required by Terraform
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = albwafUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.AlbWafV1CLient
+
 	tflog.Info(ctx, "ALB WAF client configured")
 }
 
@@ -113,7 +109,7 @@ func (d *wafDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	foundWAF, err := d.client.DefaultAPI.GetWAF(ctx, projectId, region, name).Execute()
+	foundWAF, err := d.client.GetWAF(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -16,7 +15,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
@@ -29,7 +27,7 @@ func NewServiceAccountFederatedIdentityProviderDataSource() datasource.DataSourc
 }
 
 type serviceAccountFederatedIdentityProviderDatasource struct {
-	client *serviceaccount.APIClient
+	client serviceaccount.DefaultAPI
 }
 
 func (r *serviceAccountFederatedIdentityProviderDatasource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -99,16 +97,13 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Schema(_ context.Con
 }
 
 func (r *serviceAccountFederatedIdentityProviderDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ServiceAccountV2Client
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -126,7 +121,7 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	federationId := model.FederationId.ValueString()
 
-	apiResp, err := r.client.DefaultAPI.GetFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
+	apiResp, err := r.client.GetFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		Execute()
 
 	if err != nil {

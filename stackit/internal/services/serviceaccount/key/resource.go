@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -54,21 +52,18 @@ func NewServiceAccountKeyResource() resource.Resource {
 
 // serviceAccountKeyResource implements the resource interface for service account key.
 type serviceAccountKeyResource struct {
-	client *serviceaccount.APIClient
+	client serviceaccount.DefaultAPI
 }
 
 // Configure sets up the API client for the service account resource.
 func (r *serviceAccountKeyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ServiceAccountV2Client
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -183,7 +178,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Initialize the API request with the required parameters.
-	saAccountKeyResp, err := r.client.DefaultAPI.CreateServiceAccountKey(ctx, projectId, serviceAccountEmail).CreateServiceAccountKeyPayload(*payload).Execute()
+	saAccountKeyResp, err := r.client.CreateServiceAccountKey(ctx, projectId, serviceAccountEmail).CreateServiceAccountKeyPayload(*payload).Execute()
 
 	ctx = core.LogResponse(ctx)
 
@@ -229,7 +224,7 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	_, err := r.client.DefaultAPI.GetServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
+	_, err := r.client.GetServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// due to security purposes, attempting to get access key for a non-existent Service Account will return 403.
@@ -283,7 +278,7 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
 	// Call API to delete the existing service account key.
-	err := r.client.DefaultAPI.DeleteServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
+	err := r.client.DeleteServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

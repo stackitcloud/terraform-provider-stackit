@@ -13,10 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
@@ -32,7 +30,7 @@ func NewVPCRegionDatasource() datasource.DataSource {
 }
 
 type vpcRegionDatasource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -42,17 +40,15 @@ type DatasourceModel struct {
 }
 
 func (v *vpcRegionDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc_region", core.Resource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	v.providerData = providerData
+	v.client = clients.IaaSv2AlphaClient
 
-	v.client = iaasAlphaUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc_region", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -122,7 +118,7 @@ func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	regionalVPC, err := v.client.DefaultAPI.GetVPCRegion(ctx, projectId, vpcId, region).Execute()
+	regionalVPC, err := v.client.GetVPCRegion(ctx, projectId, vpcId, region).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)

@@ -7,9 +7,6 @@ import (
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -34,7 +31,7 @@ func NewClusterDataSource() datasource.DataSource {
 
 // clusterDataSource is the data source implementation.
 type clusterDataSource struct {
-	client       *ske.APIClient
+	client       ske.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -45,17 +42,14 @@ func (r *clusterDataSource) Metadata(_ context.Context, req datasource.MetadataR
 
 // Configure adds the provider configured client to the data source.
 func (r *clusterDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := skeUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SkeV2Client
+
 	tflog.Info(ctx, "SKE client configured")
 }
 func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -399,7 +393,7 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
-	clusterResp, err := r.client.DefaultAPI.GetCluster(ctx, projectId, region, name).Execute()
+	clusterResp, err := r.client.GetCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

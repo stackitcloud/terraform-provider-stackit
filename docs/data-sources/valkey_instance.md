@@ -3,12 +3,12 @@
 page_title: "stackit_valkey_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  Valkey instance data source schema. Must have a region specified in the provider configuration.
+  Key Value Store(valkey) instance data source schema. Must have a region specified in the provider configuration.
 ---
 
 # stackit_valkey_instance (Data Source)
 
-Valkey instance data source schema. Must have a `region` specified in the provider configuration.
+Key Value Store(valkey) instance data source schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
