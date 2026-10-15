@@ -30,7 +30,6 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -706,7 +705,7 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 
 	if gateway.NetworkConfig == nil {
 		model.NetworkConfig = types.ObjectNull(networkConfigTypes)
-	} else if utils.IsUndefined(model.NetworkConfig) && gateway.NetworkConfig.PredefinedNetworkPrefix == nil && gateway.NetworkConfig.RoutingTableId == nil {
+	} else if tfutils.IsUndefined(model.NetworkConfig) && gateway.NetworkConfig.PredefinedNetworkPrefix == nil && gateway.NetworkConfig.RoutingTableId == nil {
 		// If the current model is Null and the API returns an empty Object, it should not be replaced to prevent a state drift
 		model.NetworkConfig = types.ObjectNull(networkConfigTypes)
 	} else {
