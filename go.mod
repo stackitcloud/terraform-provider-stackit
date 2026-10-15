@@ -22,13 +22,13 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.25.0
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.13.2
-	github.com/stackitcloud/stackit-sdk-go/services/git v0.14.2
+	github.com/stackitcloud/stackit-sdk-go/services/git v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.15.2
 	github.com/stackitcloud/stackit-sdk-go/services/logme v1.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.2
+	github.com/stackitcloud/stackit-sdk-go/services/logs v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/modelexperiments v0.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.14.0
