@@ -80,6 +80,10 @@ resource "stackit_loadbalancer" "example" {
         interval_jitter     = "3s"
         timeout             = "3s"
         unhealthy_threshold = 10
+        http_health_checks = {
+          path      = "/healthz"
+          ok_status = ["200"]
+        }
       }
     }
   ]
