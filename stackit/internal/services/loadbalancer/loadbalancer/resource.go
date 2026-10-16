@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -53,6 +54,7 @@ type Model struct {
 	ProjectId                      types.String `tfsdk:"project_id"`
 	ExternalAddress                types.String `tfsdk:"external_address"`
 	DisableSecurityGroupAssignment types.Bool   `tfsdk:"disable_security_group_assignment"`
+	Labels                         types.Map    `tfsdk:"labels"`
 	Listeners                      types.List   `tfsdk:"listeners"`
 	Name                           types.String `tfsdk:"name"`
 	PlanId                         types.String `tfsdk:"plan_id"`
@@ -331,6 +333,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance. " + utils.FormatPossibleValues(protocolOptions...),
 		"target_pool":                           "Reference target pool by target pool name.",
 		"name":                                  "Load balancer name.",
+		"labels":                                "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per load balancer. Keys starting with `stackit-` are reserved for the system.",
 		"plan_id":                               "The service plan ID. If not defined, the default service plan is `p10`. " + utils.FormatPossibleValues(servicePlanOptions...),
 		"networks":                              "List of networks that listeners and targets reside in.",
 		"network_id":                            "Openstack network ID.",
@@ -496,6 +499,16 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							},
 						},
 					},
+				},
+			},
+			"labels": schema.MapAttribute{
+				Description: descriptions["labels"],
+				Optional:    true,
+				ElementType: types.StringType,
+				Validators: []validator.Map{
+					mapvalidator.SizeBetween(1, 64),
+					mapvalidator.KeysAre(stringvalidator.LengthBetween(1, 63)),
+					mapvalidator.ValueStringsAre(stringvalidator.LengthBetween(0, 63)),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -1007,9 +1020,15 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 		return nil, fmt.Errorf("converting target_pools: %w", err)
 	}
 
+	labelsPayload, err := toLabelsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
+	}
+
 	return &loadbalancer.CreateLoadBalancerPayload{
 		ExternalAddress:                      conversion.StringValueToPointer(model.ExternalAddress),
 		DisableTargetSecurityGroupAssignment: conversion.BoolValueToPointer(model.DisableSecurityGroupAssignment),
+		Labels:                               labelsPayload,
 		Listeners:                            listenersPayload,
 		Name:                                 conversion.StringValueToPointer(model.Name),
 		PlanId:                               conversion.StringValueToPointer(model.PlanId),
@@ -1041,7 +1060,13 @@ func toUpdatePayload(ctx context.Context, model *Model) (*loadbalancer.UpdateLoa
 		return nil, fmt.Errorf("converting target_pools: %w", err)
 	}
 
+	labelsPayload, err := toLabelsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
+	}
+
 	return &loadbalancer.UpdateLoadBalancerPayload{
+		Labels:      labelsPayload,
 		Listeners:   listenersPayload,
 		PlanId:      conversion.StringValueToPointer(model.PlanId),
 		Options:     optionsPayload,
@@ -1418,8 +1443,45 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	if err != nil {
 		return fmt.Errorf("mapping target pools: %w", err)
 	}
+	err = mapLabels(lb, m)
+	if err != nil {
+		return fmt.Errorf("mapping labels: %w", err)
+	}
 
 	return nil
+}
+
+func mapLabels(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
+	if loadBalancerResp.Labels == nil || len(*loadBalancerResp.Labels) == 0 {
+		m.Labels = types.MapNull(types.StringType)
+		return nil
+	}
+
+	labelsMap := map[string]attr.Value{}
+	for key, value := range *loadBalancerResp.Labels {
+		labelsMap[key] = types.StringValue(value)
+	}
+
+	labelsTF, diags := types.MapValue(types.StringType, labelsMap)
+	if diags.HasError() {
+		return fmt.Errorf("mapping labels: %w", core.DiagsToError(diags))
+	}
+
+	m.Labels = labelsTF
+	return nil
+}
+
+func toLabelsPayload(ctx context.Context, model *Model) (*map[string]string, error) { //nolint:gocritic // the SDK expects a pointer to a map
+	if utils.IsUndefined(model.Labels) {
+		return nil, nil
+	}
+
+	var payload map[string]string
+	diags := model.Labels.ElementsAs(ctx, &payload, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
+	}
+	return &payload, nil
 }
 
 func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
