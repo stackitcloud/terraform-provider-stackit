@@ -22,6 +22,9 @@ variable "sni_health_interval" {}
 variable "sni_health_interval_jitter" {}
 variable "sni_health_timeout" {}
 variable "sni_unhealthy_threshold" {}
+variable "sni_health_alt_port" {}
+variable "sni_health_http_path" {}
+variable "sni_health_http_ok_status" {}
 variable "sni_use_source_ip_address" {}
 
 variable "udp_target_pool_name" {}
@@ -108,6 +111,11 @@ resource "stackit_loadbalancer" "loadbalancer" {
         interval_jitter     = var.sni_health_interval_jitter
         timeout             = var.sni_health_timeout
         unhealthy_threshold = var.sni_unhealthy_threshold
+        alt_port            = var.sni_health_alt_port
+        http_health_checks = {
+          path      = var.sni_health_http_path
+          ok_status = [var.sni_health_http_ok_status]
+        }
       }
       session_persistence = {
         use_source_ip_address = var.sni_use_source_ip_address
