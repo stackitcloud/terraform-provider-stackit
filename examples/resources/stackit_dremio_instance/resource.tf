@@ -3,6 +3,9 @@ resource "stackit_dremio_instance" "example" {
   region       = "eu01"
   display_name = "exampleName"
   description  = "Example description"
+  acl = [
+    "0.0.0.0/0"
+  ]
   authentication = {
     type = "local-only" // "oauth" or "azuread" for IDP config
 

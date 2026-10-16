@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
@@ -48,6 +50,7 @@ type Model struct {
 
 	// Optional Fields
 	Description types.String `tfsdk:"description"`
+	Acl         types.List   `tfsdk:"acl"`
 
 	// Read-only Fields
 	Endpoints types.Object `tfsdk:"endpoints"` // see EndpointsModel
@@ -130,6 +133,7 @@ var descriptions = map[string]string{ //nolint:gosec // no hardcoded credentials
 	"endpoints_arrow_flight":     "The arrow flight endpoint of the Dremio instance.",
 	"endpoints_catalog":          "The Apache Iceberg endpoint of the Dremio instance.",
 	"endpoints_ui":               "The UI endpoint of the Dremio instance.",
+	"acl":                        "The Access Control List (ACL) defining the IPv4 or IPv6 CIDR ranges allowed to connect to the Dremio instance. An empty list allows access from any address.",
 	"authentication":             "Dremio instance authentication settings. A change here triggers a Dremio restart and will incur downtime.",
 	"authentication_type":        "Type of authentication (local-only, azuread, oauth).",
 	"azuread":                    "Azure Active Directory authentication configuration.",
@@ -252,6 +256,15 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 			"display_name": schema.StringAttribute{
 				Description: descriptions["display_name"],
 				Required:    true,
+			},
+			"acl": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: descriptions["acl"],
+				Validators: []validator.List{
+					listvalidator.NoNullValues(),
+					listvalidator.ValueStringsAre(validate.CIDR()),
+				},
 			},
 			"authentication": schema.SingleNestedAttribute{
 				Description: descriptions["authentication"],
@@ -411,7 +424,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// prepare the payload struct for the create instance request
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -535,7 +548,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -702,6 +715,25 @@ func mapModelFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse,
 	}
 	model.Endpoints = endpointsObj
 
+	var acl basetypes.ListValue
+	if instanceResp.Acl == nil {
+		acl = types.ListNull(types.StringType)
+	} else {
+		var modelAclSlice []string
+		diags = model.Acl.ElementsAs(ctx, &modelAclSlice, false)
+		if diags.HasError() {
+			return fmt.Errorf("failed to parse acl: %w", core.DiagsToError(diags))
+		}
+
+		aclSlice := utils.ReconcileStringSlices(modelAclSlice, instanceResp.Acl)
+
+		acl, diags = types.ListValueFrom(ctx, types.StringType, aclSlice)
+		if diags.HasError() {
+			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
+		}
+	}
+	model.Acl = acl
+
 	return nil
 }
 
@@ -757,7 +789,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 }
 
 // Build UpdateDremioInstancePayload from provider's model
-func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePayload, error) {
+func toUpdatePayload(ctx context.Context, model *InstanceModel) (*dremioSdk.UpdateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -767,7 +799,14 @@ func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePaylo
 		return nil, fmt.Errorf("failed to parse authentication: %w", err)
 	}
 
+	var acl []string
+	diags := model.Acl.ElementsAs(ctx, &acl, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("failed to parse acl: %v", diags)
+	}
+
 	return &dremioSdk.UpdateDremioInstancePayload{
+		Acl:            acl,
 		Authentication: authentication,
 		Description:    model.Description.ValueStringPointer(),
 		DisplayName:    model.DisplayName.ValueStringPointer(),
@@ -775,7 +814,7 @@ func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePaylo
 }
 
 // Build CreateDremioInstancePayload from provider's model
-func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePayload, error) {
+func toCreatePayload(ctx context.Context, model *InstanceModel) (*dremioSdk.CreateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -785,7 +824,14 @@ func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePaylo
 		return nil, fmt.Errorf("failed to parse authentication: %w", err)
 	}
 
+	var acl []string
+	diags := model.Acl.ElementsAs(ctx, &acl, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("failed to parse acl: %v", diags)
+	}
+
 	return &dremioSdk.CreateDremioInstancePayload{
+		Acl:            acl,
 		Authentication: authentication,
 		Description:    model.Description.ValueStringPointer(),
 		DisplayName:    model.DisplayName.ValueString(),

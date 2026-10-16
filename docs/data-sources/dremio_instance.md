@@ -38,6 +38,7 @@ data "stackit_dremio_instance" "example" {
 
 ### Read-Only
 
+- `acl` (List of String) The Access Control List (ACL) defining the IPv4 or IPv6 CIDR ranges allowed to connect to the Dremio instance. An empty list allows access from any address.
 - `authentication` (Attributes) Dremio instance authentication settings. A change here triggers a Dremio restart and will incur downtime. (see [below for nested schema](#nestedatt--authentication))
 - `display_name` (String) The display name is a short name chosen by the user to identify the resource.
 - `endpoints` (Attributes) The available endpoints of the Dremio instance. (see [below for nested schema](#nestedatt--endpoints))
