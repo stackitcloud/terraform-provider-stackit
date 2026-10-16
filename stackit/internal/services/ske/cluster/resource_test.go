@@ -816,6 +816,28 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 		isValid                      bool
 	}{
 		{
+			description: "ignore malformed versions when selecting latest supported version",
+			availableVersions: []ske.KubernetesVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.20.1"), State: new(VersionStateSupported)},
+				{Version: new("1.20.2"), State: new(VersionStateSupported)},
+				{Version: new("also-invalid"), State: new(VersionStateSupported)},
+			},
+			expectedVersionUsed: new("1.20.2"),
+			isValid:             true,
+		},
+		{
+			description: "ignore malformed versions when selecting matching version",
+			availableVersions: []ske.KubernetesVersion{
+				{Version: new("1.20.1"), State: new(VersionStateSupported)},
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.20.2"), State: new(VersionStateSupported)},
+			},
+			kubernetesVersionMin: new("1.20"),
+			expectedVersionUsed:  new("1.20.2"),
+			isValid:              true,
+		},
+		{
 			"available_version",
 			[]ske.KubernetesVersion{
 				{
@@ -2206,6 +2228,27 @@ func TestGetLatestSupportedVersion(t *testing.T) {
 			expectedVersion: new("3.2.1"),
 		},
 		{
+			description: "ignore malformed supported versions",
+			listMachineVersion: []ske.MachineImageVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.2.3"), State: new(VersionStateSupported)},
+				{Version: new("3.2.1"), State: new(VersionStateSupported)},
+				{Version: new("also-invalid"), State: new(VersionStateSupported)},
+			},
+			isValid:         true,
+			expectedVersion: new("3.2.1"),
+		},
+		{
+			description: "no valid supported versions",
+			listMachineVersion: []ske.MachineImageVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new(""), State: new(VersionStateSupported)},
+				{State: new(VersionStateSupported)},
+				{Version: new("3.2.1"), State: new(VersionStatePreview)},
+			},
+			isValid: false,
+		},
+		{
 			description:        "no mchine versions 1",
 			listMachineVersion: nil,
 			isValid:            false,
@@ -2491,6 +2534,23 @@ func TestSortK8sVersion(t *testing.T) {
 				{Version: new("v1.1.10")},
 				{Version: new("v1.1")},
 				{Version: nil},
+			},
+		},
+		{
+			description: "malformed versions sort after valid versions",
+			versions: []ske.KubernetesVersion{
+				{Version: new("invalid")},
+				{Version: new("1.20.0")},
+				{Version: new("invalid")},
+				{Version: new("1.20.2")},
+				{Version: new("1.20.1")},
+			},
+			wantSorted: []ske.KubernetesVersion{
+				{Version: new("1.20.2")},
+				{Version: new("1.20.1")},
+				{Version: new("1.20.0")},
+				{Version: new("invalid")},
+				{Version: new("invalid")},
 			},
 		},
 		{

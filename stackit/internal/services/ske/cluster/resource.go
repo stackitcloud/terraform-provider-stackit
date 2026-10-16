@@ -2303,17 +2303,14 @@ func selectVersion(availableVersions []VersionWithState, versionMin *semver.Cons
 
 func sortVersions(versions []VersionWithState) {
 	sort.Slice(versions, func(i, j int) bool {
-		if versions[i].GetVersion() == "" {
-			return false
-		}
-		if versions[j].GetVersion() == "" {
-			return true
-		}
-
 		left, leftErr := semver.NewVersion(versions[i].GetVersion())
 		right, rightErr := semver.NewVersion(versions[j].GetVersion())
-		if leftErr != nil || rightErr != nil {
+		// Invalid versions sort after all valid versions, including when empty.
+		if leftErr != nil {
 			return false
+		}
+		if rightErr != nil {
+			return true
 		}
 		return left.GreaterThan(right)
 	})
@@ -2339,7 +2336,8 @@ func getLatestSupportedVersion(versions []VersionWithState) (*string, error) {
 		}
 		parsed, err := semver.NewVersion(version.GetVersion())
 		if err != nil {
-			return nil, err
+			// A malformed API entry must not prevent selecting a valid version.
+			continue
 		}
 		supportedVersions = append(supportedVersions, parsed)
 	}
