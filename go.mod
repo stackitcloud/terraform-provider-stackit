@@ -14,11 +14,11 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.11.0
 	github.com/hashicorp/terraform-plugin-testing v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.27.1
-	github.com/stackitcloud/stackit-sdk-go/services/alb v0.18.0
+	github.com/stackitcloud/stackit-sdk-go/services/alb v0.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.4
 	github.com/stackitcloud/stackit-sdk-go/services/automation v0.2.1
-	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.21.0
-	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.22.0
+	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.25.0
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.13.2
@@ -36,7 +36,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.5.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.15.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.26.1
@@ -44,7 +44,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.6.0
-	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.21.1
+	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.22.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.21.2
