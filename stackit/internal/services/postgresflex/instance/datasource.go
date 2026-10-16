@@ -183,6 +183,10 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["retention_days"],
 				Computed:    true,
 			},
+			"deletion_protection": schema.BoolAttribute{
+				Description: "Whether the instance is protected from deletion.",
+				Computed:    true,
+			},
 			"network": schema.SingleNestedAttribute{
 				Description: descriptions["network"],
 				Computed:    true,
