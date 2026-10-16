@@ -21,6 +21,9 @@ resource "stackit_dremio_instance" "example" {
   region       = "eu01"
   display_name = "exampleName"
   description  = "Example description"
+  acl = [
+    "0.0.0.0/0"
+  ]
   authentication = {
     type = "local-only" // "oauth" or "azuread" for IDP config
 
@@ -57,6 +60,7 @@ resource "stackit_dremio_instance" "example" {
 
 ### Optional
 
+- `acl` (List of String) The Access Control List (ACL) defining the IPv4 or IPv6 CIDR ranges allowed to connect to the Dremio instance. An empty list allows access from any address.
 - `description` (String) The description is a longer text chosen by the user to provide more context for the resource.
 - `region` (String) The STACKIT region name the resource is located in. If not defined, the provider region is used.
 - `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
