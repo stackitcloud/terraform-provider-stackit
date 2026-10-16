@@ -1388,10 +1388,8 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	}
 
 	var cacheKeyHeaders []attr.Value
-	if headers := distribution.Config.CacheConfig.CacheKeyHeaders; headers != nil {
-		for _, h := range headers {
-			cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
-		}
+	for _, h := range distribution.Config.CacheConfig.CacheKeyHeaders {
+		cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
 	}
 	cacheKeyHeadersList, diags := types.ListValue(types.StringType, cacheKeyHeaders)
 	if diags.HasError() {
