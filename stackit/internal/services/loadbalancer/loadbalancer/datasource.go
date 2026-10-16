@@ -72,6 +72,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"protocol":                              "Protocol is the highest network protocol we understand to load balance.",
 		"target_pool":                           "Reference target pool by target pool name.",
 		"name":                                  "Load balancer name.",
+		"labels":                                "Labels represent user-defined metadata as key-value pairs.",
 		"plan_id":                               "The service plan ID. If not defined, the default service plan is `p10`. " + utils.FormatPossibleValues(servicePlanOptions...),
 		"networks":                              "List of networks that listeners and targets reside in.",
 		"network_id":                            "Openstack network ID.",
@@ -195,6 +196,11 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 					},
 				},
+			},
+			"labels": schema.MapAttribute{
+				Description: descriptions["labels"],
+				Computed:    true,
+				ElementType: types.StringType,
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],

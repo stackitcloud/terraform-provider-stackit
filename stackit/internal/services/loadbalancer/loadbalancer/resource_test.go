@@ -45,6 +45,7 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"simple_values_ok",
 			&Model{
+				Labels:          types.MapValueMust(types.StringType, map[string]attr.Value{"env": types.StringValue("dev"), "team": types.StringValue("")}),
 				ExternalAddress: types.StringValue("external_address"),
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
@@ -123,6 +124,7 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			&loadbalancer.CreateLoadBalancerPayload{
+				Labels:          &map[string]string{"env": "dev", "team": ""},
 				ExternalAddress: new("external_address"),
 				Listeners: []loadbalancer.Listener{
 					{
@@ -399,6 +401,7 @@ func TestMapFields(t *testing.T) {
 			nil,
 			testRegion,
 			&Model{
+				Labels:          types.MapNull(types.StringType),
 				Id:              types.StringValue(id),
 				ProjectId:       types.StringValue("pid"),
 				ExternalAddress: types.StringNull(),
@@ -430,6 +433,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values_ok",
 			&loadbalancer.LoadBalancer{
+				Labels:          &map[string]string{"env": "dev", "team": ""},
 				ExternalAddress: new("external_address"),
 				Listeners: []loadbalancer.Listener{
 					{
@@ -508,6 +512,7 @@ func TestMapFields(t *testing.T) {
 			nil,
 			testRegion,
 			&Model{
+				Labels:                      types.MapValueMust(types.StringType, map[string]attr.Value{"env": types.StringValue("dev"), "team": types.StringValue("")}),
 				Id:                          types.StringValue(id),
 				ProjectId:                   types.StringValue("pid"),
 				ExternalAddress:             types.StringValue("external_address"),
@@ -660,6 +665,7 @@ func TestMapFields(t *testing.T) {
 			new(false),
 			testRegion,
 			&Model{
+				Labels:          types.MapNull(types.StringType),
 				Id:              types.StringValue(id),
 				ProjectId:       types.StringValue("pid"),
 				ExternalAddress: types.StringValue("external_address"),
@@ -925,6 +931,7 @@ func Test_toUpdatePayload(t *testing.T) {
 		{
 			"simple_values_ok",
 			&Model{
+				Labels:          types.MapValueMust(types.StringType, map[string]attr.Value{"env": types.StringValue("dev"), "team": types.StringValue("")}),
 				ExternalAddress: types.StringValue("external_address"),
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
@@ -1003,6 +1010,7 @@ func Test_toUpdatePayload(t *testing.T) {
 				}),
 			},
 			&loadbalancer.UpdateLoadBalancerPayload{
+				Labels:          &map[string]string{"env": "dev", "team": ""},
 				ExternalAddress: new("external_address"),
 				Listeners: []loadbalancer.Listener{
 					{
@@ -1306,6 +1314,43 @@ func Test_mapSessionPersistence(t *testing.T) {
 			}
 			if diff := cmp.Diff(tt.wantTp, resultTp); diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func Test_mapLabels(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *loadbalancer.LoadBalancer
+		expected types.Map
+	}{
+		{
+			name:     "nil labels",
+			input:    &loadbalancer.LoadBalancer{},
+			expected: types.MapNull(types.StringType),
+		},
+		{
+			name:     "empty labels",
+			input:    &loadbalancer.LoadBalancer{Labels: &map[string]string{}},
+			expected: types.MapNull(types.StringType),
+		},
+		{
+			name:  "labels set",
+			input: &loadbalancer.LoadBalancer{Labels: &map[string]string{"env": "dev"}},
+			expected: types.MapValueMust(types.StringType, map[string]attr.Value{
+				"env": types.StringValue("dev"),
+			}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := &Model{}
+			if err := mapLabels(tt.input, model); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(model.Labels, tt.expected); diff != "" {
+				t.Fatalf("labels do not match: %s", diff)
 			}
 		})
 	}
