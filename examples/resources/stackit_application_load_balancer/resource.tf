@@ -214,6 +214,9 @@ resource "stackit_application_load_balancer" "example" {
         http_health_checks = {
           ok_status = ["200", "201"]
           path      = "/healthy"
+          tls_config = {
+            enabled = true
+          }
         }
       }
       target_port = 80
