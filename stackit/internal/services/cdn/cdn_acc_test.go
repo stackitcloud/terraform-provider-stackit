@@ -268,9 +268,9 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(testConfigVarsHttp["default_cache_duration"])),
 
 					// Cache Config Checks
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["query_string_vary_enabled"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.0", "Authorization"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.cache_key_headers.0", testutil.ConvertConfigVariable(testConfigVarsHttp["cache_key_headers"], 0)),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.0", "utm_source"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.1", "page"),
