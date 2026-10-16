@@ -73,7 +73,9 @@ func (r *httpCheckResource) Configure(ctx context.Context, req resource.Configur
 // Schema defines the schema for the resource.
 func (r *httpCheckResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability HTTP check resource schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
+		Description: "Observability HTTP check resource schema. HTTP checks are unique per URL within an instance: creating a check for a URL that already exists returns the existing check. " +
+			"Two resources with the same `url` therefore manage the same check, and destroying one of them deletes it. " +
+			"Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`,`http_check_id`\".",
@@ -304,6 +306,7 @@ func toCreatePayload(model *Model) observabilitySdk.CreateHttpCheckPayload {
 
 // createdHttpCheck returns the HTTP check created by a CreateHttpCheck call.
 // The response contains the created check, and the list of all HTTP checks of the instance as a fallback.
+// The API does not create duplicates for the same URL, so the fallback is expected to find at most one match.
 func createdHttpCheck(createResp *observabilitySdk.HttpCheckResponse, url string) (*observabilitySdk.HttpCheckChildResponse, error) {
 	if createResp == nil {
 		return nil, fmt.Errorf("response is nil")

@@ -3,12 +3,12 @@
 page_title: "stackit_observability_http_check Resource - stackit"
 subcategory: ""
 description: |-
-  Observability HTTP check resource schema. Must have a region specified in the provider configuration. This service is only available when the provider is configured with default_region = "eu01".
+  Observability HTTP check resource schema. HTTP checks are unique per URL within an instance: creating a check for a URL that already exists returns the existing check. Two resources with the same url therefore manage the same check, and destroying one of them deletes it. Must have a region specified in the provider configuration. This service is only available when the provider is configured with default_region = "eu01".
 ---
 
 # stackit_observability_http_check (Resource)
 
-Observability HTTP check resource schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = "eu01"`.
+Observability HTTP check resource schema. HTTP checks are unique per URL within an instance: creating a check for a URL that already exists returns the existing check. Two resources with the same `url` therefore manage the same check, and destroying one of them deletes it. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = "eu01"`.
 
 ## Example Usage
 
