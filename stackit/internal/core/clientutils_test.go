@@ -58,27 +58,45 @@ const (
 	testCustomEndpoint = "https://test-custom-endpoint.api.stackit.cloud"
 )
 
-func Test_initClientCollection(t *testing.T) {
+func Test_initClientCollection_NoErr(t *testing.T) {
+	var randomRoundTripper http.RoundTripper = &http.Transport{
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+	}
+
 	type args struct {
 		clientFactory ClientFactory
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    *ClientCollection
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "eu01 default region",
+			args: args{
+				clientFactory: &DefaultClientFactory{
+					RoundTripper:          randomRoundTripper,
+					ProviderDefaultRegion: "eu01",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "eu02 default region",
+			args: args{
+				clientFactory: &DefaultClientFactory{
+					RoundTripper:          randomRoundTripper,
+					ProviderDefaultRegion: "eu02",
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := initClientCollection(tt.args.clientFactory)
+			_, err := initClientCollection(tt.args.clientFactory)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("initClientCollection() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("initClientCollection() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

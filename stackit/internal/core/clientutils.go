@@ -230,7 +230,7 @@ func (f *DefaultClientFactory) newAutomationV1Client() (automation.DefaultAPI, e
 
 	apiClient, err := automation.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring AutomationV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -241,7 +241,7 @@ func (f *DefaultClientFactory) newValkeyV2Client() (valkey.DefaultAPI, error) {
 
 	apiClient, err := valkey.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ValkeyV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -252,7 +252,7 @@ func (f *DefaultClientFactory) newAlbV2Client() (alb.DefaultAPI, error) {
 
 	apiClient, err := alb.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring AlbV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -263,7 +263,7 @@ func (f *DefaultClientFactory) newGitV1BetaClient() (git.DefaultAPI, error) {
 
 	apiClient, err := git.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring GitV1Beta client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -274,7 +274,7 @@ func (f *DefaultClientFactory) newIntakeV1BetaClient() (intake.DefaultAPI, error
 
 	apiClient, err := intake.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring IntakeV1Beta client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -285,7 +285,7 @@ func (f *DefaultClientFactory) newKmsV1Client() (kms.DefaultAPI, error) {
 
 	apiClient, err := kms.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring KmsV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -296,7 +296,7 @@ func (f *DefaultClientFactory) newLoadbalancerV2Client() (loadbalancer.DefaultAP
 
 	apiClient, err := loadbalancer.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring LoadbalancerV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -307,7 +307,7 @@ func (f *DefaultClientFactory) newLogmeV2Client() (logme.DefaultAPI, error) {
 
 	apiClient, err := logme.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring LogmeV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -318,7 +318,7 @@ func (f *DefaultClientFactory) newMariadbV2Client() (mariadb.DefaultAPI, error) 
 
 	apiClient, err := mariadb.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring MariadbV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -329,7 +329,7 @@ func (f *DefaultClientFactory) newModelServingV1Client() (modelserving.DefaultAP
 
 	apiClient, err := modelserving.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ModelServingV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -340,7 +340,7 @@ func (f *DefaultClientFactory) newMongoDbFlexV2Client() (mongodbflex.DefaultAPI,
 
 	apiClient, err := mongodbflex.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring MongoDbFlexV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -351,7 +351,7 @@ func (f *DefaultClientFactory) newOpensearchV2Client() (opensearch.DefaultAPI, e
 
 	apiClient, err := opensearch.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring OpensearchV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -362,7 +362,7 @@ func (f *DefaultClientFactory) newRabbitMqV2Client() (rabbitmq.DefaultAPI, error
 
 	apiClient, err := rabbitmq.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring RabbitMqV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -373,7 +373,7 @@ func (f *DefaultClientFactory) newRedisV2Client() (redis.DefaultAPI, error) {
 
 	apiClient, err := redis.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring RedisV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -384,7 +384,7 @@ func (f *DefaultClientFactory) newScfV1Client() (scf.DefaultAPI, error) {
 
 	apiClient, err := scf.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ScfV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -395,7 +395,7 @@ func (f *DefaultClientFactory) newServerUpdateV2Client() (serverupdate.DefaultAP
 
 	apiClient, err := serverupdate.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ServerUpdateV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -406,7 +406,7 @@ func (f *DefaultClientFactory) newServiceAccountV2Client() (serviceaccount.Defau
 
 	apiClient, err := serviceaccount.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ServiceAccountV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -417,7 +417,7 @@ func (f *DefaultClientFactory) newSfsV1Client() (sfs.DefaultAPI, error) {
 
 	apiClient, err := sfs.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring SfsV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -428,7 +428,7 @@ func (f *DefaultClientFactory) newSkeV2Client() (ske.DefaultAPI, error) {
 
 	apiClient, err := ske.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring SkeV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -439,7 +439,7 @@ func (f *DefaultClientFactory) newSqlServerFlexV3Client() (sqlserverflex.Default
 
 	apiClient, err := sqlserverflex.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring SqlServerFlexV3 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -450,7 +450,7 @@ func (f *DefaultClientFactory) newTelemetryLinkV1Client() (telemetrylink.Default
 
 	apiClient, err := telemetrylink.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring TelemetryLinkV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -461,7 +461,7 @@ func (f *DefaultClientFactory) newTelemetryRouterV1Client() (telemetryrouter.Def
 
 	apiClient, err := telemetryrouter.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring TelemetryRouterV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -472,7 +472,7 @@ func (f *DefaultClientFactory) newAlbCertificatesV2Client() (certificates.Defaul
 
 	apiClient, err := certificates.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring AlbCertificatesV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -483,7 +483,7 @@ func (f *DefaultClientFactory) newCdnV1Client() (cdn.DefaultAPI, error) {
 
 	apiClient, err := cdn.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring CdnV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -494,7 +494,7 @@ func (f *DefaultClientFactory) newIaaSV2AlphaClient() (iaasV2Alpha.DefaultAPI, e
 
 	apiClient, err := iaasV2Alpha.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring IaaSV2Alpha client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -505,7 +505,7 @@ func (f *DefaultClientFactory) newEdgeV1Client() (edge.DefaultAPI, error) {
 
 	apiClient, err := edge.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring EdgeV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -516,7 +516,7 @@ func (f *DefaultClientFactory) newAlbWafV1Client() (albwaf.DefaultAPI, error) {
 
 	apiClient, err := albwaf.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring AlbWafV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -527,7 +527,7 @@ func (f *DefaultClientFactory) newAuthorizationV2Client() (authorization.Default
 
 	apiClient, err := authorization.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring AuthorizationV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -538,7 +538,7 @@ func (f *DefaultClientFactory) newDnsV1Client() (dns.DefaultAPI, error) {
 
 	apiClient, err := dns.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring DnsV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -549,7 +549,7 @@ func (f *DefaultClientFactory) newLogsV1Client() (logs.DefaultAPI, error) {
 
 	apiClient, err := logs.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring LogsV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -560,7 +560,7 @@ func (f *DefaultClientFactory) newPostgresflexV3Client() (postgresflex.DefaultAP
 
 	apiClient, err := postgresflex.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring PostgresflexV3 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -571,7 +571,7 @@ func (f *DefaultClientFactory) newServerBackupV2Client() (serverbackup.DefaultAP
 
 	apiClient, err := serverbackup.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ServerBackupV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -582,7 +582,7 @@ func (f *DefaultClientFactory) newVpnV1Client() (vpn.DefaultAPI, error) {
 
 	apiClient, err := vpn.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring VpnV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -593,7 +593,7 @@ func (f *DefaultClientFactory) newServiceEnablementV2Client() (serviceenablement
 
 	apiClient, err := serviceenablementV2.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ServiceEnablementV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -604,7 +604,7 @@ func (f *DefaultClientFactory) newIaaSV2Client() (iaasV2.DefaultAPI, error) {
 
 	apiClient, err := iaasV2.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring IaaSV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -615,7 +615,7 @@ func (f *DefaultClientFactory) newResourceManagerClient() (resourcemanager.Defau
 
 	apiClient, err := resourcemanager.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ResourceManager client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -626,7 +626,7 @@ func (f *DefaultClientFactory) newModelExperimentsV1Client() (modelexperiments.D
 
 	apiClient, err := modelexperiments.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ModelExperimentsV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -636,14 +636,14 @@ func (f *DefaultClientFactory) newDremioV1BetaClient() (dremio.DefaultAPI, error
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(f.RoundTripper),
 		config.WithUserAgent(f.UserAgent),
-		config.WithRegion(f.ProviderDefaultRegion),
+		config.WithRegion("eu01"),
 	}
 	if f.CustomEndpoints.DremioCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.DremioCustomEndpoint))
 	}
 	apiClient, err := dremio.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring DremioV1Beta client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -658,12 +658,12 @@ func (f *DefaultClientFactory) newSecretsManagerV1Client() (secretsmanager.Defau
 	if f.CustomEndpoints.SecretsManagerCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.SecretsManagerCustomEndpoint))
 	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(f.ProviderDefaultRegion))
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 	}
 
 	apiClient, err := secretsmanager.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring SecretsManagerV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -678,12 +678,12 @@ func (f *DefaultClientFactory) newSecretsManagerV1AlphaClient() (secretsmanagerV
 	if f.CustomEndpoints.SecretsManagerCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.SecretsManagerCustomEndpoint))
 	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(f.ProviderDefaultRegion))
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 	}
 
 	apiClient, err := secretsmanagerV1Alpha.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring SecretsManagerV1Alpha client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -698,12 +698,12 @@ func (f *DefaultClientFactory) newObservabilityV1Client() (observability.Default
 	if f.CustomEndpoints.ObservabilityCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.ObservabilityCustomEndpoint))
 	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(f.ProviderDefaultRegion))
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 	}
 
 	apiClient, err := observability.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ObservabilityV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil
@@ -834,7 +834,7 @@ func (f *DefaultClientFactory) newObjectStorageV2Client() (objectstorage.Default
 
 	apiClient, err := objectstorage.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("configuring client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+		return nil, fmt.Errorf("configuring ObjectStorageV2 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil

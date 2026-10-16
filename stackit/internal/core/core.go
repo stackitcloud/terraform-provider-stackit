@@ -130,6 +130,16 @@ func (pd *ProviderData) GetRegion() string {
 	return "eu01"
 }
 
+// ValidateServiceRegion adds a diagnostic when a service is used outside its supported region.
+func ValidateServiceRegion(ctx context.Context, providerData *ProviderData, serviceName string, diagnostics *diag.Diagnostics) bool {
+	if providerData.GetRegion() == "eu01" {
+		return true
+	}
+
+	LogAndAddError(ctx, diagnostics, "Unsupported region", fmt.Sprintf("Service %s is only available in region eu01.", serviceName))
+	return false
+}
+
 func (pd *ProviderData) GetRegionWithOverride(overrideRegion types.String) string {
 	if overrideRegion.IsUnknown() || overrideRegion.IsNull() {
 		return pd.GetRegion()

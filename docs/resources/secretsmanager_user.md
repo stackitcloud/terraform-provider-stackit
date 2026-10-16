@@ -3,12 +3,12 @@
 page_title: "stackit_secretsmanager_user Resource - stackit"
 subcategory: ""
 description: |-
-  Secrets Manager user resource schema. Must have a region specified in the provider configuration.
+  Secrets Manager user resource schema. Must have a region specified in the provider configuration. This service is only available when the provider is configured with default_region = "eu01".
 ---
 
 # stackit_secretsmanager_user (Resource)
 
-Secrets Manager user resource schema. Must have a `region` specified in the provider configuration.
+Secrets Manager user resource schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = "eu01"`.
 
 ## Example Usage
 

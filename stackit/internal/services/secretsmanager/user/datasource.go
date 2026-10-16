@@ -50,8 +50,12 @@ func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 
 // Configure adds the provider configured client to the data source.
 func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Secrets Manager", &resp.Diagnostics) {
 		return
 	}
 
@@ -63,7 +67,7 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 // Schema defines the schema for the data source.
 func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":          "Secrets Manager user data source schema. Must have a `region` specified in the provider configuration.",
+		"main":          "Secrets Manager user data source schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		"id":            "Terraform's internal data source identifier. It is structured as \"`project_id`,`instance_id`,`user_id`\".",
 		"user_id":       "The user's ID.",
 		"instance_id":   "ID of the Secrets Manager instance.",
