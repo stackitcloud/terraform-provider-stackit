@@ -723,10 +723,8 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	}
 
 	var queryStringVaryParams []attr.Value
-	if params := distribution.Config.CacheConfig.QueryStringVaryParameters; params != nil {
-		for _, p := range params {
-			queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
-		}
+	for _, p := range distribution.Config.CacheConfig.QueryStringVaryParameters {
+		queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
 	}
 	queryStringVaryParamsList, diags := types.ListValue(types.StringType, queryStringVaryParams)
 	if diags.HasError() {
