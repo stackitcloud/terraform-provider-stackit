@@ -501,3 +501,124 @@ func TestToUpdatePayload(t *testing.T) {
 		})
 	}
 }
+
+func TestMapTLSConfig(t *testing.T) {
+	tlsConfig := func(insecure bool) types.Object {
+		return types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{"insecure_skip_verify": types.BoolValue(insecure)})
+	}
+	tests := []struct {
+		description string
+		input       *observabilitySdk.TLSConfig
+		current     types.Object
+		expected    types.Object
+	}{
+		{
+			description: "not set",
+			input:       nil,
+			current:     types.ObjectNull(tlsConfigTypes),
+			expected:    types.ObjectNull(tlsConfigTypes),
+		},
+		{
+			description: "insecure",
+			input:       &observabilitySdk.TLSConfig{InsecureSkipVerify: new(true)},
+			current:     types.ObjectNull(tlsConfigTypes),
+			expected:    tlsConfig(true),
+		},
+		{
+			description: "configured false, omitted by the API",
+			input:       nil,
+			current:     tlsConfig(false),
+			expected:    tlsConfig(false),
+		},
+		{
+			description: "configured true, removed in the API",
+			input:       nil,
+			current:     tlsConfig(true),
+			expected:    types.ObjectNull(tlsConfigTypes),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			model := &Model{TLSConfig: tt.current}
+			err := mapTLSConfig(context.Background(), &observabilitySdk.Job{TlsConfig: tt.input}, model)
+			if err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if diff := cmp.Diff(model.TLSConfig, tt.expected); diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestAuthAndTLSPayload(t *testing.T) {
+	model := &Model{
+		Name:            types.StringValue("name"),
+		MetricsPath:     types.StringValue("/metrics"),
+		BearerToken:     types.StringValue("header.payload.signature"),
+		HonorLabels:     types.BoolValue(true),
+		HonorTimestamps: types.BoolValue(false),
+		TLSConfig:       types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{"insecure_skip_verify": types.BoolValue(true)}),
+	}
+
+	createPayload, err := toCreatePayload(context.Background(), model, &saml2Model{}, &basicAuthModel{}, nil)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if diff := cmp.Diff(createPayload.BearerToken, new("header.payload.signature")); diff != "" {
+		t.Fatalf("Bearer token does not match: %s", diff)
+	}
+	if diff := cmp.Diff(createPayload.HonorLabels, new(true)); diff != "" {
+		t.Fatalf("Honor labels does not match: %s", diff)
+	}
+	if diff := cmp.Diff(createPayload.HonorTimeStamps, new(false)); diff != "" {
+		t.Fatalf("Honor timestamps does not match: %s", diff)
+	}
+	if createPayload.TlsConfig == nil || !createPayload.TlsConfig.GetInsecureSkipVerify() {
+		t.Fatalf("TLS config does not match: %v", createPayload.TlsConfig)
+	}
+
+	updatePayload, err := toUpdatePayload(context.Background(), model, &saml2Model{}, &basicAuthModel{}, nil)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if diff := cmp.Diff(updatePayload.BearerToken, new("header.payload.signature")); diff != "" {
+		t.Fatalf("Bearer token does not match: %s", diff)
+	}
+	if diff := cmp.Diff(updatePayload.HonorLabels, new(true)); diff != "" {
+		t.Fatalf("Honor labels does not match: %s", diff)
+	}
+	if updatePayload.TlsConfig == nil || !updatePayload.TlsConfig.GetInsecureSkipVerify() {
+		t.Fatalf("TLS config does not match: %v", updatePayload.TlsConfig)
+	}
+
+	// Not set: the fields are not sent and the API applies its defaults
+	empty := &Model{Name: types.StringValue("name"), MetricsPath: types.StringValue("/metrics")}
+	createPayload, err = toCreatePayload(context.Background(), empty, &saml2Model{}, &basicAuthModel{}, nil)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if createPayload.BearerToken != nil || createPayload.HonorLabels != nil || createPayload.HonorTimeStamps != nil || createPayload.TlsConfig != nil {
+		t.Fatalf("Expected unset fields to be nil, got %+v", createPayload)
+	}
+}
+
+func TestMapAuthFields(t *testing.T) {
+	model := &Model{ProjectId: types.StringValue("pid"), InstanceId: types.StringValue("iid")}
+	err := mapFields(context.Background(), &observabilitySdk.Job{
+		JobName:         "name",
+		BearerToken:     new("header.payload.signature"),
+		HonorLabels:     new(true),
+		HonorTimeStamps: new(false),
+		TlsConfig:       &observabilitySdk.TLSConfig{InsecureSkipVerify: new(true)},
+	}, model)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if model.BearerToken.ValueString() != "header.payload.signature" || !model.HonorLabels.ValueBool() || model.HonorTimestamps.ValueBool() {
+		t.Fatalf("Unexpected values: %+v", model)
+	}
+	if model.TLSConfig.IsNull() {
+		t.Fatalf("Expected tls config to be set")
+	}
+}

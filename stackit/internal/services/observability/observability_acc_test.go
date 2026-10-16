@@ -47,7 +47,12 @@ var testConfigVarsMin = config.Variables{
 	"scrapeconfig_name":         config.StringVariable(fmt.Sprintf("tf-acc-sc%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"scrapeconfig_metrics_path": config.StringVariable("/metrics"),
 	"scrapeconfig_targets_url":  config.StringVariable("www.y97xyrrocx2gsxx.de"),
-	"grafana_admin_enabled":     config.StringVariable("true"),
+	// The API only accepts bearer tokens in JWT format
+	"scrapeconfig_bearer_token":             config.StringVariable("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2MtdGVzdCJ9.c2lnbmF0dXJl"),
+	"scrapeconfig_tls_insecure_skip_verify": config.BoolVariable(true),
+	"scrapeconfig_honor_labels":             config.BoolVariable(true),
+	"scrapeconfig_honor_timestamps":         config.BoolVariable(false),
+	"grafana_admin_enabled":                 config.StringVariable("true"),
 }
 
 var testConfigVarsMax = config.Variables{
@@ -130,6 +135,10 @@ func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
 	tempConfig["alert_rule_name"] = config.StringVariable("alert1-updated")
+	tempConfig["scrapeconfig_bearer_token"] = config.StringVariable("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2MtdGVzdC11cGRhdGVkIn0.c2lnbmF0dXJl")
+	tempConfig["scrapeconfig_tls_insecure_skip_verify"] = config.BoolVariable(false)
+	tempConfig["scrapeconfig_honor_labels"] = config.BoolVariable(false)
+	tempConfig["scrapeconfig_honor_timestamps"] = config.BoolVariable(true)
 	return tempConfig
 }
 
@@ -196,6 +205,10 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "name", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.#", "1"),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_path", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_metrics_path"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "bearer_token", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_bearer_token"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "tls_config.insecure_skip_verify", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_tls_insecure_skip_verify"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "honor_labels", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_honor_labels"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "honor_timestamps", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_honor_timestamps"])),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.0", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_targets_url"])),
 
 					// credentials
@@ -295,6 +308,10 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "name", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_name"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_path", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_metrics_path"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "bearer_token", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_bearer_token"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "tls_config.insecure_skip_verify", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_tls_insecure_skip_verify"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "honor_labels", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_honor_labels"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "honor_timestamps", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_honor_timestamps"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.0", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_targets_url"])),
 
 					// alertgroup
@@ -448,6 +465,10 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "name", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.#", "1"),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_path", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_metrics_path"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "bearer_token", testutil.ConvertConfigVariable(configVarsMinUpdated()["scrapeconfig_bearer_token"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "tls_config.insecure_skip_verify", testutil.ConvertConfigVariable(configVarsMinUpdated()["scrapeconfig_tls_insecure_skip_verify"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "honor_labels", testutil.ConvertConfigVariable(configVarsMinUpdated()["scrapeconfig_honor_labels"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "honor_timestamps", testutil.ConvertConfigVariable(configVarsMinUpdated()["scrapeconfig_honor_timestamps"])),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.0", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_targets_url"])),
 
 					// credentials

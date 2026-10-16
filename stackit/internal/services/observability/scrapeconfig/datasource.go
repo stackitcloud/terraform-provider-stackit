@@ -127,6 +127,29 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					},
 				},
 			},
+			"bearer_token": schema.StringAttribute{
+				Description: "Bearer token set in the `Authorization` header on every scrape request.",
+				Computed:    true,
+				Sensitive:   true,
+			},
+			"tls_config": schema.SingleNestedAttribute{
+				Description: "The scrape request's TLS settings.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"insecure_skip_verify": schema.BoolAttribute{
+						Description: "Whether validation of the server certificate is disabled.",
+						Computed:    true,
+					},
+				},
+			},
+			"honor_labels": schema.BoolAttribute{
+				Description: "Whether the labels from the scraped data are kept on conflicts with server-side labels.",
+				Computed:    true,
+			},
+			"honor_timestamps": schema.BoolAttribute{
+				Description: "Whether the timestamps present in scraped data are respected.",
+				Computed:    true,
+			},
 			"basic_auth": schema.SingleNestedAttribute{
 				Description: "A basic authentication block.",
 				Computed:    true,
