@@ -293,13 +293,15 @@ var activeHealthCheckTypes = map[string]attr.Type{
 }
 
 type httpHealthChecks struct {
-	OkStatus types.Set    `tfsdk:"ok_status"`
-	Path     types.String `tfsdk:"path"`
+	OkStatus  types.Set    `tfsdk:"ok_status"`
+	Path      types.String `tfsdk:"path"`
+	TLSConfig types.Object `tfsdk:"tls_config"`
 }
 
 var httpHealthChecksTypes = map[string]attr.Type{
-	"path":      types.StringType,
-	"ok_status": types.SetType{ElemType: types.StringType},
+	"path":       types.StringType,
+	"ok_status":  types.SetType{ElemType: types.StringType},
+	"tls_config": types.ObjectType{AttrTypes: tlsConfigTypes},
 }
 
 // Struct corresponding to targetPool.Targets[i]
@@ -397,64 +399,68 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"project_id": "STACKIT project ID to which the Application Load Balancer is associated.",
 		"region":     "The resource region (e.g. eu01). If not defined, the provider region is used.",
 		"disable_target_security_group_assignment": "Disable target security group assignemt to allow targets outside of the given network. Connectivity to targets need to be ensured by the customer, including routing and Security Groups (targetSecurityGroup can be assigned). Not changeable after creation.",
-		"errors":                                 "Reports all errors a Application Load Balancer has.",
-		"errors.type":                            "The error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error. " + utils.FormatPossibleValues(errorOptions...),
-		"errors.description":                     "The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP \"45.135.247.139\" could not be found.",
-		"external_address":                       "The external IP address where this Application Load Balancer is exposed. Not changeable after creation.",
-		"labels":                                 "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per ALB.",
-		"listeners":                              "List of all listeners which will accept traffic. Limited to 20.",
-		"listeners.name":                         "Unique name for the listener",
-		"http":                                   "Configuration for handling HTTP traffic on this listener.",
-		"hosts":                                  "Defines routing rules grouped by hostname.",
-		"host":                                   "Hostname to match. Supports wildcards (e.g. *.example.com).",
-		"rules":                                  "Routing rules under the specified host, matched by path prefix.",
-		"cookie_persistence":                     "Routing persistence via cookies.",
-		"cookie_persistence.name":                "The name of the cookie to use.",
-		"ttl":                                    "TTL specifies the time-to-live for the cookie. The default value is 0s, and it acts as a session cookie, expiring when the client session ends.",
-		"headers":                                "Headers for the rule.",
-		"headers.exact_match":                    "Exact match for the header value.",
-		"headers.name":                           "Header name.",
-		"path":                                   "Routing via path.",
-		"path.exact_match":                       "Exact path match. Only a request path exactly equal to the value will match, e.g. '/foo' matches only '/foo', not '/foo/bar' or '/foobar'.",
-		"path.prefix":                            "Prefix path match. Only matches on full segment boundaries, e.g. '/foo' matches '/foo' and '/foo/bar' but NOT '/foobar'.",
-		"query_parameters":                       "Query parameters for the rule.",
-		"query_parameters.exact_match":           "Exact match for the query parameters value.",
-		"query_parameters.name":                  "Query parameter name.",
-		"target_pool":                            "Reference target pool by target pool name.",
-		"web_socket":                             "If enabled, when client sends an HTTP request with and Upgrade header, indicating the desire to establish a Websocket connection, if backend server supports WebSocket, it responds with HTTP 101 status code, switching protocols from HTTP to WebSocket. Hence the client and the server can exchange data in real-time using one long-lived TCP connection.",
-		"https":                                  "Configuration for handling HTTPS traffic on this listener.",
-		"certificate_config":                     "TLS termination certificate configuration.",
-		"certificate_ids":                        "Certificate IDs for TLS termination.",
-		"port":                                   "Port number on which the listener receives incoming traffic.",
-		"protocol":                               "Protocol is the highest network protocol we understand to load balance. " + utils.FormatPossibleValues(protocolOptions...),
-		"waf_config_name":                        "Enable Web Application Firewall (WAF), referenced by name. See \"Application Load Balancer - Web Application Firewall API\" for more information.",
-		"load_balancer_security_group":           "Security Group permitting network traffic from the LoadBalancer to the targets. Useful when disableTargetSecurityGroupAssignment=true to manually assign target security groups to targets.",
-		"load_balancer_security_group.id":        "ID of the security Group",
-		"load_balancer_security_group.name":      "Name of the security Group",
-		"name":                                   "Application Load balancer name.",
-		"networks":                               "List of networks that listeners and targets reside in.",
-		"network_id":                             "STACKIT network ID the Application Load Balancer and/or targets are in.",
-		"role":                                   "The role defines how the Application Load Balancer is using the network. " + utils.FormatPossibleValues(roleOptions...),
-		"options":                                "Defines any optional functionality you want to have enabled on your Application Load Balancer.",
-		"access_control":                         "Use this option to limit the IP ranges that can use the Application Load Balancer.",
-		"allowed_source_ranges":                  "Application Load Balancer is accessible only from an IP address in this range.",
-		"ephemeral_address":                      "This option automates the handling of the external IP address for an Application Load Balancer. If set to true a new IP address will be automatically created. It will also be automatically deleted when the Load Balancer is deleted.",
-		"observability":                          "We offer Load Balancer observability via STACKIT Observability or external solutions.",
-		"observability_logs":                     "Observability logs configuration.",
-		"observability_logs_credentials_ref":     "Credentials reference for logging. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the logging solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
-		"observability_logs_push_url":            "The Observability(Logs)/Loki remote write Push URL you want the logs to be shipped to.",
-		"observability_metrics":                  "Observability metrics configuration.",
-		"observability_metrics_credentials_ref":  "Credentials reference for metrics. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the metrics solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
-		"observability_metrics_push_url":         "The Observability(Metrics)/Prometheus remote write push URL you want the metrics to be shipped to.",
-		"plan_id":                                "Service Plan configures the size of the Application Load Balancer e.g. 'p10'. See available plans via STACKIT CLI 'stackit beta alb plans' or API https://docs.api.stackit.cloud/documentation/alb/version/v2#tag/Project/operation/APIService_ListPlans",
-		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
-		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
-		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
-		"alt_port":                               "Overrides the default port used for health check probes.",
-		"healthy_threshold":                      "Healthy threshold of the health checking.",
-		"http_health_checks":                     "Options for the HTTP health checking.",
-		"http_health_checks.ok_status":           "List of HTTP status codes that indicate a healthy response.",
-		"http_health_checks.path":                "Path to send the health check request to.",
+		"errors":                                "Reports all errors a Application Load Balancer has.",
+		"errors.type":                           "The error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error. " + utils.FormatPossibleValues(errorOptions...),
+		"errors.description":                    "The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP \"45.135.247.139\" could not be found.",
+		"external_address":                      "The external IP address where this Application Load Balancer is exposed. Not changeable after creation.",
+		"labels":                                "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per ALB.",
+		"listeners":                             "List of all listeners which will accept traffic. Limited to 20.",
+		"listeners.name":                        "Unique name for the listener",
+		"http":                                  "Configuration for handling HTTP traffic on this listener.",
+		"hosts":                                 "Defines routing rules grouped by hostname.",
+		"host":                                  "Hostname to match. Supports wildcards (e.g. *.example.com).",
+		"rules":                                 "Routing rules under the specified host, matched by path prefix.",
+		"cookie_persistence":                    "Routing persistence via cookies.",
+		"cookie_persistence.name":               "The name of the cookie to use.",
+		"ttl":                                   "TTL specifies the time-to-live for the cookie. The default value is 0s, and it acts as a session cookie, expiring when the client session ends.",
+		"headers":                               "Headers for the rule.",
+		"headers.exact_match":                   "Exact match for the header value.",
+		"headers.name":                          "Header name.",
+		"path":                                  "Routing via path.",
+		"path.exact_match":                      "Exact path match. Only a request path exactly equal to the value will match, e.g. '/foo' matches only '/foo', not '/foo/bar' or '/foobar'.",
+		"path.prefix":                           "Prefix path match. Only matches on full segment boundaries, e.g. '/foo' matches '/foo' and '/foo/bar' but NOT '/foobar'.",
+		"query_parameters":                      "Query parameters for the rule.",
+		"query_parameters.exact_match":          "Exact match for the query parameters value.",
+		"query_parameters.name":                 "Query parameter name.",
+		"target_pool":                           "Reference target pool by target pool name.",
+		"web_socket":                            "If enabled, when client sends an HTTP request with and Upgrade header, indicating the desire to establish a Websocket connection, if backend server supports WebSocket, it responds with HTTP 101 status code, switching protocols from HTTP to WebSocket. Hence the client and the server can exchange data in real-time using one long-lived TCP connection.",
+		"https":                                 "Configuration for handling HTTPS traffic on this listener.",
+		"certificate_config":                    "TLS termination certificate configuration.",
+		"certificate_ids":                       "Certificate IDs for TLS termination.",
+		"port":                                  "Port number on which the listener receives incoming traffic.",
+		"protocol":                              "Protocol is the highest network protocol we understand to load balance. " + utils.FormatPossibleValues(protocolOptions...),
+		"waf_config_name":                       "Enable Web Application Firewall (WAF), referenced by name. See \"Application Load Balancer - Web Application Firewall API\" for more information.",
+		"load_balancer_security_group":          "Security Group permitting network traffic from the LoadBalancer to the targets. Useful when disableTargetSecurityGroupAssignment=true to manually assign target security groups to targets.",
+		"load_balancer_security_group.id":       "ID of the security Group",
+		"load_balancer_security_group.name":     "Name of the security Group",
+		"name":                                  "Application Load balancer name.",
+		"networks":                              "List of networks that listeners and targets reside in.",
+		"network_id":                            "STACKIT network ID the Application Load Balancer and/or targets are in.",
+		"role":                                  "The role defines how the Application Load Balancer is using the network. " + utils.FormatPossibleValues(roleOptions...),
+		"options":                               "Defines any optional functionality you want to have enabled on your Application Load Balancer.",
+		"access_control":                        "Use this option to limit the IP ranges that can use the Application Load Balancer.",
+		"allowed_source_ranges":                 "Application Load Balancer is accessible only from an IP address in this range.",
+		"ephemeral_address":                     "This option automates the handling of the external IP address for an Application Load Balancer. If set to true a new IP address will be automatically created. It will also be automatically deleted when the Load Balancer is deleted.",
+		"observability":                         "We offer Load Balancer observability via STACKIT Observability or external solutions.",
+		"observability_logs":                    "Observability logs configuration.",
+		"observability_logs_credentials_ref":    "Credentials reference for logging. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the logging solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
+		"observability_logs_push_url":           "The Observability(Logs)/Loki remote write Push URL you want the logs to be shipped to.",
+		"observability_metrics":                 "Observability metrics configuration.",
+		"observability_metrics_credentials_ref": "Credentials reference for metrics. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the metrics solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
+		"observability_metrics_push_url":        "The Observability(Metrics)/Prometheus remote write push URL you want the metrics to be shipped to.",
+		"plan_id":                               "Service Plan configures the size of the Application Load Balancer e.g. 'p10'. See available plans via STACKIT CLI 'stackit beta alb plans' or API https://docs.api.stackit.cloud/documentation/alb/version/v2#tag/Project/operation/APIService_ListPlans",
+		"private_network_only":                  "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
+		"target_pools":                          "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
+		"active_health_checks":                  "Set this to customize active health checks for targets in this pool.",
+		"alt_port":                              "Overrides the default port used for health check probes.",
+		"healthy_threshold":                     "Healthy threshold of the health checking.",
+		"http_health_checks":                    "Options for the HTTP health checking.",
+		"http_health_checks.ok_status":          "List of HTTP status codes that indicate a healthy response.",
+		"http_health_checks.path":               "Path to send the health check request to.",
+		"http_health_checks.tls_config":         "Configuration for TLS of the HTTP health checks.",
+		"http_health_checks.tls_config.enabled": "Enable TLS for the HTTP health check requests to the targets. When enabled, public CAs are trusted. Can be used in tandem with the options either custom CA or skip validation or alone.",
+		"http_health_checks.tls_config.skip_certificate_validation": "Bypass certificate validation for the HTTP health check requests. This option is insecure and can only be used with public CAs by setting enabled true. Meant to be used for testing purposes only!",
+		"http_health_checks.tls_config.custom_ca":                   "Specifies a custom Certificate Authority (CA) that is trusted for the HTTP health check requests, in addition to any system-trusted CAs. Enabled needs to be set to true and skip validation to false for this option.",
 		"interval":                               "Interval duration of health checking in seconds.",
 		"interval_jitter":                        "Interval duration threshold of the health checking in seconds.",
 		"timeout":                                "Active health checking timeout duration in seconds.",
@@ -1039,6 +1045,31 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 														"must match expression",
 													),
 												),
+											},
+										},
+										"tls_config": schema.SingleNestedAttribute{
+											Description: descriptions["http_health_checks.tls_config"],
+											Optional:    true,
+											Attributes: map[string]schema.Attribute{
+												"enabled": schema.BoolAttribute{
+													Description: descriptions["http_health_checks.tls_config.enabled"],
+													Optional:    true,
+													Computed:    true,
+													Default:     booldefault.StaticBool(false),
+												},
+												"skip_certificate_validation": schema.BoolAttribute{
+													Description: descriptions["http_health_checks.tls_config.skip_certificate_validation"],
+													Optional:    true,
+													Computed:    true,
+													Default:     booldefault.StaticBool(false),
+												},
+												"custom_ca": schema.StringAttribute{
+													Description: descriptions["http_health_checks.tls_config.custom_ca"],
+													Optional:    true,
+													Validators: []validator.String{
+														stringvalidator.LengthBetween(1, 8192),
+													},
+												},
 											},
 										},
 									},
@@ -1842,14 +1873,23 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) ([]albSdk.TargetPoo
 }
 
 func toTlsConfigPayload(ctx context.Context, tp *targetPool) (*albSdk.TlsConfig, error) {
-	if utils.IsUndefined(tp.TLSConfig) {
+	payload, err := toTlsConfig(ctx, tp.TLSConfig)
+	if err != nil {
+		return nil, fmt.Errorf("converting target pool TLS config: %w", err)
+	}
+	return payload, nil
+}
+
+// toTlsConfig converts a `tls_config` object (target pool or HTTP health check) to the API payload
+func toTlsConfig(ctx context.Context, tlsConfigTF types.Object) (*albSdk.TlsConfig, error) {
+	if utils.IsUndefined(tlsConfigTF) {
 		return nil, nil
 	}
 
 	tlsConfigModel := tlsConfig{}
-	diags := tp.TLSConfig.As(ctx, &tlsConfigModel, basetypes.ObjectAsOptions{})
+	diags := tlsConfigTF.As(ctx, &tlsConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("converting target pool TLS config: %w", core.DiagsToError(diags))
+		return nil, core.DiagsToError(diags)
 	}
 
 	payload := albSdk.TlsConfig{
@@ -1984,9 +2024,15 @@ func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (*
 		return nil, fmt.Errorf("converting active health check ok status: %w", err)
 	}
 
+	tlsConfigPayload, err := toTlsConfig(ctx, httpHealthChecksModel.TLSConfig)
+	if err != nil {
+		return nil, fmt.Errorf("converting http health check TLS config: %w", err)
+	}
+
 	payload := albSdk.HttpHealthChecks{
 		OkStatuses: okStatus,
 		Path:       conversion.StringValueToPointer(httpHealthChecksModel.Path),
+		Tls:        tlsConfigPayload,
 	}
 	return &payload, nil
 }
@@ -2813,9 +2859,14 @@ func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *albSdk.HttpH
 	if diags.HasError() {
 		return fmt.Errorf("map OkStatuses list: %w", core.DiagsToError(diags))
 	}
+	tlsConfigTF, err := tlsConfigToObject(httpHealthChecksResp.Tls)
+	if err != nil {
+		return fmt.Errorf("map TLS config: %w", err)
+	}
 	httpHealthChecksMap := map[string]attr.Value{
-		"ok_status": okStatusesTF,
-		"path":      types.StringPointerValue(httpHealthChecksResp.Path),
+		"ok_status":  okStatusesTF,
+		"path":       types.StringPointerValue(httpHealthChecksResp.Path),
+		"tls_config": tlsConfigTF,
 	}
 
 	httpHealthChecksTF, diags := types.ObjectValue(httpHealthChecksTypes, httpHealthChecksMap)
@@ -2828,11 +2879,6 @@ func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *albSdk.HttpH
 }
 
 func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig, tp map[string]attr.Value, tlsModel basetypes.ObjectValue) error {
-	if targetPoolTLSConfigResp == nil {
-		tp["tls_config"] = types.ObjectNull(tlsConfigTypes)
-		return nil
-	}
-
 	var configTLS = &tlsConfig{}
 	if !tlsModel.IsNull() && !tlsModel.IsUnknown() {
 		diags := tlsModel.As(ctx, configTLS, basetypes.ObjectAsOptions{})
@@ -2841,14 +2887,28 @@ func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig
 		}
 	}
 
+	targetPoolTLSConfigTF, err := tlsConfigToObject(targetPoolTLSConfigResp)
+	if err != nil {
+		return err
+	}
+	tp["tls_config"] = targetPoolTLSConfigTF
+	return nil
+}
+
+// tlsConfigToObject maps a TLS config of the API (target pool or HTTP health check) to a `tls_config` object
+func tlsConfigToObject(tlsConfigResp *albSdk.TlsConfig) (types.Object, error) {
+	if tlsConfigResp == nil {
+		return types.ObjectNull(tlsConfigTypes), nil
+	}
+
 	enabled := types.BoolValue(false)
 	skipCertificateValidation := types.BoolValue(false)
 	// If the enabled or skip field is nil in the response we set it to false in the TF state to
 	// prevent an inconsistent result after apply error
-	if targetPoolTLSConfigResp.Enabled != nil && *targetPoolTLSConfigResp.Enabled {
+	if tlsConfigResp.Enabled != nil && *tlsConfigResp.Enabled {
 		enabled = types.BoolValue(true)
 	}
-	if targetPoolTLSConfigResp.SkipCertificateValidation != nil && *targetPoolTLSConfigResp.SkipCertificateValidation {
+	if tlsConfigResp.SkipCertificateValidation != nil && *tlsConfigResp.SkipCertificateValidation {
 		skipCertificateValidation = types.BoolValue(true)
 	}
 
@@ -2858,21 +2918,19 @@ func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig
 		"skip_certificate_validation": skipCertificateValidation,
 	}
 
-	if targetPoolTLSConfigResp.CustomCa != nil {
-		pemBytes, err := base64.StdEncoding.DecodeString(*targetPoolTLSConfigResp.CustomCa)
+	if tlsConfigResp.CustomCa != nil {
+		pemBytes, err := base64.StdEncoding.DecodeString(*tlsConfigResp.CustomCa)
 		if err != nil {
-			return fmt.Errorf("base64 decoding custom ca: %w", err)
+			return types.ObjectNull(tlsConfigTypes), fmt.Errorf("base64 decoding custom ca: %w", err)
 		}
 		tlsConfigMap["custom_ca"] = types.StringValue(string(pemBytes))
 	}
 
-	targetPoolTLSConfigTF, diags := types.ObjectValue(tlsConfigTypes, tlsConfigMap)
+	tlsConfigTF, diags := types.ObjectValue(tlsConfigTypes, tlsConfigMap)
 	if diags.HasError() {
-		return fmt.Errorf("mapping TLSConfig: %w", core.DiagsToError(diags))
+		return types.ObjectNull(tlsConfigTypes), fmt.Errorf("mapping TLSConfig: %w", core.DiagsToError(diags))
 	}
-
-	tp["tls_config"] = targetPoolTLSConfigTF
-	return nil
+	return tlsConfigTF, nil
 }
 
 func mapTargets(targetsResp []albSdk.Target, tp map[string]attr.Value) error {
