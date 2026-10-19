@@ -52,19 +52,20 @@ var (
 )
 
 type Model struct {
-	Id                    types.String `tfsdk:"id"` // needed by TF
-	ProjectId             types.String `tfsdk:"project_id"`
-	InstanceId            types.String `tfsdk:"instance_id"`
-	Name                  types.String `tfsdk:"name"`
-	MetricsPath           types.String `tfsdk:"metrics_path"`
-	Scheme                types.String `tfsdk:"scheme"`
-	ScrapeInterval        types.String `tfsdk:"scrape_interval"`
-	ScrapeTimeout         types.String `tfsdk:"scrape_timeout"`
-	SampleLimit           types.Int32  `tfsdk:"sample_limit"`
-	SAML2                 types.Object `tfsdk:"saml2"`
-	BasicAuth             types.Object `tfsdk:"basic_auth"`
-	MetricsRelabelConfigs types.List   `tfsdk:"metrics_relabel_configs"`
-	Targets               types.List   `tfsdk:"targets"`
+	Id             types.String `tfsdk:"id"` // needed by TF
+	ProjectId      types.String `tfsdk:"project_id"`
+	InstanceId     types.String `tfsdk:"instance_id"`
+	Name           types.String `tfsdk:"name"`
+	MetricsPath    types.String `tfsdk:"metrics_path"`
+	Scheme         types.String `tfsdk:"scheme"`
+	ScrapeInterval types.String `tfsdk:"scrape_interval"`
+	ScrapeTimeout  types.String `tfsdk:"scrape_timeout"`
+	SampleLimit    types.Int32  `tfsdk:"sample_limit"`
+	SAML2          types.Object `tfsdk:"saml2"`
+	BasicAuth      types.Object `tfsdk:"basic_auth"`
+	Targets        types.List   `tfsdk:"targets"`
+
+	MetricsRelabelConfigs types.List `tfsdk:"metrics_relabel_configs"`
 }
 
 // Struct corresponding to Model.MetricsRelabelConfigs[i]

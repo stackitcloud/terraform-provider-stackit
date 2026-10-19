@@ -34,21 +34,22 @@ var alert_rule_expression_updated = "sum(kube_pod_status_phase{phase=\"Error\"})
 var logalertgroup_expression_updated = "sum(rate({namespace=\"example\"} |= \"Another error message\" [1m])) > 0"
 
 var testConfigVarsMin = config.Variables{
-	"project_id":                 config.StringVariable(testutil.ProjectId),
-	"alertgroup_name":            config.StringVariable(fmt.Sprintf("tf-acc-ag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"alert_rule_name":            config.StringVariable("alert1"),
-	"alert_rule_expression":      config.StringVariable(alert_rule_expression),
-	"record_rule_name":           config.StringVariable("record1"),
-	"instance_name":              config.StringVariable(fmt.Sprintf("tf-acc-i%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"plan_name":                  config.StringVariable("Observability-Medium-EU01"),
-	"logalertgroup_name":         config.StringVariable(fmt.Sprintf("tf-acc-lag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"logalertgroup_alert":        config.StringVariable("alert1"),
-	"logalertgroup_expression":   config.StringVariable(logalertgroup_expression),
-	"scrapeconfig_name":          config.StringVariable(fmt.Sprintf("tf-acc-sc%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"scrapeconfig_metrics_path":  config.StringVariable("/metrics"),
-	"scrapeconfig_targets_url":   config.StringVariable("www.y97xyrrocx2gsxx.de"),
+	"project_id":                config.StringVariable(testutil.ProjectId),
+	"alertgroup_name":           config.StringVariable(fmt.Sprintf("tf-acc-ag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"alert_rule_name":           config.StringVariable("alert1"),
+	"alert_rule_expression":     config.StringVariable(alert_rule_expression),
+	"record_rule_name":          config.StringVariable("record1"),
+	"instance_name":             config.StringVariable(fmt.Sprintf("tf-acc-i%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"plan_name":                 config.StringVariable("Observability-Medium-EU01"),
+	"logalertgroup_name":        config.StringVariable(fmt.Sprintf("tf-acc-lag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"logalertgroup_alert":       config.StringVariable("alert1"),
+	"logalertgroup_expression":  config.StringVariable(logalertgroup_expression),
+	"scrapeconfig_name":         config.StringVariable(fmt.Sprintf("tf-acc-sc%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"scrapeconfig_metrics_path": config.StringVariable("/metrics"),
+	"scrapeconfig_targets_url":  config.StringVariable("www.y97xyrrocx2gsxx.de"),
+	"grafana_admin_enabled":     config.StringVariable("true"),
+
 	"scrapeconfig_relabel_regex": config.StringVariable("go_.*"),
-	"grafana_admin_enabled":      config.StringVariable("true"),
 }
 
 var testConfigVarsMax = config.Variables{
