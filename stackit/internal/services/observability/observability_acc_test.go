@@ -47,12 +47,13 @@ var testConfigVarsMin = config.Variables{
 	"scrapeconfig_name":         config.StringVariable(fmt.Sprintf("tf-acc-sc%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"scrapeconfig_metrics_path": config.StringVariable("/metrics"),
 	"scrapeconfig_targets_url":  config.StringVariable("www.y97xyrrocx2gsxx.de"),
+	"grafana_admin_enabled":     config.StringVariable("true"),
+
 	// The API only accepts bearer tokens in JWT format
 	"scrapeconfig_bearer_token":             config.StringVariable("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhY2MtdGVzdCJ9.c2lnbmF0dXJl"),
 	"scrapeconfig_tls_insecure_skip_verify": config.BoolVariable(true),
 	"scrapeconfig_honor_labels":             config.BoolVariable(true),
 	"scrapeconfig_honor_timestamps":         config.BoolVariable(false),
-	"grafana_admin_enabled":                 config.StringVariable("true"),
 }
 
 var testConfigVarsMax = config.Variables{

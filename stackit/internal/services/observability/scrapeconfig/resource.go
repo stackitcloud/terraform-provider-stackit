@@ -53,22 +53,23 @@ var (
 )
 
 type Model struct {
-	Id              types.String `tfsdk:"id"` // needed by TF
-	ProjectId       types.String `tfsdk:"project_id"`
-	InstanceId      types.String `tfsdk:"instance_id"`
-	Name            types.String `tfsdk:"name"`
-	MetricsPath     types.String `tfsdk:"metrics_path"`
-	Scheme          types.String `tfsdk:"scheme"`
-	ScrapeInterval  types.String `tfsdk:"scrape_interval"`
-	ScrapeTimeout   types.String `tfsdk:"scrape_timeout"`
-	SampleLimit     types.Int32  `tfsdk:"sample_limit"`
-	SAML2           types.Object `tfsdk:"saml2"`
-	BasicAuth       types.Object `tfsdk:"basic_auth"`
+	Id             types.String `tfsdk:"id"` // needed by TF
+	ProjectId      types.String `tfsdk:"project_id"`
+	InstanceId     types.String `tfsdk:"instance_id"`
+	Name           types.String `tfsdk:"name"`
+	MetricsPath    types.String `tfsdk:"metrics_path"`
+	Scheme         types.String `tfsdk:"scheme"`
+	ScrapeInterval types.String `tfsdk:"scrape_interval"`
+	ScrapeTimeout  types.String `tfsdk:"scrape_timeout"`
+	SampleLimit    types.Int32  `tfsdk:"sample_limit"`
+	SAML2          types.Object `tfsdk:"saml2"`
+	BasicAuth      types.Object `tfsdk:"basic_auth"`
+	Targets        types.List   `tfsdk:"targets"`
+
 	BearerToken     types.String `tfsdk:"bearer_token"`
 	TLSConfig       types.Object `tfsdk:"tls_config"`
 	HonorLabels     types.Bool   `tfsdk:"honor_labels"`
 	HonorTimestamps types.Bool   `tfsdk:"honor_timestamps"`
-	Targets         types.List   `tfsdk:"targets"`
 }
 
 // Struct corresponding to Model.TLSConfig
@@ -817,8 +818,9 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: model.ScrapeInterval.ValueString(),
 		ScrapeTimeout:  model.ScrapeTimeout.ValueString(),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit:     new(float32(model.SampleLimit.ValueInt32())),
-		Scheme:          observabilitySdk.CreateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
+		SampleLimit: new(float32(model.SampleLimit.ValueInt32())),
+		Scheme:      observabilitySdk.CreateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
+
 		BearerToken:     conversion.StringValueToPointer(model.BearerToken),
 		HonorLabels:     conversion.BoolValueToPointer(model.HonorLabels),
 		HonorTimeStamps: conversion.BoolValueToPointer(model.HonorTimestamps),
@@ -917,8 +919,9 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: model.ScrapeInterval.ValueString(),
 		ScrapeTimeout:  model.ScrapeTimeout.ValueString(),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit:     new(float32(model.SampleLimit.ValueInt32())),
-		Scheme:          observabilitySdk.UpdateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
+		SampleLimit: new(float32(model.SampleLimit.ValueInt32())),
+		Scheme:      observabilitySdk.UpdateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
+
 		BearerToken:     conversion.StringValueToPointer(model.BearerToken),
 		HonorLabels:     conversion.BoolValueToPointer(model.HonorLabels),
 		HonorTimeStamps: conversion.BoolValueToPointer(model.HonorTimestamps),
