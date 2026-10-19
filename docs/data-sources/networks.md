@@ -3,12 +3,15 @@
 page_title: "stackit_networks Data Source - stackit"
 subcategory: ""
 description: |-
-  Lists STACKIT networks in a project, optionally filtered by name or labels.
+  Lists all IaaS networks in a project and region. Results are sorted by image ID.
+  ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_networks (Data Source)
 
-Lists STACKIT networks in a project, optionally filtered by name or labels.
+Lists all IaaS networks in a project and region. Results are sorted by image ID.
+
+~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -37,14 +40,12 @@ data "stackit_networks" "example" {
 
 ### Optional
 
-- `labels` (Map of String) Optional label selector to filter networks by labels.
-- `name_regex` (String) Optional regular expression to filter networks by name.
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`".
-- `items` (Attributes List) List of networks matching the filters. (see [below for nested schema](#nestedatt--items))
+- `items` (Attributes List) List of networks. (see [below for nested schema](#nestedatt--items))
 
 <a id="nestedatt--items"></a>
 ### Nested Schema for `items`

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -15,9 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -26,20 +25,23 @@ var (
 	_ datasource.DataSource = &networksDataSource{}
 )
 
-// NetworkItem represents a single network in the list.
-type NetworkItem struct {
+// NetworksModel represents the model for the plural data source.
+type NetworksModel struct {
+	Id        types.String `tfsdk:"id"`
+	ProjectId types.String `tfsdk:"project_id"`
+	Region    types.String `tfsdk:"region"`
+	Items     types.List   `tfsdk:"items"`
+}
+
+// networkItemModel represents a single network in the list.
+type networkItemModel struct {
 	NetworkId types.String `tfsdk:"network_id"`
 	Name      types.String `tfsdk:"name"`
 }
 
-// NetworksModel represents the model for the plural data source.
-type NetworksModel struct {
-	Id        types.String  `tfsdk:"id"`
-	ProjectId types.String  `tfsdk:"project_id"`
-	Region    types.String  `tfsdk:"region"`
-	NameRegex types.String  `tfsdk:"name_regex"`
-	Labels    types.Map     `tfsdk:"labels"`
-	Items     []NetworkItem `tfsdk:"items"`
+var networkItemModelTypes = map[string]attr.Type{
+	"network_id": types.StringType,
+	"name":       types.StringType,
 }
 
 // NewNetworksDataSource creates a new instance of plural data source.
@@ -49,7 +51,7 @@ func NewNetworksDataSource() datasource.DataSource {
 
 // networksDataSource is the data source implementation for querying multiple networks.
 type networksDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -58,24 +60,31 @@ func (d *networksDataSource) Metadata(_ context.Context, req datasource.Metadata
 }
 
 func (d *networksDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_networks", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
 func (d *networksDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	description := features.AddBetaDescription(
+		"Lists all IaaS networks in a project and region. Results are sorted by image ID.",
+		core.Datasource,
+	)
+
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Lists STACKIT networks in a project, optionally filtered by name or labels.",
-		Description:         "Lists STACKIT networks in a project, optionally filtered by name or labels.",
+		MarkdownDescription: description,
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`\".",
@@ -93,18 +102,8 @@ func (d *networksDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "The resource region. If not defined, the provider region is used.",
 				Optional:    true,
 			},
-			"name_regex": schema.StringAttribute{
-				Description: "Optional regular expression to filter networks by name.",
-				Optional:    true,
-			},
-			"labels": schema.MapAttribute{
-				Description: "Optional label selector to filter networks by labels.",
-				ElementType: types.StringType,
-				Optional:    true,
-				Validators:  validate.LabelValidators(),
-			},
 			"items": schema.ListNestedAttribute{
-				Description: "List of networks matching the filters.",
+				Description: "List of networks.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -135,51 +134,17 @@ func (d *networksDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Compile the regex if provided
-	var compiledRegex *regexp.Regexp
-	var err error
-	if !model.NameRegex.IsNull() && model.NameRegex.ValueString() != "" {
-		compiledRegex, err = regexp.Compile(model.NameRegex.ValueString())
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid name_regex", err.Error())
-			return
-		}
-	}
-
-	// Fetch all networks for the given project and region, applying label selector if provided
-	listReq := d.client.DefaultAPI.ListNetworks(ctx, projectId, region)
-	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		var labels map[string]string
-		diags = model.Labels.ElementsAs(ctx, &labels, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		var pairs []string
-		for k, v := range labels {
-			if v == "" {
-				pairs = append(pairs, k)
-			} else {
-				pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
-			}
-		}
-		sort.Strings(pairs)
-		labelSelector := strings.Join(pairs, ",")
-		if labelSelector != "" {
-			listReq = listReq.LabelSelector(labelSelector)
-		}
-	}
-
-	networksResp, err := listReq.Execute()
+	networksResp, err := d.client.ListNetworks(ctx, projectId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
-			"Reading networks",
+			"Reading networks from API",
 			fmt.Sprintf("Networks could not be listed for project %q.", projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
@@ -189,36 +154,52 @@ func (d *networksDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	if networksResp == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading networks", "API response is nil")
+	ctx = core.LogResponse(ctx)
+
+	err = mapFields(ctx, networksResp, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping networks", err.Error())
 		return
 	}
-	if networksResp.Items == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading networks", "network items in the API response are nil")
-		return
-	}
-
-	// Filter networks based on the compiled regex and populate the items list
-	items := make([]NetworkItem, 0)
-	for _, netResp := range networksResp.Items {
-		if compiledRegex != nil && !compiledRegex.MatchString(netResp.Name) {
-			continue
-		}
-
-		item := NetworkItem{
-			NetworkId: types.StringValue(netResp.Id),
-			Name:      types.StringValue(netResp.Name),
-		}
-		items = append(items, item)
-	}
-
-	model.Id = utils.BuildInternalTerraformId(projectId, region)
-	model.Items = items
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Networks read")
+}
+
+func mapFields(ctx context.Context, networksResp *iaas.NetworkListResponse, model *NetworksModel, region string) error {
+	if model == nil {
+		return fmt.Errorf("model is nil")
+	} else if networksResp == nil {
+		return fmt.Errorf("API response is nil")
+	} else if networksResp.Items == nil {
+		return fmt.Errorf("network items in the API response are nil")
+	}
+
+	// sort by ID for stable output across multiple TF runs
+	slices.SortFunc(networksResp.Items, func(a, b iaas.Network) int { return strings.Compare(a.Id, b.Id) })
+
+	items := make([]networkItemModel, 0, len(networksResp.Items))
+	for _, netResp := range networksResp.Items {
+		item := networkItemModel{
+			NetworkId: types.StringValue(netResp.Id),
+			Name:      types.StringValue(netResp.Name),
+		}
+		items = append(items, item)
+	}
+
+	networksTF, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: networkItemModelTypes}, items)
+	if diags.HasError() {
+		return fmt.Errorf("converting network results: %w", core.DiagsToError(diags))
+	}
+
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region)
+	model.Region = types.StringValue(region)
+	model.Items = networksTF
+
+	return nil
 }
