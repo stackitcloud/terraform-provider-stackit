@@ -185,7 +185,7 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 
 			"scheme": schema.StringAttribute{
-				Description: "Specifies the http scheme. Defaults to `http`.",
+				Description: fmt.Sprintf("Specifies the http scheme. Defaults to `%s`.", DefaultScheme),
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(string(DefaultScheme)),
