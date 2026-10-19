@@ -29,6 +29,7 @@ import (
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	sca "github.com/stackitcloud/stackit-sdk-go/services/sca/v1alphaapi"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
 	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
@@ -76,6 +77,7 @@ type MockClientFactory struct {
 	RabbitMqV2ClientMock            rabbitmq.DefaultAPI
 	RedisV2ClientMock               redis.DefaultAPI
 	ResourceManagerClientMock       resourcemanager.DefaultAPI
+	ScaV1AlphaClientMock            sca.DefaultAPI
 	ScfV1ClientMock                 scf.DefaultAPI
 	SecretsManagerV1AlphaClientMock secretsmanagerV1Alpha.DefaultAPI
 	SecretsManagerV1ClientMock      secretsmanager.DefaultAPI
@@ -226,6 +228,14 @@ func (m *MockClientFactory) newRedisV2Client() (redis.DefaultAPI, error) {
 	}
 
 	return redis.DefaultAPIServiceMock{}, nil
+}
+
+func (m *MockClientFactory) newScaV1AlphaClient() (sca.DefaultAPI, error) {
+	if m.ScaV1AlphaClientMock != nil {
+		return m.ScaV1AlphaClientMock, nil
+	}
+
+	return sca.DefaultAPIServiceMock{}, nil
 }
 
 func (m *MockClientFactory) newScfV1Client() (scf.DefaultAPI, error) {
