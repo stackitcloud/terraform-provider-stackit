@@ -16,18 +16,8 @@ Lists all IaaS networks in a project and region. Results are sorted by image ID.
 ## Example Usage
 
 ```terraform
-# List all networks in a project
 data "stackit_networks" "example" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-}
-
-# List all networks in a project with a specific name and label
-data "stackit_networks" "example" {
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name_regex = "example"
-  labels = {
-    foo = "bar"
-  }
 }
 ```
 
