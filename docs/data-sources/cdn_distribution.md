@@ -51,6 +51,7 @@ Read-Only:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
 - `blocked_ips` (List of String) Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.
+- `cache_config` (Attributes) Groups the cache options that influence how the CDN builds its cache key. Warning: enabling query-string vary produces one cache entry per unique query-string combination (unbounded when query_string_vary_parameters is empty). Each entry in cache_key_headers multiplies the number of cache variants by the number of distinct values observed for that header. Use these settings sparingly. (see [below for nested schema](#nestedatt--config--cache_config))
 - `default_cache_duration` (String) Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
 - `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
@@ -72,6 +73,16 @@ Read-Only:
 - `origin_url` (String) The configured backend type http for the distribution
 - `region` (String) The region where the bucket is hosted. Required if type is 'bucket'.
 - `type` (String) The configured backend type. Possible values are: `http`, `bucket`.
+
+
+<a id="nestedatt--config--cache_config"></a>
+### Nested Schema for `config.cache_config`
+
+Read-Only:
+
+- `cache_key_headers` (List of String) HTTP request header names whose values participate in the cache key. Each entry multiplies the number of cache variants by the number of distinct values observed for that header.
+- `query_string_vary_enabled` (Boolean) When true, the CDN varies its cache by the request query string. If query_string_vary_parameters is empty, every unique query-string combination produces its own cache entry; if non-empty, only the listed parameters influence the cache key.
+- `query_string_vary_parameters` (List of String) Allowlist of query-string parameter names that participate in the cache key when query_string_vary_enabled is true. Ignored while query_string_vary_enabled is false, but still stored so it can be re-activated without losing the list.
 
 
 <a id="nestedatt--config--optimizer"></a>
