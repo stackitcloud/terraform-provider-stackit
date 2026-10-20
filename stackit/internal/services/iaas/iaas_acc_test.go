@@ -44,6 +44,9 @@ var (
 	//go:embed testdata/datasource-images.tf
 	dataSourceImages string
 
+	//go:embed testdata/datasource-networks.tf
+	dataSourceNetworks string
+
 	//go:embed testdata/datasource-public-ip-ranges.tf
 	datasourcePublicIpRanges string
 
@@ -6740,4 +6743,38 @@ func validateImportedNameservers(expectedIPs []string) func(states []*terraform.
 
 		return nil
 	}
+}
+
+func TestAccNetworksDataSource(t *testing.T) {
+	configVars := config.Variables{
+		"organization_id":      config.StringVariable(testutil.OrganizationId),
+		"project_name":         config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+		"network_name":         config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+		"service_account_mail": config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: configVars,
+				Config:          fmt.Sprintf("%s\n\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), dataSourceNetworks),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// All networks
+					resource.TestCheckResourceAttrSet("data.stackit_networks.networks", "id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_resourcemanager_project.project", "project_id",
+						"data.stackit_networks.networks", "project_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network", "network_id",
+						"data.stackit_networks.networks", "results.0.network_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.0.name", testutil.ConvertConfigVariable(configVars["network_name"])),
+				),
+			},
+		},
+	})
 }
