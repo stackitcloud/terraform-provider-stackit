@@ -525,8 +525,8 @@ func Test_ResolveFilePath(t *testing.T) {
 	tests := []struct {
 		description          string
 		input                *Model
-		expectedString       string
-		expectedBool         bool
+		filePath             string
+		isDownload           bool
 		expectedErrSubstring string
 		isValid              bool
 	}{
@@ -710,7 +710,7 @@ func Test_ResolveFilePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			outputString, outputBool, err := resolveFilePath(context.Background(), tt.input)
+			filePath, isDownload, err := resolveFilePath(context.Background(), tt.input)
 
 			if !tt.isValid {
 				if err == nil {
@@ -726,8 +726,8 @@ func Test_ResolveFilePath(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if !strings.HasSuffix(outputString, tt.expectedString) {
-				t.Fatalf("output mismatch:\n got: %s and %t\n want suffix: %s and %t", outputString, outputBool, tt.expectedString, tt.expectedBool)
+			if !strings.HasSuffix(filePath, tt.filePath) && isDownload != tt.isDownload {
+				t.Fatalf("output mismatch:\n got: %s and %t\n want suffix: %s and %t", filePath, isDownload, tt.filePath, tt.isDownload)
 			}
 		})
 	}

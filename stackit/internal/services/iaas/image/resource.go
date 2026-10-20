@@ -1091,7 +1091,7 @@ func downloadImage(ctx context.Context, downloadURL string) (fileName string, er
 	return fileName, nil
 }
 
-func resolveFilePath(ctx context.Context, model *Model) (string, bool, error) {
+func resolveFilePath(ctx context.Context, model *Model) (filePath string, isDownload bool, err error) {
 	// Handle deprecated option
 	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
 		return model.LocalFilePath.ValueString(), false, nil
