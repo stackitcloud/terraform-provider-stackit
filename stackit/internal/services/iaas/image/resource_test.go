@@ -420,11 +420,22 @@ func Test_DownloadImage(t *testing.T) {
 				http.Error(w, "webserver doesn't support hijacking", http.StatusInternalServerError)
 				return
 			}
-			conn, _, _ := hj.Hijack()
-			_ = conn.Close()
+			conn, _, err := hj.Hijack()
+			if err != nil {
+				t.Logf("Failed to hijack connection: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if err := conn.Close(); err != nil {
+				t.Logf("Failed to close hijacked connection: %v", err)
+			}
+
 		default:
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("dummy content"))
+			if _, err := w.Write([]byte("dummy content")); err != nil {
+				t.Logf("Failed to write mock response payload: %v", err)
+			}
 		}
 	}))
 	t.Cleanup(server.Close)
@@ -488,7 +499,6 @@ func Test_DownloadImage(t *testing.T) {
 					t.Errorf("filePath %q does not end with %q", filePath, ".img")
 				}
 			}
-
 		})
 	}
 }
@@ -508,7 +518,7 @@ var imageFileTypes = map[string]attr.Type{
 }
 
 func Test_ResolveFilePath(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(server.Close)
