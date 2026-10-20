@@ -62,7 +62,7 @@ func Test_mapFields(t *testing.T) {
 				Id:        utils.BuildInternalTerraformId(testProjectId, testRegion),
 				ProjectId: types.StringValue(testProjectId),
 				Region:    types.StringValue(testRegion),
-				Items: types.ListValueMust(types.ObjectType{AttrTypes: networkItemModelTypes}, []attr.Value{
+				Results: types.ListValueMust(types.ObjectType{AttrTypes: networkItemModelTypes}, []attr.Value{
 					types.ObjectValueMust(networkItemModelTypes, map[string]attr.Value{
 						"network_id": types.StringValue(testNetwork01Id),
 						"name":       types.StringValue("network-01"),

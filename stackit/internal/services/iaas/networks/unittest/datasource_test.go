@@ -73,11 +73,11 @@ func TestNetworksResource(t *testing.T) {
 				ConfigVariables: variables(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_networks.networks", "project_id", projectId),
-					resource.TestCheckResourceAttr("data.stackit_networks.networks", "items.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_networks.networks", "items.0.network_id", network01Id),
-					resource.TestCheckResourceAttr("data.stackit_networks.networks", "items.0.name", "network-01"),
-					resource.TestCheckResourceAttr("data.stackit_networks.networks", "items.1.network_id", network02Id),
-					resource.TestCheckResourceAttr("data.stackit_networks.networks", "items.1.name", "network-02"),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.0.network_id", network01Id),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.0.name", "network-01"),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.1.network_id", network02Id),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.1.name", "network-02"),
 				),
 			},
 			// Note that Terraform automatically adds a step below which deletes all resources used in the unit test.

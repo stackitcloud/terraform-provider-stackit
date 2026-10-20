@@ -30,7 +30,7 @@ type NetworksModel struct {
 	Id        types.String `tfsdk:"id"`
 	ProjectId types.String `tfsdk:"project_id"`
 	Region    types.String `tfsdk:"region"`
-	Items     types.List   `tfsdk:"items"`
+	Results   types.List   `tfsdk:"results"`
 }
 
 // networkItemModel represents a single network in the list.
@@ -102,7 +102,7 @@ func (d *networksDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "The resource region. If not defined, the provider region is used.",
 				Optional:    true,
 			},
-			"items": schema.ListNestedAttribute{
+			"results": schema.ListNestedAttribute{
 				Description: "List of networks.",
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
@@ -199,7 +199,7 @@ func mapFields(ctx context.Context, networksResp *iaas.NetworkListResponse, mode
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region)
 	model.Region = types.StringValue(region)
-	model.Items = networksTF
+	model.Results = networksTF
 
 	return nil
 }

@@ -35,10 +35,10 @@ data "stackit_networks" "example" {
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`".
-- `items` (Attributes List) List of networks. (see [below for nested schema](#nestedatt--items))
+- `results` (Attributes List) List of networks. (see [below for nested schema](#nestedatt--results))
 
-<a id="nestedatt--items"></a>
-### Nested Schema for `items`
+<a id="nestedatt--results"></a>
+### Nested Schema for `results`
 
 Read-Only:
 
