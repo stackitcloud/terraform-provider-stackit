@@ -213,8 +213,16 @@ type DefaultClientFactory struct {
 }
 
 func (f *DefaultClientFactory) defaultConfigOptions(customEndpoint string) []config.ConfigurationOption {
+	// Retry HTTP 429 rate limits for every service, outside the authentication transport.
+	retryRoundTripper := &RetryTransport{
+		Base:        f.RoundTripper,
+		MaxRetries:  3,
+		BaseBackoff: 10 * time.Second,
+		MaxJitter:   500 * time.Millisecond, // Always added to wait time
+	}
+
 	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(f.RoundTripper),
+		config.WithCustomAuth(retryRoundTripper),
 		config.WithUserAgent(f.UserAgent),
 	}
 
@@ -633,14 +641,8 @@ func (f *DefaultClientFactory) newModelExperimentsV1Client() (modelexperiments.D
 }
 
 func (f *DefaultClientFactory) newDremioV1BetaClient() (dremio.DefaultAPI, error) {
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(f.RoundTripper),
-		config.WithUserAgent(f.UserAgent),
-		config.WithRegion("eu01"),
-	}
-	if f.CustomEndpoints.DremioCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.DremioCustomEndpoint))
-	}
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.DremioCustomEndpoint)
+	apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 	apiClient, err := dremio.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("configuring DremioV1Beta client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
@@ -650,14 +652,9 @@ func (f *DefaultClientFactory) newDremioV1BetaClient() (dremio.DefaultAPI, error
 }
 
 func (f *DefaultClientFactory) newSecretsManagerV1Client() (secretsmanager.DefaultAPI, error) {
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(f.RoundTripper),
-		config.WithUserAgent(f.UserAgent),
-	}
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.SecretsManagerCustomEndpoint)
 
-	if f.CustomEndpoints.SecretsManagerCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.SecretsManagerCustomEndpoint))
-	} else {
+	if f.CustomEndpoints.SecretsManagerCustomEndpoint == "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 	}
 
@@ -670,14 +667,9 @@ func (f *DefaultClientFactory) newSecretsManagerV1Client() (secretsmanager.Defau
 }
 
 func (f *DefaultClientFactory) newSecretsManagerV1AlphaClient() (secretsmanagerV1Alpha.DefaultAPI, error) {
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(f.RoundTripper),
-		config.WithUserAgent(f.UserAgent),
-	}
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.SecretsManagerCustomEndpoint)
 
-	if f.CustomEndpoints.SecretsManagerCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.SecretsManagerCustomEndpoint))
-	} else {
+	if f.CustomEndpoints.SecretsManagerCustomEndpoint == "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 	}
 
@@ -690,14 +682,9 @@ func (f *DefaultClientFactory) newSecretsManagerV1AlphaClient() (secretsmanagerV
 }
 
 func (f *DefaultClientFactory) newObservabilityV1Client() (observability.DefaultAPI, error) {
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(f.RoundTripper),
-		config.WithUserAgent(f.UserAgent),
-	}
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.ObservabilityCustomEndpoint)
 
-	if f.CustomEndpoints.ObservabilityCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.ObservabilityCustomEndpoint))
-	} else {
+	if f.CustomEndpoints.ObservabilityCustomEndpoint == "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 	}
 
@@ -814,23 +801,7 @@ func (t *RetryTransport) getWaitDuration(resp *http.Response, attempt int) time.
 }
 
 func (f *DefaultClientFactory) newObjectStorageV2Client() (objectstorage.DefaultAPI, error) {
-	// Add middleware to retry on HTTP 429 rate limits.
-	// This solution is **not** intended to be copied to each and every service for now (!!).
-	retryRoundTripper := &RetryTransport{
-		Base:        f.RoundTripper,
-		MaxRetries:  3,
-		BaseBackoff: 10 * time.Second,
-		MaxJitter:   500 * time.Millisecond, // Always added to wait time
-	}
-
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(retryRoundTripper),
-		config.WithUserAgent(f.UserAgent),
-	}
-
-	if f.CustomEndpoints.ObjectStorageCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.ObjectStorageCustomEndpoint))
-	}
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.ObjectStorageCustomEndpoint)
 
 	apiClient, err := objectstorage.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
