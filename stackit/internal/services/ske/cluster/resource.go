@@ -1645,11 +1645,11 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	}
 
 	return &ske.Maintenance{
-		AutoUpdate: ske.MaintenanceAutoUpdate{
+		AutoUpdate: &ske.MaintenanceAutoUpdate{
 			KubernetesVersion:   conversion.BoolValueToPointer(maintenance.EnableKubernetesVersionUpdates),
 			MachineImageVersion: conversion.BoolValueToPointer(maintenance.EnableMachineImageVersionUpdates),
 		},
-		TimeWindow: ske.TimeWindow{
+		TimeWindow: &ske.TimeWindow{
 			Start: timeWindowStart,
 			End:   timeWindowEnd,
 		},
@@ -1942,12 +1942,14 @@ func mapMaintenance(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		return nil
 	}
 	ekvu := types.BoolNull()
-	if cl.Maintenance.AutoUpdate.KubernetesVersion != nil {
-		ekvu = types.BoolValue(*cl.Maintenance.AutoUpdate.KubernetesVersion)
-	}
 	emvu := types.BoolNull()
-	if cl.Maintenance.AutoUpdate.KubernetesVersion != nil {
-		emvu = types.BoolValue(*cl.Maintenance.AutoUpdate.MachineImageVersion)
+	if cl.Maintenance.AutoUpdate != nil {
+		if cl.Maintenance.AutoUpdate.KubernetesVersion != nil {
+			ekvu = types.BoolValue(*cl.Maintenance.AutoUpdate.KubernetesVersion)
+		}
+		if cl.Maintenance.AutoUpdate.MachineImageVersion != nil {
+			emvu = types.BoolValue(*cl.Maintenance.AutoUpdate.MachineImageVersion)
+		}
 	}
 	startTime, endTime, err := getMaintenanceTimes(ctx, cl, m)
 	if err != nil {
@@ -2019,8 +2021,11 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 }
 
 func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startTime, endTime string, err error) {
-	startTimeAPI := cl.Maintenance.TimeWindow.Start
-	endTimeAPI := cl.Maintenance.TimeWindow.End
+	var startTimeAPI, endTimeAPI time.Time
+	if cl.Maintenance.TimeWindow != nil {
+		startTimeAPI = cl.Maintenance.TimeWindow.Start
+		endTimeAPI = cl.Maintenance.TimeWindow.End
+	}
 
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return startTimeAPI.Format("15:04:05Z07:00"), endTimeAPI.Format("15:04:05Z07:00"), nil
