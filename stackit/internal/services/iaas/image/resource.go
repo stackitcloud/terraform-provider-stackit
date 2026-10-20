@@ -519,9 +519,22 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	filePath, err := resolveFilePath(ctx, &model)
+	filePath, isDownload, err := resolveFilePath(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Resolving file path: %v", err))
+	}
+
+	// Cleanup on exit
+	if isDownload {
+		tmpDir := filepath.Dir(filePath)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				tflog.Warn(ctx, "failed to cleanup downloaded temp image dir", map[string]interface{}{
+					"dir":   tmpDir,
+					"error": err.Error(),
+				})
+			}
+		}()
 	}
 
 	// Generate API request body from model
@@ -570,16 +583,6 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Cleanup on exit
-	tmpDir := filepath.Dir(filePath)
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			tflog.Warn(ctx, "failed to cleanup downloaded temp image dir", map[string]interface{}{
-				"dir":   tmpDir,
-				"error": err.Error(),
-			})
-		}
-	}()
 	// Wait for image to become available
 	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, region, imageCreateResp.Id) //nolint:tfwriteid // false positive - id fields are actually stored already using the mapFields() call above
 	waiter = waiter.SetTimeout(7 * 24 * time.Hour)                                              // Set timeout to one week, to make the timeout useless
@@ -1088,15 +1091,15 @@ func downloadImage(ctx context.Context, downloadURL string) (fileName string, er
 	return fileName, nil
 }
 
-func resolveFilePath(ctx context.Context, model *Model) (string, error) {
+func resolveFilePath(ctx context.Context, model *Model) (string, bool, error) {
 	// Handle deprecated option
 	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
-		return model.LocalFilePath.ValueString(), nil
+		return model.LocalFilePath.ValueString(), false, nil
 	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
 		var imageFileModel imageFileModel
 		diags := model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return "", fmt.Errorf("parsing image_file block: %v", diags)
+			return "", false, fmt.Errorf("parsing image_file block: %v", diags)
 		}
 
 		// Handle download option
@@ -1104,13 +1107,13 @@ func resolveFilePath(ctx context.Context, model *Model) (string, error) {
 			var downloadModel downloadModel
 			diags = imageFileModel.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
-				return "", fmt.Errorf("parsing download block: %v", diags)
+				return "", false, fmt.Errorf("parsing download block: %v", diags)
 			}
 			filePath, err := downloadImage(ctx, downloadModel.URL.ValueString())
 			if err != nil {
-				return "", fmt.Errorf("downloading image: %w", err)
+				return "", false, fmt.Errorf("downloading image: %w", err)
 			}
-			return filePath, nil
+			return filePath, true, nil
 		}
 
 		// Handle local option
@@ -1118,11 +1121,11 @@ func resolveFilePath(ctx context.Context, model *Model) (string, error) {
 			var localModel localModel
 			diags = imageFileModel.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
-				return "", fmt.Errorf("parsing local block: %v", diags)
+				return "", false, fmt.Errorf("parsing local block: %v", diags)
 			}
-			return localModel.Path.ValueString(), nil
+			return localModel.Path.ValueString(), false, nil
 		}
 	}
 
-	return "", nil
+	return "", false, nil
 }

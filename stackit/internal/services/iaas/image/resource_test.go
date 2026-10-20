@@ -525,7 +525,8 @@ func Test_ResolveFilePath(t *testing.T) {
 	tests := []struct {
 		description          string
 		input                *Model
-		expected             string
+		expectedString       string
+		expectedBool         bool
 		expectedErrSubstring string
 		isValid              bool
 	}{
@@ -545,6 +546,7 @@ func Test_ResolveFilePath(t *testing.T) {
 				),
 			},
 			"./mock-file",
+			false,
 			"",
 			true,
 		},
@@ -567,6 +569,7 @@ func Test_ResolveFilePath(t *testing.T) {
 				),
 			},
 			"",
+			false,
 			"parsing image_file block",
 			false,
 		},
@@ -597,6 +600,7 @@ func Test_ResolveFilePath(t *testing.T) {
 				),
 			},
 			"",
+			false,
 			"parsing download block",
 			false,
 		},
@@ -630,6 +634,7 @@ func Test_ResolveFilePath(t *testing.T) {
 				),
 			},
 			"",
+			false,
 			"parsing local block",
 			false,
 		},
@@ -654,6 +659,7 @@ func Test_ResolveFilePath(t *testing.T) {
 				),
 			},
 			"./mock-file",
+			false,
 			"",
 			true,
 		},
@@ -675,6 +681,7 @@ func Test_ResolveFilePath(t *testing.T) {
 				),
 			},
 			".img",
+			true,
 			"",
 			true,
 		},
@@ -696,13 +703,14 @@ func Test_ResolveFilePath(t *testing.T) {
 				),
 			},
 			"",
+			false,
 			"downloading image",
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := resolveFilePath(context.Background(), tt.input)
+			outputString, outputBool, err := resolveFilePath(context.Background(), tt.input)
 
 			if !tt.isValid {
 				if err == nil {
@@ -718,8 +726,8 @@ func Test_ResolveFilePath(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if !strings.HasSuffix(output, tt.expected) {
-				t.Fatalf("output mismatch:\n got: %s\n want suffix: %s", output, tt.expected)
+			if !strings.HasSuffix(outputString, tt.expectedString) {
+				t.Fatalf("output mismatch:\n got: %s and %t\n want suffix: %s and %t", outputString, outputBool, tt.expectedString, tt.expectedBool)
 			}
 		})
 	}
