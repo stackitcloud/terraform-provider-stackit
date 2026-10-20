@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
@@ -399,7 +400,7 @@ func Test_UploadImage(t *testing.T) {
 			}
 
 			// Call the function
-			err = uploadImage(context.Background(), tt.filePath, uploadURL.String())
+			err = uploadImage(context.Background(), &diag.Diagnostics{}, tt.filePath, uploadURL.String())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("uploadImage() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -474,7 +475,7 @@ func Test_DownloadImage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			filePath, err := downloadImage(context.Background(), tt.downloadURL)
+			filePath, err := downloadImage(context.Background(), &diag.Diagnostics{}, tt.downloadURL)
 
 			if filePath != "" {
 				t.Cleanup(func() {
@@ -710,7 +711,7 @@ func Test_ResolveFilePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			filePath, isDownload, err := resolveFilePath(context.Background(), tt.input)
+			filePath, isDownload, err := resolveFilePath(context.Background(), &diag.Diagnostics{}, tt.input)
 
 			if !tt.isValid {
 				if err == nil {

@@ -520,7 +520,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	filePath, isDownload, err := resolveFilePath(ctx, &model)
+	filePath, isDownload, err := resolveFilePath(ctx, &resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Resolving file path: %v", err))
 	}
@@ -578,7 +578,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Upload image
-	err = uploadImage(ctx, filePath, imageCreateResp.UploadUrl)
+	err = uploadImage(ctx, &resp.Diagnostics, filePath, imageCreateResp.UploadUrl)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Uploading image: %v", err))
 		return
@@ -973,7 +973,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}, nil
 }
 
-func uploadImage(ctx context.Context, filePath, uploadURL string) error {
+func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadURL string) error {
 	if filePath == "" {
 		return fmt.Errorf("file path is empty")
 	}
@@ -1012,10 +1012,9 @@ func uploadImage(ctx context.Context, filePath, uploadURL string) error {
 		return fmt.Errorf("upload image: %w", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			tflog.Debug(ctx, "failed to close HTTP response body", map[string]interface{}{
-				"error": err.Error(),
-			})
+		err = resp.Body.Close()
+		if err != nil {
+			core.LogAndAddError(ctx, diags, "Error uploading image", fmt.Sprintf("Closing response body: %v", err))
 		}
 	}()
 
@@ -1026,7 +1025,7 @@ func uploadImage(ctx context.Context, filePath, uploadURL string) error {
 	return nil
 }
 
-func downloadImage(ctx context.Context, downloadURL string) (fileName string, err error) {
+func downloadImage(ctx context.Context, diags *diag.Diagnostics, downloadURL string) (fileName string, err error) {
 	if downloadURL == "" {
 		return "", fmt.Errorf("download URL is empty")
 	}
@@ -1063,10 +1062,8 @@ func downloadImage(ctx context.Context, downloadURL string) (fileName string, er
 		return "", fmt.Errorf("download image: %w", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			tflog.Debug(ctx, "failed to close HTTP response body", map[string]interface{}{
-				"error": err.Error(),
-			})
+		if err != nil {
+			core.LogAndAddError(ctx, diags, "Error uploading image", fmt.Sprintf("Closing response body: %v", err))
 		}
 	}()
 
@@ -1092,7 +1089,7 @@ func downloadImage(ctx context.Context, downloadURL string) (fileName string, er
 	return fileName, nil
 }
 
-func resolveFilePath(ctx context.Context, model *Model) (filePath string, isDownload bool, err error) {
+func resolveFilePath(ctx context.Context, diags *diag.Diagnostics, model *Model) (filePath string, isDownload bool, err error) {
 	// Handle deprecated option
 	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
 		return model.LocalFilePath.ValueString(), false, nil
@@ -1110,7 +1107,7 @@ func resolveFilePath(ctx context.Context, model *Model) (filePath string, isDown
 			if diags.HasError() {
 				return "", false, fmt.Errorf("parsing download block: %v", diags)
 			}
-			filePath, err := downloadImage(ctx, downloadModel.URL.ValueString())
+			filePath, err := downloadImage(ctx, &diags, downloadModel.URL.ValueString())
 			if err != nil {
 				return "", false, fmt.Errorf("downloading image: %w", err)
 			}
