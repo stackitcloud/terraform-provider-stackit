@@ -1095,7 +1095,7 @@ func resolveFilePath(ctx context.Context, diags *diag.Diagnostics, model *Model)
 		return model.LocalFilePath.ValueString(), false, nil
 	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
 		var imageFileModel imageFileModel
-		diags := model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})
+		diags.Append(model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})...)
 		if diags.HasError() {
 			return "", false, fmt.Errorf("parsing image_file block: %v", diags)
 		}
@@ -1103,11 +1103,11 @@ func resolveFilePath(ctx context.Context, diags *diag.Diagnostics, model *Model)
 		// Handle download option
 		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
 			var downloadModel downloadModel
-			diags = imageFileModel.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
+			diags.Append(imageFileModel.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})...)
 			if diags.HasError() {
 				return "", false, fmt.Errorf("parsing download block: %v", diags)
 			}
-			filePath, err := downloadImage(ctx, &diags, downloadModel.URL.ValueString())
+			filePath, err := downloadImage(ctx, diags, downloadModel.URL.ValueString())
 			if err != nil {
 				return "", false, fmt.Errorf("downloading image: %w", err)
 			}
@@ -1117,7 +1117,7 @@ func resolveFilePath(ctx context.Context, diags *diag.Diagnostics, model *Model)
 		// Handle local option
 		if !imageFileModel.Local.IsNull() && !imageFileModel.Local.IsUnknown() {
 			var localModel localModel
-			diags = imageFileModel.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
+			diags.Append(imageFileModel.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})...)
 			if diags.HasError() {
 				return "", false, fmt.Errorf("parsing local block: %v", diags)
 			}
