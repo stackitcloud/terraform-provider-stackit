@@ -519,43 +519,9 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	var filePath string
-	var err error
-
-	// Handle deprecated option
-	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
-		filePath = model.LocalFilePath.ValueString()
-	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
-		var imageFileModel imageFileModel
-		diags = model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		// Handle download option
-		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
-			var downloadModel downloadModel
-			diags = imageFileModel.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			filePath, err = downloadImage(ctx, downloadModel.URL.ValueString())
-			if err != nil {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error downloading image", fmt.Sprintf("Downloading Image: %v", err))
-				return
-			}
-		}
-		// Handle local option
-		if !imageFileModel.Local.IsNull() && !imageFileModel.Local.IsUnknown() {
-			var localModel localModel
-			diags = imageFileModel.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			filePath = localModel.Path.ValueString()
-		}
+	filePath, err := resolveFilePath(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Resolving file path: %v", err))
 	}
 
 	// Generate API request body from model
@@ -1120,4 +1086,43 @@ func downloadImage(ctx context.Context, downloadURL string) (fileName string, er
 	}
 
 	return fileName, nil
+}
+
+func resolveFilePath(ctx context.Context, model *Model) (string, error) {
+	// Handle deprecated option
+	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
+		return model.LocalFilePath.ValueString(), nil
+	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
+		var imageFileModel imageFileModel
+		diags := model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return "", fmt.Errorf("parsing image_file block: %v", diags)
+		}
+
+		// Handle download option
+		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
+			var downloadModel downloadModel
+			diags = imageFileModel.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return "", fmt.Errorf("parsing download block: %v", diags)
+			}
+			filePath, err := downloadImage(ctx, downloadModel.URL.ValueString())
+			if err != nil {
+				return "", fmt.Errorf("downloading image: %w", err)
+			}
+			return filePath, nil
+		}
+
+		// Handle local option
+		if !imageFileModel.Local.IsNull() && !imageFileModel.Local.IsUnknown() {
+			var localModel localModel
+			diags = imageFileModel.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return "", fmt.Errorf("parsing local block: %v", diags)
+			}
+			return localModel.Path.ValueString(), nil
+		}
+	}
+
+	return "", nil
 }
