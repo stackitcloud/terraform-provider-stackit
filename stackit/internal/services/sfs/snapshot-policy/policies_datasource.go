@@ -49,7 +49,9 @@ func (r *policiesDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 func (r *policiesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+
 	if !ok {
 		return
 	}
@@ -62,6 +64,7 @@ func (r *policiesDataSource) Configure(ctx context.Context, req datasource.Confi
 
 func (r *policiesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "SFS snapshot policies datasource schema"
+
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,
@@ -179,8 +182,10 @@ type schedule struct {
 
 func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -192,6 +197,7 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	listRequest := r.client.ListSnapshotPolicies(ctx, projectId)
+
 	if !utils.IsUndefined(model.Immutable) {
 		switch model.Immutable.ValueString() {
 		case ImmutableFilterImmutableOnly:
@@ -205,9 +211,11 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 		tflog.Warn(ctx, fmt.Sprintf(`%s | %s`, title, content))
 		resp.Diagnostics.AddWarning(title, content)
 	}
+
 	policies, err := listRequest.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &diags, "Error listing snapshot policies", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -216,14 +224,17 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, policies, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &diags, "Error reading snapshot policies", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS snapshot policies read")
 }
 
@@ -231,6 +242,7 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 	if resp == nil || resp.SnapshotPolicies == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -241,9 +253,11 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 
 	for _, respPolicy := range resp.SnapshotPolicies {
 		var createdAt types.String
+
 		if respPolicy.CreatedAt != nil {
 			createdAt = types.StringValue(respPolicy.CreatedAt.String())
 		}
+
 		modelPolicy := policy{
 			ID:        types.StringPointerValue(respPolicy.Id),
 			Name:      types.StringPointerValue(respPolicy.Name),
@@ -253,9 +267,11 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 		}
 		for _, respSchedule := range respPolicy.SnapshotSchedules {
 			var scheduleCreatedAt types.String
+
 			if respPolicy.CreatedAt != nil {
 				scheduleCreatedAt = types.StringValue(respSchedule.CreatedAt.String())
 			}
+
 			modelSchedule := schedule{
 				ID:              types.StringPointerValue(respSchedule.Id),
 				Name:            types.StringPointerValue(respSchedule.Name),
@@ -265,9 +281,12 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 				RetentionCount:  types.Int32PointerValue(respSchedule.RetentionCount),
 				RetentionPeriod: types.StringPointerValue(respSchedule.RetentionPeriod),
 			}
+
 			modelPolicy.SnapshotSchedules = append(modelPolicy.SnapshotSchedules, modelSchedule)
 		}
+
 		model.Items = append(model.Items, modelPolicy)
 	}
+
 	return nil
 }

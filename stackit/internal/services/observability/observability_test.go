@@ -18,13 +18,17 @@ func TestObservabilityInstanceSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	planId := uuid.NewString()
 	instanceId := uuid.NewString()
+
 	const (
 		region   = "eu01"
 		name     = "observability-instance"
 		planName = "Observability-Medium-EU01"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -84,6 +88,7 @@ resource "stackit_observability_instance" "instance" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -107,12 +112,16 @@ resource "stackit_observability_instance" "instance" {
 func TestObservabilityScrapeConfigSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
+
 	const (
 		region = "eu01"
 		name   = "scrape-config"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -164,6 +173,7 @@ resource "stackit_observability_scrapeconfig" "instance" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

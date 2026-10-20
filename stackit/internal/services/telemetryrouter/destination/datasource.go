@@ -275,8 +275,10 @@ func (d *telemetryRouterDestinationDataSource) Schema(_ context.Context, _ datas
 
 func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DatasourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -296,11 +298,15 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 	destinationResponse, err := d.client.GetDestination(ctx, projectID, region, instanceID, destinationID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
+
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		tfutils.LogError(
 			ctx,
 			&resp.Diagnostics,
@@ -312,20 +318,26 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapDatasourceFields(ctx, destinationResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter Destination read", map[string]interface{}{
 		"instance_id":    instanceID,
 		"destination_id": destinationID,
@@ -336,10 +348,13 @@ func mapDatasourceFields(ctx context.Context, destination *telemetryrouter.Desti
 	if destination == nil {
 		return fmt.Errorf("destination is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
+
 	var destinationID string
+
 	if model.DestinationID.ValueString() != "" {
 		destinationID = model.DestinationID.ValueString()
 	} else if destination.Id != "" {
@@ -385,6 +400,7 @@ func mapDatasourceConfig(ctx context.Context, destination *telemetryrouter.Desti
 	if diags.HasError() {
 		return fmt.Errorf("mapping config: %w", core.DiagsToError(diags))
 	}
+
 	model.Config = configValue
 
 	return nil
@@ -397,11 +413,13 @@ func mapDatasourceFilter(ctx context.Context, apiConf *telemetryrouter.Destinati
 	}
 
 	attrList := []attr.Value{}
+
 	for _, currentAttr := range apiConf.Filter.Attributes {
 		values, diags := types.ListValueFrom(ctx, types.StringType, currentAttr.Values)
 		if diags.HasError() {
 			return fmt.Errorf("mapping filter values: %w", core.DiagsToError(diags))
 		}
+
 		attrModel, diags := types.ObjectValueFrom(ctx, datasourceAttributeTypes, datasourceAttribute{
 			Key:     types.StringValue(currentAttr.Key),
 			Level:   types.StringValue(string(currentAttr.Level)),
@@ -411,11 +429,15 @@ func mapDatasourceFilter(ctx context.Context, apiConf *telemetryrouter.Destinati
 		if diags.HasError() {
 			return fmt.Errorf("mapping filter config: %w", core.DiagsToError(diags))
 		}
+
 		attrList = append(attrList, attrModel)
 	}
 
-	var attrConfigs basetypes.ListValue
-	var diags diag.Diagnostics
+	var (
+		attrConfigs basetypes.ListValue
+		diags       diag.Diagnostics
+	)
+
 	if len(attrList) == 0 {
 		attrConfigs = types.ListNull(types.ObjectType{AttrTypes: datasourceAttributeTypes})
 	} else {
@@ -431,6 +453,7 @@ func mapDatasourceFilter(ctx context.Context, apiConf *telemetryrouter.Destinati
 	if diags.HasError() {
 		return fmt.Errorf("mapping filter: %w", core.DiagsToError(diags))
 	}
+
 	conf.Filter = filterValue
 
 	return nil
@@ -443,6 +466,7 @@ func mapDatasourceOpenTelemetry(ctx context.Context, apiConf *telemetryrouter.De
 	}
 
 	var ot datasourceOpenTelemetry
+
 	ot.Uri = types.StringValue(apiConf.OpenTelemetry.Uri)
 
 	otModel, diags := types.ObjectValueFrom(ctx, datasourceOpenTelemetryTypes, ot)
@@ -462,6 +486,7 @@ func mapDatasourceS3(ctx context.Context, apiConf *telemetryrouter.DestinationCo
 	}
 
 	var s3Struct datasourceS3
+
 	s3Struct.Bucket = types.StringValue(apiConf.S3.Bucket)
 	s3Struct.Endpoint = types.StringValue(apiConf.S3.Endpoint)
 

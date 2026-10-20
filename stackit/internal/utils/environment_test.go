@@ -9,6 +9,7 @@ import (
 
 func TestGetEnvStringOrDefault(t *testing.T) {
 	const defaultValue = "default_value"
+
 	tests := []struct {
 		name         string
 		val          types.String
@@ -89,6 +90,7 @@ func TestGetEnvStringOrDefault(t *testing.T) {
 				if err != nil {
 					t.Errorf("Failed to set environment variable %s: %v", tt.envVar, err)
 				}
+
 				defer func() {
 					err := os.Unsetenv(tt.envVar)
 					if err != nil {
@@ -235,6 +237,7 @@ func TestGetEnvBoolIfValueAbsent(t *testing.T) {
 				if err != nil {
 					t.Errorf("Failed to set environment variable %s: %v", tt.envVar, err)
 				}
+
 				defer func() {
 					err := os.Unsetenv(tt.envVar)
 					if err != nil {

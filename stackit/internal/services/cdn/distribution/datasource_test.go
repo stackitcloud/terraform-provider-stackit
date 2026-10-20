@@ -187,6 +187,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -223,6 +224,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(distribution)
 		}
+
 		return distribution
 	}
 
@@ -309,6 +311,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"bucket_url":             types.StringNull(),
 					"region":                 types.StringNull(),
 				})
+
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backendWithGeofencing,
 					"regions":                regionsFixture,
@@ -400,6 +403,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"errors": types.ListValueMust(types.StringType, []attr.Value{}),
 				})
 				domains := types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{managedDomain, customDomain})
+
 				m.Domains = domains
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -545,9 +549,11 @@ func TestMapDataSourceFields(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(model, tc.Expected)
 				if diff != "" {

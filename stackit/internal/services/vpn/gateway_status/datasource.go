@@ -182,8 +182,10 @@ func (d *vpnGatewayStatusDataSource) Schema(_ context.Context, _ datasource.Sche
 
 func (d *vpnGatewayStatusDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -201,27 +203,36 @@ func (d *vpnGatewayStatusDataSource) Read(ctx context.Context, req datasource.Re
 	gatewayResponse, err := d.client.GetGatewayStatus(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
+
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN gateway", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, gatewayResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN gateway", fmt.Sprintf("Processing response: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN gateway read", map[string]any{
 		"gateway_id": gatewayId,
 	})
@@ -231,11 +242,13 @@ func mapFields(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, mo
 	if gatewayStatus == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var gatewayId string
+
 	if model.GatewayId.ValueString() != "" {
 		gatewayId = model.GatewayId.ValueString()
 	} else if gatewayStatus.Id != nil {
@@ -278,9 +291,11 @@ func mapConnections(ctx context.Context, vpnConnections []vpn.ConnectionStatusRe
 		if connectionItem.DisplayName != nil {
 			connection.DisplayName = types.StringValue(string(*connectionItem.DisplayName))
 		}
+
 		if connectionItem.Enabled != nil {
 			connection.Enabled = types.BoolValue(*connectionItem.Enabled)
 		}
+
 		if connectionItem.Id != nil {
 			connection.Id = types.StringValue(string(*connectionItem.Id))
 		}
@@ -310,9 +325,11 @@ func mapTunnels(ctx context.Context, vpnTunnels []vpn.VPNTunnels) (*basetypes.Li
 		if tunnelItem.InternalNextHopIP != nil {
 			tunnel.InternalNextHopIP = types.StringValue(string(*tunnelItem.InternalNextHopIP))
 		}
+
 		if tunnelItem.Name != nil {
 			tunnel.Name = types.StringValue(string(*tunnelItem.Name))
 		}
+
 		if tunnelItem.PublicIP != nil {
 			tunnel.PublicIP = types.StringValue(string(*tunnelItem.PublicIP))
 		}

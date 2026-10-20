@@ -84,27 +84,34 @@ func (r *networkAreaRegionResource) Metadata(_ context.Context, req resource.Met
 // Use the modifier to set the effective region in the current plan.
 func (r *networkAreaRegionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -249,7 +256,9 @@ func (r *networkAreaRegionResource) Schema(_ context.Context, _ resource.SchemaR
 func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -257,6 +266,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -267,6 +277,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -274,6 +285,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	networkAreaRegion, err := r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -290,6 +302,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	_, err = wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
+
 		return
 	}
 
@@ -297,33 +310,42 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	err = mapFields(ctx, networkAreaRegion, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area region created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+
 	if networkAreaId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -333,11 +355,15 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 	networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -347,14 +373,17 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 	err = mapFields(ctx, networkAreaRegionResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area region read")
 }
 
@@ -362,7 +391,9 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -370,6 +401,7 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -378,7 +410,9 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 
 	// Retrieve values from state
 	var stateModel Model
+
 	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -387,6 +421,7 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -394,6 +429,7 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	_, err = r.client.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).UpdateNetworkAreaRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -402,25 +438,30 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	err = updateIpv4NetworkRanges(ctx, organizationId, networkAreaId, model.Ipv4.NetworkRanges, r.client, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Updating Network ranges: %v", err))
+
 		return
 	}
 
 	updatedNetworkAreaRegion, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
 	err = mapFields(ctx, updatedNetworkAreaRegion, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "network area region updated")
 }
 
@@ -428,7 +469,9 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -436,6 +479,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -445,6 +489,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
+
 		return
 	}
 
@@ -452,10 +497,13 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -464,6 +512,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("network area deletion waiting: %v", err))
+
 		return
 	}
 
@@ -480,6 +529,7 @@ func (r *networkAreaRegionResource) ImportState(ctx context.Context, req resourc
 			"Error importing network area region",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id],[region]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -497,6 +547,7 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 	if networkAreaRegion == nil {
 		return fmt.Errorf("network are region input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -526,6 +577,7 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 		model.Ipv4.DefaultNameservers = types.ListNull(types.StringType)
 	} else {
 		respDefaultNameservers := networkAreaRegion.Ipv4.DefaultNameservers
+
 		modelDefaultNameservers, err := utils.ListValueToStringSlice(model.Ipv4.DefaultNameservers)
 		if err != nil {
 			return fmt.Errorf("get current network area default nameservers from model: %w", err)
@@ -564,8 +616,10 @@ func mapIpv4NetworkRanges(_ context.Context, networkAreaRangesList []iaas.Networ
 	reconciledRangePrefixes := utils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
 
 	model.Ipv4.NetworkRanges = []networkRangeModel{}
+
 	for _, prefix := range reconciledRangePrefixes {
 		var networkRangeId string
+
 		for _, networkRangeElement := range networkAreaRangesList {
 			if networkRangeElement.Prefix == prefix {
 				networkRangeId = *networkRangeElement.Id
@@ -588,11 +642,13 @@ func toDefaultNameserversPayload(_ context.Context, model *Model) ([]string, err
 	}
 
 	modelDefaultNameservers := []string{}
+
 	for _, ns := range model.Ipv4.DefaultNameservers.Elements() {
 		nameserverString, ok := ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelDefaultNameservers = append(modelDefaultNameservers, nameserverString.ValueString())
 	}
 
@@ -693,6 +749,7 @@ func updateIpv4NetworkRanges(ctx context.Context, organizationId, networkAreaId 
 		if _, ok := networkRangesState[prefix]; !ok {
 			networkRangesState[prefix] = &networkRangeState{}
 		}
+
 		networkRangesState[prefix].isCreated = true
 		networkRangesState[prefix].id = *networkRange.Id
 	}

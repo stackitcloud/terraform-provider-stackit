@@ -11,6 +11,7 @@ import (
 
 func TestDataMapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	id := fmt.Sprintf("%s,%s,%s", "pid", "sid", testRegion)
 	tests := []struct {
 		description string
@@ -50,6 +51,7 @@ func TestDataMapFields(t *testing.T) {
 			false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &DataModel{
@@ -57,12 +59,15 @@ func TestDataMapFields(t *testing.T) {
 				ServerId:  tt.expected.ServerId,
 			}
 			err := mapDataFields(tt.input, model, "eu01")
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expected)
 				if diff != "" {

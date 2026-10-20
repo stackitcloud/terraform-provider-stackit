@@ -47,6 +47,7 @@ func TestToCreatePayload(t *testing.T) {
 			got, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) == tt.isValid {
 				t.Errorf("toCreatePayload() error = %v, isValid %v", err, tt.isValid)
+
 				return
 			}
 
@@ -102,6 +103,7 @@ func TestMapFields(t *testing.T) {
 			if err := mapFields(ctx, tt.input, tt.state, tt.region); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)

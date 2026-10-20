@@ -51,6 +51,7 @@ func fixtureAttrs(base map[string]attr.Value, mods ...func(m map[string]attr.Val
 	for _, mod := range mods {
 		mod(m)
 	}
+
 	return m
 }
 

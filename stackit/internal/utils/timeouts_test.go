@@ -9,8 +9,11 @@ import (
 func TestTimeoutHint(t *testing.T) {
 	deadlineExceeded, cancelDeadlineExceeded := context.WithDeadline(context.Background(), time.Now().Add(-time.Minute))
 	defer cancelDeadlineExceeded()
+
 	deadlineAhead, cancelDeadlineAhead := context.WithTimeout(context.Background(), time.Hour)
+
 	defer cancelDeadlineAhead()
+
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
 

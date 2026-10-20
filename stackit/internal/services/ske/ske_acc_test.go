@@ -111,6 +111,7 @@ var testConfigDatasource = config.Variables{
 
 func configVarsMinUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsMin)
+
 	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
 
 	return updatedConfig
@@ -118,6 +119,7 @@ func configVarsMinUpdated() config.Variables {
 
 func configVarsMaxUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsMax)
+
 	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
 	updatedConfig["nodepool_os_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateMachineVersion())
 	updatedConfig["maintenance_end"] = config.StringVariable("03:03:03+00:00")
@@ -236,14 +238,17 @@ func TestAccSKEMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_ske_cluster.cluster")
 					}
+
 					_, ok = r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -488,14 +493,17 @@ func TestAccSKEMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_ske_cluster.cluster")
 					}
+
 					_, ok = r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -615,17 +623,21 @@ func TestAccProviderOption(t *testing.T) {
 
 func testAccCheckSKEDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := ske.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SKECustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	clustersToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_ske_cluster" {
 			continue
 		}
+
 		clusterName := rs.Primary.Attributes["name"]
+
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
 
@@ -639,17 +651,20 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		if items[i].Name == nil {
 			continue
 		}
+
 		if utils.Contains(clustersToDestroy, *items[i].Name) {
 			_, err := client.DefaultAPI.DeleteCluster(ctx, testutil.ProjectId, testutil.Region, *items[i].Name).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: %w", *items[i].Name, err)
 			}
+
 			_, err = wait.DeleteClusterWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -700,11 +715,13 @@ func (s *SkeProviderOptions) getMachineVersionAt(position int) string {
 	for _, mi := range s.options.MachineImages {
 		if mi.Name != nil && *mi.Name == s.nodePoolOsName && mi.Versions != nil {
 			count := 0
+
 			for _, v := range mi.Versions {
 				if v.State != nil && v.Version != nil {
 					if count == position {
 						return *v.Version
 					}
+
 					count++
 				}
 			}
@@ -726,11 +743,13 @@ func (s *SkeProviderOptions) getK8sVersionAt(position int) string {
 	}
 
 	count := 0
+
 	for _, v := range s.options.KubernetesVersions {
 		if v.State != nil && *v.State == "supported" && v.Version != nil {
 			if count == position {
 				return *v.Version
 			}
+
 			count++
 		}
 	}

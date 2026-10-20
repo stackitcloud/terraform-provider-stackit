@@ -61,6 +61,7 @@ func NewRoleAssignmentResources() []func() resource.Resource {
 			}
 		})
 	}
+
 	return resources
 }
 
@@ -83,6 +84,7 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.IamExperiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), core.Resource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -162,8 +164,10 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 // Create creates the resource and sets the initial Terraform state.
 func (r *roleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -191,11 +195,13 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	listMemberResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing current resource members", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
 	if err := checkDuplicate(model, listMemberResp); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error while checking for duplicate role assignments", err.Error())
+
 		return
 	}
 
@@ -203,18 +209,21 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	payload, err := toCreatePayload(&model, r.apiName)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
 	createResp, err := r.authorizationClient.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
 	listMembersResponse, err := authorizationUtils.TypeConverter[authorization.ListMembersResponse](createResp)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
@@ -223,11 +232,13 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	err = mapListMembersResponse(listMembersResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -241,8 +252,10 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 // Read refreshes the Terraform state with the latest data.
 func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -256,6 +269,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	listResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorizations", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -266,18 +280,23 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	if err != nil {
 		if errors.Is(err, errRoleAssignmentNotFound) {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorization", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment read successful", r.apiName))
 }
 
@@ -289,8 +308,10 @@ func (r *roleAssignmentResource) Update(_ context.Context, _ resource.UpdateRequ
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -315,10 +336,13 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	_, err := r.authorizationClient.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 	}
 
@@ -339,6 +363,7 @@ func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.I
 			fmt.Sprintf("Error importing %s role assignment", r.apiName),
 			fmt.Sprintf("Expected import identifier with format [resource_id],[role],[subject], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -378,9 +403,11 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if resp.Members == nil {
 		return fmt.Errorf("response members are nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -392,6 +419,7 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 		if m.Role == model.Role.ValueString() && m.Subject == model.Subject.ValueString() {
 			model.Role = types.StringValue(m.Role)
 			model.Subject = types.StringValue(m.Subject)
+
 			return nil
 		}
 	}
@@ -403,11 +431,11 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 // Duplicates lead to inconsistent state (Terraform then fails).
 func checkDuplicate(model Model, listMemberResp *authorization.ListMembersResponse) error { //nolint:gocritic // A read only copy is required since an api response is parsed into the model and this check should not affect the model parameter
 	err := mapListMembersResponse(listMemberResp, &model)
-
 	if err != nil {
 		if errors.Is(err, errRoleAssignmentNotFound) {
 			return nil
 		}
+
 		return err
 	}
 

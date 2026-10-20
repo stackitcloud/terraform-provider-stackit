@@ -64,12 +64,15 @@ var testConfigVarsMax = config.Variables{
 
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
+
 	tempConfig["retention_period"] = config.IntegerVariable(0)
+
 	return tempConfig
 }
 
 func configVarsMinUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMin)
+
 	tempConfig["retention_period"] = config.IntegerVariable(12)
 	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
 
@@ -78,8 +81,10 @@ func configVarsMinUpdated() config.Variables {
 
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
+
 	tempConfig["retention_period"] = config.IntegerVariable(12)
 	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
+
 	return tempConfig
 }
 
@@ -152,14 +157,17 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server_backup_schedule.test_schedule")
 					}
+
 					scheduleId, ok := r.Primary.Attributes["backup_schedule_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute backup_schedule_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, serverId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -262,14 +270,17 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server_backup_schedule.test_schedule")
 					}
+
 					scheduleId, ok := r.Primary.Attributes["backup_schedule_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute backup_schedule_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, serverId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -305,12 +316,14 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 
 func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := serverbackup.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ServerBackupCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating serverbackup client: %w", err)
 	}
 
 	var serverId string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type == "stackit_server" {
 			// server terraform ID: "[project_id],[region],[server_id]"
@@ -324,12 +337,15 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 	}
 
 	schedulesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server_backup_schedule" {
 			continue
 		}
+
 		// server backup schedule terraform ID: "[project_id],[server_id],[backup_schedule_id]"
 		scheduleId := strings.Split(rs.Primary.ID, core.Separator)[3]
+
 		schedulesToDestroy = append(schedulesToDestroy, scheduleId)
 	}
 
@@ -340,6 +356,7 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Server not found") {
 			return nil
 		}
+
 		return fmt.Errorf("getting schedulesResp: %w", err)
 	}
 
@@ -348,6 +365,7 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 		if schedules[i].Id == 0 {
 			continue
 		}
+
 		scheduleId := strconv.FormatInt(int64(schedules[i].Id), 10)
 		if utils.Contains(schedulesToDestroy, scheduleId) {
 			err := client.DefaultAPI.DeleteBackupSchedule(ctx, testutil.ProjectId, serverId, scheduleId, testutil.Region).Execute()
@@ -356,24 +374,29 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 // Additional function to check if the server was deleted if something went wrong in the first case.
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	serversToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server" {
 			continue
 		}
+
 		// server terraform ID: "[project_id],[region],[server_id]"
 		serverId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
@@ -387,6 +410,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		if servers[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(serversToDestroy, *servers[i].Id) {
 			err := client.DefaultAPI.DeleteServer(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id).Execute()
 			if err != nil {
@@ -394,5 +418,6 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

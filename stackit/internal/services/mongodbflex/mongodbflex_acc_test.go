@@ -217,10 +217,12 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_mongodbflex_instance.instance")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -235,9 +237,11 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					if len(s) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(s))
 					}
+
 					if s[0].Attributes["backup_schedule"] != instanceResource["backup_schedule_read"] {
 						return fmt.Errorf("expected backup_schedule %s, got %s", instanceResource["backup_schedule_read"], s[0].Attributes["backup_schedule"])
 					}
+
 					return nil
 				},
 			},
@@ -248,14 +252,17 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_mongodbflex_user.user")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute user_id")
@@ -298,18 +305,22 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 
 func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := mongodbflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.MongoDBFlexCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_mongodbflex_instance" {
 			continue
 		}
+
 		// instance terraform ID: = "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -323,16 +334,19 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 		if items[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
 			err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *items[i].Id, testutil.Region).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *items[i].Id, testutil.Region).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

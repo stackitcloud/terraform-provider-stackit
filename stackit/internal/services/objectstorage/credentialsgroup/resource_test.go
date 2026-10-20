@@ -29,6 +29,7 @@ func newAPIMock(settings *mockSettings) objectstorage.DefaultAPI {
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cid")
 	tests := []struct {
 		description string
@@ -100,6 +101,7 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
@@ -107,12 +109,15 @@ func TestMapFields(t *testing.T) {
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 			}
 			err := mapFields(tt.input, model, "eu01")
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expected)
 				if diff != "" {
@@ -125,6 +130,7 @@ func TestMapFields(t *testing.T) {
 
 func TestReadCredentialsGroups(t *testing.T) {
 	const testRegion = "eu01"
+
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cid")
 	tests := []struct {
 		description               string
@@ -245,6 +251,7 @@ func TestReadCredentialsGroups(t *testing.T) {
 			false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := newAPIMock(&mockSettings{
@@ -257,12 +264,15 @@ func TestReadCredentialsGroups(t *testing.T) {
 				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 			}
 			found, err := readCredentialsGroups(context.Background(), model, "eu01", client)
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expectedModel)
 				if diff != "" {

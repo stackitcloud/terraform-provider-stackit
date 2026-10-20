@@ -13,6 +13,7 @@ import (
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	id := fmt.Sprintf("%s,%s,%s,%s,%s", "pid", "vid", testRegion, "rtid", "rid")
 	tests := []struct {
 		description string
@@ -109,15 +110,18 @@ func TestMapFields(t *testing.T) {
 			wantErr:     true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, &tt.state, testRegion)
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
@@ -260,9 +264,11 @@ func TestToCreatePayload(t *testing.T) {
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -329,18 +335,22 @@ func TestToUpdatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var current types.Map
+
 			if tt.currentLabels != nil {
 				current = *tt.currentLabels
 			} else {
 				current = types.MapNull(types.StringType)
 			}
+
 			output, err := toUpdatePayload(context.Background(), tt.input, current)
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(&output, tt.expected)
 				if diff != "" {

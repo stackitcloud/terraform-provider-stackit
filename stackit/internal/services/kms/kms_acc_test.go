@@ -55,7 +55,9 @@ var testConfigKeyRingVarsMin = config.Variables{
 var testConfigKeyRingVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigKeyRingVarsMin)
+
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
+
 	return updatedConfig
 }
 
@@ -70,8 +72,10 @@ var testConfigKeyRingVarsMax = config.Variables{
 var testConfigKeyRingVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigKeyRingVarsMax)
+
 	updatedConfig["description"] = config.StringVariable("updated description")
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
+
 	return updatedConfig
 }
 
@@ -89,9 +93,11 @@ var testConfigKeyVarsMin = config.Variables{
 var testConfigKeyVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigKeyVarsMin)
+
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
 	updatedConfig["algorithm"] = config.StringVariable(string(kms.ALGORITHM_RSA_3072_OAEP_SHA256))
 	updatedConfig["purpose"] = config.StringVariable(string(kms.PURPOSE_ASYMMETRIC_ENCRYPT_DECRYPT))
+
 	return updatedConfig
 }
 
@@ -112,11 +118,13 @@ var testConfigKeyVarsMax = config.Variables{
 var testConfigKeyVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigKeyVarsMax)
+
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
 	updatedConfig["algorithm"] = config.StringVariable(string(kms.ALGORITHM_RSA_3072_OAEP_SHA256))
 	updatedConfig["purpose"] = config.StringVariable(string(kms.PURPOSE_ASYMMETRIC_ENCRYPT_DECRYPT))
 	updatedConfig["import_only"] = config.BoolVariable(true)
 	updatedConfig["description"] = config.StringVariable("kms-key-description-updated")
+
 	return updatedConfig
 }
 
@@ -134,9 +142,11 @@ var testConfigWrappingKeyVarsMin = config.Variables{
 var testConfigWrappingKeyVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigWrappingKeyVarsMin)
+
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
 	updatedConfig["algorithm"] = config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_4096_OAEP_SHA256_AES_256_KEY_WRAP))
 	updatedConfig["purpose"] = config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY))
+
 	return updatedConfig
 }
 
@@ -156,10 +166,12 @@ var testConfigWrappingKeyVarsMax = config.Variables{
 var testConfigWrappingKeyVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigWrappingKeyVarsMax)
+
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
 	updatedConfig["algorithm"] = config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_4096_OAEP_SHA256_AES_256_KEY_WRAP))
 	updatedConfig["purpose"] = config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY))
 	updatedConfig["description"] = config.StringVariable("kms-wrapping-key-description-updated")
+
 	return updatedConfig
 }
 
@@ -224,6 +236,7 @@ func TestAccKeyRingMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_kms_keyring.keyring")
 					}
+
 					keyRingId, ok := r.Primary.Attributes["keyring_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute keyring_id")
@@ -319,6 +332,7 @@ func TestAccKeyRingMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_kms_keyring.keyring")
 					}
+
 					keyRingId, ok := r.Primary.Attributes["keyring_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute keyring_id")
@@ -435,10 +449,12 @@ func TestAccKeyMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_kms_key.key")
 					}
+
 					keyRingId, ok := r.Primary.Attributes["keyring_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute keyring_id")
 					}
+
 					keyId, ok := r.Primary.Attributes["key_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute key_id")
@@ -565,10 +581,12 @@ func TestAccKeyMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_kms_key.key")
 					}
+
 					keyRingId, ok := r.Primary.Attributes["keyring_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute keyring_id")
 					}
+
 					keyId, ok := r.Primary.Attributes["key_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute key_id")
@@ -699,10 +717,12 @@ func TestAccWrappingKeyMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_kms_wrapping_key.wrapping_key")
 					}
+
 					keyRingId, ok := r.Primary.Attributes["keyring_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute keyring_id")
 					}
+
 					wrappingKeyId, ok := r.Primary.Attributes["wrapping_key_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute wrapping_key_id")
@@ -835,10 +855,12 @@ func TestAccWrappingKeyMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_kms_wrapping_key.wrapping_key")
 					}
+
 					keyRingId, ok := r.Primary.Attributes["keyring_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute keyring_id")
 					}
+
 					wrappingKeyId, ok := r.Primary.Attributes["wrapping_key_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute wrapping_key_id")
@@ -901,15 +923,19 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckKeyRingDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -921,10 +947,13 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_kms_keyring" {
 			continue
 		}
+
 		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		err := client.DefaultAPI.DeleteKeyRing(ctx, testutil.ProjectId, testutil.Region, keyRingId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
+
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
@@ -938,6 +967,7 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger keyring deletion %q: %w", keyRingId, err))
 		}
 	}
@@ -947,6 +977,7 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 
 func testAccCheckKeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -958,11 +989,14 @@ func testAccCheckKeyDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_kms_key" {
 			continue
 		}
+
 		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		keyId := strings.Split(rs.Primary.ID, core.Separator)[3]
+
 		err := client.DefaultAPI.DeleteKey(ctx, testutil.ProjectId, testutil.Region, keyRingId, keyId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
+
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
@@ -974,6 +1008,7 @@ func testAccCheckKeyDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger key deletion %q: %w", keyRingId, err))
 		}
 	}
@@ -983,6 +1018,7 @@ func testAccCheckKeyDestroy(s *terraform.State) error {
 
 func testAccCheckWrappingKeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -994,16 +1030,20 @@ func testAccCheckWrappingKeyDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_kms_wrapping_key" {
 			continue
 		}
+
 		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		wrappingKeyId := strings.Split(rs.Primary.ID, core.Separator)[3]
+
 		err := client.DefaultAPI.DeleteWrappingKey(ctx, testutil.ProjectId, testutil.Region, keyRingId, wrappingKeyId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
+
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger wrapping key deletion %q: %w", keyRingId, err))
 		}
 	}

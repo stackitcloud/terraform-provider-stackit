@@ -97,8 +97,10 @@ func (r *certDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 // Read refreshes the Terraform state with the latest data.
 func (r *certDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -108,6 +110,7 @@ func (r *certDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	certId := model.CertID.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "cert_id", certId)
@@ -125,6 +128,7 @@ func (r *certDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -134,14 +138,17 @@ func (r *certDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	err = mapDataFields(certResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading certificate", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Certificate read")
 }

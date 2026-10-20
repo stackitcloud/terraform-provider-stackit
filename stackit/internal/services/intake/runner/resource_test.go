@@ -106,8 +106,10 @@ func TestMapFields(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, tt.model, tt.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapFields error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !tt.wantErr {
 				if diff := cmp.Diff(tt.expected, tt.model); diff != "" {
 					t.Errorf("mapFields mismatch (-want +got):\n%s", diff)
@@ -166,8 +168,10 @@ func TestToCreatePayload(t *testing.T) {
 			payload, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !tt.wantErr {
 				if diff := cmp.Diff(tt.expected, payload); diff != "" {
 					t.Errorf("toCreatePayload mismatch (-want +got):\n%s", diff)
@@ -236,8 +240,10 @@ func TestToUpdatePayload(t *testing.T) {
 			payload, err := toUpdatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !tt.wantErr {
 				if diff := cmp.Diff(tt.expected, payload); diff != "" {
 					t.Errorf("toUpdatePayload mismatch (-want +got):\n%s", diff)

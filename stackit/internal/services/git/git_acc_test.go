@@ -46,15 +46,18 @@ var testConfigVarsMax = config.Variables{
 func testConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
+
 	// update git instance to a new name
 	// should trigger creating a new instance
 	tempConfig["name"] = config.StringVariable(nameMinUpdated)
+
 	return tempConfig
 }
 
 func testConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
+
 	// update git instance to a new name
 	// should trigger creating a new instance
 	tempConfig["name"] = config.StringVariable(nameMaxUpdated)
@@ -146,10 +149,12 @@ func TestAccGitMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_git.git")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -264,10 +269,12 @@ func TestAccGitMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_git.git")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -297,18 +304,22 @@ func TestAccGitMax(t *testing.T) {
 
 func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := git.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	var instancesToDestroy []string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_git" {
 			continue
 		}
+
 		// terraform ID: "[project_id],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -326,5 +337,6 @@ func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

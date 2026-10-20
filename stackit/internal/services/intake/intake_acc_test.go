@@ -47,14 +47,18 @@ var testIntakeRunnerConfigVarsMax = config.Variables{
 func testIntakeRunnerConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMin))
 	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMin)
+
 	tempConfig["name"] = config.StringVariable("intake-min-runner-upd")
+
 	return tempConfig
 }
 
 func testIntakeRunnerConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMax))
 	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMax)
+
 	tempConfig["name"] = config.StringVariable("intake-max-runner-upd")
+
 	return tempConfig
 }
 
@@ -118,6 +122,7 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", intakeRunnerResource)
 					}
+
 					// ID structure: project_id, region, runner_id
 					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["project_id"], r.Primary.Attributes["region"], r.Primary.Attributes["runner_id"]), nil
 				},
@@ -203,6 +208,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", intakeRunnerResource)
 					}
+
 					// ID structure: project_id, region, runner_id
 					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["project_id"], r.Primary.Attributes["region"], r.Primary.Attributes["runner_id"]), nil
 				},
@@ -234,6 +240,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 // testAccCheckIntakeRunnerDestroy act as independent auditor to verify destroy operation
 func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := intake.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -244,12 +251,15 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_intake_runner" {
 			continue
 		}
+
 		// Intake internal ID: "[project_id],[region],[runner_id]"
 		runnerId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		instancesToDestroy = append(instancesToDestroy, runnerId)
 	}
 
@@ -277,5 +287,6 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

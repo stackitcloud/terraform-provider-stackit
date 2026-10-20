@@ -62,6 +62,7 @@ func (m useStateForUnknownIf) PlanModifyInt64(ctx context.Context, req planmodif
 	m.ifFunc(ctx, m.attributeName, req, funcResponse)
 
 	resp.Diagnostics.Append(funcResponse.Diagnostics...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -76,15 +77,19 @@ func Int64Unchanged(ctx context.Context, attributeName string, request planmodif
 	dependencyPath := request.Path.ParentPath().AtName(attributeName)
 
 	var attributePlan types.Int64
+
 	diags := request.Plan.GetAttribute(ctx, dependencyPath, &attributePlan)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
 
 	var attributeState types.Int64
+
 	diags = request.State.GetAttribute(ctx, dependencyPath, &attributeState)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}

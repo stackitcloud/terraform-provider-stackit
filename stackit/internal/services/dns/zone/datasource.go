@@ -186,18 +186,23 @@ func (d *zoneDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest,
 // Read refreshes the Terraform state with the latest data.
 func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -205,12 +210,15 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	dnsName := model.DnsName.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "dns_name", dnsName)
 
-	var zoneResp *dns.ZoneResponse
-	var err error
+	var (
+		zoneResp *dns.ZoneResponse
+		err      error
+	)
 
 	if zoneId != "" {
 		zoneResp, err = d.client.GetZone(ctx, projectId, zoneId).Execute()
@@ -226,6 +234,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				},
 			)
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 
@@ -247,6 +256,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				},
 			)
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 
@@ -262,27 +272,35 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				nil,
 			)
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		zones := listZoneResp.Zones
+
 		zoneResp = dns.NewZoneResponse(zones[0])
 	}
 
 	if zoneResp != nil && zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", "Zone was deleted successfully")
+
 		return
 	}
 
 	err = mapFields(ctx, zoneResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "DNS zone read")
 }

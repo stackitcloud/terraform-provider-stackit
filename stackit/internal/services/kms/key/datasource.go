@@ -138,8 +138,10 @@ func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 
 func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -169,6 +171,7 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -177,12 +180,16 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	err = mapFields(keyResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Key read")
 }

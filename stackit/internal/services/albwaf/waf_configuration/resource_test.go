@@ -30,6 +30,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(&m)
 		}
+
 		return &m
 	}
 	tests := []struct {
@@ -82,19 +83,22 @@ func TestMapFields(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotErr := mapFields(t.Context(), tt.input, tt.state, tt.region)
-
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("mapFieds() failed: %v", gotErr)
 				}
+
 				return
 			}
+
 			if tt.wantErr {
 				t.Fatal("mapFieds() succeeded unexpectedly")
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(tt.state, tt.want)
 				if diff != "" {
@@ -141,11 +145,14 @@ func TestToCreatePayload(t *testing.T) {
 				if !tt.wantErr {
 					t.Errorf("toCreatePayload() failed: %v", gotErr)
 				}
+
 				return
 			}
+
 			if tt.wantErr {
 				t.Fatal("toCreatePayload() succeeded unexpectedly")
 			}
+
 			diff := cmp.Diff(got, tt.want)
 			if diff != "" {
 				t.Errorf("Data does not match: %s", diff)

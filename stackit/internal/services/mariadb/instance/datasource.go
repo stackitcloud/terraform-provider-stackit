@@ -181,8 +181,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -192,6 +194,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -210,6 +213,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -218,6 +222,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
@@ -225,14 +230,17 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = loadPlanNameAndVersion(ctx, d.client, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MariaDB instance read")
 }

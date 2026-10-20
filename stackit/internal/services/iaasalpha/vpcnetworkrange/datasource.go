@@ -57,6 +57,7 @@ func (r *vpcNetworkRangeDatasource) Configure(ctx context.Context, req datasourc
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_network_range", core.Datasource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -145,26 +146,33 @@ func (r *vpcNetworkRangeDatasource) Schema(ctx context.Context, _ datasource.Sch
 // Read refreshes the Terraform state with the latest data.
 func (r *vpcNetworkRangeDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DatasourceModel
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	vpcId := model.VpcId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkRangeId := model.NetworkRangeId.ValueString()
+
 	if networkRangeId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -188,6 +196,7 @@ func (r *vpcNetworkRangeDatasource) Read(ctx context.Context, req datasource.Rea
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -197,13 +206,16 @@ func (r *vpcNetworkRangeDatasource) Read(ctx context.Context, req datasource.Rea
 	err = mapFields(ctx, networkRangeResp, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network range", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Network range read")
 }

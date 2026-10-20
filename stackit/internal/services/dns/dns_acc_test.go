@@ -66,12 +66,15 @@ var testConfigVarsMax = config.Variables{
 
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
+
 	tempConfig["dns_name"] = config.StringVariable("foo")
+
 	return tempConfig
 }
 
 func configVarsMinUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMin)
+
 	tempConfig["record_record1"] = config.StringVariable("1.2.3.5")
 
 	return tempConfig
@@ -79,7 +82,9 @@ func configVarsMinUpdated() config.Variables {
 
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
+
 	tempConfig["record_record1"] = config.StringVariable("1.2.3.5")
+
 	return tempConfig
 }
 
@@ -102,6 +107,7 @@ func TestAccDnsMinResource(t *testing.T) {
 
 					// Ensure it ends with a dot (even if the random value already had one, be explicit)
 					base := testutil.ConvertConfigVariable(vars["dns_name"])
+
 					vars["dns_name"] = config.StringVariable(base + ".")
 
 					return vars
@@ -194,6 +200,7 @@ func TestAccDnsMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_zone.recozonerd_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
@@ -212,10 +219,12 @@ func TestAccDnsMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_record_set.record_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
 					}
+
 					recordSetId, ok := r.Primary.Attributes["record_set_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute record_set_id")
@@ -415,6 +424,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_zone.record_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
@@ -433,10 +443,12 @@ func TestAccDnsMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_record_set.record_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
 					}
+
 					recordSetId, ok := r.Primary.Attributes["record_set_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute record_set_id")
@@ -501,18 +513,22 @@ func TestAccDnsMaxResource(t *testing.T) {
 
 func testAccCheckDnsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := dns.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.DnsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	zonesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_dns_zone" {
 			continue
 		}
+
 		// zone terraform ID: "[projectId],[zoneId]"
 		zoneId := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		zonesToDestroy = append(zonesToDestroy, zoneId)
 	}
 
@@ -529,11 +545,13 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: %w", zones[i].Id, err)
 			}
+
 			_, err = wait.DeleteZoneWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: waiting for deletion %w", zones[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

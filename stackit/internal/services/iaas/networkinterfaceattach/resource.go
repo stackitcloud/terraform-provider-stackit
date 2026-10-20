@@ -59,27 +59,34 @@ func (r *networkInterfaceAttachResource) Metadata(_ context.Context, req resourc
 // Use the modifier to set the effective region in the current plan.
 func (r *networkInterfaceAttachResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -101,6 +108,7 @@ func (r *networkInterfaceAttachResource) Configure(ctx context.Context, req reso
 // Schema defines the schema for the resource.
 func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network interface attachment resource schema. Attaches a network interface to a server. The attachment only takes full effect after server reboot."
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -162,8 +170,10 @@ func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.Sc
 func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,6 +184,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -183,6 +194,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	err := r.client.AddNicToServer(ctx, projectId, region, serverId, networkInterfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching network interface to server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -194,17 +206,21 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface attachment created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -215,6 +231,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
@@ -222,11 +239,15 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	nics, err := r.client.ListServerNICs(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface attachment", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -234,6 +255,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 
 	if nics == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface attachment", "List of network interfaces attached to the server is nil")
+
 		return
 	}
 
@@ -248,11 +270,13 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 		// Set refreshed state
 		diags = resp.State.Set(ctx, model)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
 		tflog.Info(ctx, "Network interface attachment read")
+
 		return
 	}
 
@@ -269,8 +293,10 @@ func (r *networkInterfaceAttachResource) Update(_ context.Context, _ resource.Up
 func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -281,6 +307,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 	network_interfaceId := model.NetworkInterfaceId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -290,10 +317,13 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 	err := r.client.RemoveNicFromServer(ctx, projectId, region, serverId, network_interfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing network interface from server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -312,6 +342,7 @@ func (r *networkInterfaceAttachResource) ImportState(ctx context.Context, req re
 			"Error importing network_interface attachment",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id],[network_interface_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

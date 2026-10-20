@@ -230,8 +230,10 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -241,9 +243,11 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
+
 	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
@@ -257,12 +261,14 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
 	flavor := &flavorModel{}
+
 	flavorResp, err := getFlavor(ctx, r.client, projectId, region, instanceResp.FlavorId)
 	if err != nil {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
@@ -279,13 +285,17 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, instanceResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex instance read")
 }

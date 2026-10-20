@@ -135,8 +135,10 @@ func (d *alertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 func (d *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -146,6 +148,7 @@ func (d *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -153,12 +156,17 @@ func (d *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	readAlertGroupResp, err := d.client.GetAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
+
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -167,6 +175,7 @@ func (d *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	err = mapFields(ctx, &readAlertGroupResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Error processing API response: %v", err))
+
 		return
 	}
 

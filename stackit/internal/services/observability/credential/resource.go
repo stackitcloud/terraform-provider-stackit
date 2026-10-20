@@ -151,8 +151,10 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 // Create creates the resource and sets the initial Terraform state.
 func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -170,6 +172,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -177,8 +180,10 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	if got == nil || got.Credentials.Username == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty username")
+
 		return
 	}
+
 	username := got.Credentials.Username
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -193,13 +198,17 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	err = mapFields(&got.Credentials, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Observability credential created")
 }
 
@@ -207,10 +216,13 @@ func mapFields(r *observabilitySdk.Credentials, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	var userName string
+
 	if model.Username.ValueString() != "" {
 		userName = model.Username.ValueString()
 	} else if r.Username != "" {
@@ -218,19 +230,23 @@ func mapFields(r *observabilitySdk.Credentials, model *Model) error {
 	} else {
 		return fmt.Errorf("username id not present")
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), model.InstanceId.ValueString(), userName,
 	)
 	model.Username = types.StringValue(r.Username)
 	model.Password = types.StringValue(r.Password)
+
 	return nil
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -240,18 +256,24 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
+
 	if userName == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	_, err := r.client.GetCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
@@ -262,6 +284,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
+
 		return
 	}
 
@@ -269,9 +292,11 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Observability credential read")
 }
 
@@ -284,8 +309,10 @@ func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateReques
 func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -295,13 +322,17 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
+
 	_, err := r.client.DeleteCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 

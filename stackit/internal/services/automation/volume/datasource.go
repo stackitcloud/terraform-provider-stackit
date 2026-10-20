@@ -48,6 +48,7 @@ func (d *volumeAutomationDataSource) Configure(ctx context.Context, req datasour
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_volume_automation", core.Datasource)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -129,8 +130,10 @@ func (d *volumeAutomationDataSource) Schema(_ context.Context, _ datasource.Sche
 // Read refreshes the Terraform state with the latest data.
 func (d *volumeAutomationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -158,6 +161,7 @@ func (d *volumeAutomationDataSource) Read(ctx context.Context, req datasource.Re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -166,13 +170,16 @@ func (d *volumeAutomationDataSource) Read(ctx context.Context, req datasource.Re
 	err = mapFields(ctx, automationResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume automation", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume automation read.")
 }

@@ -92,6 +92,7 @@ func TestMapFields(t *testing.T) {
 		Region:    types.StringValue("eu01"),
 		Results:   wantResults,
 	}
+
 	if diff := cmp.Diff(want, model); diff != "" {
 		t.Fatalf("mapped data does not match (-want +got):\n%s", diff)
 	}

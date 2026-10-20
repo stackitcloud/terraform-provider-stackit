@@ -50,9 +50,11 @@ var testConfigVarsMaxPrivatePreview = config.Variables{
 
 func configVarsMaxPrivatePreviewUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMaxPrivatePreview)
+
 	temp["backup_schedule"] = config.StringVariable("0 12 * * *")
 	temp["acl1"] = config.StringVariable("192.168.2.0/16")
 	temp["retention_days"] = config.IntegerVariable(40)
+
 	return temp
 }
 
@@ -174,6 +176,7 @@ func TestAccSQLServerFlexMaxPrivatePreviewResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_instance.instance")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -195,9 +198,11 @@ func TestAccSQLServerFlexMaxPrivatePreviewResource(t *testing.T) {
 					if len(s) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(s))
 					}
+
 					if s[0].Attributes["backup_schedule"] != testutil.ConvertConfigVariable(testConfigVarsMaxPrivatePreview["backup_schedule"]) {
 						return fmt.Errorf("expected backup_schedule %s, got %s", testConfigVarsMaxPrivatePreview["backup_schedule"], s[0].Attributes["backup_schedule"])
 					}
+
 					return nil
 				},
 			},
@@ -209,10 +214,12 @@ func TestAccSQLServerFlexMaxPrivatePreviewResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_user.user")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute user_id")

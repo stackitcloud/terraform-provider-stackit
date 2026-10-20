@@ -19,12 +19,16 @@ func TestMongoDBInstanceSavesIDsOnError(t *testing.T) {
 		projectId  = uuid.NewString()
 		instanceId = uuid.NewString()
 	)
+
 	const (
 		name   = "instance-test"
 		region = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	mongodbflex_custom_endpoint = "%s"
@@ -92,6 +96,7 @@ resource "stackit_mongodbflex_instance" "instance" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -110,9 +115,13 @@ func TestMongoDBUserSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
 	userId := uuid.NewString()
+
 	const region = "eu01"
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	mongodbflex_custom_endpoint = "%s"
@@ -154,6 +163,7 @@ resource "stackit_mongodbflex_user" "user" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

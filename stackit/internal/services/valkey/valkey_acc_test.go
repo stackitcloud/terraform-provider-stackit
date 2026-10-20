@@ -43,8 +43,11 @@ func parametersConfig(params map[string]string) string {
 		"min_replicas_to_write",
 		"syslog",
 	}
+
 	var parameters strings.Builder
+
 	parameters.WriteString("parameters = {")
+
 	for k, v := range params {
 		if utils.Contains(nonStringParams, k) {
 			parameters.WriteString(fmt.Sprintf("%s = %s\n", k, v))
@@ -52,7 +55,9 @@ func parametersConfig(params map[string]string) string {
 			parameters.WriteString(fmt.Sprintf("%s = %q\n", k, v))
 		}
 	}
+
 	parameters.WriteString("\n}")
+
 	return parameters.String()
 }
 
@@ -211,14 +216,17 @@ func TestAccValkeyResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_valkey_instance.instance")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
@@ -231,18 +239,22 @@ func TestAccValkeyResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_valkey_credential.credential")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -279,23 +291,28 @@ func checkInstanceDeleteSuccess(i *valkey.Instance) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
 func testAccCheckValkeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := valkey.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ValkeyCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_valkey_instance" {
 			continue
 		}
+
 		// instance terraform ID: "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -309,12 +326,14 @@ func testAccCheckValkeyDestroy(s *terraform.State) error {
 		if instances[i].InstanceId == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
 				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, "eu01", *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
@@ -322,5 +341,6 @@ func testAccCheckValkeyDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

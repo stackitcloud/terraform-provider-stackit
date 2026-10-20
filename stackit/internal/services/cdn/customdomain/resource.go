@@ -101,6 +101,7 @@ func (r *customDomainResource) Configure(ctx context.Context, req resource.Confi
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", "resource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -189,8 +190,10 @@ func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaReques
 
 func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model CustomDomainModel
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -198,14 +201,21 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+
 	distributionId := model.DistributionId.ValueString()
+
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
+
 	name := model.Name.ValueString()
+
 	ctx = tflog.SetField(ctx, "name", name)
+
 	certificate, err := toCertificatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -213,9 +223,11 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
+
 	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -233,32 +245,40 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Waiting for create: %v", err))
+
 		return
 	}
 
 	respCustomDomain, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	err = mapCustomDomainResourceFields(respCustomDomain, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN custom domain created")
 }
 
 func (r *customDomainResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model CustomDomainModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -266,23 +286,32 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+
 	distributionId := model.DistributionId.ValueString()
+
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
+
 	name := model.Name.ValueString()
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
+
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -291,21 +320,27 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapCustomDomainResourceFields(customDomainResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN custom domain read")
 }
 
 func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model CustomDomainModel
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -313,15 +348,21 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+
 	distributionId := model.DistributionId.ValueString()
+
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
+
 	name := model.Name.ValueString()
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	certificate, err := toCertificatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -329,9 +370,11 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
+
 	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -340,31 +383,40 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Waiting for update: %v", err))
+
 		return
 	}
 
 	respCustomDomain, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API to read final state: %v", err))
+
 		return
 	}
+
 	err = mapCustomDomainResourceFields(respCustomDomain, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN custom domain certificate updated")
 }
 
 func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model CustomDomainModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -372,20 +424,29 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+
 	distributionId := model.DistributionId.ValueString()
+
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
+
 	name := model.Name.ValueString()
+
 	ctx = tflog.SetField(ctx, "name", name)
 
 	_, err := r.client.DeleteCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Delete custom domain: %v", err))
+
 		return
 	}
 
@@ -394,8 +455,10 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err = wait.DeleteCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Waiting for deletion: %v", err))
+
 		return
 	}
+
 	tflog.Info(ctx, "CDN custom domain deleted")
 }
 
@@ -405,6 +468,7 @@ func (r *customDomainResource) ImportState(ctx context.Context, req resource.Imp
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing CDN custom domain", fmt.Sprintf("Expected import identifier on the format: [project_id]%q[distribution_id]%q[custom_domain_name], got %q", core.Separator, core.Separator, req.ID))
 	}
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      idParts[0],
 		"distribution_id": idParts[1],
@@ -414,8 +478,10 @@ func (r *customDomainResource) ImportState(ctx context.Context, req resource.Imp
 }
 
 func normalizeCertificate(certInput cdnSdk.GetCustomDomainResponseCertificate) (Certificate, error) {
-	var customCert *cdnSdk.GetCustomDomainCustomCertificate
-	var managedCert *cdnSdk.GetCustomDomainManagedCertificate
+	var (
+		customCert  *cdnSdk.GetCustomDomainCustomCertificate
+		managedCert *cdnSdk.GetCustomDomainManagedCertificate
+	)
 
 	customCert = certInput.GetCustomDomainCustomCertificate
 	managedCert = certInput.GetCustomDomainManagedCertificate
@@ -446,10 +512,12 @@ func toCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdnSd
 	if model.Certificate.IsNull() {
 		managedCert := cdnSdk.NewPutCustomDomainManagedCertificate("managed")
 		certPayload := cdnSdk.PutCustomDomainManagedCertificateAsPutCustomDomainPayloadCertificate(managedCert)
+
 		return &certPayload, nil
 	}
 
 	var certModel CertificateModel
+
 	// Unpack the Terraform object into the temporary struct.
 	respDiags := model.Certificate.As(ctx, &certModel, basetypes.ObjectAsOptions{})
 	if respDiags.HasError() {
@@ -472,7 +540,9 @@ func toCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdnSd
 		keyStr,
 		"custom",
 	)
+
 	customCert.SkipDnsCheck = conversion.BoolValueToPointer(certModel.SkipDnsCheck)
+
 	certPayload := cdnSdk.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
 
 	return &certPayload, nil
@@ -482,6 +552,7 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 	if customDomainResponse == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -493,6 +564,7 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 	if customDomainResponse.CustomDomain.Status == "" {
 		return fmt.Errorf("status missing in response")
 	}
+
 	normalizedCert, err := normalizeCertificate(customDomainResponse.Certificate)
 	if err != nil {
 		return fmt.Errorf("Certificate error in normalizer: %w", err)
@@ -517,6 +589,7 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 			if val, ok := existingAttrs["certificate"]; ok {
 				certAttributes["certificate"] = val
 			}
+
 			if val, ok := existingAttrs["private_key"]; ok {
 				certAttributes["private_key"] = val
 			}
@@ -526,12 +599,14 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 		if normalizedCert.Version != nil {
 			certAttributes["version"] = types.Int32Value(*normalizedCert.Version)
 		}
+
 		certAttributes["skip_dns_check"] = types.BoolPointerValue(normalizedCert.SkipDnsCheck)
 
 		certificateObj, diags := types.ObjectValue(certificateTypes, certAttributes)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map certificate: %w", core.DiagsToError(diags))
 		}
+
 		model.Certificate = certificateObj
 	}
 
@@ -539,18 +614,22 @@ func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainR
 	model.Status = types.StringValue(string(customDomainResponse.CustomDomain.Status))
 
 	customDomainErrors := []attr.Value{}
+
 	if customDomainResponse.CustomDomain.Errors != nil {
 		for _, e := range customDomainResponse.CustomDomain.Errors {
 			if e.En == "" {
 				return fmt.Errorf("error description missing")
 			}
+
 			customDomainErrors = append(customDomainErrors, types.StringValue(e.En))
 		}
 	}
+
 	modelErrors, diags := types.ListValue(types.StringType, customDomainErrors)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Errors = modelErrors
 
 	return nil

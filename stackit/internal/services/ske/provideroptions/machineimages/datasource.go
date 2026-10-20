@@ -132,13 +132,16 @@ func (d *machineImagesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 // Read refreshes the Terraform state with the latest data.
 func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	region := d.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -163,6 +166,7 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -170,6 +174,7 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	if err := mapFields(ctx, optionsResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading provider options", fmt.Sprintf("Mapping API payload: %v", err))
+
 		return
 	}
 
@@ -186,24 +191,29 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 	if optionsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	// Machine Images
 	miList := make([]attr.Value, 0)
+
 	if optionsResp.MachineImages != nil {
 		for _, img := range optionsResp.MachineImages {
 			versionsList := make([]attr.Value, 0)
+
 			if img.Versions != nil {
 				for _, ver := range img.Versions {
 					// CRI list
 					criList := make([]types.String, 0)
+
 					for _, cri := range ver.Cri {
 						if cri.Name != nil {
 							criList = append(criList, types.StringValue(string(*cri.Name)))
 						}
 					}
+
 					criVal, diags := types.ListValueFrom(ctx, types.StringType, criList)
 					if diags.HasError() {
 						return core.DiagsToError(diags)
@@ -224,6 +234,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 					if diags.HasError() {
 						return core.DiagsToError(diags)
 					}
+
 					versionsList = append(versionsList, versionObj)
 				}
 			}
@@ -240,6 +251,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			miList = append(miList, imgObj)
 		}
 	}
@@ -248,6 +260,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.MachineImages = mis
 
 	return nil

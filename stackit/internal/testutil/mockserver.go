@@ -37,40 +37,51 @@ func NewMockServer(t *testing.T, responses ...MockResponse) *MockServer {
 		responses:    responses,
 		t:            t,
 	}
+
 	mock.Server = httptest.NewServer(mock)
+
 	return mock
 }
 
 func (m *MockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if m.nextResponse >= len(m.responses) {
 		m.t.Fatalf("No more responses left in the mock server for request: %v", r)
 	}
+
 	next := m.responses[m.nextResponse]
 	m.nextResponse++
+
 	if next.Handler != nil {
 		next.Handler(w, r)
+
 		return
 	}
+
 	if next.ToJsonBody != nil {
 		bs, err := json.Marshal(next.ToJsonBody)
 		if err != nil {
 			m.t.Fatalf("Error marshaling response body: %v", err)
 		}
+
 		w.Header().Set("content-type", "application/json")
 		w.Write(bs) //nolint:errcheck //test will fail when this happens
 	}
+
 	status := next.StatusCode
 	if status == 0 {
 		status = http.StatusOK
 	}
+
 	w.WriteHeader(status)
 }
 
 func (m *MockServer) Reset(responses ...MockResponse) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.nextResponse = 0
 	m.responses = responses
 }

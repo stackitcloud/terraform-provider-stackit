@@ -72,20 +72,27 @@ func (r *networkInterfaceResource) ModifyPlan(ctx context.Context, req resource.
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	var configModel Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	// If allowed_addresses were completly removed from the config this is not recognized by terraform
 	// since this field is optional and computed therefore this plan modifier is needed.
 	utils.CheckListRemoval(ctx, configModel.AllowedAddresses, planModel.AllowedAddresses, path.Root("allowed_addresses"), types.StringType, false, resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -93,17 +100,20 @@ func (r *networkInterfaceResource) ModifyPlan(ctx context.Context, req resource.
 	// If security_group_ids were completly removed from the config this is not recognized by terraform
 	// since this field is optional and computed therefore this plan modifier is needed.
 	utils.CheckListRemoval(ctx, configModel.SecurityGroupIds, planModel.SecurityGroupIds, path.Root("security_group_ids"), types.StringType, true, resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Use the modifier to set the effective region in the current plan.
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -271,8 +281,10 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 func (r *networkInterfaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -282,6 +294,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
@@ -290,6 +303,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -297,6 +311,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	networkInterface, err := r.client.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -310,32 +325,41 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	err = mapFields(ctx, networkInterface, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
 	if networkInterfaceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -349,11 +373,15 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	networkInterfaceResp, err := r.client.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -363,14 +391,18 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	err = mapFields(ctx, networkInterfaceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface read")
 }
 
@@ -378,11 +410,14 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 func (r *networkInterfaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
@@ -397,8 +432,10 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -407,12 +444,15 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Update existing network
 	nicResp, err := r.client.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -421,13 +461,17 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 	err = mapFields(ctx, nicResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface updated")
 }
 
@@ -435,8 +479,10 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -457,10 +503,13 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 	err := r.client.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network interface", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -479,6 +528,7 @@ func (r *networkInterfaceResource) ImportState(ctx context.Context, req resource
 			"Error importing network interface",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[network_id],[network_interface_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -496,11 +546,13 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 	if networkInterfaceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var networkInterfaceId string
+
 	if model.NetworkInterfaceId.ValueString() != "" {
 		networkInterfaceId = model.NetworkInterfaceId.ValueString()
 	} else if networkInterfaceResp.NetworkId != nil {
@@ -513,7 +565,9 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 	model.Region = types.StringValue(region)
 
 	respAllowedAddresses := []string{}
+
 	var diags diag.Diagnostics
+
 	if networkInterfaceResp.AllowedAddresses == nil {
 		// If we send an empty list, the API will send null in the response
 		// We should handle this case and set the value to an empty list
@@ -549,6 +603,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 		model.SecurityGroupIds = types.ListNull(types.StringType)
 	} else {
 		respSecurityGroups := networkInterfaceResp.SecurityGroups
+
 		modelSecurityGroups, err := utils.ListValueToStringSlice(model.SecurityGroupIds)
 		if err != nil {
 			return fmt.Errorf("get current network interface security groups from model: %w", err)
@@ -594,17 +649,20 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 	var labelPayload map[string]any
 
 	modelSecurityGroups := []string{}
+
 	if !(model.SecurityGroupIds.IsNull() || model.SecurityGroupIds.IsUnknown()) {
 		for _, ns := range model.SecurityGroupIds.Elements() {
 			securityGroupString, ok := ns.(types.String)
 			if !ok {
 				return nil, fmt.Errorf("type assertion failed")
 			}
+
 			modelSecurityGroups = append(modelSecurityGroups, securityGroupString.ValueString())
 		}
 	}
 
 	allowedAddressesPayload := []iaas.AllowedAddressesInner{}
+
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
@@ -622,6 +680,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 
 	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
 		var err error
+
 		labelPayload, err = conversion.ToStringInterfaceMap(ctx, model.Labels)
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)
@@ -649,15 +708,18 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	var labelPayload map[string]any
 
 	modelSecurityGroups := []string{}
+
 	for _, ns := range model.SecurityGroupIds.Elements() {
 		securityGroupString, ok := ns.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelSecurityGroups = append(modelSecurityGroups, securityGroupString.ValueString())
 	}
 
 	allowedAddressesPayload := []iaas.AllowedAddressesInner{} // Even if null in the model, we need to send an empty list to the API since it's a PATCH endpoint
+
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
@@ -673,6 +735,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 
 	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
 		var err error
+
 		labelPayload, err = conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)

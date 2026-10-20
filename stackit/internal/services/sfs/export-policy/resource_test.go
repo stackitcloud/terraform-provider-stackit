@@ -168,6 +168,7 @@ func fixtureExportPolicyUpdatePayload(rules []sfs.UpdateShareExportPolicyBodyRul
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		name          string
 		input         *sfs.GetShareExportPolicyResponse
@@ -303,15 +304,18 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, tt.state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.state, tt.expectedModel)
 				if diff != "" {
@@ -390,8 +394,10 @@ func TestToCreatePayload(t *testing.T) {
 			got, err := toCreatePayload(context.Background(), tt.model, tt.rules)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Errorf("toCreatePayload() = %v, want %v", got, tt.expected)
 			}
@@ -466,8 +472,10 @@ func TestToUpdatePayload(t *testing.T) {
 			got, err := toUpdatePayload(context.Background(), tt.model, tt.rules)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Errorf("toUpdatePayload() = %v, want %v", got, tt.expected)
 			}

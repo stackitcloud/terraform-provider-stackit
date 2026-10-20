@@ -41,7 +41,9 @@ func (r *albDataSource) Metadata(_ context.Context, req datasource.MetadataReque
 // Configure adds the provider configured client to the data source.
 func (r *albDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+
 	if !ok {
 		return
 	}
@@ -542,8 +544,10 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 // Read refreshes the Terraform state with the latest data.
 func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -553,6 +557,7 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -570,6 +575,7 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -579,14 +585,17 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	err = mapFields(ctx, albResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading application load balancer", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Application Load Balancer read")
 }

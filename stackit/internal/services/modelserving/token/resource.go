@@ -102,13 +102,17 @@ func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -120,11 +124,13 @@ func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		r.providerData.GetRegion(),
 		resp,
 	)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -223,8 +229,10 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -242,20 +250,24 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling AI model serving",
 					fmt.Sprintf("Service not available in region %s \n%v", region, err),
 				)
+
 				return
 			}
 		}
+
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
 			"Error enabling AI model serving",
 			fmt.Sprintf("Error enabling AI model serving: %v", err),
 		)
+
 		return
 	}
 
@@ -268,6 +280,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 			"Error enabling AI model serving",
 			fmt.Sprintf("Error enabling AI model serving: %v", err),
 		)
+
 		return
 	}
 
@@ -275,6 +288,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -289,6 +303,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 			"Error creating AI model serving auth token",
 			fmt.Sprintf("Calling API: %v", err),
 		)
+
 		return
 	}
 
@@ -296,6 +311,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	if createTokenResp.Token.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "Got empty token id")
+
 		return
 	}
 
@@ -313,6 +329,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Waiting for token to be active: %v", err))
+
 		return
 	}
 
@@ -320,12 +337,14 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	err = mapCreateResponse(createTokenResp, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -336,8 +355,10 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 // Read refreshes the Terraform state with the latest data.
 func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -346,11 +367,14 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
+
 	if tokenId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -361,15 +385,18 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				// Remove the resource from the state so Terraform will recreate it
 				resp.State.RemoveResource(ctx)
+
 				return
 			}
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -378,6 +405,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if getTokenResp != nil && getTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", "AI model serving auth token has expired")
+
 		return
 	}
 
@@ -385,12 +413,14 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	err = mapGetResponse(getTokenResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -402,16 +432,20 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Get current state
 	var state Model
+
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -431,6 +465,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -438,10 +473,12 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	updateTokenResp, err := r.client.PartialUpdateToken(ctx, region, projectId, tokenId).PartialUpdateTokenPayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				// Remove the resource from the state so Terraform will recreate it
 				resp.State.RemoveResource(ctx)
+
 				return
 			}
 		}
@@ -458,6 +495,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				projectId,
 			),
 		)
+
 		return
 	}
 
@@ -466,25 +504,30 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if updateTokenResp != nil && updateTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", "AI model serving auth token has expired")
+
 		return
 	}
 
 	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Waiting for token to be updated: %v", err))
+
 		return
 	}
 
 	// Since STACKIT is not saving the content of the token. We have to use it from the state.
 	model.Token = state.Token
+
 	err = mapGetResponse(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -496,8 +539,10 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -517,14 +562,17 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	_, err := r.client.DeleteToken(ctx, region, projectId, tokenId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
+
 				return
 			}
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -534,6 +582,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Waiting for token to be deleted: %v", err))
+
 		return
 	}
 
@@ -544,6 +593,7 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 	if tokenCreateResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

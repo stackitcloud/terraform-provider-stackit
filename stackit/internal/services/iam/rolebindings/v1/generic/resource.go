@@ -68,6 +68,7 @@ func (r *RoleBindingResource[C]) Configure(ctx context.Context, req resource.Con
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.IamExperiment, fmt.Sprintf("stackit_%s_%s_role_binding_v1", r.ApiName, r.ResourceType), core.Resource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -120,8 +121,10 @@ func (r *RoleBindingResource[C]) Schema(_ context.Context, _ resource.SchemaRequ
 // Create creates the resource and sets the initial Terraform state.
 func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -137,6 +140,7 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 	roleBindingResp, err := r.ExecCreateRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -145,11 +149,13 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -167,8 +173,10 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 // Read refreshes the Terraform state with the latest data.
 func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic,tfstateremove // function signature required by Terraform, api does not return 404
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -185,6 +193,7 @@ func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequ
 	roleBindingResp, err := r.ExecReadRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error reading %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -194,23 +203,28 @@ func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequ
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error reading %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, fmt.Sprintf("%s %s role binding read", r.ApiName, r.ResourceType))
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -226,6 +240,7 @@ func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.Update
 	roleBindingResp, err := r.ExecUpdateRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error updating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -234,11 +249,13 @@ func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.Update
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error updating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -256,8 +273,10 @@ func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.Update
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *RoleBindingResource[C]) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -296,6 +315,7 @@ func (r *RoleBindingResource[C]) ImportState(ctx context.Context, req resource.I
 			fmt.Sprintf("Error importing %s %s role binding", r.ApiName, r.ResourceType),
 			fmt.Sprintf("Expected import identifier with format [region],[resource_id],[role],[subject], got %q", req.ID),
 		)
+
 		return
 	}
 

@@ -105,8 +105,10 @@ func (d *publicIpRangesDataSource) Schema(_ context.Context, _ datasource.Schema
 // Read refreshes the Terraform state with the latest data.
 func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -126,6 +128,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -135,13 +138,17 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 	err = mapFields(ctx, publicIpRangeResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP ranges", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "read public IP ranges")
 }
 
@@ -149,6 +156,7 @@ func mapFields(ctx context.Context, publicIpRangeResp *iaas.PublicNetworkListRes
 	if publicIpRangeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -157,6 +165,7 @@ func mapFields(ctx context.Context, publicIpRangeResp *iaas.PublicNetworkListRes
 	if err != nil {
 		return fmt.Errorf("error mapping public IP ranges: %w", err)
 	}
+
 	return nil
 }
 
@@ -165,10 +174,12 @@ func mapPublicIpRanges(ctx context.Context, publicIpRanges []iaas.PublicNetwork,
 	if len(publicIpRanges) == 0 {
 		model.PublicIpRanges = types.ListNull(types.ObjectType{AttrTypes: publicIpRangesTypes})
 		model.CidrList = types.ListNull(types.StringType)
+
 		return nil
 	}
 
 	var apiIpRanges []string
+
 	for _, ipRange := range publicIpRanges {
 		if ipRange.Cidr != "" {
 			apiIpRanges = append(apiIpRanges, ipRange.Cidr)
@@ -181,14 +192,17 @@ func mapPublicIpRanges(ctx context.Context, publicIpRanges []iaas.PublicNetwork,
 	model.Id = utils.BuildInternalTerraformId(apiIpRanges...)
 
 	var ipRangesList []attr.Value
+
 	for _, cidr := range apiIpRanges {
 		ipRangeValues := map[string]attr.Value{
 			"cidr": types.StringValue(cidr),
 		}
 		ipRangeObject, diag := types.ObjectValue(publicIpRangesTypes, ipRangeValues)
+
 		if diag.HasError() {
 			return core.DiagsToError(diag)
 		}
+
 		ipRangesList = append(ipRangesList, ipRangeObject)
 	}
 
@@ -206,6 +220,7 @@ func mapPublicIpRanges(ctx context.Context, publicIpRanges []iaas.PublicNetwork,
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.CidrList = cidrListTF
 
 	return nil

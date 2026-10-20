@@ -78,6 +78,7 @@ var testConfigVarsBucket = config.Variables{
 
 func configVarsBucketUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsBucket)
+
 	updatedConfig["bucket_name"] = config.StringVariable(bucketNameUpdated)
 	updatedConfig["credentials_name"] = config.StringVariable(credentialsNameUpdated)
 
@@ -154,6 +155,7 @@ var testConfigVarsHttp = config.Variables{
 
 func configVarsHttpUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsHttp)
+
 	updatedConfig["regions"] = config.ListVariable(config.StringVariable("EU"), config.StringVariable("US"), config.StringVariable("ASIA"))
 	updatedConfig["redirect_target_url"] = config.StringVariable("https://example.com/updated")
 	updatedConfig["monthly_limit_bytes"] = config.IntegerVariable(209715200)
@@ -180,6 +182,7 @@ func makeCertAndKey(organization, domain string) (cert, key []byte) {
 	if err != nil {
 		fmt.Printf("failed to generate key: %s", err.Error())
 	}
+
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Issuer:       pkix.Name{CommonName: organization},
@@ -194,6 +197,7 @@ func makeCertAndKey(organization, domain string) (cert, key []byte) {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
+
 	cert, err = x509.CreateCertificate(
 		cryptoRand.Reader,
 		&template,
@@ -313,6 +317,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_cdn_distribution.distribution")
 					}
+
 					distributionId, ok := r.Primary.Attributes["distribution_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute distribution_id")
@@ -332,10 +337,12 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_cdn_custom_domain.custom_domain")
 					}
+
 					distributionId, ok := r.Primary.Attributes["distribution_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute distribution_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
@@ -545,6 +552,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_cdn_distribution.distribution")
 					}
+
 					distributionId, ok := r.Primary.Attributes["distribution_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute distribution_id")
@@ -625,18 +633,22 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := cdnSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.CdnCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	distributionsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_cdn_distribution" {
 			continue
 		}
+
 		// terraform ID: "[project_id],[distribution_id]"
 		distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		distributionsToDestroy = append(distributionsToDestroy, distributionId)
 	}
 
@@ -645,11 +657,13 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: %w", dist, err)
 		}
+
 		_, err = wait.DeleteDistributionWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, dist).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: waiting for deletion %w", dist, err)
 		}
 	}
+
 	return nil
 }
 
@@ -682,11 +696,13 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error looking up IP for domain %s: %w", domain, err)
 		}
+
 		for _, ip := range ips {
 			if ip.String() != "<nil>" {
 				return ip, nil
 			}
 		}
+
 		return nil, fmt.Errorf("no IP for domain: %v", domain)
 	}
 
@@ -694,15 +710,21 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 }
 
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
-	var zero T
-	var errOuter error
+	var (
+		zero     T
+		errOuter error
+	)
+
 	for range attempts {
 		dist, err := f()
 		if err == nil {
 			return dist, nil
 		}
+
 		errOuter = err
+
 		time.Sleep(sleep)
 	}
+
 	return zero, fmt.Errorf("retry timed out, last error: %w", errOuter)
 }

@@ -67,6 +67,7 @@ func (d *instancesDataSource) Configure(ctx context.Context, req datasource.Conf
 	d.client = clients.EdgeV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_edgecloud_instances", "datasource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -147,8 +148,10 @@ func (d *instancesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 // Read fetches the list of Edge Cloud instances and populates the data source.
 func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var state DataSourceModel
+
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,6 +177,7 @@ func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadReque
 				http.StatusNotFound: fmt.Sprintf("Project %q or region %q not found", projectId, region),
 			},
 		)
+
 		return
 	}
 
@@ -181,12 +185,16 @@ func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	if instancesResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instances", "API response is nil")
+
 		return
 	}
+
 	if instancesResp.Instances == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instances", "instance field in the API response is nil")
+
 		return
 	}
+
 	instancesList := buildInstancesList(ctx, instancesResp.Instances, region, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -195,6 +203,7 @@ func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	// Create ListValue
 	instancesListValue, diags := types.ListValue(types.ObjectType{AttrTypes: instanceTypes}, instancesList)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -205,9 +214,11 @@ func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "read all edgecloud instances")
 }
 
@@ -224,8 +235,10 @@ func buildInstancesList(_ context.Context, instances []edge.Instance, region str
 		if objDiags.HasError() {
 			continue
 		}
+
 		instancesList = append(instancesList, instanceObjectValue)
 	}
+
 	return instancesList
 }
 
@@ -240,5 +253,6 @@ func mapInstanceToAttrs(instance *edge.Instance, region string) map[string]attr.
 		"created":      types.StringValue(instance.Created.String()),
 		"description":  types.StringPointerValue(instance.Description),
 	}
+
 	return attrs
 }

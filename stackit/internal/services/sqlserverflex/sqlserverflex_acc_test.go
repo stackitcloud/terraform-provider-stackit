@@ -60,16 +60,20 @@ var testConfigVarsMax = config.Variables{
 
 func configVarsMinUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMin)
+
 	temp["name"] = config.StringVariable(testutil.ConvertConfigVariable(temp["name"]) + "changed")
+
 	return temp
 }
 
 func configVarsMaxUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMax)
+
 	temp["backup_schedule"] = config.StringVariable("0 12 * * *")
 	temp["acl1"] = config.StringVariable("192.168.2.0/16")
 	temp["retention_days"] = config.IntegerVariable(40)
 	temp["collation"] = config.StringVariable("Latin1_General_100_CI_AS_SC")
+
 	return temp
 }
 
@@ -189,6 +193,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_instance.instance")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -210,6 +215,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					if len(s) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(s))
 					}
+
 					return nil
 				},
 			},
@@ -221,10 +227,12 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_user.user")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute user_id")
@@ -245,22 +253,27 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_database.database")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -415,6 +428,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_instance.instance")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -436,9 +450,11 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					if len(s) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(s))
 					}
+
 					if s[0].Attributes["backup_schedule"] != testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule"]) {
 						return fmt.Errorf("expected backup_schedule %s, got %s", testConfigVarsMax["backup_schedule"], s[0].Attributes["backup_schedule"])
 					}
+
 					return nil
 				},
 			},
@@ -450,10 +466,12 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_user.user")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute user_id")
@@ -474,22 +492,27 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_database.database")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -568,18 +591,22 @@ func TestAccSqlServerFlexFlavorsDatasource(t *testing.T) {
 
 func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := sqlserverflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SQLServerFlexCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_sqlserverflex_instance" {
 			continue
 		}
+
 		// instance terraform ID: = "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -593,16 +620,19 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 		if items[i].Id == "" {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, items[i].Id) {
 			err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, items[i].Id, testutil.Region).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", items[i].Id, err)
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, items[i].Id, testutil.Region).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", items[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

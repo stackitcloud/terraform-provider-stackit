@@ -220,8 +220,10 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 // Read refreshes the Terraform state with the latest data.
 func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -231,6 +233,7 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
@@ -247,6 +250,7 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -255,13 +259,17 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	err = mapDataSourceFields(ctx, networkResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network read")
 }
 
@@ -269,11 +277,13 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	if networkResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var networkId string
+
 	if model.NetworkId.ValueString() != "" {
 		networkId = model.NetworkId.ValueString()
 	} else {
@@ -293,6 +303,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
 		respNameservers := networkResp.Ipv4.Nameservers
+
 		modelIPv4Nameservers, err := utils.ListValueToStringSlice(model.IPv4Nameservers)
 		if err != nil {
 			return fmt.Errorf("get current IPv4 network nameservers from model: %w", err)
@@ -313,17 +324,21 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	} else {
 		respPrefixes := networkResp.Ipv4.Prefixes
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
+
 		if diags.HasError() {
 			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
 		}
+
 		if len(respPrefixes) > 0 {
 			model.IPv4Prefix = types.StringValue(respPrefixes[0])
+
 			_, netmask, err := net.ParseCIDR(respPrefixes[0])
 			if err != nil {
 				// silently ignore parsing error for the netmask
 				model.IPv4PrefixLength = types.Int64Null()
 			} else {
 				ones, _ := netmask.Mask.Size()
+
 				model.IPv4PrefixLength = types.Int64Value(int64(ones))
 			}
 		}
@@ -355,6 +370,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv6Nameservers = types.ListNull(types.StringType)
 	} else {
 		respIPv6Nameservers := networkResp.Ipv6.Nameservers
+
 		modelIPv6Nameservers, errIpv6 := utils.ListValueToStringSlice(model.IPv6Nameservers)
 		if errIpv6 != nil {
 			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
@@ -375,20 +391,25 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	} else {
 		respPrefixesV6 := networkResp.Ipv6.Prefixes
 		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
+
 		if diags.HasError() {
 			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
 		}
+
 		if len(respPrefixesV6) > 0 {
 			model.IPv6Prefix = types.StringValue(respPrefixesV6[0])
+
 			_, netmask, err := net.ParseCIDR(respPrefixesV6[0])
 			if err != nil {
 				// silently ignore parsing error for the netmask
 				model.IPv6PrefixLength = types.Int64Null()
 			} else {
 				ones, _ := netmask.Mask.Size()
+
 				model.IPv6PrefixLength = types.Int64Value(int64(ones))
 			}
 		}
+
 		model.IPv6Prefixes = prefixesV6TF
 	}
 

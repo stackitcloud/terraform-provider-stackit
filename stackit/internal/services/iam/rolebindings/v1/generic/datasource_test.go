@@ -12,6 +12,7 @@ import (
 
 func Test_mapDatasourceFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	testResourceId := uuid.New().String()
 
 	type args struct {
@@ -19,6 +20,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 		model  *DatasourceModel
 		region string
 	}
+
 	tests := []struct {
 		name      string
 		args      args
@@ -91,6 +93,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := mapDatasourceFields(tt.args.resp, tt.args.model, tt.args.region); (err != nil) != tt.wantErr {

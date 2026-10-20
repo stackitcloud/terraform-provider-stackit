@@ -126,27 +126,34 @@ func (r *imageResource) Metadata(_ context.Context, req resource.MetadataRequest
 // Use the modifier to set the effective region in the current plan.
 func (r *imageResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -411,14 +418,17 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -428,6 +438,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -435,6 +446,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	imageCreateResp, err := r.client.CreateImage(ctx, projectId, region).CreateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -446,6 +458,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	image, err := r.client.GetImage(ctx, projectId, region, imageCreateResp.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -453,12 +466,14 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	err = mapFields(ctx, image, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set state to partially populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -467,15 +482,19 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	err = uploadImage(ctx, &resp.Diagnostics, model.LocalFilePath.ValueString(), imageCreateResp.UploadUrl)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Uploading image: %v", err))
+
 		return
 	}
 
 	// Wait for image to become available
 	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, region, imageCreateResp.Id) //nolint:tfwriteid // false positive - id fields are actually stored already using the mapFields() call above
-	waiter = waiter.SetTimeout(7 * 24 * time.Hour)                                              // Set timeout to one week, to make the timeout useless
+
+	waiter = waiter.SetTimeout(7 * 24 * time.Hour) // Set timeout to one week, to make the timeout useless
+
 	waitResp, err := waiter.WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Waiting for image to become available: %v", err))
+
 		return
 	}
 
@@ -483,23 +502,28 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Image created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -507,9 +531,11 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	imageId := model.ImageId.ValueString()
+
 	if imageId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -522,11 +548,15 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	imageResp, err := r.client.GetImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -536,14 +566,18 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	err = mapFields(ctx, imageResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Image read")
 }
 
@@ -551,8 +585,10 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -569,8 +605,10 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -579,12 +617,15 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Update existing image
 	updatedImage, err := r.client.UpdateImage(ctx, projectId, region, imageId).UpdateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -593,13 +634,17 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	err = mapFields(ctx, updatedImage, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Image updated")
 }
 
@@ -607,8 +652,10 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -616,6 +663,7 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	projectId := model.ProjectId.ValueString()
 	imageId := model.ImageId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -626,11 +674,15 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	err := r.client.DeleteImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -639,6 +691,7 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	_, err = wait.DeleteImageWaitHandler(ctx, r.client, projectId, region, imageId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("image deletion waiting: %v", err))
+
 		return
 	}
 
@@ -655,6 +708,7 @@ func (r *imageResource) ImportState(ctx context.Context, req resource.ImportStat
 			"Error importing image",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[image_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -671,11 +725,13 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var imageId string
+
 	if model.ImageId.ValueString() != "" {
 		imageId = model.ImageId.ValueString()
 	} else if imageResp.Id != nil {
@@ -688,9 +744,13 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	model.Region = types.StringValue(region)
 
 	// Map config
-	var configModel = &configModel{}
-	var configObject basetypes.ObjectValue
+	var (
+		configModel  = &configModel{}
+		configObject basetypes.ObjectValue
+	)
+
 	diags := diag.Diagnostics{}
+
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
 		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.CdromBus.Get())
@@ -704,6 +764,7 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 		configModel.SecureBoot = types.BoolPointerValue(imageResp.Config.SecureBoot)
 		configModel.UEFI = types.BoolPointerValue(imageResp.Config.Uefi)
 		configModel.VideoModel = types.StringPointerValue(imageResp.Config.VideoModel.Get())
+
 		if imageResp.Config.VirtioScsi != nil {
 			configModel.VirtioScsi = types.BoolValue(*imageResp.Config.VirtioScsi)
 		} else {
@@ -728,13 +789,17 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	} else {
 		configObject = types.ObjectNull(configTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating config: %w", core.DiagsToError(diags))
 	}
 
 	// Map checksum
-	var checksumModel = &checksumModel{}
-	var checksumObject basetypes.ObjectValue
+	var (
+		checksumModel  = &checksumModel{}
+		checksumObject basetypes.ObjectValue
+	)
+
 	if imageResp.Checksum != nil {
 		checksumModel.Algorithm = types.StringValue(imageResp.Checksum.Algorithm)
 		checksumModel.Digest = types.StringValue(imageResp.Checksum.Digest)
@@ -745,6 +810,7 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	} else {
 		checksumObject = types.ObjectNull(checksumTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating checksum: %w", core.DiagsToError(diags))
 	}
@@ -765,6 +831,7 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	model.Labels = labels
 	model.Config = configObject
 	model.Checksum = checksumObject
+
 	return nil
 }
 
@@ -774,6 +841,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateImagePayloa
 	}
 
 	var configModel = &configModel{}
+
 	if !(model.Config.IsNull() || model.Config.IsUnknown()) {
 		diags := model.Config.As(ctx, configModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -819,6 +887,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}
 
 	var configModel = &configModel{}
+
 	if !(model.Config.IsNull() || model.Config.IsUnknown()) {
 		diags := model.Config.As(ctx, configModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -863,6 +932,7 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	if filePath == "" {
 		return fmt.Errorf("file path is empty")
 	}
+
 	if uploadURL == "" {
 		return fmt.Errorf("upload URL is empty")
 	}
@@ -871,6 +941,7 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
+
 	stat, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("stat file: %w", err)
@@ -880,14 +951,18 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	if err != nil {
 		return fmt.Errorf("create upload request: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/octet-stream")
+
 	req.ContentLength = stat.Size()
 
 	client := &http.Client{}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("upload image: %w", err)
 	}
+
 	defer func() {
 		err = resp.Body.Close()
 		if err != nil {

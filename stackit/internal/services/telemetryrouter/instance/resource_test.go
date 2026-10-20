@@ -23,6 +23,7 @@ func fixtureInstance(mods ...func(instance *telemetryrouter.TelemetryRouterRespo
 	for _, mod := range mods {
 		mod(instance)
 	}
+
 	return instance
 }
 
@@ -41,6 +42,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 	for _, mod := range mods {
 		mod(model)
 	}
+
 	return model
 }
 
@@ -91,6 +93,7 @@ func TestMapFields(t *testing.T) {
 				fltr, _ := types.ObjectValueFrom(ctx, filterTypes, filter{
 					Attributes: attrs,
 				})
+
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
@@ -110,12 +113,15 @@ func TestMapFields(t *testing.T) {
 				Region:    tt.expected.Region,
 			}
 			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
+
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(state, tt.expected)
 				if diff != "" {
@@ -154,6 +160,7 @@ func TestToCreatePayload(t *testing.T) {
 				fltr, _ := types.ObjectValueFrom(ctx, filterTypes, filter{
 					Attributes: attrs,
 				})
+
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
@@ -184,9 +191,11 @@ func TestToCreatePayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)
@@ -223,6 +232,7 @@ func TestToUpdatePayload(t *testing.T) {
 				fltr, _ := types.ObjectValueFrom(ctx, filterTypes, filter{
 					Attributes: attrs,
 				})
+
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
@@ -253,9 +263,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)

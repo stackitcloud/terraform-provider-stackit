@@ -20,6 +20,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		input  *iaas.Server
 		region string
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -171,15 +172,18 @@ func TestMapDataSourceFields(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapDataSourceFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {

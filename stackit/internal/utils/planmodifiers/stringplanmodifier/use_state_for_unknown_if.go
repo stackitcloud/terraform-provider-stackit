@@ -61,6 +61,7 @@ func (m useStateForUnknownIf) PlanModifyString(ctx context.Context, req planmodi
 	m.ifFunc(ctx, req, funcResponse)
 
 	resp.Diagnostics.Append(funcResponse.Diagnostics...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -77,19 +78,24 @@ func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
 		for _, expr := range exprs {
 			matched, diags := req.Config.PathMatches(ctx, expr)
 			resp.Diagnostics.Append(diags...)
+
 			if resp.Diagnostics.HasError() {
 				return
 			}
 
 			for _, match := range matched {
 				var planValue attr.Value
+
 				resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, match, &planValue)...)
+
 				if resp.Diagnostics.HasError() {
 					return
 				}
 
 				var stateValue attr.Value
+
 				resp.Diagnostics.Append(req.State.GetAttribute(ctx, match, &stateValue)...)
+
 				if resp.Diagnostics.HasError() {
 					return
 				}
@@ -100,6 +106,7 @@ func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
 				}
 			}
 		}
+
 		resp.UseStateForUnknown = true
 	}
 }

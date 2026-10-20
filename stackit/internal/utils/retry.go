@@ -77,6 +77,7 @@ func RetryRequest[T any](ctx context.Context, fn func() (*T, error), config Retr
 		select {
 		case <-ctx.Done():
 			timer.Stop()
+
 			return nil, ctx.Err()
 		case <-timer.C:
 		}
@@ -89,10 +90,12 @@ func RetryRequestWithoutResponse(ctx context.Context, fn func() error, config Re
 	if fn == nil {
 		return errors.New("retry function fn cannot be nil")
 	}
+
 	wrapper := func() (*struct{}, error) {
 		err := fn()
 		return &struct{}{}, err
 	}
 	_, err := RetryRequest(ctx, wrapper, config)
+
 	return err
 }

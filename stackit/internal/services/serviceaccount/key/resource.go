@@ -85,6 +85,7 @@ func (r *serviceAccountKeyResource) Schema(_ context.Context, _ resource.SchemaR
 		"public_key":            "Specifies the public_key (RSA2048 key-pair). If not provided, a certificate from STACKIT will be used to generate a private_key.",
 		"json":                  "The raw JSON representation of the service account key json, available for direct use.",
 	}
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: fmt.Sprintf("%s%s", descriptions["main"], markdownDescription),
 		Description:         descriptions["main"],
@@ -152,8 +153,10 @@ func (r *serviceAccountKeyResource) Schema(_ context.Context, _ resource.SchemaR
 func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -163,6 +166,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	// Set logging context with the project ID and service account email.
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
@@ -174,6 +178,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account key", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -184,6 +189,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Failed to create service account key", fmt.Sprintf("API call error: %v", err))
+
 		return
 	}
 
@@ -191,15 +197,18 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	err = mapCreateResponse(saAccountKeyResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account key", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Service account key created")
 }
 
@@ -207,8 +216,10 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -218,21 +229,27 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	keyId := model.KeyId.ValueString()
+
 	if keyId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
 	_, err := r.client.GetServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		// due to security purposes, attempting to get access key for a non-existent Service Account will return 403.
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account key", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -241,9 +258,11 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 	// No mapping needed for read response, as private_key is excluded and ID remains unchanged.
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "key read")
 }
 
@@ -262,8 +281,10 @@ func (r *serviceAccountKeyResource) Update(ctx context.Context, _ resource.Updat
 func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -273,6 +294,7 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	keyId := model.KeyId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 	ctx = tflog.SetField(ctx, "key_id", keyId)
@@ -281,10 +303,13 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 	err := r.client.DeleteServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account key", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -307,6 +332,7 @@ func toCreatePayload(model *Model) (*serviceaccount.CreateServiceAccountKeyPaylo
 		if err != nil {
 			return nil, err
 		}
+
 		payload.ValidUntil = &validUntil
 	}
 
@@ -323,6 +349,7 @@ func computeValidUntil(ttlDays *int64) (time.Time, error) {
 	if ttlDays == nil {
 		return time.Time{}, fmt.Errorf("ttlDays is nil")
 	}
+
 	return time.Now().UTC().Add(time.Duration(*ttlDays) * 24 * time.Hour), nil
 }
 

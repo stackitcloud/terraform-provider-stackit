@@ -147,8 +147,10 @@ func (d *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 // Read refreshes the Terraform state with the latest data.
 func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -159,6 +161,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -177,6 +180,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -186,15 +190,18 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	err = mapDataSourceFields(ctx, recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "mariadb credential read")
 }
 
@@ -202,15 +209,19 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *mariadb.Credentia
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if credentialsResp.Raw == nil {
 		return fmt.Errorf("response credentials raw is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	credentials := credentialsResp.Raw.Credentials
 
 	var credentialId string
+
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
 	} else if credentialsResp.Id != "" {
@@ -247,6 +258,7 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *mariadb.Credentia
 
 		model.Hosts = hostsTF
 	}
+
 	model.Host = types.StringValue(credentials.Host)
 	model.Name = types.StringPointerValue(credentials.Name)
 	model.Password = types.StringValue(credentials.Password)

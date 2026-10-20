@@ -19,7 +19,9 @@ func TestCreateTimeout(t *testing.T) {
 	// these tests would be slow and flaky
 	projectID := uuid.NewString()
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	providerConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "eu01"

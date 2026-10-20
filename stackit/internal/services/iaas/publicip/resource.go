@@ -64,27 +64,34 @@ func (r *publicIpResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Use the modifier to set the effective region in the current plan.
 func (r *publicIpResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -93,7 +100,9 @@ func (r *publicIpResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 // Configure adds the provider configured client to the resource.
 func (r *publicIpResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+
 	if !ok {
 		return
 	}
@@ -107,6 +116,7 @@ func (r *publicIpResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Public IP resource schema. Must have a `region` specified in the provider configuration."
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -181,8 +191,10 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 func (r *publicIpResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -191,6 +203,7 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -198,6 +211,7 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -206,6 +220,7 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 	publicIp, err := r.client.CreatePublicIP(ctx, projectId, region).CreatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -217,31 +232,40 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(ctx, publicIp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Public IP created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
+
 	if publicIpId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -254,11 +278,15 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -268,14 +296,18 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(ctx, publicIpResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "public IP read")
 }
 
@@ -283,11 +315,14 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
@@ -300,8 +335,10 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -310,12 +347,15 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Update existing public IP
 	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -324,13 +364,17 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(ctx, updatedPublicIp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "public IP updated")
 }
 
@@ -338,8 +382,10 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -358,11 +404,15 @@ func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 	err := r.client.DeletePublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -381,6 +431,7 @@ func (r *publicIpResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing public IP",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[public_ip_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -397,11 +448,13 @@ func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model, r
 	if publicIpResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var publicIpId string
+
 	if model.PublicIpId.ValueString() != "" {
 		publicIpId = model.PublicIpId.ValueString()
 	} else if publicIpResp.Id != nil {
@@ -422,6 +475,7 @@ func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model, r
 	model.Ip = types.StringPointerValue(publicIpResp.Ip)
 	model.NetworkInterfaceId = types.StringPointerValue(publicIpResp.NetworkInterface.Get())
 	model.Labels = labels
+
 	return nil
 }
 

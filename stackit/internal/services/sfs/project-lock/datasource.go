@@ -94,7 +94,9 @@ func (r *projectlockDatasource) Schema(_ context.Context, _ datasource.SchemaReq
 // Read refreshes the Terraform state with the latest data.
 func (r *projectlockDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -119,6 +121,7 @@ func (r *projectlockDatasource) Read(ctx context.Context, req datasource.ReadReq
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -128,13 +131,16 @@ func (r *projectlockDatasource) Read(ctx context.Context, req datasource.ReadReq
 	err = mapFields(projectResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project lock", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS project lock read")
 }

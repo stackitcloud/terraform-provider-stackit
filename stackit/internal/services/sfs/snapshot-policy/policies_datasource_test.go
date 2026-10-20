@@ -120,15 +120,19 @@ func TestMapFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &model{}
 			err := mapFields(t.Context(), tt.resp, m)
+
 			if err != nil && !tt.wantErr {
 				t.Errorf("unexpected error: %v", err)
 			}
+
 			if err == nil && tt.wantErr {
 				t.Errorf("unexpected error: %v", err)
 			}
+
 			if err != nil {
 				return
 			}
+
 			if diff := cmp.Diff(tt.want, m); diff != "" {
 				t.Errorf("Data does not match: %s", diff)
 			}

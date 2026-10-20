@@ -135,8 +135,10 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 // Read refreshes the Terraform state with the latest data.
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,19 +146,24 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	containerId := model.ContainerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	if containerId == "" && projectId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", "Either container_id or project_id must be set")
+
 		return
 	}
 
 	// set project identifier. If projectId is provided, it takes precedence over containerId
 	var identifier = containerId
+
 	identifierType := "Container"
+
 	if projectId != "" {
 		identifier = projectId
 		identifierType = "Project"
@@ -175,6 +182,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -183,13 +191,16 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	err = mapProjectFields(ctx, projectResp, &model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project read")
 }

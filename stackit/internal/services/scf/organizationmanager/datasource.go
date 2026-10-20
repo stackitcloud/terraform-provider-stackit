@@ -131,8 +131,10 @@ func (s *scfOrganizationManagerDataSource) Schema(_ context.Context, _ datasourc
 func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model DataSourceModel
+
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -144,6 +146,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	orgId := model.OrgId.ValueString()
 
 	region := s.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -161,6 +164,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -169,6 +173,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	err = mapFieldsDataSource(ScfOrgManager, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
@@ -182,9 +187,11 @@ func mapFieldsDataSource(response *scf.OrgManager, model *DataSourceModel) error
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	if userId := model.UserId.ValueString(); userId != "" && userId != response.Guid {
 		return fmt.Errorf("user id mismatch in response and model")
 	}
@@ -198,5 +205,6 @@ func mapFieldsDataSource(response *scf.OrgManager, model *DataSourceModel) error
 	model.UserName = types.StringValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }

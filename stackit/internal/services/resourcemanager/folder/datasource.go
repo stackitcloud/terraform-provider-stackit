@@ -136,8 +136,10 @@ func (d *folderDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 // Read refreshes the Terraform state with the latest data.
 func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -145,6 +147,7 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	folderResp, err := d.client.GetFolderDetails(ctx, containerId).Execute()
@@ -160,6 +163,7 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -168,13 +172,16 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	err = mapFolderFields(ctx, folderResp, &model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager folder read")
 }

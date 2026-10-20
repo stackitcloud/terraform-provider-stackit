@@ -62,27 +62,34 @@ func (r *affinityGroupResource) Metadata(_ context.Context, req resource.Metadat
 // Use the modifier to set the effective region in the current plan.
 func (r *affinityGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -103,6 +110,7 @@ func (r *affinityGroupResource) Configure(ctx context.Context, req resource.Conf
 
 func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Affinity Group schema."
+
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description + "\n\n" + exampleUsageWithServer + policies,
@@ -184,14 +192,17 @@ func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 // Create creates the resource and sets the initial Terraform state.
 func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -201,11 +212,14 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	affinityGroupResp, err := r.client.CreateAffinityGroup(ctx, projectId, region).CreateAffinityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -217,31 +231,39 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 	err = mapFields(ctx, affinityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Affinity group created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	affinityGroupId := model.AffinityGroupId.ValueString()
+
 	if affinityGroupId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -254,11 +276,15 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	affinityGroupResp, err := r.client.GetAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Call API: %v", err))
+
 		return
 	}
 
@@ -268,12 +294,15 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Processing API payload: %v", err))
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Affinity group read")
 }
 
@@ -285,8 +314,10 @@ func (r *affinityGroupResource) Update(_ context.Context, _ resource.UpdateReque
 func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -305,11 +336,15 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	err := r.client.DeleteAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting affinity group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -326,6 +361,7 @@ func (r *affinityGroupResource) ImportState(ctx context.Context, req resource.Im
 			"Error importing affinity group",
 			fmt.Sprintf("Expected import indentifier with format: [project_id],[region],[affinity_group_id], got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -359,6 +395,7 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 	}
 
 	var affinityGroupId string
+
 	if model.AffinityGroupId.ValueString() != "" {
 		affinityGroupId = model.AffinityGroupId.ValueString()
 	} else if affinityGroupResp.Id != nil {
@@ -375,6 +412,7 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 		if diags.HasError() {
 			return fmt.Errorf("convert members to StringValue list: %w", core.DiagsToError(diags))
 		}
+
 		model.Members = members
 	} else if model.Members.IsNull() {
 		model.Members = types.ListNull(types.StringType)

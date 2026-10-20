@@ -154,6 +154,7 @@ func (r *customRoleResource) Schema(_ context.Context, _ resource.SchemaRequest,
 // Create creates the resource and sets the initial Terraform state.
 func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -168,12 +169,14 @@ func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequ
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating custom role", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
 	createResp, err := r.client.AddRole(ctx, r.resourceType, model.ResourceId.ValueString()).AddRolePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating custom role", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -181,6 +184,7 @@ func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequ
 
 	if err = mapAddCustomRoleResponse(ctx, createResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating custom role", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
@@ -198,6 +202,7 @@ func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequ
 func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -213,6 +218,7 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 	if roleId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -223,6 +229,7 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 
@@ -235,6 +242,7 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	if err = mapGetCustomRoleResponse(ctx, roleResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading custom role", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
@@ -248,6 +256,7 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -263,6 +272,7 @@ func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequ
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating custom role", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -270,6 +280,7 @@ func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequ
 	roleResp, err := r.client.UpdateRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).UpdateRolePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating custom role", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -278,6 +289,7 @@ func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequ
 	err = mapUpdateCustomRoleResponse(ctx, roleResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating custom role", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
@@ -294,6 +306,7 @@ func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequ
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *customRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -308,10 +321,13 @@ func (r *customRoleResource) Delete(ctx context.Context, req resource.DeleteRequ
 	_, err := r.client.DeleteRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting custom role", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -374,6 +390,7 @@ func mapGetCustomRoleResponse(ctx context.Context, resp *authorization.GetRoleRe
 	}
 
 	var respPermissions []string
+
 	for _, p := range resp.Role.Permissions {
 		if name, ok := p.GetNameOk(); ok {
 			respPermissions = append(respPermissions, *name)
@@ -383,7 +400,9 @@ func mapGetCustomRoleResponse(ctx context.Context, resp *authorization.GetRoleRe
 	reconciledPermissions := utils.ReconcileStringSlices(modelPermissions, respPermissions)
 
 	var diags diag.Diagnostics
+
 	model.Permissions, diags = types.ListValueFrom(ctx, types.StringType, reconciledPermissions)
+
 	if diags.HasError() {
 		return fmt.Errorf("mapping permissions: %w", core.DiagsToError(diags))
 	}
@@ -416,6 +435,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*authorization.AddRoleP
 	}
 
 	permissions := make([]authorization.PermissionRequest, 0)
+
 	for _, permission := range model.Permissions.Elements() {
 		if utils.IsUndefined(permission) {
 			return nil, errors.New("permission is unknown or null")
@@ -443,6 +463,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*authorization.UpdateRo
 	}
 
 	permissions := make([]authorization.PermissionRequest, 0)
+
 	for _, permission := range model.Permissions.Elements() {
 		if utils.IsUndefined(permission) {
 			return nil, errors.New("permission is unknown or null")

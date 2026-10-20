@@ -90,27 +90,34 @@ func (s *scfOrganizationManagerResource) Metadata(_ context.Context, request res
 // Use the modifier to set the effective region in the current plan.
 func (r *scfOrganizationManagerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -203,8 +210,10 @@ func (s *scfOrganizationManagerResource) Schema(_ context.Context, _ resource.Sc
 func (s *scfOrganizationManagerResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
+
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -216,11 +225,13 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	orgId := model.OrgId.ValueString()
 	userName := model.UserName.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "username", userName)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -229,12 +240,14 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	scfOrgManagerCreateResponse, err := s.client.CreateOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Calling API to create org manager: %v", err))
+
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
 	userId := scfOrgManagerCreateResponse.Guid
+
 	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
@@ -245,23 +258,28 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	err = mapFieldsCreate(scfOrgManagerCreateResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Mapping fields: %v", err))
+
 		return
 	}
 
 	// Set the state with fully populated data.
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Scf organization manager created")
 }
 
 func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -272,6 +290,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 	region := s.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -280,12 +299,16 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	scfOrgManager, err := s.client.GetOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			core.LogAndAddWarning(ctx, &response.Diagnostics, "SCF Organization manager not found", "SCF Organization manager not found, remove from state")
 			response.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -294,6 +317,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	err = mapFieldsRead(scfOrgManager, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
@@ -311,8 +335,10 @@ func (s *scfOrganizationManagerResource) Update(ctx context.Context, _ resource.
 func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
+
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -322,6 +348,7 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -330,11 +357,15 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	_, err := s.client.DeleteOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusGone || oapiErr.StatusCode == http.StatusNotFound) {
 			tflog.Info(ctx, "Scf organization manager was already deleted")
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization manager", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -353,6 +384,7 @@ func (s *scfOrganizationManagerResource) ImportState(ctx context.Context, reques
 			"Error importing scf organization manager",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[org_id],[user_id]  Got: %q", request.ID),
 		)
+
 		return
 	}
 
@@ -374,6 +406,7 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -388,6 +421,7 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 	model.Password = types.StringValue(response.Password)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }
 
@@ -395,9 +429,11 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	if userId := model.UserId.ValueString(); userId != "" && userId != response.Guid {
 		return fmt.Errorf("user id mismatch in response and model")
 	}
@@ -411,5 +447,6 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	model.UserName = types.StringValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }

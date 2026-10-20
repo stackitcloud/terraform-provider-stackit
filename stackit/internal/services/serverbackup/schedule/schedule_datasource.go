@@ -122,8 +122,10 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -153,6 +155,7 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -162,14 +165,17 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server backup schedule read")
 }

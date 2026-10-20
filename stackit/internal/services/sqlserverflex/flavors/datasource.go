@@ -157,22 +157,28 @@ func (f *flavors) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *
 
 func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	region := f.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
@@ -181,11 +187,14 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	ctx = core.InitProviderContext(ctx)
 
 	const pageSize = 100
+
 	flavorsResp, err := f.client.ListFlavors(ctx, projectId, region).Size(pageSize).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", fmt.Sprintf("Error calling ListFlavors: %v", err))
+
 		return
 	}
+
 	if flavorsResp.Pagination.TotalRows > pageSize {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics,
 			"Truncated results",
@@ -198,13 +207,16 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	err = mapFields(flavorsResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading Flavors", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SqlserverFlex flavor read")
 }
 
@@ -212,6 +224,7 @@ func mapFields(resp *sqlserverflex.ListFlavorsResponse, m *model) error {
 	if resp == nil {
 		return fmt.Errorf("nil response")
 	}
+
 	if m == nil {
 		return fmt.Errorf("nil model")
 	}
@@ -243,9 +256,12 @@ func mapFields(resp *sqlserverflex.ListFlavorsResponse, m *model) error {
 				MaxIOPerSec:    types.Int32Value(respSC.MaxIoPerSec),
 				MaxThroughInMB: types.Int32Value(respSC.MaxThroughInMb),
 			}
+
 			modelFlavor.StorageClasses = append(modelFlavor.StorageClasses, modelSC)
 		}
+
 		m.Flavors = append(m.Flavors, modelFlavor)
 	}
+
 	return nil
 }

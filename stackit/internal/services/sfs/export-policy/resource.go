@@ -82,17 +82,22 @@ type exportPolicyResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *exportPolicyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -100,16 +105,19 @@ func (r *exportPolicyResource) ModifyPlan(ctx context.Context, req resource.Modi
 	// If rules were completely removed from the config this is not recognized by terraform
 	// since this field is optional and computed therefore this plan modifier is needed.
 	utils.CheckListRemoval(ctx, configModel.Rules, planModel.Rules, path.Root("rules"), types.ObjectType{AttrTypes: rulesTypes}, true, resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -136,6 +144,7 @@ func (r *exportPolicyResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *exportPolicyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "SFS export policy resource schema. Must have a `region` specified in the provider configuration."
+
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,
@@ -245,22 +254,28 @@ func (r *exportPolicyResource) Schema(_ context.Context, _ resource.SchemaReques
 func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // defined by terraform api
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	ctx = core.InitProviderContext(ctx)
 
 	var rules = []rulesModel{}
+
 	if !(model.Rules.IsNull() || model.Rules.IsUnknown()) {
 		diags = model.Rules.ElementsAs(ctx, &rules, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -269,12 +284,14 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 	payload, err := toCreatePayload(ctx, &model, rules)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
 	createResp, err := r.client.CreateShareExportPolicy(ctx, projectId, region).CreateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -282,8 +299,10 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 
 	if createResp == nil || createResp.ShareExportPolicy == nil || createResp.ShareExportPolicy.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", "response did not contain an ID")
+
 		return
 	}
+
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
@@ -298,40 +317,51 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 	getResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, *createResp.ShareExportPolicy.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
+
 		return
 	}
 
 	err = mapFields(ctx, getResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS export policy created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // defined by terraform api
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
+
 	if exportPolicyId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -342,13 +372,17 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &openapiError) {
 			if openapiError.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
+
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
+
 		return
 	}
 
@@ -358,12 +392,14 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapFields(ctx, exportPolicyResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading export policy", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -374,14 +410,18 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // defined by terraform api
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -389,9 +429,11 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = core.InitProviderContext(ctx)
 
 	var rules = []rulesModel{}
+
 	if !(model.Rules.IsNull() || model.Rules.IsUnknown()) {
 		diags = model.Rules.ElementsAs(ctx, &rules, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -400,12 +442,14 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 	payload, err := toUpdatePayload(ctx, &model, rules)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
 	_, err = r.client.UpdateShareExportPolicy(ctx, projectId, region, exportPolicyId).UpdateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to update export policy: %v", err))
+
 		return
 	}
 
@@ -415,6 +459,7 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
+
 		return
 	}
 
@@ -422,12 +467,14 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 	err = mapFields(ctx, exportPolicyResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -438,14 +485,18 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // defined by terraform api
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -455,12 +506,15 @@ func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err := r.client.DeleteShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &openapiError) {
 			if openapiError.StatusCode == http.StatusNotFound {
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting export policy", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -479,6 +533,7 @@ func (r *exportPolicyResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing export policy",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[policy_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -495,11 +550,13 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 	if resp == nil || resp.ShareExportPolicy == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var exportPolicyId string
+
 	if model.ExportPolicyId.ValueString() != "" {
 		exportPolicyId = model.ExportPolicyId.ValueString()
 	} else if resp.ShareExportPolicy.Id != nil {
@@ -512,16 +569,21 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 	if err != nil {
 		return err
 	}
+
 	model.Labels = labels
 
 	// iterate over Rules from response
 	if resp.ShareExportPolicy.Rules != nil {
 		rulesList := []attr.Value{}
+
 		for _, rule := range resp.ShareExportPolicy.Rules {
 			var ipAcl basetypes.ListValue
+
 			if rule.IpAcl != nil {
 				var diags diag.Diagnostics
+
 				ipAcl, diags = types.ListValueFrom(ctx, types.StringType, rule.IpAcl)
+
 				if diags.HasError() {
 					return fmt.Errorf("failed to map ip acls: %w", core.DiagsToError(diags))
 				}
@@ -571,6 +633,7 @@ func toCreatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if rules == nil {
 		return nil, fmt.Errorf("nil rules")
 	}
@@ -582,12 +645,14 @@ func toCreatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 
 	// iterate over rules
 	var tempRules []sfs.CreateShareExportPolicyRequestRule
+
 	for _, rule := range rules {
 		// convert list
 		convertedList, err := conversion.StringListToSlice(rule.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("conversion of rule failed")
 		}
+
 		tempRule := sfs.CreateShareExportPolicyRequestRule{
 			Description: *sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
 			IpAcl:       convertedList,
@@ -596,6 +661,7 @@ func toCreatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 			SetUuid:     conversion.BoolValueToPointer(rule.SetUuid),
 			SuperUser:   conversion.BoolValueToPointer(rule.SuperUser),
 		}
+
 		tempRules = append(tempRules, tempRule)
 	}
 
@@ -617,6 +683,7 @@ func toUpdatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if rules == nil {
 		return nil, fmt.Errorf("nil rules")
 	}
@@ -634,6 +701,7 @@ func toUpdatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 		if err != nil {
 			return nil, fmt.Errorf("conversion of rule failed")
 		}
+
 		tempRule := sfs.UpdateShareExportPolicyBodyRule{
 			Description: *sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
 			IpAcl:       convertedList,
@@ -642,6 +710,7 @@ func toUpdatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 			SetUuid:     conversion.BoolValueToPointer(rule.SetUuid),
 			SuperUser:   conversion.BoolValueToPointer(rule.SuperUser),
 		}
+
 		tempRules[i] = tempRule
 	}
 
@@ -652,5 +721,6 @@ func toUpdatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 		Rules:  tempRules,
 		Labels: &labels,
 	}
+
 	return result, nil
 }

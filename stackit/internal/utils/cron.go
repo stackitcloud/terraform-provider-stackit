@@ -14,10 +14,12 @@ func SimplifyCronString(cron string) string {
 		if simplified == "" {
 			simplified = "0"
 		}
+
 		return simplified
 	})
 
 	whiteSpaceRegex := regexp.MustCompile(`\s+`)
+
 	simplifiedCron = whiteSpaceRegex.ReplaceAllString(simplifiedCron, " ")
 
 	return simplifiedCron

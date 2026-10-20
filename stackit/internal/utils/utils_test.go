@@ -75,6 +75,7 @@ func TestReconcileStrLists(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			output := ReconcileStringSlices(tt.list1, tt.list2)
 			diff := cmp.Diff(output, tt.expected)
+
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -120,11 +121,14 @@ func TestListValuetoStrSlice(t *testing.T) {
 				if !tt.isValid {
 					return
 				}
+
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.isValid {
 				t.Fatalf("Should have failed")
 			}
+
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -175,6 +179,7 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			output := ConvertPointerSliceToStringSlice(tt.input)
 			diff := cmp.Diff(output, tt.expected)
+
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -231,6 +236,7 @@ func TestFormatPossibleValues(t *testing.T) {
 	type args struct {
 		values []string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -258,6 +264,7 @@ func TestFormatPossibleValues(t *testing.T) {
 			want: fmt.Sprintf("%s `foo`, `bar`.", gotPrefix),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := FormatPossibleValues(tt.args.values...); got != tt.want {
@@ -271,6 +278,7 @@ func TestIsUndefined(t *testing.T) {
 	type args struct {
 		val value
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -298,6 +306,7 @@ func TestIsUndefined(t *testing.T) {
 			want: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := IsUndefined(tt.args.val); got != tt.want {
@@ -311,6 +320,7 @@ func TestBuildInternalTerraformId(t *testing.T) {
 	type args struct {
 		idParts []string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -331,6 +341,7 @@ func TestBuildInternalTerraformId(t *testing.T) {
 			want: types.StringValue("abc,foo,bar,xyz"),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := BuildInternalTerraformId(tt.args.idParts...); !reflect.DeepEqual(got, tt.want) {
@@ -344,6 +355,7 @@ func TestCheckListRemoval(t *testing.T) {
 	type model struct {
 		AllowedAddresses types.List `tfsdk:"allowed_addresses"`
 	}
+
 	tests := []struct {
 		description          string
 		configModelList      types.List
@@ -409,6 +421,7 @@ func TestCheckListRemoval(t *testing.T) {
 			true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			// create resp
@@ -426,18 +439,22 @@ func TestCheckListRemoval(t *testing.T) {
 			if diags := plan.Set(context.Background(), model{tt.planModelList}); diags.HasError() {
 				t.Fatalf("cannot create test model: %v", diags)
 			}
+
 			resp := resource.ModifyPlanResponse{
 				Plan: plan,
 			}
 
 			CheckListRemoval(context.Background(), tt.configModelList, tt.planModelList, tt.path, tt.listType, tt.createEmptyList, &resp)
+
 			// check targetList
 			var respList types.List
+
 			resp.Plan.GetAttribute(context.Background(), tt.path, &respList)
 
 			if tt.createEmptyList {
 				emptyList, _ := types.ListValueFrom(context.Background(), tt.listType, []string{})
 				diffEmptyList := cmp.Diff(emptyList, respList)
+
 				if diffEmptyList != "" {
 					t.Fatalf("an empty list should have been created but was not: %s", diffEmptyList)
 				}
@@ -471,10 +488,12 @@ func TestSetAndLogStateFields(t *testing.T) {
 		state  *tfsdk.State
 		values map[string]any
 	}
+
 	type want struct {
 		hasError bool
 		state    *tfsdk.State
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -505,6 +524,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 						}),
 						Schema: testSchema,
 					}
+
 					return &state
 				}(),
 				values: map[string]any{
@@ -525,11 +545,13 @@ func TestSetAndLogStateFields(t *testing.T) {
 					}
 					state.SetAttribute(ctx, path.Root("project_id"), "a414f971-3f7a-4e9a-8671-51a8acb7bcc8")
 					state.SetAttribute(ctx, path.Root("instance_id"), "97073250-8cad-46c3-8424-6258ac0b3731")
+
 					return &state
 				}(),
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -574,6 +596,7 @@ func TestCoalesce(t *testing.T) {
 		baz  = types.StringValue("baz")
 		null = types.StringNull()
 	)
+
 	tests := []struct {
 		name string
 		vals []attr.Value
@@ -585,6 +608,7 @@ func TestCoalesce(t *testing.T) {
 		{"first and second element undefined", []attr.Value{null, null, baz}, baz},
 		{"all elements undefined", []attr.Value{null, null, null}, nil},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotR := Coalesce(tt.vals...); !reflect.DeepEqual(gotR, tt.want) {
@@ -641,11 +665,13 @@ func TestMap(t *testing.T) {
 		input []T
 		mapFn func(T) U
 	}
+
 	type testCase[T any, U any] struct {
 		name string
 		args args[T, U]
 		want []U
 	}
+
 	tests := []testCase[string, *string]{
 		{
 			name: "default",
@@ -668,6 +694,7 @@ func TestMap(t *testing.T) {
 			want: []*string{},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Map(tt.args.input, tt.args.mapFn); !reflect.DeepEqual(got, tt.want) {

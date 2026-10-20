@@ -187,8 +187,10 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 // Create creates the resource and sets the initial Terraform state.
 func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -196,18 +198,22 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_container_id", containerId)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Create new project
 	createResp, err := r.client.CreateProject(ctx).CreateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -226,29 +232,35 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client, createResp.ContainerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
+
 		return
 	}
 
 	err = mapProjectFields(ctx, waitResp, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -259,18 +271,24 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if containerId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -279,15 +297,18 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	err = mapProjectFields(ctx, projectResp, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project read")
 }
 
@@ -295,16 +316,20 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var planModel ResourceModel
+
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Retrieve values from state
 	var stateModel ResourceModel
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -312,18 +337,22 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := planModel.ContainerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Generate API request body from plan model and state model
 	payload, err := toUpdatePayload(ctx, &planModel, &stateModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Update existing project
 	_, err = r.client.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -333,20 +362,24 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API for updated data: %v", err))
+
 		return
 	}
 
 	err = mapProjectFields(ctx, projectResp, &planModel.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project updated")
 }
 
@@ -354,8 +387,10 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -363,17 +398,22 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing project
 	err := r.client.DeleteProject(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -382,6 +422,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, containerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Instance deletion waiting: %v", err))
+
 		return
 	}
 
@@ -397,6 +438,7 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 			"Error importing project",
 			fmt.Sprintf("Expected import identifier with format: [container_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -411,11 +453,13 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	if projectResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var projectId string
+
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
 	} else if projectResp.ProjectId != "" {
@@ -425,6 +469,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	}
 
 	var containerId string
+
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
 	} else if projectResp.ContainerId != "" {
@@ -439,6 +484,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	}
 
 	var containerParentIdTF types.String
+
 	if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 		// the provided containerParentId is the UUID identifier
 		containerParentIdTF = types.StringValue(projectResp.Parent.Id)
@@ -466,6 +512,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("creation_time"), model.CreationTime)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("update_time"), model.UpdateTime)...)
+
 		if diags.HasError() {
 			return fmt.Errorf("update terraform state: %w", core.DiagsToError(diags))
 		}
@@ -478,6 +525,7 @@ func toMembersPayload(model *ResourceModel) ([]resourcemanager.Member, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if model.OwnerEmail.IsNull() {
 		return nil, fmt.Errorf("owner_email is null")
 	}

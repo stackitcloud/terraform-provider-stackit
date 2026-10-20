@@ -54,6 +54,7 @@ func (d *networkAreaRouteDataSource) Configure(ctx context.Context, req datasour
 func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Network area route data resource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This datasource is for SNA, not VPC, networks."
+
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,
@@ -131,8 +132,10 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 // Read refreshes the Terraform state with the latest data.
 func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ModelV1
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -162,6 +165,7 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -170,13 +174,16 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 	err = mapFields(ctx, networkAreaRouteResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area route read")
 }

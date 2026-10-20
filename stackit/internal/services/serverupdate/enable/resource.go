@@ -53,27 +53,34 @@ type serverUpdateEnableResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *serverUpdateEnableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -169,8 +176,10 @@ func (r *serverUpdateEnableResource) Schema(_ context.Context, _ resource.Schema
 // Create creates the resource and sets the initial Terraform state.
 func (r *serverUpdateEnableResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -188,18 +197,22 @@ func (r *serverUpdateEnableResource) Create(ctx context.Context, req resource.Cr
 	err := r.client.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(serverupdate.EnableServiceResourcePayload{}).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 
 		if !(ok && oapiErr.StatusCode == http.StatusConflict) {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update enable", fmt.Sprintf("Calling API: %v", err))
+
 			return
 		}
+
 		tflog.Info(ctx, "Server update is already enabled for this server. Please check duplicate resources.")
 	}
 
 	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update enable", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -209,11 +222,13 @@ func (r *serverUpdateEnableResource) Create(ctx context.Context, req resource.Cr
 	err = mapFields(serviceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update enable", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -224,8 +239,10 @@ func (r *serverUpdateEnableResource) Create(ctx context.Context, req resource.Cr
 // Read refreshes the Terraform state with the latest data.
 func (r *serverUpdateEnableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -244,9 +261,12 @@ func (r *serverUpdateEnableResource) Read(ctx context.Context, req resource.Read
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update enable", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -256,15 +276,18 @@ func (r *serverUpdateEnableResource) Read(ctx context.Context, req resource.Read
 	err = mapFields(serviceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update enable", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server update enable read")
 }
 
@@ -277,8 +300,10 @@ func (r *serverUpdateEnableResource) Update(ctx context.Context, _ resource.Upda
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *serverUpdateEnableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -296,10 +321,13 @@ func (r *serverUpdateEnableResource) Delete(ctx context.Context, req resource.De
 	err := r.client.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server update enable", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -311,6 +339,7 @@ func mapFields(serviceResp *serverupdate.GetUpdateServiceResponse, model *Model,
 	if serviceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

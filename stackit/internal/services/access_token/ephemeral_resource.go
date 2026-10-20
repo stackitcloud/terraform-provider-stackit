@@ -39,6 +39,7 @@ func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req epheme
 		&resp.Diagnostics,
 		"stackit_access_token", "ephemeral_resource",
 	)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -84,6 +85,7 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 	var model ephemeralTokenModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -91,6 +93,7 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 	accessToken, err := getAccessToken(e.roundTripper)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token generation failed", err.Error())
+
 		return
 	}
 
@@ -110,5 +113,6 @@ func getAccessToken(roundTripper http.RoundTripper) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error obtaining access token: %w", err)
 	}
+
 	return accessToken, nil
 }

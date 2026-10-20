@@ -209,10 +209,12 @@ func TestServiceAccount(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_service_account.sa")
 					}
+
 					email, ok := r.Primary.Attributes["email"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute email")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, email), nil
 				},
 				ImportState:       true,
@@ -313,18 +315,22 @@ func TestServiceAccount(t *testing.T) {
 
 func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := serviceaccount.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ServiceAccountCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	var instancesToDestroy []string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_service_account" {
 			continue
 		}
+
 		// terraform ID: "[project_id],[email]"
 		serviceAccountEmail := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		instancesToDestroy = append(instancesToDestroy, serviceAccountEmail)
 	}
 
@@ -342,5 +348,6 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

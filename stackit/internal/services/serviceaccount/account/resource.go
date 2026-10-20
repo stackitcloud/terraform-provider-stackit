@@ -131,8 +131,10 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 func (r *serviceAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,6 +144,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	// Set logging context with the project ID and service account name.
 	projectId := model.ProjectId.ValueString()
 	serviceAccountName := model.Name.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_name", serviceAccountName)
 
@@ -149,6 +152,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -156,6 +160,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	serviceAccountResp, err := r.client.CreateServiceAccount(ctx, projectId).CreateServiceAccountPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -163,9 +168,11 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 
 	// Set the service account name and map the response to the resource schema.
 	model.Name = types.StringValue(serviceAccountName)
+
 	err = mapFields(serviceAccountResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
@@ -175,9 +182,11 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Service account created")
 }
 
@@ -185,8 +194,10 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -200,11 +211,15 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error calling API: %v", err))
+
 		return
 	}
 
@@ -221,12 +236,14 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		err = mapFields(&serviceAccounts[i], &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error processing API response: %v", err))
+
 			return
 		}
 
 		// Set the updated state.
 		diags = resp.State.Set(ctx, &model)
 		resp.Diagnostics.Append(diags...)
+
 		return
 	}
 
@@ -244,8 +261,10 @@ func (r *serviceAccountResource) Update(ctx context.Context, _ resource.UpdateRe
 func (r *serviceAccountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,6 +274,7 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	projectId := model.ProjectId.ValueString()
 	serviceAccountName := model.Name.ValueString()
 	serviceAccountEmail := model.Email.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_name", serviceAccountName)
 
@@ -262,11 +282,15 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	err := r.client.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -287,6 +311,7 @@ func (r *serviceAccountResource) ImportState(ctx context.Context, req resource.I
 			"Error importing service account",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[email]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -321,6 +346,7 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

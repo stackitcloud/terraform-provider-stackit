@@ -30,9 +30,11 @@ func fixtureDatasourceModel(mods ...func(model *DatasourceModel)) *DatasourceMod
 		CreationTime:   types.StringValue(testTime.Format(time.RFC3339)),
 		Status:         types.StringValue("active"),
 	}
+
 	for _, mod := range mods {
 		mod(model)
 	}
+
 	return model
 }
 
@@ -95,6 +97,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(datasourceS3Types),
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -153,6 +156,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(datasourceOpenTelemetryTypes),
 					S3:            s3Val,
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -173,12 +177,15 @@ func TestMapDataSourceFields(t *testing.T) {
 				InstanceID: tt.expected.InstanceID,
 			}
 			err := mapDatasourceFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
+
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(state, tt.expected)
 				if diff != "" {

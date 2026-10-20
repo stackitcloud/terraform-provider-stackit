@@ -38,8 +38,10 @@ var testConfigVarsMin = config.Variables{
 var testConfigVarsMinUpdated = func() config.Variables {
 	updatedConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(updatedConfig, testConfigVarsMin)
+
 	updatedConfig["plan_name"] = config.StringVariable("stackit-opensearch-2.4.10-single")
 	updatedConfig["plan_id"] = config.StringVariable("f97a4935-0a77-4939-bfd1-33ba2e1f2b36")
+
 	return updatedConfig
 }()
 
@@ -68,6 +70,7 @@ var testConfigVarsMax = config.Variables{
 var testConfigVarsMaxUpdated = func() config.Variables {
 	updatedConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(updatedConfig, testConfigVarsMax)
+
 	updatedConfig["plan_name"] = config.StringVariable("stackit-opensearch-2.4.10-single")
 	updatedConfig["plan_id"] = config.StringVariable("f97a4935-0a77-4939-bfd1-33ba2e1f2b36")
 	updatedConfig["graphite"] = config.StringVariable("graphite.updated.com:2004")
@@ -82,6 +85,7 @@ var testConfigVarsMaxUpdated = func() config.Variables {
 	updatedConfig["syslog"] = config.StringVariable("syslog.update.com:515")
 	updatedConfig["tls_ciphers"] = config.StringVariable("TLS_AES_256_GCM_SHA384")
 	updatedConfig["tls_protocols"] = config.StringVariable("TLSv1.3")
+
 	return updatedConfig
 }()
 
@@ -187,10 +191,12 @@ func TestAccOpenSearchResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_opensearch_instance.instance")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -209,18 +215,22 @@ func TestAccOpenSearchResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_opensearch_credential.credential")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -416,10 +426,12 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_opensearch_instance.instance")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -438,18 +450,22 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_opensearch_credential.credential")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -522,18 +538,22 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 
 func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := opensearch.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.OpenSearchCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_opensearch_instance" {
 			continue
 		}
+
 		// instance terraform ID: "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -547,12 +567,14 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 		if instances[i].InstanceId == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
 				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
@@ -560,6 +582,7 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -575,5 +598,6 @@ func checkInstanceDeleteSuccess(i *opensearch.Instance) bool {
 			return false
 		}
 	}
+
 	return true
 }

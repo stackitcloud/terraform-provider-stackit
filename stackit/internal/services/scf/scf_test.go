@@ -18,9 +18,13 @@ func TestScfOrganizationSavesIDsOnError(t *testing.T) {
 		projectId = uuid.NewString()
 		guid      = uuid.NewString()
 	)
+
 	const name = "scf-org-error-test"
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
   default_region = "eu01"
@@ -62,6 +66,7 @@ resource "stackit_scf_organization" "org" {
 								if req.URL.Path != expected {
 									t.Errorf("Expected request to %s but got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

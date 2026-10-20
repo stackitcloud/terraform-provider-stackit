@@ -41,7 +41,9 @@ var testConfigVarsMin = config.Variables{
 func testConfigVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
+
 	newVars["display_name"] = config.StringVariable("tf-acc-test-link-updated")
+
 	return newVars
 }
 
@@ -59,10 +61,12 @@ var testConfigVarsMax = config.Variables{
 func testConfigVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
+
 	newVars["display_name"] = config.StringVariable("tf-acc-test-link-updated")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryLink Updated")
 	newVars["enabled"] = config.BoolVariable(true)
 	newVars["access_token_wo_version"] = config.IntegerVariable(1)
+
 	return newVars
 }
 
@@ -72,7 +76,9 @@ func testConfigVarsMaxUpdated() config.Variables {
 func testConfigVarsMaxRotated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMaxUpdated())
+
 	newVars["access_token_wo_version"] = config.IntegerVariable(2)
+
 	return newVars
 }
 
@@ -145,10 +151,12 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink.link")
 					}
+
 					resourceType, ok := rs.Primary.Attributes["resource_type"]
 					if !ok {
 						return "", fmt.Errorf("resource_type not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", resourceType, testutil.ProjectId, testutil.Region), nil
 				},
 				ImportState:             true,
@@ -257,10 +265,12 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink.link")
 					}
+
 					resourceType, ok := rs.Primary.Attributes["resource_type"]
 					if !ok {
 						return "", fmt.Errorf("resource_type not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", resourceType, testutil.ProjectId, testutil.Region), nil
 				},
 				ImportState:             true,
@@ -326,15 +336,19 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := telemetrylink.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.TelemetryLinkCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -347,11 +361,14 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	}
 
 	var linksToDestroy []link
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_telemetrylink" {
 			continue
 		}
+
 		parts := strings.Split(rs.Primary.ID, core.Separator)
+
 		linksToDestroy = append(linksToDestroy, link{
 			resourceType: parts[0],
 			resourceId:   parts[1],
@@ -360,52 +377,68 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
+
 	for _, l := range linksToDestroy {
 		var err error
+
 		switch l.resourceType {
 		case "organization":
 			err = client.DefaultAPI.DeleteOrganizationTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
+
 				if errors.As(err, &oapiErr) {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						continue
 					}
 				}
+
 				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+
 				continue
 			}
+
 			_, err = telemetrylinkWait.DeleteOrganizationTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "folder":
 			err = client.DefaultAPI.DeleteFolderTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
+
 				if errors.As(err, &oapiErr) {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						continue
 					}
 				}
+
 				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+
 				continue
 			}
+
 			_, err = telemetrylinkWait.DeleteFolderTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "project":
 			err = client.DefaultAPI.DeleteProjectTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
+
 				if errors.As(err, &oapiErr) {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						continue
 					}
 				}
+
 				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+
 				continue
 			}
+
 			_, err = telemetrylinkWait.DeleteProjectTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
 		}
 	}
+
 	return errors.Join(errs...)
 }

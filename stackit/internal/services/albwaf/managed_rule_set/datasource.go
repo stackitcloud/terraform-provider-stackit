@@ -130,8 +130,10 @@ func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.Schema
 
 func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -141,6 +143,7 @@ func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.Read
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -148,12 +151,16 @@ func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.Read
 	managedRuleSetResp, err := d.client.GetManagedRuleSet(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("ALB WAF Managed Rule Set with name %q not found in project %q and region %q", name, projectId, region), err.Error())
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Managed Rule Set", err.Error())
+
 		return
 	}
 
@@ -162,13 +169,16 @@ func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.Read
 	err = mapFields(ctx, managedRuleSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Managed Rule Set", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Managed Rule Set read")
 }

@@ -16,6 +16,7 @@ func TestMapFields(t *testing.T) {
 		input  *iaas.PublicIp
 		region string
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -138,15 +139,18 @@ func TestMapFields(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
@@ -206,9 +210,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
@@ -266,9 +272,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {

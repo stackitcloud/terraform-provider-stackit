@@ -84,14 +84,18 @@ func (r *resourcePoolSnapshotDataSource) Metadata(_ context.Context, req datasou
 // Read implements datasource.DataSource.
 func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model dataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -101,13 +105,17 @@ func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasourc
 	response, err := r.client.ListResourcePoolSnapshots(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &openapiError) {
 			if openapiError.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
+
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool snapshot", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -117,20 +125,25 @@ func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasourc
 	err = mapDataSourceFields(ctx, region, &response.ResourcePoolSnapshots, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "error reading resource pool snapshot", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS resource pool snapshot read")
 }
 
 // Schema implements datasource.DataSource.
 func (r *resourcePoolSnapshotDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Resource-pool datasource schema. Must have a `region` specified in the provider configuration."
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -199,26 +212,34 @@ func mapDataSourceFields(ctx context.Context, region string, snapshots *[]sfs.Re
 	if snapshots == nil {
 		return fmt.Errorf("resource pool snapshot empty in response")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	model.Region = types.StringValue(region)
+
 	var resourcePoolId types.String
+
 	if utils.IsUndefined(model.ResourcePoolId) {
 		if snapshots == nil || len(*snapshots) == 0 {
 			return fmt.Errorf("no resource pool id defined")
 		}
+
 		resourcePoolId = types.StringPointerValue((*snapshots)[0].ResourcePoolId)
 	} else {
 		resourcePoolId = model.ResourcePoolId
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
 		region,
 		resourcePoolId.ValueString(),
 	)
 	model.Snapshots = types.ListNull(snapshotModelType)
+
 	var vals []attr.Value
+
 	for _, snapshot := range *snapshots {
 		elem := snapshotModel{
 			ResourcePoolId:       types.StringPointerValue(snapshot.ResourcePoolId),
@@ -229,13 +250,16 @@ func mapDataSourceFields(ctx context.Context, region string, snapshots *[]sfs.Re
 		if commentPtr, ok := snapshot.GetCommentOk(); ok {
 			elem.Comment = types.StringPointerValue(commentPtr)
 		}
+
 		if val := snapshot.CreatedAt; val != nil {
 			elem.CreatedAt = types.StringValue(val.Format(time.RFC3339))
 		}
+
 		val, diags := types.ObjectValueFrom(ctx, snapshotModelType.AttrTypes, elem)
 		if diags.HasError() {
 			return fmt.Errorf("error while converting snapshot list: %v", diags.Errors())
 		}
+
 		vals = append(vals, val)
 	}
 
@@ -243,6 +267,7 @@ func mapDataSourceFields(ctx context.Context, region string, snapshots *[]sfs.Re
 	if diags.HasError() {
 		return fmt.Errorf("cannot convert snapshot list: %v", diags.Errors())
 	}
+
 	model.Snapshots = list
 
 	return nil

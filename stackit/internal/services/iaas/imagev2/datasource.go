@@ -133,6 +133,7 @@ func (d *imageDataV2Source) Configure(ctx context.Context, req datasource.Config
 	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_image_v2", "datasource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -183,6 +184,7 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 			"stackit image list\n"+
 			"```",
 	), core.Datasource)
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -354,8 +356,10 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 // Read refreshes the Terraform state with the latest data.
 func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -368,9 +372,11 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	sortAscending := model.SortAscending.ValueBool()
 
 	var filter Filter
+
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
 		if diagnostics := model.Filter.As(ctx, &filter, basetypes.ObjectAsOptions{}); diagnostics.HasError() {
 			resp.Diagnostics.Append(diagnostics...)
+
 			return
 		}
 	}
@@ -384,8 +390,10 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "name_regex", nameRegex)
 	ctx = tflog.SetField(ctx, "sort_ascending", sortAscending)
 
-	var imageResp *iaas.Image
-	var err error
+	var (
+		imageResp *iaas.Image
+		err       error
+	)
 
 	// Case 1: Direct lookup by image ID
 	if imageID != "" {
@@ -397,6 +405,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 					http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
 				})
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 
@@ -406,10 +415,12 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 		// Compile regex
 		var compiledRegex *regexp.Regexp
+
 		if nameRegex != "" {
 			compiledRegex, err = regexp.Compile(nameRegex)
 			if err != nil {
 				core.LogAndAddWarning(ctx, &resp.Diagnostics, "Invalid name_regex", err.Error())
+
 				return
 			}
 		}
@@ -418,6 +429,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		imageList, err := d.client.ListImages(ctx, projectID, region).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "List images", "Unable to fetch images", nil)
+
 			return
 		}
 
@@ -425,14 +437,17 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 		// Step 1: Match images by name or regular expression (name or name_regex, if provided)
 		var matchedImages []*iaas.Image
+
 		for i := range imageList.Items {
 			img := &imageList.Items[i]
 			if name != "" && img.Name == name {
 				matchedImages = append(matchedImages, img)
 			}
+
 			if compiledRegex != nil && compiledRegex.MatchString(img.Name) {
 				matchedImages = append(matchedImages, img)
 			}
+
 			// If neither name nor name_regex is specified, include all images for filter evaluation later
 			if name == "" && nameRegex == "" {
 				matchedImages = append(matchedImages, img)
@@ -446,6 +461,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 		// Step 3: Apply additional filtering based on OS, distro, version, UEFI, secure boot, etc.
 		var filteredImages []*iaas.Image
+
 		for _, img := range matchedImages {
 			if imageMatchesFilter(img, &filter) {
 				filteredImages = append(filteredImages, img)
@@ -456,6 +472,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		if len(filteredImages) == 0 {
 			core.LogAndAddWarning(ctx, &resp.Diagnostics, "No match",
 				"No matching image found using name, name_regex, and filter criteria.")
+
 			return
 		}
 
@@ -466,12 +483,14 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 	err = mapDataSourceFields(ctx, imageResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -483,11 +502,13 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var imageId string
+
 	if model.ImageId.ValueString() != "" {
 		imageId = model.ImageId.ValueString()
 	} else if imageResp.Id != nil {
@@ -500,9 +521,13 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Region = types.StringValue(region)
 
 	// Map config
-	var configModel = &configModel{}
-	var configObject basetypes.ObjectValue
+	var (
+		configModel  = &configModel{}
+		configObject basetypes.ObjectValue
+	)
+
 	diags := diag.Diagnostics{}
+
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
 		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.CdromBus.Get())
@@ -536,13 +561,17 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		configObject = types.ObjectNull(configTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating config: %w", core.DiagsToError(diags))
 	}
 
 	// Map checksum
-	var checksumModel = &checksumModel{}
-	var checksumObject basetypes.ObjectValue
+	var (
+		checksumModel  = &checksumModel{}
+		checksumObject basetypes.ObjectValue
+	)
+
 	if imageResp.Checksum != nil {
 		checksumModel.Algorithm = types.StringValue(imageResp.Checksum.Algorithm)
 		checksumModel.Digest = types.StringValue(imageResp.Checksum.Digest)
@@ -553,6 +582,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		checksumObject = types.ObjectNull(checksumTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating checksum: %w", core.DiagsToError(diags))
 	}
@@ -573,6 +603,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Labels = labels
 	model.Config = configObject
 	model.Checksum = checksumObject
+
 	return nil
 }
 

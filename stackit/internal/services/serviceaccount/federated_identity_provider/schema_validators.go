@@ -22,14 +22,18 @@ func (v assertionsValidator) ValidateList(ctx context.Context, req validator.Lis
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
+
 	var assertions []AssertionModel
+
 	diags := req.ConfigValue.ElementsAs(ctx, &assertions, false)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	foundAud := false
+
 	for _, assertion := range assertions {
 		if !assertion.Item.IsNull() && !assertion.Item.IsUnknown() && assertion.Item.ValueString() == "aud" {
 			foundAud = true

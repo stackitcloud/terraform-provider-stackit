@@ -23,6 +23,7 @@ func fixtureDestinationResponse(mods ...func(destination *telemetryrouter.Destin
 	for _, mod := range mods {
 		mod(destination)
 	}
+
 	return destination
 }
 
@@ -46,9 +47,11 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		CreationTime:   types.StringValue(testTime.Format(time.RFC3339)),
 		Status:         types.StringValue("active"),
 	}
+
 	for _, mod := range mods {
 		mod(model)
 	}
+
 	return model
 }
 
@@ -113,6 +116,7 @@ func TestMapFields(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -153,6 +157,7 @@ func TestMapFields(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -216,6 +221,7 @@ func TestMapFields(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(openTelemetryTypes),
 					S3:            s3Val,
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -237,12 +243,15 @@ func TestMapFields(t *testing.T) {
 				Config:     tt.expected.Config,
 			}
 			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
+
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(state, tt.expected)
 				if diff != "" {
@@ -286,6 +295,7 @@ func TestToCreatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -333,6 +343,7 @@ func TestToCreatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -379,6 +390,7 @@ func TestToCreatePayload(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(openTelemetryTypes),
 					S3:            s3Val,
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -411,9 +423,11 @@ func TestToCreatePayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)
@@ -458,6 +472,7 @@ func TestToUpdatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -505,6 +520,7 @@ func TestToUpdatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -551,6 +567,7 @@ func TestToUpdatePayload(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(openTelemetryTypes),
 					S3:            s3Val,
 				})
+
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -583,6 +600,7 @@ func TestToUpdatePayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}

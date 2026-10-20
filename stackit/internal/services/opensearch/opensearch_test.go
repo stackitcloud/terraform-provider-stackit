@@ -18,14 +18,18 @@ func TestOpensearchInstanceSavesIDsOnError(t *testing.T) {
 		projectId  = uuid.NewString()
 		instanceId = uuid.NewString()
 	)
+
 	const (
 		name     = "opensearch-instance-test"
 		version  = "version"
 		planName = "plan-name"
 		region   = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
   opensearch_custom_endpoint = "%s"
@@ -85,6 +89,7 @@ resource "stackit_opensearch_instance" "instance" {
 								if req.URL.Path != expected {
 									t.Errorf(fmt.Sprintf("unexpected URL path: got %s, want %s", req.URL.Path, expected), http.StatusBadRequest)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -105,9 +110,13 @@ func TestOpensearchCredentialSavesIDsOnError(t *testing.T) {
 		instanceId   = uuid.NewString()
 		credentialId = uuid.NewString()
 	)
+
 	const region = "eu01"
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
   opensearch_custom_endpoint = "%s"
@@ -148,6 +157,7 @@ resource "stackit_opensearch_credential" "credential" {
 								if req.URL.Path != expected {
 									t.Errorf(fmt.Sprintf("unexpected URL path: got %s, want %s", req.URL.Path, expected), http.StatusBadRequest)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

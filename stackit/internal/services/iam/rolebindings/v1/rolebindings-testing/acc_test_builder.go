@@ -67,6 +67,7 @@ func (b *RoleBindingAccTestBuilder) CreateStep(tfConfig string, variables config
 			resource.TestCheckResourceAttr(b.resourceIdentifier, "region", testutil.Region),
 		),
 	}
+
 	return b
 }
 
@@ -92,6 +93,7 @@ func (b *RoleBindingAccTestBuilder) DatasourceStep(tfConfig string, variables co
 			resource.TestCheckResourceAttr(datasourceIdentifier, "region", testutil.Region),
 		),
 	}
+
 	return b
 }
 
@@ -126,6 +128,7 @@ func (b *RoleBindingAccTestBuilder) ImportStep(variables config.Variables) RoleB
 		ImportState:       true,
 		ImportStateVerify: true,
 	}
+
 	return b
 }
 
@@ -144,6 +147,7 @@ func (b *RoleBindingAccTestBuilder) UpdateStep(tfConfig string, variables config
 			resource.TestCheckResourceAttr(b.resourceIdentifier, "region", testutil.Region),
 		),
 	}
+
 	return b
 }
 

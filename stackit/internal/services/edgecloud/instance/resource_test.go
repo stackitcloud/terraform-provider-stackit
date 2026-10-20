@@ -102,11 +102,14 @@ func TestMapFields(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Should have failed")
 				}
+
 				return
 			}
+
 			if err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			diff := cmp.Diff(tt.model, &tt.expected)
 			if diff != "" {
 				t.Errorf("Data does not match: %s", diff)
@@ -157,6 +160,7 @@ func TestToCreatePayload(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			payload := toCreatePayload(tt.input)
 			diff := cmp.Diff(payload, tt.expected)
+
 			if diff != "" {
 				t.Errorf("Payload does not match: %s", diff)
 			}
@@ -203,6 +207,7 @@ func TestToUpdatePayload(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			payload := toUpdatePayload(tt.input)
 			diff := cmp.Diff(payload, tt.expected)
+
 			if diff != "" {
 				t.Errorf("Payload does not match: %s", diff)
 			}

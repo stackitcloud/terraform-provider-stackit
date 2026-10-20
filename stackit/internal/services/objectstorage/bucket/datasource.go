@@ -108,8 +108,10 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 // Read refreshes the Terraform state with the latest data.
 func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -137,6 +139,7 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -146,14 +149,17 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	err = mapFields(bucketResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage bucket read")
 }

@@ -17,15 +17,19 @@ func createTestConfig(vals map[string]attr.Value) types.Object {
 	if _, ok := vals["blocked_ips"]; !ok {
 		vals["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{})
 	}
+
 	if _, ok := vals["default_cache_duration"]; !ok {
 		vals["default_cache_duration"] = types.StringNull()
 	}
+
 	if _, ok := vals["monthly_limit_bytes"]; !ok {
 		vals["monthly_limit_bytes"] = types.Int64Null()
 	}
+
 	if _, ok := vals["cache_config"]; !ok {
 		vals["cache_config"] = types.ObjectNull(cacheConfigTypes)
 	}
+
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -52,6 +56,7 @@ func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
 	for _, mod := range mods {
 		mod(vals)
 	}
+
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -124,6 +129,7 @@ func TestToCreatePayload(t *testing.T) {
 	if !ok {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
+
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 
 	config := createTestConfig(map[string]attr.Value{
@@ -210,6 +216,7 @@ func TestToCreatePayload(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 	tests := map[string]struct {
@@ -325,6 +332,7 @@ func TestToCreatePayload(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
+
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture, // reusing the existing one
@@ -620,15 +628,18 @@ func TestToCreatePayload(t *testing.T) {
 			IsValid:  false,
 		},
 	}
+
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			res, err := toCreatePayload(context.Background(), tc.Input)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				// set generated ID before diffing
 				tc.Expected.IntentId = res.IntentId
@@ -692,6 +703,7 @@ func TestToPatchPayload(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -847,9 +859,11 @@ func TestToPatchPayload(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to patch payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				tc.Expected.IntentId = res.IntentId
 
@@ -982,6 +996,7 @@ func TestConvertConfig(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -1184,6 +1199,7 @@ func TestConvertConfig(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
+
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture,
@@ -1321,9 +1337,11 @@ func TestConvertConfig(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(
 					res, tc.Expected,
@@ -1378,6 +1396,7 @@ func TestMapFields(t *testing.T) {
 	if !ok {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
+
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 	populatedWafSet := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("rule1"),
@@ -1523,6 +1542,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 	distributionFixture := func(mods ...func(*cdnSdk.Distribution)) *cdnSdk.Distribution {
@@ -1566,6 +1586,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(distribution)
 		}
+
 		return distribution
 	}
 	// define old state with the secrets
@@ -1637,6 +1658,7 @@ func TestMapFields(t *testing.T) {
 					"region":                 types.StringNull(),
 					"credentials":            types.ObjectNull(backendCredentialsTypes),
 				})
+
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backendWithGeofencing,
 					"regions":                regionsFixture,
@@ -1724,6 +1746,7 @@ func TestMapFields(t *testing.T) {
 					"disabled_rule_collection_ids":  populatedWafSet,
 					"log_only_rule_collection_ids":  populatedWafSet,
 				})
+
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
@@ -1739,6 +1762,7 @@ func TestMapFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				wafCopy := expectedWafConfig
+
 				wafCopy.EnabledRuleGroupIds = []string{}
 				wafCopy.DisabledRuleGroupIds = []string{}
 				wafCopy.LogOnlyRuleGroupIds = []string{}
@@ -1789,6 +1813,7 @@ func TestMapFields(t *testing.T) {
 					"errors": types.ListValueMust(types.StringType, []attr.Value{}),
 				})
 				domains := types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{managedDomain, customDomain})
+
 				m.Domains = domains
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -1996,6 +2021,7 @@ func TestMapFields(t *testing.T) {
 			IsValid: false,
 		},
 	}
+
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			model := &Model{}
@@ -2009,9 +2035,11 @@ func TestMapFields(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(model, tc.Expected)
 				if diff != "" {
@@ -2112,6 +2140,7 @@ func TestValidateCountryCode(t *testing.T) {
 				} else if err.Error() != tc.expectedError {
 					t.Errorf("for input '%s', expected error '%s', but got '%s'", tc.inputCountry, tc.expectedError, err.Error())
 				}
+
 				if gotOutput != "" {
 					t.Errorf("expected empty string on error, but got '%s'", gotOutput)
 				}
@@ -2119,6 +2148,7 @@ func TestValidateCountryCode(t *testing.T) {
 				if err != nil {
 					t.Errorf("did not expect an error for input '%s', but got: %v", tc.inputCountry, err)
 				}
+
 				if gotOutput != tc.wantOutput {
 					t.Errorf("for input '%s', expected output '%s', but got '%s'", tc.inputCountry, tc.wantOutput, gotOutput)
 				}

@@ -15,18 +15,22 @@ import (
 
 func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := secretsmanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SecretsManagerCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_secretsmanager_instance" {
 			continue
 		}
+
 		// instance terraform ID: "[project_id],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -43,5 +47,6 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

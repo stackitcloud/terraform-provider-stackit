@@ -12,6 +12,7 @@ import (
 
 func Test_mapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	resourceId := uuid.New().String()
 
 	type args struct {
@@ -19,6 +20,7 @@ func Test_mapFields(t *testing.T) {
 		model  *Model
 		region string
 	}
+
 	tests := []struct {
 		name      string
 		args      args
@@ -63,6 +65,7 @@ func Test_mapFields(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := mapFields(tt.args.resp, tt.args.model, tt.args.region); (err != nil) != tt.wantErr {

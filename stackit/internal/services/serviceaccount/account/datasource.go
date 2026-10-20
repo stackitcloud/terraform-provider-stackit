@@ -99,8 +99,10 @@ func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 // Read reads all service accounts from the API and updates the state with the latest information.
 func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -122,6 +124,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 			map[int]string{},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -139,6 +142,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		err = mapFields(&serviceAccounts[i], &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error processing API response: %v", err))
+
 			return
 		}
 
@@ -151,6 +155,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		// Update the state with the service account model
 		diags = resp.State.Set(ctx, &model)
 		resp.Diagnostics.Append(diags...)
+
 		return
 	}
 

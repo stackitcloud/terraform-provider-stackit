@@ -133,22 +133,29 @@ func (r *serviceAccountsDataSource) Schema(_ context.Context, _ datasource.Schem
 
 func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic
 	var model ServiceAccountsModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 
 	// Compile the regex if provided
-	var compiledRegex *regexp.Regexp
-	var err error
+	var (
+		compiledRegex *regexp.Regexp
+		err           error
+	)
+
 	if !model.EmailRegex.IsNull() && model.EmailRegex.ValueString() != "" {
 		compiledRegex, err = regexp.Compile(model.EmailRegex.ValueString())
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid email_regex", err.Error())
+
 			return
 		}
 	}
@@ -165,6 +172,7 @@ func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 			map[int]string{},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -174,6 +182,7 @@ func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 	err = mapDataSourceFields(listSaResp.Items, &model, compiledRegex)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service accounts", fmt.Sprintf("Error processing API response: %v", err))
+
 		return
 	}
 
@@ -188,6 +197,7 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 	}
 
 	var matchedItems []ServiceAccountItem
+
 	emailSuffix := model.EmailSuffix.ValueString()
 
 	for _, sa := range apiItems {
@@ -197,6 +207,7 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 		if compiledRegex != nil && !compiledRegex.MatchString(email) {
 			continue
 		}
+
 		if emailSuffix != "" && !strings.HasSuffix(email, emailSuffix) {
 			continue
 		}
@@ -220,9 +231,11 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 	sort.SliceStable(matchedItems, func(i, j int) bool {
 		emailA := matchedItems[i].Email.ValueString()
 		emailB := matchedItems[j].Email.ValueString()
+
 		if sortAsc {
 			return emailA < emailB
 		}
+
 		return emailA > emailB
 	})
 

@@ -84,27 +84,34 @@ func (r *runnerResource) Configure(ctx context.Context, req resource.ConfigureRe
 // Use the modifier to set the effective region in the current plan.
 func (r *runnerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -212,7 +219,9 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 // Create creates the resource and sets the initial Terraform state.
 func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -221,6 +230,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -228,6 +238,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -235,6 +246,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	runnerResp, err := r.client.CreateIntakeRunner(ctx, projectId, region).CreateIntakeRunnerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -253,25 +265,32 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	_, err = wait.CreateIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Intake runner creation waiting: %v", err))
+
 		return
 	}
 
 	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -281,6 +300,7 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	runnerId := model.RunnerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
@@ -288,13 +308,17 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	runnerResp, err := r.client.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
+
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -304,22 +328,27 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model, state Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -329,6 +358,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	projectId := model.ProjectId.ValueString()
 	runnerId := model.RunnerId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -336,6 +366,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
@@ -343,6 +374,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	runnerResp, err := r.client.UpdateIntakeRunner(ctx, projectId, region, runnerId).UpdateIntakeRunnerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -352,6 +384,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	_, err = wait.UpdateIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Runner update waiting: %v", err))
+
 		return
 	}
 
@@ -359,21 +392,26 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -383,6 +421,7 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	runnerId := model.RunnerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
@@ -391,11 +430,15 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	err := r.client.DeleteIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			tflog.Info(ctx, "Intake runner already deleted")
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -405,6 +448,7 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting runner", fmt.Sprintf("Runner deletion waiting: %v", err))
+
 		return
 	}
 
@@ -420,6 +464,7 @@ func (r *runnerResource) ImportState(ctx context.Context, req resource.ImportSta
 			"Error importing intake runner",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[runner_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -437,6 +482,7 @@ func mapFields(ctx context.Context, runnerResp *intake.IntakeRunnerResponse, mod
 	if runnerResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -508,6 +554,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*intake.UpdateIntakeRun
 	if err != nil {
 		return nil, err
 	}
+
 	payload.Labels = labels
 
 	return payload, nil

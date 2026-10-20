@@ -62,27 +62,34 @@ func (r *volumeAttachResource) Metadata(_ context.Context, req resource.Metadata
 // Use the modifier to set the effective region in the current plan.
 func (r *volumeAttachResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -91,7 +98,9 @@ func (r *volumeAttachResource) ModifyPlan(ctx context.Context, req resource.Modi
 // Configure adds the provider configured client to the resource.
 func (r *volumeAttachResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+
 	if !ok {
 		return
 	}
@@ -105,6 +114,7 @@ func (r *volumeAttachResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *volumeAttachResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Volume attachment resource schema. Attaches a volume to a server. Must have a `region` specified in the provider configuration."
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -166,8 +176,10 @@ func (r *volumeAttachResource) Schema(_ context.Context, _ resource.SchemaReques
 func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -178,6 +190,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 	volumeId := model.VolumeId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -188,9 +201,11 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	payload := iaas.AddVolumeToServerPayload{
 		DeleteOnTermination: new(false),
 	}
+
 	_, err := r.client.AddVolumeToServer(ctx, projectId, region, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -209,11 +224,14 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	requestId, err := iaasUtils.ReadXRequestId(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
+
 		return
 	}
+
 	_, err = wait.ProjectRequestWaitHandler(ctx, r.client, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("volume attachment waiting: %v", err))
+
 		return
 	}
 
@@ -223,17 +241,21 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume attachment created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -244,6 +266,7 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 	volumeId := model.VolumeId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -252,11 +275,15 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	_, err := r.client.GetAttachedVolume(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume attachment", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -269,9 +296,11 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume attachment read")
 }
 
@@ -284,8 +313,10 @@ func (r *volumeAttachResource) Update(_ context.Context, _ resource.UpdateReques
 func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -296,6 +327,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 	volumeId := model.VolumeId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -305,10 +337,13 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 	err := r.client.RemoveVolumeFromServer(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -317,11 +352,14 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 	requestId, err := iaasUtils.ReadXRequestId(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
+
 		return
 	}
+
 	_, err = wait.ProjectRequestWaitHandler(ctx, r.client, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("volume removal waiting: %v", err))
+
 		return
 	}
 
@@ -338,6 +376,7 @@ func (r *volumeAttachResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing volume attachment",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id],[volume_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

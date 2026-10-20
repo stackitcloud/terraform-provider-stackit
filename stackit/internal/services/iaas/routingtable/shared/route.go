@@ -45,11 +45,13 @@ type RouteModel struct {
 
 func RouteModelTypes() map[string]attr.Type {
 	modelTypes := RouteReadModelTypes()
+
 	modelTypes["id"] = types.StringType
 	modelTypes["organization_id"] = types.StringType
 	modelTypes["routing_table_id"] = types.StringType
 	modelTypes["network_area_id"] = types.StringType
 	modelTypes["region"] = types.StringType
+
 	return modelTypes
 }
 
@@ -81,6 +83,7 @@ func MapRouteModel(ctx context.Context, route *iaas.Route, model *RouteModel, re
 	if route == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -97,6 +100,7 @@ func MapRouteModel(ctx context.Context, route *iaas.Route, model *RouteModel, re
 		model.RoutingTableId.ValueString(),
 		model.RouteId.ValueString(),
 	}
+
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
@@ -109,11 +113,13 @@ func MapRouteReadModel(ctx context.Context, route *iaas.Route, model *RouteReadM
 	if route == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var routeId string
+
 	if model.RouteId.ValueString() != "" {
 		routeId = model.RouteId.ValueString()
 	} else if route.Id != nil {
@@ -129,12 +135,16 @@ func MapRouteReadModel(ctx context.Context, route *iaas.Route, model *RouteReadM
 
 	// created at and updated at
 	createdAtTF, updatedAtTF := types.StringNull(), types.StringNull()
+
 	if route.CreatedAt != nil {
 		createdAtValue := *route.CreatedAt
+
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	if route.UpdatedAt != nil {
 		updatedAtValue := *route.UpdatedAt
+
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
 
@@ -154,11 +164,13 @@ func MapRouteReadModel(ctx context.Context, route *iaas.Route, model *RouteReadM
 	model.CreatedAt = createdAtTF
 	model.UpdatedAt = updatedAtTF
 	model.Labels = labels
+
 	return nil
 }
 
 func MapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
 	nextHopMap := map[string]attr.Value{}
+
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
 	case *iaas.NexthopIPv4:
 		nextHopMap["type"] = types.StringValue(string(i.Type))
@@ -186,6 +198,7 @@ func MapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
 
 func MapRouteDestination(routeResp *iaas.Route) (types.Object, error) {
 	destinationMap := map[string]attr.Value{}
+
 	switch i := routeResp.Destination.GetActualInstance().(type) {
 	case *iaas.DestinationCIDRv4:
 		destinationMap["type"] = types.StringValue(string(i.Type))

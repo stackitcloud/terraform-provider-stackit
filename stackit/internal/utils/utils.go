@@ -51,12 +51,14 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 
 	// Remove elements from list1Copy that are not in list2
 	i := 0
+
 	for _, elem := range list1Copy {
 		if inList2[elem] {
 			list1Copy[i] = elem
 			i++
 		}
 	}
+
 	list1Copy = list1Copy[:i]
 
 	// Append elements to list1Copy that are in list2 but not in list1Copy
@@ -64,6 +66,7 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 	for _, elem := range list1Copy {
 		inList1[elem] = true
 	}
+
 	for _, elem := range list2 {
 		if !inList1[elem] {
 			list1Copy = append(list1Copy, elem)
@@ -75,11 +78,13 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 
 func ListValueToStringSlice(list basetypes.ListValue) ([]string, error) {
 	result := []string{}
+
 	for _, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
 			return result, fmt.Errorf("expected record to be of type %T, got %T", types.String{}, elStr)
 		}
+
 		result = append(result, elStr.ValueString())
 	}
 
@@ -91,12 +96,14 @@ func ConvertPointerSliceToStringSlice(pointerSlice []*string) []string {
 	if pointerSlice == nil {
 		return []string{}
 	}
+
 	stringSlice := make([]string, 0, len(pointerSlice))
 	for _, strPtr := range pointerSlice {
 		if strPtr != nil { // Safely skip any nil pointers in the list
 			stringSlice = append(stringSlice, *strPtr)
 		}
 	}
+
 	return stringSlice
 }
 
@@ -119,28 +126,36 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 	if err == nil {
 		return
 	}
+
 	tflog.Error(ctx, fmt.Sprintf("%s. Err: %v", summary, err))
 
 	var oapiErr *oapierror.GenericOpenAPIError
+
 	ok := errors.As(err, &oapiErr)
+
 	if !ok {
 		core.LogAndAddError(ctx, inputDiags, summary, fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
 	var description string
+
 	if len(descriptions) != 0 {
 		description, ok = descriptions[oapiErr.StatusCode]
 	}
+
 	if !ok || description == "" {
 		description = defaultDescription
 	}
+
 	core.LogAndAddError(ctx, inputDiags, summary, description)
 }
 
 // FormatPossibleValues formats a slice into a comma-separated-list for usage in the provider docs
 func FormatPossibleValues(values ...string) string {
 	var formattedValues []string
+
 	for _, value := range values {
 		if value == "unknown_default_open_api" {
 			continue
@@ -148,6 +163,7 @@ func FormatPossibleValues(values ...string) string {
 
 		formattedValues = append(formattedValues, fmt.Sprintf("`%v`", value))
 	}
+
 	return fmt.Sprintf("Possible values are: %s.", strings.Join(formattedValues, ", "))
 }
 
@@ -174,6 +190,7 @@ func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *t
 		ctx = tflog.SetField(ctx, key, val)
 		diags.Append(state.SetAttribute(ctx, path.Root(key), val)...)
 	}
+
 	return ctx
 }
 
@@ -187,19 +204,23 @@ func Coalesce[T interface {
 			return t
 		}
 	}
+
 	return r
 }
 
 func Join(separator string, parts ...types.String) types.String {
 	var builder strings.Builder
+
 	for i, l := 0, len(parts); i < l; i++ {
 		if !IsUndefined(parts[i]) {
 			if i > 0 {
 				builder.WriteString(separator)
 			}
+
 			builder.WriteString(parts[i].ValueString())
 		}
 	}
+
 	return types.StringValue(builder.String())
 }
 
@@ -207,15 +228,20 @@ func Join(separator string, parts ...types.String) types.String {
 // It will also keep the entier body intact, instead of cutting out important information in long responses.
 func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) string {
 	var oapiErr *oapierror.GenericOpenAPIError
+
 	if errors.As(err, &oapiErr) {
 		var prettyJSON bytes.Buffer
+
 		if errJson := json.Indent(&prettyJSON, oapiErr.Body, "", "  "); errJson != nil {
 			core.LogAndAddError(ctx, diags, "Error indenting JSON response from API. This is an issue with the API. Please notify the respective team.", errJson.Error())
+
 			// if there is an error formating the JSON just return the unformatted error to the user
 			return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, string(oapiErr.Body))
 		}
+
 		return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
 	}
+
 	return err.Error()
 }
 
@@ -225,5 +251,6 @@ func Map[T, U any](input []T, mapFn func(T) U) []U {
 	for i := range input {
 		values[i] = mapFn(input[i])
 	}
+
 	return values
 }

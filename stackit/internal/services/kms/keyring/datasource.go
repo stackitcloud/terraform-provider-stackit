@@ -93,6 +93,7 @@ func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadReq
 
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -120,6 +121,7 @@ func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadReq
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -128,13 +130,16 @@ func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadReq
 	err = mapFields(keyRingResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading keyring", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = response.State.Set(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Key ring read")
 }

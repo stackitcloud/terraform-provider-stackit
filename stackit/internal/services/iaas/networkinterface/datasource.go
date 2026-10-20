@@ -138,8 +138,10 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 // Read refreshes the Terraform state with the latest data.
 func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -169,6 +171,7 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -177,12 +180,16 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 	err = mapFields(ctx, networkInterfaceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface read")
 }

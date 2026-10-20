@@ -19,6 +19,7 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 		ctx context.Context
 		m   basetypes.MapValue
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -71,13 +72,16 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ToStringInterfaceMap(tt.args.ctx, tt.args.m)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FromTerraformStringMapToInterfaceMap() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("FromTerraformStringMapToInterfaceMap() = %v, want %v", got, tt.want)
 			}
@@ -143,6 +147,7 @@ func TestToStringStringPointerMap(t *testing.T) {
 			got, err := ToStringStringPointerMap(context.Background(), tt.args.m)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ToStringStringPointerMap() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 
@@ -199,6 +204,7 @@ func TestToOptStringPointerMap(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ToOptStringPointerMap() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Fatalf("ToOptStringPointerMap() mismatch: %s", diff)
 			}
@@ -349,6 +355,7 @@ func TestToLabelsMapPartialUpdatePayload(t *testing.T) {
 		currentLabels types.Map
 		desiredLabels types.Map
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -480,13 +487,16 @@ func TestToLabelsMapPartialUpdatePayload(t *testing.T) {
 			isValid: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			got, err := ToLabelsMapPartialUpdatePayload(context.Background(), tt.args.currentLabels, tt.args.desiredLabels)
 			if (err != nil) == tt.isValid {
 				t.Errorf("ToLabelsMapPartialUpdatePayload() error = %v, isValid %v", err, tt.isValid)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Errorf("ToLabelsMapPartialUpdatePayload() got = %v, want %v", got, tt.expected)
 			}
@@ -496,6 +506,7 @@ func TestToLabelsMapPartialUpdatePayload(t *testing.T) {
 
 func TestStringSetToSlice(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		in      basetypes.SetValue
@@ -536,13 +547,16 @@ func TestStringSetToSlice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			got, err := StringSetToSlice(tt.in)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected error")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("expected no error, got: %v", err)
 			}
+
 			if d := cmp.Diff(got, tt.want); d != "" {
 				t.Fatalf("no match, diff: %s", d)
 			}
@@ -552,6 +566,7 @@ func TestStringSetToSlice(t *testing.T) {
 
 func TestStringListToSlice(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		in      basetypes.ListValue
@@ -597,13 +612,16 @@ func TestStringListToSlice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			got, err := StringListToSlice(tt.in)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected error")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("expected no error, got: %v", err)
 			}
+
 			if d := cmp.Diff(got, tt.want); d != "" {
 				t.Fatalf("no match, diff: %s", d)
 			}
@@ -613,6 +631,7 @@ func TestStringListToSlice(t *testing.T) {
 
 func TestStringListToSet(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name       string
 		stringList []string
@@ -648,7 +667,9 @@ func TestStringListToSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
+
 			var diags diag.Diagnostics
 
 			got := StringListToSet(ctx, tt.stringList, &diags)
@@ -666,6 +687,7 @@ func TestStringListToSet(t *testing.T) {
 
 func TestTerraformStringSetToList(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		tfSet   basetypes.SetValue
@@ -719,7 +741,9 @@ func TestTerraformStringSetToList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
+
 			var diags diag.Diagnostics
 
 			got := TerraformStringSetToList(ctx, tt.tfSet, &diags)
@@ -739,6 +763,7 @@ func TestStringValueToPointer(t *testing.T) {
 	type args struct {
 		s basetypes.StringValue
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -766,6 +791,7 @@ func TestStringValueToPointer(t *testing.T) {
 			want: nil,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := StringValueToPointer(tt.args.s); !reflect.DeepEqual(got, tt.want) {
@@ -779,11 +805,13 @@ func TestStringValueToEnumPointer(t *testing.T) {
 	type args struct {
 		s basetypes.StringValue
 	}
+
 	type testCase[T interface{ ~string }] struct {
 		name string
 		args args
 		want *T
 	}
+
 	tests := []testCase[opensearch.InstanceParametersJavaGarbageCollector]{
 		{
 			name: "default",
@@ -807,6 +835,7 @@ func TestStringValueToEnumPointer(t *testing.T) {
 			want: nil,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := StringValueToEnumPointer[opensearch.InstanceParametersJavaGarbageCollector](tt.args.s); !reflect.DeepEqual(got, tt.want) {
@@ -820,12 +849,14 @@ func TestStringListToEnumSlice(t *testing.T) {
 	type args struct {
 		list basetypes.ListValue
 	}
+
 	type testCase[T interface{ ~string }] struct {
 		name    string
 		args    args
 		want    []T
 		wantErr bool
 	}
+
 	tests := []testCase[opensearch.InstanceParametersPluginsInner]{
 		{
 			name: "default",
@@ -873,13 +904,16 @@ func TestStringListToEnumSlice(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := StringListToEnumSlice[opensearch.InstanceParametersPluginsInner](tt.args.list)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("StringListToEnumSlice() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("StringListToEnumSlice() got = %v, want %v", got, tt.want)
 			}

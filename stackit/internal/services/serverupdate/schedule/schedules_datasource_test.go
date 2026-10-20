@@ -11,6 +11,7 @@ import (
 
 func TestMapSchedulesDataSourceFields(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		description string
 		input       *serverupdate.GetUpdateSchedulesResponse
@@ -72,6 +73,7 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 			false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &schedulesDataSourceModel{
@@ -80,12 +82,15 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 			}
 			ctx := context.TODO()
 			err := mapSchedulesDatasourceFields(ctx, tt.input, state, tt.region)
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {

@@ -133,8 +133,10 @@ type schedulesDatasourceItemModel struct {
 // Read refreshes the Terraform state with the latest data.
 func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model schedulesDataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,6 +146,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
@@ -160,6 +163,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -169,15 +173,18 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	err = mapSchedulesDatasourceFields(ctx, schedules, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update schedules", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server update schedules read")
 }
 
@@ -185,11 +192,13 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.G
 	if schedules == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	tflog.Debug(ctx, "response", map[string]any{"schedules": schedules})
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
@@ -204,7 +213,9 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.G
 			Enabled:           types.BoolValue(schedule.Enabled),
 			MaintenanceWindow: types.Int32Value(schedule.MaintenanceWindow),
 		}
+
 		model.Items = append(model.Items, scheduleState)
 	}
+
 	return nil
 }

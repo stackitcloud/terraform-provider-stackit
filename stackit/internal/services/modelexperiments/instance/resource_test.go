@@ -84,6 +84,7 @@ func TestMapInstanceFields(t *testing.T) {
 
 			ctx := context.Background()
 			err := mapInstance(ctx, tt.input, tt.state, "eu01")
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

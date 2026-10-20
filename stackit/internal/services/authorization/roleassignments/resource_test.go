@@ -90,6 +90,7 @@ func TestToCreatePayload(t *testing.T) {
 			if tt.expectError && err == nil {
 				t.Fatalf("Expected error but got nil")
 			}
+
 			if !tt.expectError && err != nil {
 				t.Fatalf("Expected no error but got: %v", err)
 			}
@@ -199,6 +200,7 @@ func TestMapListMembersResponse(t *testing.T) {
 			if tt.expectError && err == nil {
 				t.Fatalf("Expected error but got none")
 			}
+
 			if !tt.expectError && err != nil {
 				t.Fatalf("Expected no error, but got: %v", err)
 			}
@@ -311,6 +313,7 @@ func TestCheckDuplicate(t *testing.T) {
 			if tt.expectError && err == nil {
 				t.Fatalf("Expected error but got none")
 			}
+
 			if !tt.expectError && err != nil {
 				t.Fatalf("Expected no error, but got: %v", err)
 			}

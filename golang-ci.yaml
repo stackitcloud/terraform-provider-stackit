@@ -28,6 +28,7 @@ linters:
     - revive
     - sqlclosecheck
     - wastedassign
+    - wsl_v5
   disable:
     - noctx # false positive: finds errors with http.NewRequest that dont make sense
     - unparam # false positives
@@ -114,6 +115,8 @@ linters:
         # customizations
         - "-QF1001" # disable 'could apply De Morgan's law': readability of boolean expressions is subjective and should be decided on a case-by-case basis
         - "-QF1012" # disable 'use fmt.Fprintf instead' Fprintf returns bytes written and an error, which we'd have to handle/ignore to appease some other linter
+    wsl_v5:
+      default: all
   exclusions:
     generated: lax
     paths:

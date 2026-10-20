@@ -29,9 +29,12 @@ func startMockTokenServer() *httptest.Server {
 			ExpiresIn:   int(time.Now().Add(time.Hour).Unix()),
 			Scope:       "mock_scope",
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		_ = json.NewEncoder(w).Encode(resp) // nolint:gosec // mock_access_token is not sensitive information
 	})
+
 	return httptest.NewServer(handler)
 }
 
@@ -40,10 +43,12 @@ func generatePrivateKey() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	privateKeyPEM := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
+
 	return string(pem.EncodeToMemory(privateKeyPEM)), nil
 }
 
@@ -179,6 +184,7 @@ func TestGetAccessToken(t *testing.T) {
 			setupEnv: func() {
 				// Write temp file and set env
 				tmpFile := writeTempPEMFile(t, privateKey)
+
 				_ = os.Setenv("STACKIT_PRIVATE_KEY_PATH", tmpFile)
 			},
 			cleanupEnv: func() {
@@ -229,6 +235,7 @@ func TestGetAccessToken(t *testing.T) {
 			if tt.setupEnv != nil {
 				tt.setupEnv()
 			}
+
 			if tt.cleanupEnv != nil {
 				defer tt.cleanupEnv()
 			}
@@ -241,6 +248,7 @@ func TestGetAccessToken(t *testing.T) {
 					t.Errorf("expected error generating round tripper for test case '%s'", tt.description)
 				}
 			}
+
 			token, err := getAccessToken(roundTripper)
 			if tt.expectError {
 				if err == nil {
@@ -250,6 +258,7 @@ func TestGetAccessToken(t *testing.T) {
 				if err != nil {
 					t.Errorf("did not expect error but got: %v for test case '%s'", err, tt.description)
 				}
+
 				if token != tt.expected {
 					t.Errorf("expected token '%s', got '%s' for test case '%s'", tt.expected, token, tt.description)
 				}

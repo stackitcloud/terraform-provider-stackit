@@ -64,6 +64,7 @@ var testConfigInstanceVarsMin = config.Variables{
 var testConfigInstanceVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigInstanceVarsMin)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -72,6 +73,7 @@ var testConfigInstanceVarsMinUpdated = func() config.Variables {
 	updatedConfig["flavor_id"] = config.StringVariable("4.8")
 	updatedConfig["storage_size"] = config.IntegerVariable(10)
 	updatedConfig["instance_version"] = config.StringVariable("17")
+
 	return updatedConfig
 }()
 
@@ -96,6 +98,7 @@ var testConfigInstanceVarsMax = config.Variables{
 var testConfigInstanceVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigInstanceVarsMax)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -108,6 +111,7 @@ var testConfigInstanceVarsMaxUpdated = func() config.Variables {
 	updatedConfig["storage_size"] = config.IntegerVariable(11)
 	updatedConfig["instance_version"] = config.StringVariable("17")
 	updatedConfig["retention_days"] = config.IntegerVariable(32)
+
 	return updatedConfig
 }()
 
@@ -130,11 +134,13 @@ var testConfigDatabaseVarsMin = config.Variables{
 var testConfigDatabaseVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigDatabaseVarsMin)
+
 	updatedConfig["username"] = config.StringVariable(fmt.Sprintf(
 		"%s_updated", testutil.ConvertConfigVariable(updatedConfig["username"]),
 	))
 	updatedConfig["roles"] = config.StringVariable("createdb")
 	updatedConfig["database_name"] = config.StringVariable("acc_test_updated")
+
 	return updatedConfig
 }()
 
@@ -156,8 +162,10 @@ var testConfigUserVarsMin = config.Variables{
 var testConfigUserVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigUserVarsMin)
+
 	updatedConfig["username"] = config.StringVariable("acc_test_updated")
 	updatedConfig["roles"] = config.StringVariable("createdb")
+
 	return updatedConfig
 }()
 
@@ -260,14 +268,17 @@ func TestAccPostgresFlexInstanceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, region, instanceId), nil
 				},
 				ImportState:             true,
@@ -468,14 +479,17 @@ func TestAccPostgresFlexInstanceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, region, instanceId), nil
 				},
 				ImportState:             true,
@@ -496,14 +510,17 @@ func TestAccPostgresFlexInstanceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, region, instanceId), nil
 				},
 				ImportState:             true,
@@ -668,18 +685,22 @@ func TestAccPostgresFlexDatabaseMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					databaseId, ok := r.Primary.Attributes["database_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute database_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, databaseId), nil
 				},
 				ImportState:       true,
@@ -814,18 +835,22 @@ func TestAccPostgresFlexUserMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute user_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, userId), nil
 				},
 				ImportState:             true,
@@ -911,6 +936,7 @@ func testCheckDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
+
 	for _, checkDestroyFunc := range checkDestroyFuncs {
 		err := checkDestroyFunc(s)
 		if err != nil {
@@ -923,6 +949,7 @@ func testCheckDestroy(s *terraform.State) error {
 
 func testUserDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := postgresflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.PostgresFlexCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -936,31 +963,38 @@ func testUserDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
+
 	usersToDestroy := []postgresUser{}
+
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "stackit_postgresflex_user" {
 			continue
 		}
+
 		projectId, ok := r.Primary.Attributes["project_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no project_id found in %s", r.Primary))
 			continue
 		}
+
 		region, ok := r.Primary.Attributes["region"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no region found in %s", r.Primary))
 			continue
 		}
+
 		instanceId, ok := r.Primary.Attributes["instance_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no instance_id found in %s", r.Primary))
 			continue
 		}
+
 		userIdStr, ok := r.Primary.Attributes["user_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no user_id found in %s", r.Primary))
 			continue
 		}
+
 		userId, err := strconv.ParseInt(userIdStr, 10, 64)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("parsing user id: %w", err))
@@ -986,6 +1020,7 @@ func testUserDestroy(s *terraform.State) error {
 				},
 				RetryStatusCodes: []int{http.StatusLocked},
 			}
+
 			err = utils.RetryRequestWithoutResponse(
 				ctx,
 				client.DefaultAPI.DeleteUser(ctx, user.projectId, user.region, user.instanceId, user.userId).Execute,
@@ -995,17 +1030,20 @@ func testUserDestroy(s *terraform.State) error {
 				errs = append(errs, fmt.Errorf("deleting user with ID %d in project %q, region %q, instance %q: %w", user.userId, user.projectId, user.region, user.instanceId, err))
 				continue
 			}
+
 			_, err = wait.DeleteUserWaitHandler(ctx, client.DefaultAPI, user.projectId, user.region, user.instanceId, user.userId).WaitWithContext(ctx)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("deleting user with ID %d in project %q, region %q, instance %q during CheckDestroy: waiting for deletion %w", user.userId, user.projectId, user.region, user.instanceId, err))
 			}
 		}
 	}
+
 	return errors.Join(errs...)
 }
 
 func testDatabaseDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := postgresflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.PostgresFlexCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -1019,36 +1057,44 @@ func testDatabaseDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
+
 	databasesToDestroy := []postgresDatabase{}
+
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "stackit_postgresflex_database" {
 			continue
 		}
+
 		projectId, ok := r.Primary.Attributes["project_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no project_id found in %s", r.Primary))
 			continue
 		}
+
 		region, ok := r.Primary.Attributes["region"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no region found in %s", r.Primary))
 			continue
 		}
+
 		instanceId, ok := r.Primary.Attributes["instance_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no instance_id found in %s", r.Primary))
 			continue
 		}
+
 		databaseIdStr, ok := r.Primary.Attributes["database_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no database_id found in %s", r.Primary))
 			continue
 		}
+
 		databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("parsing database id: %w", err))
 			continue
 		}
+
 		databasesToDestroy = append(databasesToDestroy, postgresDatabase{
 			projectId:  projectId,
 			region:     region,
@@ -1068,6 +1114,7 @@ func testDatabaseDestroy(s *terraform.State) error {
 				},
 				RetryStatusCodes: []int{http.StatusLocked},
 			}
+
 			err = utils.RetryRequestWithoutResponse(
 				ctx,
 				client.DefaultAPI.DeleteDatabase(ctx, db.projectId, db.region, db.instanceId, db.databaseId).Execute,
@@ -1079,11 +1126,13 @@ func testDatabaseDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return errors.Join(errs...)
 }
 
 func testInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := postgresflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.PostgresFlexCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -1096,26 +1145,32 @@ func testInstanceDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
+
 	instancesToDestroy := []postgresInstance{}
+
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "stackit_postgresflex_instance" {
 			continue
 		}
+
 		projectId, ok := r.Primary.Attributes["project_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no project_id found in %s", r.Primary))
 			continue
 		}
+
 		region, ok := r.Primary.Attributes["region"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no region found in %s", r.Primary))
 			continue
 		}
+
 		instanceId, ok := r.Primary.Attributes["instance_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no instance_id found in %s", r.Primary))
 			continue
 		}
+
 		instancesToDestroy = append(instancesToDestroy, postgresInstance{
 			projectId:  projectId,
 			region:     region,
@@ -1134,6 +1189,7 @@ func testInstanceDestroy(s *terraform.State) error {
 				},
 				RetryStatusCodes: []int{http.StatusLocked},
 			}
+
 			err = utils.RetryRequestWithoutResponse(
 				ctx,
 				client.DefaultAPI.DeleteInstance(ctx, inst.projectId, inst.region, inst.instanceId).Execute,
@@ -1143,11 +1199,13 @@ func testInstanceDestroy(s *terraform.State) error {
 				errs = append(errs, fmt.Errorf("deleting instance with ID %q in project %q, region %q: %w", inst.instanceId, inst.projectId, inst.region, err))
 				continue
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, inst.projectId, inst.region, inst.instanceId).WaitWithContext(ctx)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("deleting instance with ID %q in project %q, region %q during CheckDestroy: waiting for deletion %w", inst.instanceId, inst.projectId, inst.region, err))
 			}
 		}
 	}
+
 	return errors.Join(errs...)
 }

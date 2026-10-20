@@ -61,18 +61,22 @@ var testConfigVarsMax = config.Variables{
 func testScfOrgConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
+
 	// update scf organization to a new name
 	tempConfig["name"] = config.StringVariable(nameMinUpdated)
+
 	return tempConfig
 }
 
 func testScfOrgConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
+
 	// update scf organization to a new name, unsuspend it and assign a new quota
 	tempConfig["name"] = config.StringVariable(nameMaxUpdated)
 	tempConfig["quota_id"] = config.StringVariable(quotaIdMaxUpdated)
 	tempConfig["suspended"] = config.BoolVariable(!suspendedMax)
+
 	return tempConfig
 }
 
@@ -196,14 +200,17 @@ func TestAccScfOrganizationMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_scf_organization.org")
 					}
+
 					orgId, ok := r.Primary.Attributes["org_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute org_id")
 					}
+
 					regionInAttributes, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, regionInAttributes, orgId), nil
 				},
 				ImportState:       true,
@@ -373,14 +380,17 @@ func TestAccScfOrgMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_scf_organization.org")
 					}
+
 					orgId, ok := r.Primary.Attributes["org_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute org_id")
 					}
+
 					regionInAttributes, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, regionInAttributes, orgId), nil
 				},
 				ImportState:       true,
@@ -409,18 +419,22 @@ func TestAccScfOrgMax(t *testing.T) {
 
 func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := scf.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ScfCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	var orgsToDestroy []string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_scf_organization" {
 			continue
 		}
+
 		// terraform ID: "[project_id],[region],[org_id]"
 		orgId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		orgsToDestroy = append(orgsToDestroy, orgId)
 	}
 
@@ -434,6 +448,7 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 		if scfOrgs[i].Guid == "" {
 			continue
 		}
+
 		if slices.Contains(orgsToDestroy, scfOrgs[i].Guid) {
 			_, err := client.DefaultAPI.DeleteOrganization(ctx, testutil.ProjectId, testutil.Region, scfOrgs[i].Guid).Execute()
 			if err != nil {
@@ -441,5 +456,6 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

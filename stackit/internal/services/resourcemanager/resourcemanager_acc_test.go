@@ -82,28 +82,36 @@ var providerConfig = testutil.NewConfigBuilder().ServiceAccountToken(token).Buil
 func testConfigProjectNameParentContainerIdUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceProjectParentContainerId))
 	maps.Copy(tempConfig, testConfigResourceProjectParentContainerId)
+
 	tempConfig["name"] = config.StringVariable(projectNameParentContainerIdUpdated)
+
 	return tempConfig
 }
 
 func testConfigProjectNameParentUUIDUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceProjectParentUUID))
 	maps.Copy(tempConfig, testConfigResourceProjectParentUUID)
+
 	tempConfig["name"] = config.StringVariable(projectNameParentUUIDUpdated)
+
 	return tempConfig
 }
 
 func testConfigFolderNameParentContainerIdUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceFolderParentContainerId))
 	maps.Copy(tempConfig, testConfigResourceFolderParentContainerId)
+
 	tempConfig["name"] = config.StringVariable(folderNameParentContainerIdUpdated)
+
 	return tempConfig
 }
 
 func testConfigFolderNameParentUUIDUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceFolderParentUUID))
 	maps.Copy(tempConfig, testConfigResourceFolderParentUUID)
+
 	tempConfig["name"] = config.StringVariable(folderNameParentUUIDUpdated)
+
 	return tempConfig
 }
 
@@ -430,6 +438,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckResourceManagerProjectsDestroy,
 		testAccCheckResourceManagerFoldersDestroy,
 	}
+
 	var errs []error
 
 	wg := sync.WaitGroup{}
@@ -441,31 +450,39 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	projectsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_project" {
 			continue
 		}
+
 		// project terraform ID: "[container_id]"
 		containerId := rs.Primary.ID
+
 		projectsToDestroy = append(projectsToDestroy, containerId)
 	}
 
 	var containerParentId string
+
 	switch {
 	case testutil.TestProjectParentContainerID != "":
 		containerParentId = testutil.TestProjectParentContainerID
@@ -485,6 +502,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 		if items[i].LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
 			continue
 		}
+
 		if !utils.Contains(projectsToDestroy, items[i].ContainerId) {
 			continue
 		}
@@ -499,27 +517,33 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", items[i].ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	foldersToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_folder" {
 			continue
 		}
+
 		// project terraform ID: "[container_id]"
 		containerId := rs.Primary.ID
+
 		foldersToDestroy = append(foldersToDestroy, containerId)
 	}
 
 	var containerParentId string
+
 	switch {
 	case testutil.TestProjectParentContainerID != "":
 		containerParentId = testutil.TestProjectParentContainerID
@@ -545,6 +569,7 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", items[i].ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
@@ -553,9 +578,11 @@ func getImportIdFromID(s *terraform.State, resourceName, keyName string) (string
 	if !ok {
 		return "", fmt.Errorf("couldn't find resource %s", resourceName)
 	}
+
 	id, ok := r.Primary.Attributes[keyName]
 	if !ok {
 		return "", fmt.Errorf("couldn't find attribute %s", keyName)
 	}
+
 	return id, nil
 }

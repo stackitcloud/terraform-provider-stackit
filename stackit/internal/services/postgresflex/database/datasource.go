@@ -42,7 +42,9 @@ func (r *databaseDataSource) Metadata(_ context.Context, req datasource.Metadata
 // Configure adds the provider configured client to the data source.
 func (r *databaseDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+
 	if !ok {
 		return
 	}
@@ -116,8 +118,10 @@ func (r *databaseDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -128,6 +132,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	instanceId := model.InstanceId.ValueString()
 	databaseIdStr := model.DatabaseId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
@@ -137,6 +142,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Parsing database ID: %v", err))
+
 		return
 	}
 
@@ -153,6 +159,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -162,14 +169,17 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(databaseResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex database read")
 }

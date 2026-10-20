@@ -18,6 +18,7 @@ func TestMapLabels(t *testing.T) {
 		responseLabels map[string]any
 		currentLabels  types.Map
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -79,14 +80,18 @@ func TestMapLabels(t *testing.T) {
 			want:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			got, err := MapLabels(ctx, tt.args.responseLabels, tt.args.currentLabels)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapLabels() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MapLabels() got = %v, want %v", got, tt.want)
 			}
@@ -156,13 +161,16 @@ func TestReadXRequestId(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ReadXRequestId(tt.ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ReadXRequestId() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if got != tt.want {
 				t.Errorf("ReadXRequestId() got = %v, want %v", got, tt.want)
 			}

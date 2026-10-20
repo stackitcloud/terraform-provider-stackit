@@ -60,6 +60,7 @@ func (d *plansDataSource) Configure(ctx context.Context, req datasource.Configur
 	d.client = clients.EdgeV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_edgecloud_plans", "datasource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -124,8 +125,10 @@ func (d *plansDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 // Read fetches the list of Edge Cloud plans and populates the data source.
 func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var state DataSourceModel
+
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -149,6 +152,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 				http.StatusNotFound: fmt.Sprintf("Project %q not found", projectId),
 			},
 		)
+
 		return
 	}
 
@@ -156,19 +160,23 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	// Process the API response and build the list
 	var plansList []attr.Value
+
 	if plansResp.ValidPlans != nil {
 		for _, plan := range plansResp.ValidPlans {
 			planAttrs, err := mapPlanToAttrs(&plan)
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Edge Cloud plans", fmt.Sprintf("Could not process plans: %v", err))
+
 				return
 			}
 
 			planObjectValue, diags := types.ObjectValue(planTypes, planAttrs)
 			resp.Diagnostics.Append(diags...)
+
 			if resp.Diagnostics.HasError() {
 				return
 			}
+
 			plansList = append(plansList, planObjectValue)
 		}
 	}
@@ -177,16 +185,20 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	planListValue, diags := types.ListValue(types.ObjectType{AttrTypes: planTypes}, plansList)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	state.Plans = planListValue
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "read all Edge Cloud plans")
 }
 

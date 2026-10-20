@@ -387,9 +387,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.state, tt.expected)
 				if diff != "" {
@@ -584,9 +586,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(postgresflex.NullableInt32{}))
 				if diff != "" {
@@ -737,9 +741,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -906,12 +912,15 @@ func TestLoadFlavorId(t *testing.T) {
 				RAM: tt.inputFlavor.RAM,
 			}
 			err := loadFlavorId(context.Background(), client, model, flavorModel)
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(flavorModel, tt.expected)
 				if diff != "" {
@@ -1094,12 +1103,15 @@ func TestGetFlavor(t *testing.T) {
 				listFlavorsResps: []*postgresflex.ListFlavorsResponse{tt.mockedResp},
 			}
 			got, err := getFlavor(context.Background(), client, "pid", "region", tt.flavorId)
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
@@ -1117,6 +1129,7 @@ func TestGetAllFlavors(t *testing.T) {
 		projectId string
 		region    string
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -1284,13 +1297,16 @@ func TestGetAllFlavors(t *testing.T) {
 			wantErr: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := getAllFlavors(tt.args.ctx, tt.args.client, tt.args.projectId, tt.args.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getAllFlavors() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !cmp.Equal(got, tt.want) {
 				t.Errorf("getAllFlavors() got = %v, want %v", got, tt.want)
 			}

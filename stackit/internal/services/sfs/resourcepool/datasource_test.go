@@ -106,12 +106,14 @@ func TestMapDatasourceFields(t *testing.T) {
 			isValid: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			if err := mapDataSourceFields(ctx, tt.region, tt.input, tt.state); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)

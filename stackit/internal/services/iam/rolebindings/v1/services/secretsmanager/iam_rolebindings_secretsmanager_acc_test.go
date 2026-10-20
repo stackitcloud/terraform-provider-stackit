@@ -30,7 +30,9 @@ func TestAccSecretsManagerInstanceRoleBindings(t *testing.T) {
 	variablesUpdated := func() config.Variables {
 		tempConfig := make(config.Variables, len(variables))
 		maps.Copy(tempConfig, variables)
+
 		tempConfig["role"] = config.StringVariable("editor")
+
 		return tempConfig
 	}
 

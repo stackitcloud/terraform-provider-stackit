@@ -96,12 +96,14 @@ var testConfigVPCVarsMax = config.Variables{
 var testConfigVPCVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCVarsMax)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
 	updatedConfig["description"] = config.StringVariable("terraform acceptance test updated")
 	updatedConfig["label_key"] = config.StringVariable("stage-updated")
 	updatedConfig["label_value"] = config.StringVariable("qa-updated")
+
 	return updatedConfig
 }()
 
@@ -121,9 +123,11 @@ var testConfigVPCRoutingTableVarsMin = config.Variables{
 var testConfigVPCRoutingTableVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableVarsMin)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
+
 	return updatedConfig
 }()
 
@@ -149,6 +153,7 @@ var testConfigVPCRoutingTableVarsMax = config.Variables{
 var testConfigVPCRoutingTableVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableVarsMax)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -157,6 +162,7 @@ var testConfigVPCRoutingTableVarsMaxUpdated = func() config.Variables {
 	updatedConfig["label_value"] = config.StringVariable("qa-updated")
 	updatedConfig["system_routes"] = config.BoolVariable(true)
 	updatedConfig["dynamic_routes"] = config.BoolVariable(true)
+
 	return updatedConfig
 }()
 
@@ -177,9 +183,11 @@ var testConfigVPCRoutingTableStaticRouteVarsMin = config.Variables{
 var testConfigVPCRoutingTableStaticRouteVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableStaticRouteVarsMin)
+
 	// currently only cidrv4 supported
 	updatedConfig["nexthop_type"] = config.StringVariable("blackhole")
 	updatedConfig["nexthop_value"] = nil
+
 	return updatedConfig
 }()
 
@@ -203,6 +211,7 @@ var testConfigVPCRoutingTableStaticRouteVarsMax = config.Variables{
 var testConfigVPCRoutingTableStaticRouteVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableStaticRouteVarsMax)
+
 	// currently only cidrv4 supported
 	updatedConfig["nexthop_type"] = config.StringVariable("blackhole")
 	updatedConfig["nexthop_value"] = nil
@@ -210,6 +219,7 @@ var testConfigVPCRoutingTableStaticRouteVarsMaxUpdated = func() config.Variables
 		"key1": config.StringVariable("value1-updated"),
 		"key2": config.StringVariable("value2"),
 	})
+
 	return updatedConfig
 }()
 
@@ -240,7 +250,9 @@ var testConfigVPCNetworkRangeVarsMin = config.Variables{
 var testConfigVPCNetworkRangeVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCNetworkRangeVarsMin)
+
 	updatedConfig["description"] = config.StringVariable("network range acc test update")
+
 	return updatedConfig
 }()
 
@@ -268,6 +280,7 @@ var testConfigVPCNetworkRangeVarsMax = config.Variables{
 var testConfigVPCNetworkRangeVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCNetworkRangeVarsMax)
+
 	updatedConfig["description"] = config.StringVariable("network range acc test update")
 	updatedConfig["default_prefix_length"] = config.IntegerVariable(27)
 	updatedConfig["max_prefix_length"] = config.IntegerVariable(27)
@@ -275,6 +288,7 @@ var testConfigVPCNetworkRangeVarsMaxUpdated = func() config.Variables {
 	updatedConfig["nameserver"] = config.StringVariable("8.8.8.8")
 	updatedConfig["label_key"] = config.StringVariable("acc-update")
 	updatedConfig["label_value"] = config.StringVariable("test-update")
+
 	return updatedConfig
 }()
 
@@ -342,14 +356,17 @@ func TestAccVPCMin(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc.vpc")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					return fmt.Sprintf("%s,%s", projectId, vpcId), nil
 				},
 				ImportState:       true,
@@ -426,14 +443,17 @@ func TestAccVPCMax(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc.vpc")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					return fmt.Sprintf("%s,%s", projectId, vpcId), nil
 				},
 				ImportState:       true,
@@ -546,22 +566,27 @@ func TestAccVPCRoutingTableMin(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc.vpc")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute routing_table_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, vpcId, region, routingTableId), nil
 				},
 				ImportState:       true,
@@ -681,22 +706,27 @@ func TestAccVPCRoutingTableMax(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc.vpc")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute routing_table_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, vpcId, region, routingTableId), nil
 				},
 				ImportState:       true,
@@ -804,18 +834,22 @@ func TestAccVPCRegionMin(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc_region.region")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", errors.New("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, vpcId, region), nil
 				},
 				ImportState:       true,
@@ -918,26 +952,32 @@ func TestAccVPCRoutingTableStaticRouteMin(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc_routing_table_static_route.static_route")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", errors.New("couldn't find attribute region")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute routing_table_id")
 					}
+
 					routeId, ok := r.Primary.Attributes["route_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute route_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s,%s", projectId, vpcId, region, routingTableId, routeId), nil
 				},
 				ImportState:       true,
@@ -1075,26 +1115,32 @@ func TestAccVPCRoutingTableStaticRouteMax(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc_routing_table_static_route.static_route")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", errors.New("couldn't find attribute region")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute routing_table_id")
 					}
+
 					routeId, ok := r.Primary.Attributes["route_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute route_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s,%s", projectId, vpcId, region, routingTableId, routeId), nil
 				},
 				ImportState:       true,
@@ -1221,22 +1267,27 @@ func TestAccVPCNetworkRangeMin(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc_network_range.network_range")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", errors.New("couldn't find attribute region")
 					}
+
 					networkRangeId, ok := r.Primary.Attributes["network_range_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute network_range_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, vpcId, region, networkRangeId), nil
 				},
 				ImportState:       true,
@@ -1360,22 +1411,27 @@ func TestAccVPCNetworkRangeMax(t *testing.T) {
 					if !ok {
 						return "", errors.New("couldn't find resource stackit_vpc_network_range.network_range")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute project_id")
 					}
+
 					vpcId, ok := r.Primary.Attributes["vpc_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute vpc_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", errors.New("couldn't find attribute region")
 					}
+
 					networkRangeId, ok := r.Primary.Attributes["network_range_id"]
 					if !ok {
 						return "", errors.New("couldn't find attribute network_range_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, vpcId, region, networkRangeId), nil
 				},
 				ImportState:       true,
@@ -1426,6 +1482,7 @@ func testCheckDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
+
 	for _, checkDestroyFunc := range checkDestroyFuncs {
 		err := checkDestroyFunc(s)
 		if err != nil {
@@ -1438,6 +1495,7 @@ func testCheckDestroy(s *terraform.State) error {
 
 func testVpcRoutingTableCheckDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().Experiments(testutil.ExperimentVPC).BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -1451,30 +1509,37 @@ func testVpcRoutingTableCheckDestroy(s *terraform.State) error {
 	}
 
 	rtToDestroy := []routingTableIds{}
+
 	var errs []error
+
 	// vpc
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_vpc_routing_table" {
 			continue
 		}
+
 		projectId, ok := rs.Primary.Attributes["project_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no project_id found in %s", rs.Primary))
 			continue
 		}
+
 		vpcId, ok := rs.Primary.Attributes["vpc_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no vpc_id found in %s", rs.Primary))
 			continue
 		}
+
 		region, ok := rs.Primary.Attributes["region"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no region found in %s", rs.Primary))
 		}
+
 		routingTableId, ok := rs.Primary.Attributes["routing_table_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no routing_table_id found in %s", rs.Primary))
 		}
+
 		rtToDestroy = append(rtToDestroy, routingTableIds{
 			projectId:      projectId,
 			vpcId:          vpcId,
@@ -1490,6 +1555,7 @@ func testVpcRoutingTableCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, fmt.Errorf("deleting rt with ID %q in project %q, vpc %q, region %q : %w", rt.routingTableId, rt.projectId, rt.vpcId, rt.region, err))
 			}
+
 			continue
 		}
 
@@ -1498,6 +1564,7 @@ func testVpcRoutingTableCheckDestroy(s *terraform.State) error {
 				continue
 			}
 		}
+
 		errs = append(errs, fmt.Errorf("deleting rt: %w", err))
 	}
 
@@ -1506,6 +1573,7 @@ func testVpcRoutingTableCheckDestroy(s *terraform.State) error {
 
 func testVpcRoutingTableStaticRouteDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().Experiments(testutil.ExperimentVPC).BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -1520,36 +1588,44 @@ func testVpcRoutingTableStaticRouteDestroy(s *terraform.State) error {
 	}
 
 	routesToDestroy := []staticRouteIds{}
+
 	var errs []error
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_vpc_routing_table_static_route" {
 			continue
 		}
+
 		projectId, ok := rs.Primary.Attributes["project_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no project_id found in %s", rs.Primary))
 			continue
 		}
+
 		vpcId, ok := rs.Primary.Attributes["vpc_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no vpc_id found in %s", rs.Primary))
 			continue
 		}
+
 		region, ok := rs.Primary.Attributes["region"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no region found in %s", rs.Primary))
 			continue
 		}
+
 		routingTableId, ok := rs.Primary.Attributes["routing_table_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no routing_table_id found in %s", rs.Primary))
 			continue
 		}
+
 		routeId, ok := rs.Primary.Attributes["route_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no route_id found in %s", rs.Primary))
 			continue
 		}
+
 		routesToDestroy = append(routesToDestroy, staticRouteIds{
 			projectId:      projectId,
 			vpcId:          vpcId,
@@ -1566,6 +1642,7 @@ func testVpcRoutingTableStaticRouteDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, fmt.Errorf("deleting static route with ID %q in project %q, vpc %q, region %q, routing table %q : %w", route.routeId, route.projectId, route.vpcId, route.region, route.routingTableId, err))
 			}
+
 			continue
 		}
 
@@ -1574,6 +1651,7 @@ func testVpcRoutingTableStaticRouteDestroy(s *terraform.State) error {
 				continue
 			}
 		}
+
 		errs = append(errs, fmt.Errorf("deleting static route: %w", err))
 	}
 

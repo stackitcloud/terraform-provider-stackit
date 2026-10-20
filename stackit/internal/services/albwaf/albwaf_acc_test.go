@@ -49,7 +49,9 @@ var testCustomRuleGroupMin = config.Variables{
 var testCustomRuleGroupMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testCustomRuleGroupMin)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+
 	return updatedConfig
 }
 
@@ -70,6 +72,7 @@ var testCustomRuleGroupMax = config.Variables{
 var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testCustomRuleGroupMax)
+
 	// Name should not be updated, test if the update works in place
 	updatedConfig["description"] = config.StringVariable("new description")
 	updatedConfig["action"] = config.StringVariable("ACTION_ALLOW")
@@ -79,6 +82,7 @@ var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	updatedConfig["transformation"] = config.StringVariable("TRANSFORMATION_UTF8_TO_UNICODE")
 	updatedConfig["variable_type"] = config.StringVariable("VARIABLE_ARGS_POST")
 	updatedConfig["variable_value"] = config.StringVariable("foo")
+
 	return updatedConfig
 }
 
@@ -91,7 +95,9 @@ var testManagedRuleSet = config.Variables{
 var testManagedRuleSetUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testManagedRuleSet)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+
 	return updatedConfig
 }
 
@@ -110,10 +116,12 @@ var testConfigVarsMax = config.Variables{
 var testConfigVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVarsMax)
+
 	updatedConfig["waf_configuration_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_name"])))
 	updatedConfig["rule_set_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["rule_set_name"])))
 	updatedConfig["custom_rule_group_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["custom_rule_group_name"])))
 	updatedConfig["waf_configuration_label"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_label"])))
+
 	return updatedConfig
 }
 
@@ -125,7 +133,9 @@ var testConfigVarsMin = config.Variables{
 var testConfigVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVarsMin)
+
 	updatedConfig["waf_configuration_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_name"])))
+
 	return updatedConfig
 }
 
@@ -208,10 +218,12 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_custom_rule_group.custom_rule_group")
 					}
+
 					policyId, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -339,10 +351,12 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_custom_rule_group.custom_rule_group")
 					}
+
 					policyId, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -436,10 +450,12 @@ func TestAccManagedRuleSet(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_managed_rule_set.managed_rule_set")
 					}
+
 					policyId, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -515,10 +531,12 @@ func TestAccWafConfigurationMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_configuration.waf_instance")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -617,10 +635,12 @@ func TestAccWafConfigurationMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_configuration.waf_instance")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -666,6 +686,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAlbWafManagedRuleSetDestroy,
 		testAlbWafWafConfigurationDestroy,
 	}
+
 	var errs []error
 
 	for _, f := range checkFunctions {
@@ -676,21 +697,25 @@ func testAccCheckDestroy(s *terraform.State) error {
 			}
 		}()
 	}
+
 	return errors.Join(errs...)
 }
 
 func testAlbWafCustomRuleGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
 	}
 
 	customRuleGroupsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_waf_custom_rule_group" {
 			continue
 		}
+
 		// custom rule group transform id: "[projectId],[region],[name]"
 		terraformId := strings.Split(rs.Primary.ID, core.Separator)
 		if len(terraformId) == 3 {
@@ -711,21 +736,25 @@ func testAlbWafCustomRuleGroupDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
 	}
 
 	managedRuleSetsToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_waf_managed_rule_set" {
 			continue
 		}
+
 		// managed rule set transform id: "[projectId],[region],[name]"
 		terraformId := strings.Split(rs.Primary.ID, core.Separator)
 		if len(terraformId) == 3 {
@@ -746,21 +775,25 @@ func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAlbWafWafConfigurationDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
 	}
 
 	wafConfigurationToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_waf_configuration" {
 			continue
 		}
+
 		// waf configuration transform id: "[projectId],[region],[name]"
 		terraformId := strings.Split(rs.Primary.ID, core.Separator)
 		if len(terraformId) == 3 {
@@ -781,5 +814,6 @@ func testAlbWafWafConfigurationDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

@@ -48,32 +48,40 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx contex
 	// (https://github.com/hashicorp/terraform-plugin-framework/blob/main/resource/schema/stringplanmodifier/use_state_for_unknown.go#L38)
 
 	var stateModel Model
+
 	diags := req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var stateFlavor = &flavorModel{}
+
 	if !(stateModel.Flavor.IsNull() || stateModel.Flavor.IsUnknown()) {
 		diags = stateModel.Flavor.As(ctx, stateFlavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var planModel Model
+
 	diags = req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planFlavor = &flavorModel{}
+
 	if !(planModel.Flavor.IsNull() || planModel.Flavor.IsUnknown()) {
 		diags = planModel.Flavor.As(ctx, planFlavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}

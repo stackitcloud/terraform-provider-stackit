@@ -53,6 +53,7 @@ func (r *staticRouteDatasource) Configure(ctx context.Context, req datasource.Co
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table_static_route", core.Datasource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -62,6 +63,7 @@ func (r *staticRouteDatasource) Configure(ctx context.Context, req datasource.Co
 
 func (r *staticRouteDatasource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "VPC Routing table static route datasource schema. Must have a `region` specified in the provider configuration."
+
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.VpcExperiment, core.Datasource),
@@ -129,18 +131,23 @@ func (r *staticRouteDatasource) Schema(ctx context.Context, _ datasource.SchemaR
 
 func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -164,6 +171,7 @@ func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadReq
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
+
 		return
 	}
 
@@ -172,13 +180,16 @@ func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadReq
 	err = mapFields(ctx, route, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading static route", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC static route read")
 }

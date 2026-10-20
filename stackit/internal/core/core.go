@@ -127,6 +127,7 @@ func (pd *ProviderData) GetRegion() string {
 	if pd.DefaultRegion != "" {
 		return pd.DefaultRegion
 	}
+
 	return "eu01"
 }
 
@@ -137,6 +138,7 @@ func ValidateServiceRegion(ctx context.Context, providerData *ProviderData, serv
 	}
 
 	LogAndAddError(ctx, diagnostics, "Unsupported region", fmt.Sprintf("Service %s is only available in region eu01.", serviceName))
+
 	return false
 }
 
@@ -144,6 +146,7 @@ func (pd *ProviderData) GetRegionWithOverride(overrideRegion types.String) strin
 	if overrideRegion.IsUnknown() || overrideRegion.IsNull() {
 		return pd.GetRegion()
 	}
+
 	return overrideRegion.ValueString()
 }
 
@@ -264,8 +267,10 @@ func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagno
 	stackitProviderDataInternal, ok := providerData.(providerDataInternal)
 	if !ok {
 		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.providerDataInternal, got %T", providerData))
+
 		return ProviderData{}, ClientCollection{}, false
 	}
+
 	return stackitProviderDataInternal.providerData, stackitProviderDataInternal.clients, true
 }
 
@@ -281,6 +286,7 @@ func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *di
 	stackitEphemeralProviderDataInternal, ok := providerData.(ephemeralProviderDataInternal)
 	if !ok {
 		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.ephemeralProviderDataInternal, got %T", providerData))
+
 		return EphemeralProviderData{}, ClientCollection{}, false
 	}
 
@@ -296,6 +302,7 @@ func DiagsToError(diags diag.Diagnostics) error {
 
 	diagsError := diags.Errors()
 	diagsStrings := make([]string, 0)
+
 	for _, diagnostic := range diagsError {
 		diagsStrings = append(diagsStrings, fmt.Sprintf(
 			"(%s) %s",
@@ -303,6 +310,7 @@ func DiagsToError(diags diag.Diagnostics) error {
 			diagnostic.Detail(),
 		))
 	}
+
 	return fmt.Errorf("%s", strings.Join(diagsStrings, ";"))
 }
 
@@ -344,6 +352,7 @@ func LogAndAddErrorBeta(ctx context.Context, diags *diag.Diagnostics, name strin
 func InitProviderContext(ctx context.Context) context.Context {
 	// Capture http response to get trace-id
 	var httpResp *http.Response
+
 	return runtime.WithCaptureHTTPResponse(ctx, &httpResp)
 }
 
@@ -351,10 +360,12 @@ func InitProviderContext(ctx context.Context) context.Context {
 func LogResponse(ctx context.Context) context.Context {
 	// Logs the trace-id of the request
 	traceId := runtime.GetTraceId(ctx)
+
 	ctx = tflog.SetField(ctx, "x-trace-id", traceId)
 
 	tflog.Info(ctx, "response data", map[string]any{
 		"x-trace-id": traceId,
 	})
+
 	return ctx
 }

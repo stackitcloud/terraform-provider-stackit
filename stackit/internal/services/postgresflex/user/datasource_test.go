@@ -11,6 +11,7 @@ import (
 
 func TestMapDataSourceFields(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		description  string
 		userResp     *postgresflex.GetUserResponse
@@ -119,6 +120,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			isValid:      false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &DataSourceModel{
@@ -127,12 +129,15 @@ func TestMapDataSourceFields(t *testing.T) {
 				UserId:     tt.expected.UserId,
 			}
 			err := mapDataSourceFields(tt.userResp, tt.instanceResp, state, tt.region)
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {

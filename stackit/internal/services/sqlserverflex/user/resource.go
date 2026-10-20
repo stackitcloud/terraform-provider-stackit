@@ -90,27 +90,34 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 // Use the modifier to set the effective region in the current plan.
 func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -228,8 +235,10 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 // Create creates the resource and sets the initial Terraform state.
 func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -245,9 +254,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var roles []string
+
 	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
 		diags = model.Roles.ElementsAs(ctx, &roles, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -257,14 +268,17 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	payload, err := toCreatePayload(&model, roles)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Create new user
 	// Workaround: The user creation will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
 	userResp, err := utils.RetryRequest(ctx, r.client.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -272,9 +286,12 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	if userResp == nil || userResp.Id == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return user Id. A user might have been created")
+
 		return
 	}
+
 	userId := strconv.FormatInt(userResp.Id, 10)
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"region":      region,
@@ -285,6 +302,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	_, err = wait.CreateUserWaitHandler(ctx, r.client, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("user creation waiting: %v", err))
+
 		return
 	}
 
@@ -292,22 +310,28 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	err = mapFieldsCreate(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SQLServer Flex user created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -317,19 +341,25 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userIdStr := model.UserId.ValueString()
+
 	if userIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
+
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
+
 		return
 	}
 
@@ -337,9 +367,12 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -349,15 +382,18 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	err = mapFields(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SQLServer Flex user read")
 }
 
@@ -371,8 +407,10 @@ func (r *userResource) Update(ctx context.Context, _ resource.UpdateRequest, res
 func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -383,6 +421,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	instanceId := model.InstanceId.ValueString()
 	userIdStr := model.UserId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
@@ -391,6 +430,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Parsing user ID: %v", err))
+
 		return
 	}
 
@@ -402,7 +442,9 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -411,6 +453,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("user deletion waiting: %v", err))
+
 		return
 	}
 
@@ -426,6 +469,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 			"Error importing user",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -446,6 +490,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -453,7 +498,9 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 	if userResp.Id == 0 {
 		return fmt.Errorf("user id not present")
 	}
+
 	userId := strconv.FormatInt(userResp.Id, 10)
+
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringValue(userResp.Username)
@@ -465,10 +512,12 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
+
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map roles: %w", core.DiagsToError(diags))
 		}
+
 		model.Roles = rolesSet
 	}
 
@@ -479,6 +528,7 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 	model.Host = types.StringValue(userResp.Host)
 	model.Port = types.Int32Value(userResp.Port)
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -486,11 +536,13 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var userId string
+
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
 	} else if userResp.Id != 0 {
@@ -498,6 +550,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 	} else {
 		return fmt.Errorf("user id not present")
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
 		region,
@@ -512,10 +565,12 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
+
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map roles: %w", core.DiagsToError(diags))
 		}
+
 		model.Roles = rolesSet
 	}
 
@@ -526,6 +581,7 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 	model.Host = types.StringValue(userResp.Host)
 	model.Port = types.Int32Value(userResp.Port)
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 

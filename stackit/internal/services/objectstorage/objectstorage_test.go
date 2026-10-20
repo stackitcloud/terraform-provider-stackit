@@ -15,12 +15,16 @@ import (
 
 func TestObjectStorageBucketSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
+
 	const (
 		name   = "bucket-name"
 		region = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -72,6 +76,7 @@ resource "stackit_objectstorage_bucket" "instance" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

@@ -77,27 +77,34 @@ func (r *credentialResource) Metadata(_ context.Context, req resource.MetadataRe
 // Use the modifier to set the effective region in the current plan.
 func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -235,8 +242,10 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 // Create creates the resource and sets the initial Terraform state.
 func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -246,6 +255,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -254,6 +264,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	credentialsResp, err := r.client.CreateCredentials(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -261,15 +272,19 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	if credentialsResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty credential id")
+
 		return
 	}
+
 	credentialId := credentialsResp.Id
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":    projectId,
 		"region":        region,
 		"instance_id":   instanceId,
 		"credential_id": credentialId,
 	})
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -277,6 +292,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Instance creation waiting: %v", err))
+
 		return
 	}
 
@@ -284,21 +300,27 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "RabbitMQ credential created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -309,11 +331,14 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
+
 	if credentialId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -322,11 +347,15 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -336,15 +365,18 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	err = mapFields(ctx, recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "RabbitMQ credential read")
 }
 
@@ -357,8 +389,10 @@ func (r *credentialResource) Update(ctx context.Context, _ resource.UpdateReques
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -369,6 +403,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -378,10 +413,13 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	err := r.client.DeleteCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -390,8 +428,10 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, region, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
+
 		return
 	}
+
 	tflog.Info(ctx, "RabbitMQ credential deleted")
 }
 
@@ -404,8 +444,10 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 			"Error importing credential",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[credential_id], got %q", req.ID),
 		)
+
 		return
 	}
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":    idParts[0],
 		"region":        idParts[1],
@@ -415,6 +457,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "RabbitMQ credential state imported")
 }
 
@@ -422,15 +465,19 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if credentialsResp.Raw == nil {
 		return fmt.Errorf("response credentials raw is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	credentials := credentialsResp.Raw.Credentials
 
 	var credentialId string
+
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
 	} else if credentialsResp.Id != "" {
@@ -449,10 +496,12 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 	if err != nil {
 		return err
 	}
+
 	modelHttpApiUris, err := utils.ListValueToStringSlice(model.HttpAPIURIs)
 	if err != nil {
 		return err
 	}
+
 	modelUris, err := utils.ListValueToStringSlice(model.Uris)
 	if err != nil {
 		return err
@@ -461,6 +510,7 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 	model.Hosts = types.ListNull(types.StringType)
 	model.Uris = types.ListNull(types.StringType)
 	model.HttpAPIURIs = types.ListNull(types.StringType)
+
 	if credentials.Hosts != nil {
 		respHosts := credentials.Hosts
 		reconciledHosts := utils.ReconcileStringSlices(modelHosts, respHosts)
@@ -472,6 +522,7 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 
 		model.Hosts = hostsTF
 	}
+
 	model.Host = types.StringValue(credentials.Host)
 	if credentials.HttpApiUris != nil {
 		respHttpApiUris := credentials.HttpApiUris

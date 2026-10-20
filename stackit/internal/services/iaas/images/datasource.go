@@ -134,6 +134,7 @@ func (d *imagesDataSource) Configure(ctx context.Context, req datasource.Configu
 	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_images", "datasource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -259,7 +260,9 @@ func toRequest(ctx context.Context, client iaas.DefaultAPI, model *DataSourceMod
 	request := client.ListImages(ctx, model.ProjectID.ValueString(), providerData.GetRegionWithOverride(model.Region)).All(true)
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
 		var filter filterModel
+
 		diags := model.Filter.As(ctx, &filter, basetypes.ObjectAsOptions{})
+
 		if diags.HasError() {
 			return iaas.ApiListImagesRequest{}, fmt.Errorf("converting filter: %w", core.DiagsToError(diags))
 		}
@@ -275,43 +278,55 @@ func toRequest(ctx context.Context, client iaas.DefaultAPI, model *DataSourceMod
 // nolint:gocritic // framework signature required
 func (d *imagesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var model DataSourceModel
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
+
 	region := d.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", model.ProjectID.ValueString())
 	ctx = tflog.SetField(ctx, "region", region)
 
 	request, err := toRequest(ctx, d.client, &model, &d.providerData)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Creating API request: %v", err))
+
 		return
 	}
 
 	apiResponse, err := request.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	if err = mapFields(ctx, apiResponse, &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -323,6 +338,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 	if response == nil {
 		return fmt.Errorf("image list response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("data source model is nil")
 	}
@@ -333,6 +349,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 			return fmt.Errorf("image at index %d has no ID", i)
 		}
 	}
+
 	slices.SortFunc(items, func(a, b iaas.Image) int { return strings.Compare(*a.Id, *b.Id) })
 
 	values := make([]imageModel, 0, len(items))
@@ -341,6 +358,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 		if err != nil {
 			return fmt.Errorf("mapping image at index %d (ID %q): %w", i, *items[i].Id, err)
 		}
+
 		values = append(values, item)
 	}
 
@@ -360,6 +378,7 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 	if image == nil {
 		return imageModel{}, fmt.Errorf("image is nil")
 	}
+
 	if image.Id == nil || *image.Id == "" {
 		return imageModel{}, fmt.Errorf("image ID is missing")
 	}
@@ -379,6 +398,7 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 	if err != nil {
 		return m, fmt.Errorf("mapping labels: %w", err)
 	}
+
 	m.Labels = labels
 
 	if image.Config == nil {
@@ -401,9 +421,11 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 			VirtioScsi:             types.BoolPointerValue(c.VirtioScsi),
 		}
 		obj, ds := types.ObjectValueFrom(ctx, configAttrTypes, config)
+
 		if ds.HasError() {
 			return m, fmt.Errorf("mapping config: %w", core.DiagsToError(ds))
 		}
+
 		m.Config = obj
 	}
 
@@ -415,9 +437,11 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 			Digest:    types.StringValue(image.Checksum.Digest),
 		}
 		obj, ds := types.ObjectValueFrom(ctx, checksumAttrTypes, cs)
+
 		if ds.HasError() {
 			return m, fmt.Errorf("mapping checksum: %w", core.DiagsToError(ds))
 		}
+
 		m.Checksum = obj
 	}
 

@@ -144,8 +144,10 @@ func (d *telemetryRouterInstanceDataSource) Schema(_ context.Context, _ datasour
 
 func (d *telemetryRouterInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -163,11 +165,15 @@ func (d *telemetryRouterInstanceDataSource) Read(ctx context.Context, req dataso
 	instanceResponse, err := d.client.GetTelemetryRouter(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
+
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		tfutils.LogError(
 			ctx,
 			&resp.Diagnostics,
@@ -179,20 +185,26 @@ func (d *telemetryRouterInstanceDataSource) Read(ctx context.Context, req dataso
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, instanceResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter instance", fmt.Sprintf("Processing response: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter Instance read", map[string]interface{}{
 		"instance_id": instanceID,
 	})

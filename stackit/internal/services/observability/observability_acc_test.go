@@ -129,13 +129,16 @@ var testConfigVarsMax = config.Variables{
 func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
+
 	tempConfig["alert_rule_name"] = config.StringVariable("alert1-updated")
+
 	return tempConfig
 }
 
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
+
 	tempConfig["plan_name"] = config.StringVariable("Observability-Large-EU01")
 	tempConfig["alert_interval"] = config.StringVariable("1h")
 	tempConfig["alert_rule_expression"] = config.StringVariable(alert_rule_expression_updated)
@@ -145,6 +148,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["ms_teams"] = config.StringVariable("false")
 	tempConfig["google_chat"] = config.StringVariable("true")
 	tempConfig["matchers"] = config.StringVariable("instance =~ \"my.*\"")
+
 	return tempConfig
 }
 
@@ -329,6 +333,7 @@ func TestAccResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_instance.instance")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -348,14 +353,17 @@ func TestAccResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_scrapeconfig.scrapeconfig")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -370,14 +378,17 @@ func TestAccResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_alertgroup.alertgroup")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -392,14 +403,17 @@ func TestAccResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_logalertgroup.logalertgroup")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:       true,
@@ -817,6 +831,7 @@ func TestAccResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_instance.instance")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -837,14 +852,17 @@ func TestAccResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_scrapeconfig.scrapeconfig")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:             true,
@@ -860,14 +878,17 @@ func TestAccResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_alertgroup.alertgroup")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:             true,
@@ -883,14 +904,17 @@ func TestAccResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_observability_logalertgroup.logalertgroup")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, name), nil
 				},
 				ImportState:             true,
@@ -1051,18 +1075,22 @@ func TestAccResourceMax(t *testing.T) {
 
 func testAccCheckObservabilityDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := observabilitySdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObservabilityCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_observability_instance" {
 			continue
 		}
+
 		// instance terraform ID: = "[project_id],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -1079,6 +1107,7 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", instances[i].Id, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, instances[i].Id).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", instances[i].Id, err)
@@ -1086,5 +1115,6 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

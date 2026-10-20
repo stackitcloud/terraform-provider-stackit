@@ -46,8 +46,10 @@ var testConfigVarsMin = config.Variables{
 func testConfigVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
+
 	newVars["display_name"] = config.StringVariable("tf-acc-test-logs-updated")
 	newVars["retention_days"] = config.IntegerVariable(14)
+
 	return newVars
 }
 
@@ -63,10 +65,12 @@ var testConfigVarsMax = config.Variables{
 func testConfigVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
+
 	newVars["display_name"] = config.StringVariable("tf-acc-test-logs-updated")
 	newVars["retention_days"] = config.IntegerVariable(14)
 	newVars["acl"] = config.StringVariable("192.168.0.1/16")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test Logs Instance Updated")
+
 	return newVars
 }
 
@@ -83,7 +87,9 @@ var testConfigAccessTokenVarsMin = config.Variables{
 func testConfigAccessTokenVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigAccessTokenVarsMin))
 	maps.Copy(newVars, testConfigAccessTokenVarsMin)
+
 	newVars["display_name"] = config.StringVariable("tf-acc-test-token-updated")
+
 	return newVars
 }
 
@@ -103,8 +109,10 @@ var testConfigAccessTokenVarsMax = config.Variables{
 func testConfigAccessTokenVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigAccessTokenVarsMax))
 	maps.Copy(newVars, testConfigAccessTokenVarsMax)
+
 	newVars["display_name"] = config.StringVariable("tf-acc-test-token-updated")
 	newVars["description"] = config.StringVariable("tf-acc-test-token-decription-updated")
+
 	return newVars
 }
 
@@ -204,10 +212,12 @@ data "stackit_logs_instance" "logs" {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_instance.logs")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
 				ImportState:       true,
@@ -344,10 +354,12 @@ data "stackit_logs_instance" "logs" {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_instance.logs")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
 				ImportState:       true,
@@ -451,14 +463,17 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_access_token.accessToken")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					tokenId, ok := rs.Primary.Attributes["access_token_id"]
 					if !ok {
 						return "", fmt.Errorf("access_token_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, tokenId), nil
 				},
 				ImportState:             true,
@@ -576,14 +591,17 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_access_token.accessToken")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					tokenId, ok := rs.Primary.Attributes["access_token_id"]
 					if !ok {
 						return "", fmt.Errorf("access_token_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, tokenId), nil
 				},
 				ImportState:             true,
@@ -634,26 +652,33 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	var instancesToDestroy []string
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_logs_instance" {
 			continue
 		}
+
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -661,6 +686,7 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	if err != nil {
 		return fmt.Errorf("getting instances: %w", err)
 	}
+
 	for i := range response.Instances {
 		if !slices.Contains(instancesToDestroy, response.Instances[i].Id) {
 			continue
@@ -671,22 +697,26 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 			return fmt.Errorf("deleting instance %s: %w", response.Instances[i].Id, err)
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	var errs []error
+
 	// access tokens
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_logs_access_token" {
 			continue
 		}
+
 		accessTokenId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
@@ -694,11 +724,13 @@ func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteAccessToken(ctx, testutil.ProjectId, region, instanceId, accessTokenId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
+
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger access token deletion %q: %w", accessTokenId, err))
 		}
 	}

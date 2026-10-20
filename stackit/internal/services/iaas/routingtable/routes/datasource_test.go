@@ -33,6 +33,7 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 		model  *RoutingTableRoutesDataSourceModel
 		region string
 	}
+
 	tests := []struct {
 		name          string
 		args          args
@@ -182,11 +183,13 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			if err := mapDataSourceRoutingTableRoutes(ctx, tt.args.routes, tt.args.model, tt.args.region); (err != nil) != tt.wantErr {
 				t.Errorf("mapDataSourceRoutingTableRoutes() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 

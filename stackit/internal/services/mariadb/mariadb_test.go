@@ -17,13 +17,17 @@ func TestMariaDBInstanceSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
 	planId := uuid.NewString()
+
 	const (
 		region   = "eu01"
 		version  = "10.11"
 		planName = "mariadb-plan"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -91,6 +95,7 @@ resource "stackit_mariadb_instance" "example" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -112,11 +117,15 @@ func TestMariaDBCredentialsSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
 	credentialId := uuid.NewString()
+
 	const (
 		region = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -161,6 +170,7 @@ resource "stackit_mariadb_credential" "example" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

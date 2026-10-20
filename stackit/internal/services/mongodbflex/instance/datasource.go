@@ -186,8 +186,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -197,9 +199,11 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+
 	instanceResp, err := d.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		utils.LogError(
@@ -213,31 +217,40 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
 	var flavor = &flavorModel{}
+
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
+
 	var storage = &storageModel{}
+
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
+
 	var options = &optionsModel{}
+
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -246,13 +259,17 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MongoDB Flex instance read")
 }

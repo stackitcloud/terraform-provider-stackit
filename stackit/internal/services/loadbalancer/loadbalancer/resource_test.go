@@ -353,9 +353,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -368,6 +370,7 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "name")
 	tests := []struct {
 		description             string
@@ -755,6 +758,7 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
@@ -776,13 +780,16 @@ func TestMapFields(t *testing.T) {
 					}),
 				})
 			}
+
 			err := mapFields(context.Background(), tt.input, model, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, tt.expected)
 				if diff != "" {
@@ -798,6 +805,7 @@ func Test_validateConfig(t *testing.T) {
 		ExternalAddress    *string
 		PrivateNetworkOnly *bool
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -852,6 +860,7 @@ func Test_validateConfig(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -1233,9 +1242,11 @@ func Test_toUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -1294,16 +1305,20 @@ func Test_mapSessionPersistence(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resultTp := map[string]attr.Value{}
+
 			gotErr := mapSessionPersistence(tt.sessionPersistenceResp, resultTp)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("mapSessionPersistence() failed: %v", gotErr)
 				}
+
 				return
 			}
+
 			if tt.wantErr {
 				t.Fatal("mapSessionPersistence() succeeded unexpectedly")
 			}
+
 			if diff := cmp.Diff(tt.wantTp, resultTp); diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}

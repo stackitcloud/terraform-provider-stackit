@@ -96,6 +96,7 @@ func (r *kubeconfigResource) Configure(ctx context.Context, req resource.Configu
 	r.client = clients.EdgeV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_edgecloud_kubeconfig", "resource")
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -224,25 +225,32 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 	}
 
 	var configModel Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if !req.State.Raw.IsNull() {
 		var stateModel Model
+
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -254,9 +262,9 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 			}
 
 			shouldRecreate, err := edgeCloudUtils.CheckExpiration(stateModel.ExpiresAt, recreateBefore, time.Now())
-
 			if err != nil {
 				resp.Diagnostics.AddError("Error checking kubeconfig expiration in plan", err.Error())
+
 				return
 			}
 
@@ -267,12 +275,14 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 				})
 
 				planModel.ExpiresAt = types.StringUnknown()
+
 				resp.RequiresReplace.Append(path.Root("expires_at"))
 			}
 		}
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -281,8 +291,10 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 // Create creates the resource and sets the initial Terraform state.
 func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -293,6 +305,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	expirationSeconds := model.Expiration.ValueInt64()
 	region := model.Region.ValueString()
 	kubeconfigUUID := uuid.New().String()
+
 	model.KubeconfigId = types.StringValue(kubeconfigUUID)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -302,55 +315,74 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	// Note: The token itself must not be created via an endpoint. There's only a GET endpoint for the token.
 	// But the instance needs to be ready, that's why wait handlers are used here.
 
-	var kubeconfigResp *edgeCloud.Kubeconfig
-	var err error
+	var (
+		kubeconfigResp *edgeCloud.Kubeconfig
+		err            error
+	)
+
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
+
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
+
 		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
+
 			return
 		}
+
 		model.Id = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, kubeconfigUUID))
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
+
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
+
 		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
+
 			return
 		}
+
 		model.Id = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceName, kubeconfigUUID))
 	}
 
 	ctx = core.LogResponse(ctx)
 
 	creationTime := time.Now()
+
 	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
+
 	expirationDuration := time.Duration(model.Expiration.ValueInt64()) * time.Second
 	expiresAtTime := creationTime.Add(expirationDuration)
+
 	model.ExpiresAt = types.StringValue(expiresAtTime.Format(time.RFC3339))
 
 	if kubeconfigResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", "API response is nil")
+
 		return
 	}
 
 	if kubeconfigResp.Kubeconfig == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", "API response kubeconfig field is nil")
+
 		return
 	}
 
 	kubeconfig, err := marshalKubeconfig(kubeconfigResp.Kubeconfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	model.Kubeconfig = types.StringValue(kubeconfig)
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -360,26 +392,34 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 
 func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	if expired, err := edgeCloudUtils.CheckExpiration(model.ExpiresAt, types.Int64Null(), time.Now()); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("Checking expiration: %v", err))
+
 		return
 	} else if expired {
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	if !model.InstanceId.IsNull() {
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
 	} else if !model.InstanceName.IsNull() {
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
 	}
+
 	projectId := model.ProjectId.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "kubeconfig_id", kubeconfigUUID)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -389,17 +429,20 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 // Update only works for recreate_before, since this is a provider internal state value. Everything else requires recreation.
 func (r *kubeconfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	ctx = tflog.SetField(ctx, "region", model.Region.ValueString())
 	ctx = tflog.SetField(ctx, "project_id", model.ProjectId.ValueString())
 	ctx = tflog.SetField(ctx, "instance_id", model.InstanceId.ValueString())
 	ctx = tflog.SetField(ctx, "kubeconfig_id", model.KubeconfigId.ValueString())
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -413,8 +456,10 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}

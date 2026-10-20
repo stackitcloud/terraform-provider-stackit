@@ -166,8 +166,10 @@ func (r *customRuleGroupDataSource) Schema(_ context.Context, _ datasource.Schem
 
 func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -177,6 +179,7 @@ func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.Rea
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -184,12 +187,16 @@ func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.Rea
 	customRuleGroupResp, err := r.client.GetCustomRuleGroup(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("ALB WAF Custom Rule Group with name %q not found in project %q and region %q", name, projectId, region), err.Error())
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Custom Rule Group", err.Error())
+
 		return
 	}
 
@@ -198,13 +205,16 @@ func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.Rea
 	err = mapFields(ctx, customRuleGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Custom Rule Group", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Custom Rule Group read")
 }

@@ -78,8 +78,11 @@ func TestLockAssignment(t *testing.T) {
 	// Ensures that two processes cannot hold the lock for the same ID simultaneously.
 	t.Run("same key serialization", func(t *testing.T) {
 		key := "uuid,reader,project"
-		var criticalSectionActive bool
-		var wg sync.WaitGroup
+
+		var (
+			criticalSectionActive bool
+			wg                    sync.WaitGroup
+		)
 
 		// Goroutine 1
 		wg.Go(func() {
@@ -90,6 +93,7 @@ func TestLockAssignment(t *testing.T) {
 			criticalSectionActive = true
 			// Sleep to simulate API work and give G2 a chance to interrupt if the lock is broken
 			time.Sleep(100 * time.Millisecond)
+
 			criticalSectionActive = false
 		})
 
@@ -116,6 +120,7 @@ func TestLockAssignment(t *testing.T) {
 		key2 := "uuid_b"
 
 		start := time.Now()
+
 		var wg sync.WaitGroup
 
 		wg.Add(2)
@@ -123,20 +128,27 @@ func TestLockAssignment(t *testing.T) {
 		// Worker for Key 1
 		go func() {
 			defer wg.Done()
+
 			unlock := LockAssignment(key1)
+
 			defer unlock()
+
 			time.Sleep(100 * time.Millisecond)
 		}()
 
 		// Worker for Key 2
 		go func() {
 			defer wg.Done()
+
 			unlock := LockAssignment(key2)
+
 			defer unlock()
+
 			time.Sleep(100 * time.Millisecond)
 		}()
 
 		wg.Wait()
+
 		duration := time.Since(start)
 
 		// If they ran sequentially, it would take >200ms.

@@ -140,27 +140,34 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Use the modifier to set the effective region in the current plan.
 func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -354,8 +361,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -364,43 +373,56 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
+
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
+
 	var flavor = &flavorModel{}
+
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
+
 			return
 		}
 	}
+
 	var storage = &storageModel{}
+
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
+
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -410,12 +432,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Create new instance
 	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -423,24 +448,32 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	if createResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API response is empty")
+
 		return
 	}
+
 	if createResp.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API response does not contain instance id")
+
 		return
 	}
+
 	instanceId := *createResp.Id
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"region":      region,
 		"instance_id": instanceId,
 	})
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
+
 		return
 	}
 
@@ -448,11 +481,13 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -460,34 +495,42 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	backupScheduleOptionsPayload, err := toUpdateBackupScheduleOptionsPayload(ctx, &model, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
+
 		return
 	}
 
 	err = mapOptions(&model, options, backupScheduleOptions)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MongoDB Flex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -497,36 +540,46 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var flavor = &flavorModel{}
+
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
+
 	var storage = &storageModel{}
+
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
+
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -535,11 +588,15 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", err.Error())
+
 		return
 	}
 
@@ -549,14 +606,18 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MongoDB Flex instance read")
 }
 
@@ -564,8 +625,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -575,44 +638,57 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var acl []string
+
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
+
 	var flavor = &flavorModel{}
+
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
+
 			return
 		}
 	}
+
 	var storage = &storageModel{}
+
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
+
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -622,12 +698,15 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	// Update existing instance
 	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
+
 		return
 	}
 
@@ -636,6 +715,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
+
 		return
 	}
 
@@ -643,31 +723,38 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	backupScheduleOptionsPayload, err := toUpdateBackupScheduleOptionsPayload(ctx, &model, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
+
 	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
+
 		return
 	}
 
 	err = mapOptions(&model, options, backupScheduleOptions)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MongoDB Flex instance updated")
 }
 
@@ -675,8 +762,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -686,6 +775,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -694,11 +784,15 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	err := r.client.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -707,6 +801,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
+
 		return
 	}
 
@@ -727,6 +822,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -742,15 +838,19 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if resp.Item == nil {
 		return fmt.Errorf("no instance provided")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	instance := resp.Item
 
 	var instanceId string
+
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
 	} else if instance.Id != nil {
@@ -759,12 +859,16 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 		return fmt.Errorf("instance id not present")
 	}
 
-	var aclList basetypes.ListValue
-	var diags diag.Diagnostics
+	var (
+		aclList basetypes.ListValue
+		diags   diag.Diagnostics
+	)
+
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
 		respACL := instance.Acl.Items
+
 		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err
@@ -779,6 +883,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	}
 
 	var flavorValues map[string]attr.Value
+
 	if instance.Flavor == nil {
 		flavorValues = map[string]attr.Value{
 			"id":          flavor.Id,
@@ -794,12 +899,14 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 			"ram":         types.Int32PointerValue(instance.Flavor.Memory),
 		}
 	}
+
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
 
 	var storageValues map[string]attr.Value
+
 	if instance.Storage == nil {
 		storageValues = map[string]attr.Value{
 			"class": storage.Class,
@@ -811,12 +918,14 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 			"size":  types.Int64PointerValue(instance.Storage.Size),
 		}
 	}
+
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
 
 	var optionsValues map[string]attr.Value
+
 	if instance.Options == nil {
 		optionsValues = map[string]attr.Value{
 			"type":                              options.Type,
@@ -828,26 +937,35 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 		}
 	} else {
 		snapshotRetentionDaysStr := (*instance.Options)["snapshotRetentionDays"]
+
 		snapshotRetentionDays, err := strconv.ParseInt(snapshotRetentionDaysStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse snapshot retention days: %w", err)
 		}
+
 		dailySnapshotRetentionDaysStr := (*instance.Options)["dailySnapshotRetentionDays"]
+
 		dailySnapshotRetentionDays, err := strconv.ParseInt(dailySnapshotRetentionDaysStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse daily snapshot retention days: %w", err)
 		}
+
 		weeklySnapshotRetentionWeeksStr := (*instance.Options)["weeklySnapshotRetentionWeeks"]
+
 		weeklySnapshotRetentionWeeks, err := strconv.ParseInt(weeklySnapshotRetentionWeeksStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse weekly snapshot retention weeks: %w", err)
 		}
+
 		monthlySnapshotRetentionMonthsStr := (*instance.Options)["monthlySnapshotRetentionMonths"]
+
 		monthlySnapshotRetentionMonths, err := strconv.ParseInt(monthlySnapshotRetentionMonthsStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse monthly snapshot retention months: %w", err)
 		}
+
 		pointInTimeWindowHoursStr := (*instance.Options)["pointInTimeWindowHours"]
+
 		pointInTimeWindowHours, err := strconv.ParseInt(pointInTimeWindowHoursStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse point in time window hours: %w", err)
@@ -862,6 +980,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 			"point_in_time_window_hours":        types.Int32Value(int32(pointInTimeWindowHours)),
 		}
 	}
+
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
@@ -885,11 +1004,13 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Options = optionsObject
+
 	return nil
 }
 
 func mapOptions(model *Model, options *optionsModel, backupScheduleOptions *mongodbflex.BackupSchedule) error {
 	var optionsValues map[string]attr.Value
+
 	if backupScheduleOptions == nil {
 		optionsValues = map[string]attr.Value{
 			"type":                              options.Type,
@@ -909,11 +1030,14 @@ func mapOptions(model *Model, options *optionsModel, backupScheduleOptions *mong
 			"point_in_time_window_hours":        types.Int32Value(*backupScheduleOptions.PointInTimeWindowHours),
 		}
 	}
+
 	optionsTF, diags := types.ObjectValue(optionsTypes, optionsValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
 	}
+
 	model.Options = optionsTF
+
 	return nil
 }
 
@@ -921,15 +1045,19 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if acl == nil {
 		return nil, fmt.Errorf("nil acl")
 	}
+
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
+
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
+
 	if options == nil {
 		return nil, fmt.Errorf("nil options")
 	}
@@ -960,15 +1088,19 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if acl == nil {
 		return nil, fmt.Errorf("nil acl")
 	}
+
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
+
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
+
 	if options == nil {
 		return nil, fmt.Errorf("nil options")
 	}
@@ -1001,6 +1133,7 @@ func toUpdateBackupScheduleOptionsPayload(ctx context.Context, model *Model, con
 	}
 
 	var currOptions = &optionsModel{}
+
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags := model.Options.As(ctx, currOptions, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1055,13 +1188,16 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
+
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
+
 	cpu := conversion.Int32ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
+
 	ram := conversion.Int32ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
@@ -1069,26 +1205,33 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 
 	projectId := model.ProjectId.ValueString()
 	req := client.ListFlavors(ctx, projectId, region)
+
 	res, err := client.ListFlavorsExecute(req)
 	if err != nil {
 		return fmt.Errorf("listing mongodbflex flavors: %w", err)
 	}
 
 	avl := ""
+
 	if res.Flavors == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
+
 	for _, f := range res.Flavors {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
 			continue
 		}
+
 		if *f.Cpu == *cpu && *f.Memory == *ram {
 			flavor.Id = types.StringValue(*f.Id)
 			flavor.Description = types.StringValue(*f.Description)
+
 			break
 		}
+
 		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
 	}
+
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
 	}

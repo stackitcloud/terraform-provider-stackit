@@ -207,28 +207,36 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 		// Planned to create a kubeconfig
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Planned to create kubeconfig", "Once this resource is created, you will no longer be able to use the deprecated credentials endpoints and the kube_config field on the cluster resource will be empty for this cluster. For more info check How to Rotate SKE Credentials (https://docs.stackit.cloud/products/runtime/kubernetes-engine/how-tos/rotate-ske-credentials)")
 	}
+
 	var configModel Model
+
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -237,8 +245,10 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 // Create creates the resource and sets the initial Terraform state.
 func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -265,14 +275,18 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Creating kubeconfig: %v", err))
+
 		return
 	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SKE kubeconfig created")
 }
 
@@ -284,8 +298,10 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -301,9 +317,11 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	// Prevent recreation of kubeconfig when updating to v2 api version
 	diags = resp.State.SetAttribute(ctx, path.Root("region"), region)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
@@ -312,10 +330,13 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	cluster, err := r.client.GetCluster(ctx, projectId, region, clusterName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
@@ -326,6 +347,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
+
 		return
 	}
 
@@ -335,18 +357,21 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	hasExpired, err := checkHasExpired(&model, time.Now())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
+
 		return
 	}
 
 	clusterRecreation, err := checkClusterRecreation(cluster, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
+
 		return
 	}
 
 	credentialsRotation, err := checkCredentialsRotation(cluster, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
+
 		return
 	}
 
@@ -354,11 +379,14 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 		err := r.createKubeconfig(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("The existing kubeconfig is invalid, creating a new one: %v", err))
+
 			return
 		}
+
 		// Set state to fully populated data
 		diags = resp.State.Set(ctx, model)
 		resp.Diagnostics.Append(diags...)
+
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -373,6 +401,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	if err != nil {
 		return fmt.Errorf("creating API payload: %w", err)
 	}
+
 	// Create new kubeconfig
 	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Region.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
 	if err != nil {
@@ -384,6 +413,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	if err != nil {
 		return fmt.Errorf("processing API payload: %w", err)
 	}
+
 	return nil
 }
 
@@ -398,8 +428,10 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -408,6 +440,7 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
 	region := model.Region.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
@@ -421,6 +454,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	if kubeconfigResp == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -438,6 +472,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	// set creation time
 	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -447,7 +482,9 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	}
 
 	expiration := conversion.Int64ValueToPointer(model.Expiration)
+
 	var expirationStringPtr *string
+
 	if expiration != nil {
 		expirationStringPtr = new(strconv.FormatInt(*expiration, 10))
 	}
@@ -464,17 +501,21 @@ func checkHasExpired(model *Model, currentTime time.Time) (bool, error) {
 		if expiresAt.IsUnknown() {
 			return true, nil
 		}
+
 		expiresAt, err := time.Parse(time.RFC3339, expiresAt.ValueString())
 		if err != nil {
 			return false, fmt.Errorf("converting expiresAt field to timestamp: %w", err)
 		}
+
 		if !model.RefreshBefore.IsNull() {
 			expiresAt = expiresAt.Add(-time.Duration(model.RefreshBefore.ValueInt64()) * time.Second)
 		}
+
 		if expiresAt.Before(currentTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
@@ -484,15 +525,18 @@ func checkCredentialsRotation(cluster *ske.Cluster, model *Model) (bool, error) 
 	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
 		return false, nil
 	}
+
 	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
+
 	if cluster.Status.CredentialsRotation.LastCompletionTime != nil {
 		if creationTime.Before(*cluster.Status.CredentialsRotation.LastCompletionTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
@@ -502,14 +546,17 @@ func checkClusterRecreation(cluster *ske.Cluster, model *Model) (bool, error) {
 	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
 		return false, nil
 	}
+
 	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
+
 	if cluster.Status.CreationTime != nil {
 		if creationTime.Before(*cluster.Status.CreationTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }

@@ -384,8 +384,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 // Read refreshes the Terraform state with the latest data.
 func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -395,6 +397,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -412,6 +415,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -421,14 +425,17 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	err = mapFields(ctx, lbResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Load balancer read")
 }

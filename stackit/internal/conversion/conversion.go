@@ -19,17 +19,22 @@ func ToString(ctx context.Context, v attr.Value) (string, error) {
 	if t := v.Type(ctx); t != types.StringType {
 		return "", fmt.Errorf("type mismatch. expected 'types.StringType' but got '%s'", t.String())
 	}
+
 	if v.IsNull() || v.IsUnknown() {
 		return "", fmt.Errorf("value is unknown or null")
 	}
+
 	tv, err := v.ToTerraformValue(ctx)
 	if err != nil {
 		return "", err
 	}
+
 	var s string
+
 	if err := tv.Copy().As(&s); err != nil {
 		return "", err
 	}
+
 	return s, nil
 }
 
@@ -40,6 +45,7 @@ func ToOptStringMap(tfMap map[string]attr.Value) (*map[string]string, error) { /
 		if !ok {
 			return nil, fmt.Errorf("error converting map value: expected to string, got %v", v)
 		}
+
 		labels[l] = valueString.ValueString()
 	}
 
@@ -47,6 +53,7 @@ func ToOptStringMap(tfMap map[string]attr.Value) (*map[string]string, error) { /
 	if len(labels) == 0 {
 		labelsPointer = nil
 	}
+
 	return labelsPointer, nil
 }
 
@@ -57,6 +64,7 @@ func ToOptStringPointerMap(tfMap map[string]attr.Value) (*map[string]*string, er
 		if !ok {
 			return nil, fmt.Errorf("error converting map value: expected to string, got %v", v)
 		}
+
 		labels[l] = valueString.ValueStringPointer()
 	}
 
@@ -64,6 +72,7 @@ func ToOptStringPointerMap(tfMap map[string]attr.Value) (*map[string]*string, er
 	if len(labels) == 0 {
 		labelsPointer = nil
 	}
+
 	return labelsPointer, nil
 }
 
@@ -71,8 +80,10 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 	labels := make(map[string]attr.Value, len(m))
 	for l, v := range m {
 		stringValue := types.StringValue(v)
+
 		labels[l] = stringValue
 	}
+
 	res, diags := types.MapValueFrom(ctx, types.StringType, m)
 	if diags.HasError() {
 		return types.MapNull(types.StringType), fmt.Errorf("converting to MapValue: %v", diags.Errors())
@@ -85,6 +96,7 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]any, error) {
 	labels := map[string]string{}
 	diags := m.ElementsAs(ctx, &labels, false)
+
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
 	}
@@ -101,6 +113,7 @@ func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string
 func ToStringStringPointerMap(ctx context.Context, m basetypes.MapValue) (map[string]*string, error) {
 	labels := map[string]string{}
 	diags := m.ElementsAs(ctx, &labels, false)
+
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
 	}
@@ -119,6 +132,7 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
+
 	return new(s.ValueString())
 }
 
@@ -128,6 +142,7 @@ func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
+
 	return new(T(s.ValueString()))
 }
 
@@ -137,7 +152,9 @@ func Int32ValueToPointer(s basetypes.Int32Value) *int32 {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
+
 	value := s.ValueInt32()
+
 	return &value
 }
 
@@ -147,7 +164,9 @@ func Int64ValueToPointer(s basetypes.Int64Value) *int64 {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
+
 	value := s.ValueInt64()
+
 	return &value
 }
 
@@ -157,7 +176,9 @@ func Float32ValueToPointer(s basetypes.Float32Value) *float32 {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
+
 	value := s.ValueFloat32()
+
 	return &value
 }
 
@@ -167,7 +188,9 @@ func Float64ValueToPointer(s basetypes.Float64Value) *float64 {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
+
 	value := s.ValueFloat64()
+
 	return &value
 }
 
@@ -177,7 +200,9 @@ func BoolValueToPointer(s basetypes.BoolValue) *bool {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
+
 	value := s.ValueBool()
+
 	return &value
 }
 
@@ -188,6 +213,7 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 	if result == nil {
 		return nil, err
 	}
+
 	return &result, err
 }
 
@@ -206,11 +232,13 @@ func StringListToEnumSlice[T ~string](list basetypes.ListValue) ([]T, error) {
 
 	// Instantiate an empty slice to ensure the slice is not nil
 	listStr := []T{}
+
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("element %d is not a string", i)
 		}
+
 		listStr = append(listStr, T(elStr.ValueString()))
 	}
 
@@ -232,6 +260,7 @@ func StringSetToSlice(set basetypes.SetValue) ([]string, error) {
 	if set.IsNull() || set.IsUnknown() {
 		return nil, nil
 	}
+
 	elements := set.Elements()
 	result := make([]string, 0, len(elements))
 
@@ -240,6 +269,7 @@ func StringSetToSlice(set basetypes.SetValue) ([]string, error) {
 		if !ok {
 			return nil, fmt.Errorf("element %d in set is not a string (type: %T)", i, el)
 		}
+
 		result = append(result, elStr.ValueString())
 	}
 
@@ -281,6 +311,7 @@ func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.M
 			mapPayload[k] = desiredValue
 		}
 	}
+
 	return mapPayload, nil
 }
 
@@ -315,6 +346,7 @@ func ToLabelsMapPartialUpdatePayload(ctx context.Context, current, desired types
 			mapPayload[k] = desiredValue
 		}
 	}
+
 	return mapPayload, nil
 }
 
@@ -359,6 +391,7 @@ func TerraformStringSetToList(ctx context.Context, tfSet basetypes.SetValue, dia
 	}
 
 	var elements []string
+
 	d := tfSet.ElementsAs(ctx, &elements, true)
 
 	diags.Append(d...)

@@ -15,5 +15,6 @@ func TimeoutHint(ctx context.Context, operation string, timeout time.Duration) s
 	if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return ""
 	}
+
 	return fmt.Sprintf("\nThe wait gave up after the configured `timeouts.%s` of %s; raise it if the operation regularly needs longer.", operation, timeout)
 }

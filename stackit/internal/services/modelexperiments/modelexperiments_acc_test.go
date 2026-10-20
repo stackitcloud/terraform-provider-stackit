@@ -60,14 +60,17 @@ var testModelexperimentsConfigVarsMax = config.Variables{
 func testModelexperimentsInstanceConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testModelexperimentsConfigVarsMin))
 	maps.Copy(tempConfig, testModelexperimentsConfigVarsMin)
+
 	tempConfig["name"] = config.StringVariable("tfAccTest-minInstance-upd")
 	tempConfig["token_name"] = config.StringVariable("tfAccTest-minInstanceToken-upd")
+
 	return tempConfig
 }
 
 func testModelexperimentsInstanceConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testModelexperimentsConfigVarsMax))
 	maps.Copy(tempConfig, testModelexperimentsConfigVarsMax)
+
 	// Instance
 	tempConfig["name"] = config.StringVariable("tfAccTest-maxInstance-upd")
 	tempConfig["description"] = config.StringVariable("instanceDescription-upd")
@@ -77,6 +80,7 @@ func testModelexperimentsInstanceConfigVarsMaxUpdated() config.Variables {
 	tempConfig["token_name"] = config.StringVariable("tfAccTest-maxInstanceToken-upd")
 	tempConfig["token_description"] = config.StringVariable("tokenDescription-upd")
 	tempConfig["token_label_value"] = config.StringVariable("tokenLabel-upd")
+
 	return tempConfig
 }
 
@@ -182,6 +186,7 @@ func TestAccModelExperimentsInstanceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", modelexperimentsInstanceResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
@@ -337,6 +342,7 @@ func TestAccModelExperimentsInstanceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", modelexperimentsInstanceResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
@@ -387,13 +393,16 @@ func TestAccModelExperimentsInstanceMax(t *testing.T) {
 
 func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
 	fmt.Println("destroying resources")
+
 	ctx := context.Background()
+
 	client, err := modelexperiments.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ModelExperimentsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	instancesToDestroy := []string{}
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_modelexperiments_instance" {
 			continue
@@ -404,6 +413,7 @@ func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
 		if len(idParts) != 3 {
 			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
 		}
+
 		if idParts[2] != "" {
 			instancesToDestroy = append(instancesToDestroy, idParts[2])
 		}
@@ -420,6 +430,7 @@ func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
 
 	if len(instancesResp.Instances) == 0 {
 		fmt.Print("No instances found for project \n")
+
 		return nil
 	}
 
@@ -430,11 +441,13 @@ func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", items[i].Name, err)
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.Region, testutil.ProjectId, items[i].Id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying token %s during CheckDestroy: waiting for deletion %w", items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }

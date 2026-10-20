@@ -57,6 +57,7 @@ func (r *vpcDatasource) Configure(ctx context.Context, req datasource.ConfigureR
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc", core.Resource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -67,6 +68,7 @@ func (r *vpcDatasource) Configure(ctx context.Context, req datasource.ConfigureR
 // Schema defines the schema for the datasource.
 func (r *vpcDatasource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "VPC datasource schema."
+
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.VpcExperiment, core.Datasource),
@@ -118,17 +120,22 @@ func (r *vpcDatasource) Schema(ctx context.Context, _ datasource.SchemaRequest, 
 // Read refreshes the Terraform state with the latest data.
 func (r *vpcDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DatasourceModel
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -152,21 +159,26 @@ func (r *vpcDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, vpcResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading vpc", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC read")
 }

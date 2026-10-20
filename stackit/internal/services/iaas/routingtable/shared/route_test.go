@@ -28,6 +28,7 @@ func Test_MapRouteNextHop(t *testing.T) {
 	type args struct {
 		routeResp *iaas.Route
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -104,6 +105,7 @@ func Test_MapRouteNextHop(t *testing.T) {
 			}),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual, err := MapRouteNextHop(tt.args.routeResp)
@@ -123,6 +125,7 @@ func Test_MapRouteDestination(t *testing.T) {
 	type args struct {
 		routeResp *iaas.Route
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -169,6 +172,7 @@ func Test_MapRouteDestination(t *testing.T) {
 			}),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual, err := MapRouteDestination(tt.args.routeResp)
@@ -193,6 +197,7 @@ func TestMapRouteModel(t *testing.T) {
 		model  *RouteModel
 		region string
 	}
+
 	tests := []struct {
 		name          string
 		args          args
@@ -270,6 +275,7 @@ func TestMapRouteModel(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()

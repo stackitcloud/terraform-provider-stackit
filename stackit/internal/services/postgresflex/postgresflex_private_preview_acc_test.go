@@ -53,6 +53,7 @@ var testConfigInstanceVarsPrivatePreviewMax = config.Variables{
 var testConfigInstanceVarsPrivatePreviewMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigInstanceVarsPrivatePreviewMax)
+
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -65,6 +66,7 @@ var testConfigInstanceVarsPrivatePreviewMaxUpdated = func() config.Variables {
 	updatedConfig["storage_size"] = config.IntegerVariable(11)
 	updatedConfig["instance_version"] = config.StringVariable("17")
 	updatedConfig["retention_days"] = config.IntegerVariable(32)
+
 	return updatedConfig
 }()
 
@@ -177,14 +179,17 @@ func TestAccPostgresFlexInstancePrivatePreviewMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, region, instanceId), nil
 				},
 				ImportState:             true,

@@ -52,6 +52,7 @@ func (d *affinityGroupDatasource) Metadata(_ context.Context, req datasource.Met
 
 func (d *affinityGroupDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptionMain := "Affinity Group schema. Must have a `region` specified in the provider configuration."
+
 	resp.Schema = schema.Schema{
 		Description:         descriptionMain,
 		MarkdownDescription: descriptionMain,
@@ -112,11 +113,14 @@ func (d *affinityGroupDatasource) Schema(_ context.Context, _ datasource.SchemaR
 
 func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	affinityGroupId := model.AffinityGroupId.ValueString()
@@ -140,6 +144,7 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -152,8 +157,10 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Affinity group read")
 }

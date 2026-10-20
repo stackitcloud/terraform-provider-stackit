@@ -132,7 +132,9 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 // Read refreshes the Terraform state with the latest data.
 func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,6 +144,7 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	runnerId := model.RunnerId.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
@@ -149,13 +152,17 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	runnerResp, err := r.client.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Runner with ID %s not found in project %s and region %s", runnerId, projectId, region))
+
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -164,13 +171,16 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner read")
 }

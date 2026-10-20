@@ -110,6 +110,7 @@ func (d *customRoleDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -131,6 +132,7 @@ func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
 
@@ -143,6 +145,7 @@ func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	if err = mapGetCustomRoleResponse(ctx, roleResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading custom role", fmt.Sprintf("Processing API response: %v", err))
+
 		return
 	}
 

@@ -17,15 +17,18 @@ import (
 // containing wantSubstring.
 func expectPanic(t *testing.T, wantSubstring string, fn func()) {
 	t.Helper()
+
 	defer func() {
 		r := recover()
 		if r == nil {
 			t.Fatalf("expected a panic containing %q, got no panic", wantSubstring)
 		}
+
 		if msg := fmt.Sprint(r); !strings.Contains(msg, wantSubstring) {
 			t.Fatalf("expected a panic containing %q, got %q", wantSubstring, msg)
 		}
 	}()
+
 	fn()
 }
 
@@ -51,11 +54,13 @@ func newTestState(resourceName string, attributes map[string]string) *terraform.
 
 func TestUsingOpenTofu(t *testing.T) {
 	t.Setenv("TF_ACC_TERRAFORM_PATH", "/usr/local/bin/tofu")
+
 	if !UsingOpenTofu() {
 		t.Error("UsingOpenTofu() = false, want true")
 	}
 
 	t.Setenv("TF_ACC_TERRAFORM_PATH", "/usr/local/bin/terraform")
+
 	if UsingOpenTofu() {
 		t.Error("UsingOpenTofu() = true, want false")
 	}
@@ -118,6 +123,7 @@ func TestResolveVariablePath(t *testing.T) {
 	t.Run("int segment indexes into a list", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("a"), config.StringVariable("b"))
 		got := resolveVariablePath("test", v, 1)
+
 		if want := `"b"`; string(got) != want {
 			t.Errorf("resolveVariablePath() = %s, want %s", got, want)
 		}
@@ -128,6 +134,7 @@ func TestResolveVariablePath(t *testing.T) {
 			"mode": config.StringVariable("ENABLED"),
 		})
 		got := resolveVariablePath("test", v, "mode")
+
 		if want := `"ENABLED"`; string(got) != want {
 			t.Errorf("resolveVariablePath() = %s, want %s", got, want)
 		}
@@ -141,6 +148,7 @@ func TestResolveVariablePath(t *testing.T) {
 			),
 		})
 		got := resolveVariablePath("test", v, "rules", 1, "order")
+
 		if want := "2"; string(got) != want {
 			t.Errorf("resolveVariablePath() = %s, want %s", got, want)
 		}
@@ -148,6 +156,7 @@ func TestResolveVariablePath(t *testing.T) {
 
 	t.Run("positive index out of range panics", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("a"))
+
 		expectPanic(t, "index 5 out of range", func() {
 			resolveVariablePath("test", v, 5)
 		})
@@ -155,6 +164,7 @@ func TestResolveVariablePath(t *testing.T) {
 
 	t.Run("negative index panics", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("a"))
+
 		expectPanic(t, "index -1 out of range", func() {
 			resolveVariablePath("test", v, -1)
 		})
@@ -162,6 +172,7 @@ func TestResolveVariablePath(t *testing.T) {
 
 	t.Run("unknown object key panics", func(t *testing.T) {
 		v := config.ObjectVariable(map[string]config.Variable{"mode": config.StringVariable("x")})
+
 		expectPanic(t, `key "missing" not found`, func() {
 			resolveVariablePath("test", v, "missing")
 		})
@@ -169,6 +180,7 @@ func TestResolveVariablePath(t *testing.T) {
 
 	t.Run("int segment against an object panics instead of silently misreading it", func(t *testing.T) {
 		v := config.ObjectVariable(map[string]config.Variable{"mode": config.StringVariable("x")})
+
 		expectPanic(t, "value is not a list", func() {
 			resolveVariablePath("test", v, 0)
 		})
@@ -176,6 +188,7 @@ func TestResolveVariablePath(t *testing.T) {
 
 	t.Run("string segment against a list panics instead of silently misreading it", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("a"))
+
 		expectPanic(t, "value is not an object", func() {
 			resolveVariablePath("test", v, "key")
 		})
@@ -183,6 +196,7 @@ func TestResolveVariablePath(t *testing.T) {
 
 	t.Run("unsupported segment type panics", func(t *testing.T) {
 		v := config.StringVariable("a")
+
 		expectPanic(t, "unsupported path segment type", func() {
 			resolveVariablePath("test", v, 1.5)
 		})
@@ -248,6 +262,7 @@ func TestCheckListAttr(t *testing.T) {
 			"ip_acl.0": "1.2.3.4",
 			"ip_acl.1": "5.6.7.8",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -258,6 +273,7 @@ func TestCheckListAttr(t *testing.T) {
 		state := newTestState(resourceName, map[string]string{
 			"ip_acl.#": "0",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -272,6 +288,7 @@ func TestCheckListAttr(t *testing.T) {
 			"config.waf.allowed_http_methods.#": "1",
 			"config.waf.allowed_http_methods.0": "GET",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -284,6 +301,7 @@ func TestCheckListAttr(t *testing.T) {
 			"ip_acl.#": "1",
 			"ip_acl.0": "a",
 		})
+
 		if err := check(state); err == nil {
 			t.Error("expected an error for a count mismatch, got nil")
 		}
@@ -297,6 +315,7 @@ func TestCheckListAttr(t *testing.T) {
 			"ip_acl.0": "a",
 			"ip_acl.1": "WRONG",
 		})
+
 		if err := check(state); err == nil {
 			t.Error("expected an error for a value mismatch, got nil")
 		}
@@ -322,6 +341,7 @@ func TestCheckListAttr(t *testing.T) {
 			"rules.1.description": "second",
 			"rules.1.order":       "2",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -336,6 +356,7 @@ func TestCheckListAttr(t *testing.T) {
 			"rules.#":       "1",
 			"rules.0.order": "WRONG",
 		})
+
 		if err := check(state); err == nil {
 			t.Error("expected an error for a nested field mismatch, got nil")
 		}
@@ -360,6 +381,7 @@ func TestCheckListAttr(t *testing.T) {
 			"rules.0.headers.0.name": "a",
 			"rules.0.headers.1.name": "b",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -380,6 +402,7 @@ func TestCheckListAttr(t *testing.T) {
 			"rules.0.name":      "rule1",
 			"rules.0.headers.#": "0",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -393,6 +416,7 @@ func TestCheckListAttr(t *testing.T) {
 
 	t.Run("panics when path navigation fails", func(t *testing.T) {
 		v := config.ObjectVariable(map[string]config.Variable{"mode": config.StringVariable("x")})
+
 		expectPanic(t, `key "missing" not found`, func() {
 			CheckListAttr(resourceName, "config.waf.missing", v, "missing")
 		})
@@ -414,6 +438,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			"config.waf.type":           "FREE",
 			"config.waf.paranoia_level": "L2",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -422,6 +447,7 @@ func TestCheckObjectAttr(t *testing.T) {
 	t.Run("empty object", func(t *testing.T) {
 		check := CheckObjectAttr(resourceName, "config.waf", config.ObjectVariable(map[string]config.Variable{}))
 		state := newTestState(resourceName, map[string]string{})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -439,6 +465,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			"rules.0.description": "first",
 			"rules.0.order":       "1",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -456,6 +483,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			"config.waf.allowed_http_methods.0": "GET",
 			"config.waf.allowed_http_methods.1": "POST",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -473,6 +501,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			"config.waf.mode":                "ENABLED",
 			"config.waf.disabled_rule_ids.#": "0",
 		})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -484,6 +513,7 @@ func TestCheckObjectAttr(t *testing.T) {
 		state := newTestState(resourceName, map[string]string{
 			"config.waf.mode": "WRONG",
 		})
+
 		if err := check(state); err == nil {
 			t.Error("expected an error for a value mismatch, got nil")
 		}
@@ -497,6 +527,7 @@ func TestCheckObjectAttr(t *testing.T) {
 
 	t.Run("panics when path navigation fails", func(t *testing.T) {
 		v := config.ObjectVariable(map[string]config.Variable{"mode": config.StringVariable("x")})
+
 		expectPanic(t, `key "missing" not found`, func() {
 			CheckObjectAttr(resourceName, "config.waf", v, "missing")
 		})
@@ -506,6 +537,7 @@ func TestCheckObjectAttr(t *testing.T) {
 		// Falls deine Implementierung null zu {} umwandelt:
 		check := CheckObjectAttr(resourceName, "config.waf", config.ObjectVariable(nil))
 		state := newTestState(resourceName, map[string]string{})
+
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -514,6 +546,7 @@ func TestCheckObjectAttr(t *testing.T) {
 
 func TestConfigBuilderProviderConfig(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		builder *ConfigBuilder
@@ -586,6 +619,7 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			got := tt.builder.BuildProviderConfig()
 			if d := cmp.Diff(got, tt.want); d != "" {
 				t.Errorf("ConfigBuilder.BuildProviderConfig() = diff: %s", d)
@@ -596,18 +630,21 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
 
 func TestConfigBuilderProviderConfigEnvVar(t *testing.T) {
 	os.Setenv(CdnCustomEndpoint.envVarName, "http://expected.example.com") // nolint:errcheck // test would fail
+
 	defer func() {
 		err := os.Unsetenv(CdnCustomEndpoint.envVarName)
 		if err != nil {
 			t.Fatalf("unset env: %v", err)
 		}
 	}()
+
 	got := NewConfigBuilder().BuildProviderConfig()
 	want := `provider "stackit" {
     default_region = "eu01"
     enable_beta_resources = false
     cdn_custom_endpoint = "http://expected.example.com"
 }`
+
 	if d := cmp.Diff(got, want); d != "" {
 		t.Errorf("ConfigBuilder.BuildProviderConfig() = diff: %s", d)
 	}
@@ -659,14 +696,17 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			opts := tt.builder.BuildClientOptions(CdnCustomEndpoint, false)
 			got := sdkConf.Configuration{}
+
 			for _, opt := range opts {
 				err := opt(&got)
 				if err != nil {
 					t.Fatalf("Config option returned error: %v", err)
 				}
 			}
+
 			if d := cmp.Diff(got, tt.want, cmpopts.IgnoreUnexported(sdkConf.Configuration{})); d != "" {
 				t.Errorf("ConfigBuilder.BuildClientOptions() = diff: %s", d)
 			}
@@ -676,20 +716,24 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 
 func TestConfigBuilderClientOptionsEnvVar(t *testing.T) {
 	os.Setenv(CdnCustomEndpoint.envVarName, "http://cdn.example.com") // nolint:errcheck // test would fail
+
 	defer func() {
 		err := os.Unsetenv(CdnCustomEndpoint.envVarName)
 		if err != nil {
 			t.Fatalf("unset env: %v", err)
 		}
 	}()
+
 	opts := NewConfigBuilder().BuildClientOptions(CdnCustomEndpoint, false)
 	got := sdkConf.Configuration{}
+
 	for _, opt := range opts {
 		err := opt(&got)
 		if err != nil {
 			t.Fatalf("Config option returned error: %v", err)
 		}
 	}
+
 	want := sdkConf.Configuration{
 		Servers: sdkConf.ServerConfigurations{
 			{

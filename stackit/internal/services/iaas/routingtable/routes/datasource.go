@@ -59,6 +59,7 @@ func (d *routingTableRoutesDataSource) Configure(ctx context.Context, req dataso
 	d.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_table_routes", core.Datasource, &resp.Diagnostics)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -70,6 +71,7 @@ func (d *routingTableRoutesDataSource) Configure(ctx context.Context, req dataso
 func (d *routingTableRoutesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Routing table routes datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This datasource is for SNA, not VPC, based networks."
+
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Datasource),
@@ -80,8 +82,10 @@ func (d *routingTableRoutesDataSource) Schema(_ context.Context, _ datasource.Sc
 // Read refreshes the Terraform state with the latest data.
 func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model RoutingTableRoutesDataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -92,6 +96,7 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	networkAreaId := model.NetworkAreaId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
@@ -110,6 +115,7 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -118,13 +124,17 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 	err = mapDataSourceRoutingTableRoutes(ctx, routesResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table routes", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table routes read")
 }
 
@@ -132,9 +142,11 @@ func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaas.RouteList
 	if routes == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	if routes.Items == nil {
 		return fmt.Errorf("items input is nil")
 	}
@@ -144,13 +156,16 @@ func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaas.RouteList
 	routingTableId := model.RoutingTableId.ValueString()
 
 	idParts := []string{organizationId, region, networkAreaId, routingTableId}
+
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)
 
 	itemsList := []attr.Value{}
+
 	for i, route := range routes.Items {
 		var routeModel shared.RouteReadModel
+
 		err := shared.MapRouteReadModel(ctx, &route, &routeModel)
 		if err != nil {
 			return fmt.Errorf("mapping route: %w", err)
@@ -169,6 +184,7 @@ func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaas.RouteList
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
+
 		itemsList = append(itemsList, routeTF)
 	}
 

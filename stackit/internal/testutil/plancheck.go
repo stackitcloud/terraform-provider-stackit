@@ -26,6 +26,7 @@ func (c expectOnlyEphemeralOpen) CheckPlan(_ context.Context, req plancheck.Chec
 
 		actions := resourceChange.Change.Actions
 		isSpecificResource := slices.Contains(c.configAddresses, resourceChange.Address)
+
 		if isSpecificResource &&
 			string(resourceChange.Mode) == "ephemeral" &&
 			len(actions) == 1 && string(actions[0]) == "open" {
@@ -33,6 +34,7 @@ func (c expectOnlyEphemeralOpen) CheckPlan(_ context.Context, req plancheck.Chec
 		}
 
 		resp.Error = fmt.Errorf("unexpected planned action(s) %v for %s", actions, resourceChange.Address)
+
 		return
 	}
 

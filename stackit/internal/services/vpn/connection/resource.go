@@ -474,26 +474,33 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 
 func (r *vpnConnectionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -507,6 +514,7 @@ func (r *vpnConnectionResource) ImportState(ctx context.Context, req resource.Im
 			"Error importing VPN connection",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[gateway_id],[connection_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -522,8 +530,10 @@ func (r *vpnConnectionResource) ImportState(ctx context.Context, req resource.Im
 func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// the regular plan model one always uses in the create implementation
 	var planModel Model
+
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -532,8 +542,10 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	// plan and state models - for security measures. Write-only values should be only kept in the config model
 	// so that they never end up in the state (or plan).
 	var configModel Model
+
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -543,6 +555,7 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	projectId := planModel.ProjectID.ValueString()
 	region := r.providerData.GetRegionWithOverride(planModel.Region)
 	gatewayId := planModel.GatewayID.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -550,12 +563,14 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	payload, err := toCreatePayload(ctx, &planModel, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
 	createResp, err := r.client.CreateGatewayConnection(ctx, projectId, region, gatewayId).CreateGatewayConnectionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -564,21 +579,26 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	err = mapResourceFields(ctx, createResp, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN connection created")
 }
 
 func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -589,6 +609,7 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	gatewayId := model.GatewayID.ValueString()
 	connectionId := model.ConnectionID.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -598,9 +619,12 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", err.Error())
+
 		return
 	}
 
@@ -609,22 +633,27 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 	err = mapResourceFields(ctx, connResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN connection read")
 }
 
 func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// the regular plan model one always uses in the update implementation
 	var planModel Model
+
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -632,8 +661,10 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	// the state model - contains the "previous" values and is needed to compare the old write-only version field
 	// values to the new ones
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -642,8 +673,10 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	// plan and state models - for security measures. Write-only values should be only kept in the config model
 	// so that they never end up in the state (or plan).
 	var configModel Model
+
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -654,6 +687,7 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	region := r.providerData.GetRegionWithOverride(planModel.Region)
 	gatewayId := planModel.GatewayID.ValueString()
 	connectionId := planModel.ConnectionID.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -662,12 +696,14 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	payload, err := toUpdatePayload(ctx, &planModel, &stateModel, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
+
 		return
 	}
 
 	connResp, err := r.client.UpdateGatewayConnection(ctx, projectId, region, gatewayId, connectionId).UpdateGatewayConnectionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", err.Error())
+
 		return
 	}
 
@@ -676,21 +712,26 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	err = mapResourceFields(ctx, connResp, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN connection updated")
 }
 
 func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -701,6 +742,7 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	gatewayId := model.GatewayID.ValueString()
 	connectionId := model.ConnectionID.ValueString()
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -710,9 +752,12 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN connection", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -724,11 +769,13 @@ func toCreatePayload(ctx context.Context, planModel, configModel *Model) (*vpn.C
 	if planModel == nil {
 		return nil, fmt.Errorf("nil plan model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("nil config model")
 	}
 
 	payload := &vpn.CreateGatewayConnectionPayload{}
+
 	err := toConnectionPayload(ctx, planModel, payload)
 	if err != nil {
 		return nil, err
@@ -763,14 +810,17 @@ func toUpdatePayload(ctx context.Context, planModel, stateModel, configModel *Mo
 	if planModel == nil {
 		return nil, fmt.Errorf("nil plan model")
 	}
+
 	if stateModel == nil {
 		return nil, fmt.Errorf("nil state model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("nil config model")
 	}
 
 	payload := &vpn.UpdateGatewayConnectionPayload{}
+
 	err := toConnectionPayload(ctx, planModel, payload)
 	if err != nil {
 		return nil, err
@@ -833,6 +883,7 @@ func toConnectionPayload(ctx context.Context, model *Model, payload connectionPa
 		if err != nil {
 			return fmt.Errorf("converting remote_subnets: %w", err)
 		}
+
 		payload.SetRemoteSubnets(remoteSubnets)
 	}
 
@@ -841,6 +892,7 @@ func toConnectionPayload(ctx context.Context, model *Model, payload connectionPa
 		if err != nil {
 			return fmt.Errorf("converting local_subnets: %w", err)
 		}
+
 		payload.SetLocalSubnets(localSubnets)
 	}
 
@@ -849,6 +901,7 @@ func toConnectionPayload(ctx context.Context, model *Model, payload connectionPa
 		if err != nil {
 			return fmt.Errorf("converting static_routes: %w", err)
 		}
+
 		payload.SetStaticRoutes(staticRoutes)
 	}
 
@@ -856,6 +909,7 @@ func toConnectionPayload(ctx context.Context, model *Model, payload connectionPa
 	if err != nil {
 		return err
 	}
+
 	payload.SetLabels(labels)
 
 	return nil
@@ -872,10 +926,12 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 
 	if tunnel.Phase1 != nil {
 		phase1 := vpn.TunnelConfigurationPhase1{}
+
 		err := toBasePhasePayload(&tunnel.Phase1.BasePhaseModel, &phase1)
 		if err != nil {
 			return nil, err
 		}
+
 		config.Phase1 = phase1
 	}
 
@@ -919,6 +975,7 @@ func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayloa
 		if err != nil {
 			return fmt.Errorf("converting phase dh_groups: %w", err)
 		}
+
 		phasePayload.SetDhGroups(tfutils.Map(dhGroups, func(t string) vpn.PhaseDhGroupsInner {
 			return vpn.PhaseDhGroupsInner(t)
 		}))
@@ -928,6 +985,7 @@ func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayloa
 	if err != nil {
 		return fmt.Errorf("converting phase encryption_algorithms: %w", err)
 	}
+
 	phasePayload.SetEncryptionAlgorithms(tfutils.Map(encAlgs, func(t string) vpn.PhaseEncryptionAlgorithmsInner {
 		return vpn.PhaseEncryptionAlgorithmsInner(t)
 	}))
@@ -936,6 +994,7 @@ func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayloa
 	if err != nil {
 		return fmt.Errorf("converting phase integrity_algorithms: %w", err)
 	}
+
 	phasePayload.SetIntegrityAlgorithms(tfutils.Map(intAlgs, func(t string) vpn.PhaseIntegrityAlgorithmsInner {
 		return vpn.PhaseIntegrityAlgorithmsInner(t)
 	}))
@@ -952,11 +1011,13 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 	if conn == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	var connectionId string
+
 	if respConnectionId, _ := conn.GetIdOk(); respConnectionId != nil {
 		connectionId = *respConnectionId
 	} else if model.ConnectionID.ValueString() != "" {
@@ -971,6 +1032,7 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 	model.Region = types.StringValue(region)
 
 	enabled, _ := conn.GetEnabledOk()
+
 	model.Enabled = types.BoolPointerValue(enabled)
 
 	model.RemoteSubnets = types.ListNull(types.StringType)
@@ -979,6 +1041,7 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 		if diags.HasError() {
 			return fmt.Errorf("mapping remote_subnets: %w", core.DiagsToError(diags))
 		}
+
 		model.RemoteSubnets = list
 	}
 
@@ -988,6 +1051,7 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 		if diags.HasError() {
 			return fmt.Errorf("mapping local_subnets: %w", core.DiagsToError(diags))
 		}
+
 		model.LocalSubnets = list
 	}
 
@@ -997,14 +1061,17 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 		if diags.HasError() {
 			return fmt.Errorf("mapping static_routes: %w", core.DiagsToError(diags))
 		}
+
 		model.StaticRoutes = list
 	}
 
 	respLabels, _ := conn.GetLabelsOk()
+
 	labels, err := tfutils.MapLabels(ctx, respLabels, model.Labels)
 	if err != nil {
 		return fmt.Errorf("mapping labels: %w", err)
 	}
+
 	model.Labels = labels
 
 	return nil
@@ -1017,18 +1084,22 @@ func mapResourceFields(ctx context.Context, conn connectionResponse, model *Mode
 	}
 
 	tunnel1 := conn.GetTunnel1()
+
 	if model.Tunnel1 == nil {
 		model.Tunnel1 = &TunnelModel{}
 	}
+
 	err = mapTunnel(ctx, &tunnel1, &model.Tunnel1.DataSourceTunnelModel)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
 
 	tunnel2 := conn.GetTunnel2()
+
 	if model.Tunnel2 == nil {
 		model.Tunnel2 = &TunnelModel{}
 	}
+
 	err = mapTunnel(ctx, &tunnel2, &model.Tunnel2.DataSourceTunnelModel)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)
@@ -1041,6 +1112,7 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel
 	if apiTunnel == nil {
 		return fmt.Errorf("apiTunnel can not be nil")
 	}
+
 	if tfTunnel == nil {
 		return fmt.Errorf("tfTunnel can not be nil")
 	}
@@ -1096,6 +1168,7 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhasePayload) (phase BasePha
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase dh_groups: %w", core.DiagsToError(diags))
 		}
+
 		phase.DhGroups = list
 	}
 
@@ -1105,6 +1178,7 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhasePayload) (phase BasePha
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase encryption_algorithms: %w", core.DiagsToError(diags))
 		}
+
 		phase.EncryptionAlgorithms = list
 	}
 
@@ -1114,10 +1188,12 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhasePayload) (phase BasePha
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase integrity_algorithms: %w", core.DiagsToError(diags))
 		}
+
 		phase.IntegrityAlgorithms = list
 	}
 
 	rekeyTime, _ := apiPhase.GetRekeyTimeOk()
+
 	phase.RekeyTime = types.Int32PointerValue(rekeyTime)
 
 	return phase, nil

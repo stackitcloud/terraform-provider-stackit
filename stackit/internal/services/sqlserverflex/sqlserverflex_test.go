@@ -17,6 +17,7 @@ import (
 func TestSQLServerFlexInstanceSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
+
 	const (
 		name      = "instance-name"
 		flavorCpu = 4
@@ -24,8 +25,11 @@ func TestSQLServerFlexInstanceSavesIDsOnError(t *testing.T) {
 		flavorId  = "4.16-Single"
 		region    = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
+
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -88,6 +92,7 @@ resource "stackit_sqlserverflex_instance" "instance" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

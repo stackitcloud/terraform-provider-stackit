@@ -104,12 +104,14 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			if err := mapFields(ctx, tt.region, tt.input, tt.state); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -181,8 +183,10 @@ func TestToCreatePayload(t *testing.T) {
 			got, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toCreatePayload() = %v, want %v", got, tt.want)
 			}
@@ -268,8 +272,10 @@ func TestToUpdatePayload(t *testing.T) {
 			got, err := toUpdatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toUpdatePayload() = %v, want %v", got, tt.want)
 			}

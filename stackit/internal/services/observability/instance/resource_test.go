@@ -346,6 +346,7 @@ func fixtureRouteAttributeSchema(route *schema.ListNestedAttribute, isDatasource
 	if route != nil {
 		attributeMap["routes"] = *route
 	}
+
 	return attributeMap
 }
 
@@ -712,9 +713,11 @@ func TestMapFields(t *testing.T) {
 			metricsErr := mapMetricsRetentionField(tt.getMetricsRetentionResp, state)
 			logsErr := mapLogsRetentionField(tt.getLogsRetentionResp, state)
 			tracesErr := mapTracesRetentionField(tt.getTracesRetentionResp, state)
+
 			if !tt.isValid && err == nil && aclErr == nil && metricsErr == nil && logsErr == nil && tracesErr == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && (err != nil || aclErr != nil || metricsErr != nil || logsErr != nil || tracesErr != nil) {
 				t.Fatalf("Should not have failed: %v, aclErr %v, metricsErr %v, logsErr %v, tracesErr %v", err, aclErr, metricsErr, logsErr, tracesErr)
 			}
@@ -1062,9 +1065,11 @@ func TestMapAlertConfigField(t *testing.T) {
 				Parameters: types.MapNull(types.StringType),
 			}
 			err := mapAlertConfigField(context.Background(), tt.alertConfigResp, state)
+
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
@@ -1148,9 +1153,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -1230,9 +1237,11 @@ func TestToPayloadUpdate(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -1363,9 +1372,11 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -1529,9 +1540,11 @@ func TestToUpdateAlertConfigPayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -1644,6 +1657,7 @@ func TestGetRouteNestedObjectAux(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			output := getRouteNestedObjectAux(tt.isDatasource, tt.startingLevel, tt.recursionLimit)
 			diff := cmp.Diff(output, tt.expected)
+
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -1729,6 +1743,7 @@ func TestGetRouteListTypeAux(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			output := getRouteListTypeAux(tt.startingLevel, tt.recursionLimit)
 			diff := cmp.Diff(output, tt.expected)
+
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -1738,11 +1753,15 @@ func TestGetRouteListTypeAux(t *testing.T) {
 
 func makeTestMap(t *testing.T) basetypes.MapValue {
 	p := make(map[string]attr.Value, 1)
+
 	p["key"] = types.StringValue("value")
+
 	params, diag := types.MapValueFrom(context.Background(), types.StringType, p)
+
 	if diag.HasError() {
 		t.Fail()
 	}
+
 	return params
 }
 
@@ -1751,11 +1770,14 @@ func toTerraformStringMapMust(ctx context.Context, m map[string]string) basetype
 	labels := make(map[string]attr.Value, len(m))
 	for l, v := range m {
 		stringValue := types.StringValue(v)
+
 		labels[l] = stringValue
 	}
+
 	res, diags := types.MapValueFrom(ctx, types.StringType, m)
 	if diags.HasError() {
 		return types.MapNull(types.StringType)
 	}
+
 	return res
 }

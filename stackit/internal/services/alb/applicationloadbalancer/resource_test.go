@@ -276,6 +276,7 @@ func fixtureModel(explicitBool *bool, mods ...func(m *Model)) *Model {
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -302,6 +303,7 @@ func fixtureModelNull(mods ...func(m *Model)) *Model {
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -467,6 +469,7 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -584,9 +587,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -629,9 +634,11 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -644,6 +651,7 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	tests := []struct {
 		description             string
 		input                   *albSdk.LoadBalancer
@@ -1434,15 +1442,18 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, tt.output, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.output, tt.expected)
 				if diff != "" {
@@ -1580,9 +1591,11 @@ func Test_toExternalAddress(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
@@ -1667,9 +1680,11 @@ func Test_toPathPayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
