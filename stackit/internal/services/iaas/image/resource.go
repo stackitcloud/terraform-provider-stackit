@@ -482,11 +482,15 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"download": schema.SingleNestedAttribute{
-						Description: "Remote file download settings.",
-						Optional:    true,
+						Description: features.AddExperimentDescription(
+							"File to download the image from a remote server.",
+							features.IaasExperiment,
+							core.Resource,
+						),
+						Optional: true,
 						Attributes: map[string]schema.Attribute{
 							"url": schema.StringAttribute{
-								Description: "URL to download the image from.",
+								Description: "URL to download the image from. Currently, a new download is only possible by changing the url.",
 								Required:    true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
@@ -1062,6 +1066,7 @@ func downloadImage(ctx context.Context, diags *diag.Diagnostics, downloadURL str
 		return "", fmt.Errorf("download image: %w", err)
 	}
 	defer func() {
+		err = resp.Body.Close()
 		if err != nil {
 			core.LogAndAddError(ctx, diags, "Error uploading image", fmt.Sprintf("Closing response body: %v", err))
 		}

@@ -79,7 +79,9 @@ Optional:
 
 Optional:
 
-- `download` (Attributes) Remote file download settings. (see [below for nested schema](#nestedatt--image_file--download))
+- `download` (Attributes) File to download the image from a remote server.
+
+~> This resource is part of the experimental feature iaas and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion. (see [below for nested schema](#nestedatt--image_file--download))
 - `local` (Attributes) Representation of a local image file. (see [below for nested schema](#nestedatt--image_file--local))
 
 <a id="nestedatt--image_file--download"></a>
@@ -87,7 +89,7 @@ Optional:
 
 Required:
 
-- `url` (String) URL to download the image from.
+- `url` (String) URL to download the image from. Currently, a new download is only possible by changing the url.
 
 
 <a id="nestedatt--image_file--local"></a>
