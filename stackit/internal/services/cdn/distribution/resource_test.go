@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
@@ -1924,6 +1925,257 @@ func TestValidateCountryCode(t *testing.T) {
 				if gotOutput != tc.wantOutput {
 					t.Errorf("for input '%s', expected output '%s', but got '%s'", tc.inputCountry, tc.wantOutput, gotOutput)
 				}
+			}
+		})
+	}
+}
+
+func testBuildCredentialsObject(credType, username, password, token attr.Value) types.Object {
+	return types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+		"type":     credType,
+		"username": username,
+		"password": password,
+		"token":    token,
+	})
+}
+
+func testBuildLogSinkObject(sinkType, pushUrl attr.Value, creds types.Object) types.Object {
+	return types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"type":        sinkType,
+		"push_url":    pushUrl,
+		"credentials": creds,
+	})
+}
+
+func TestValidateLogSinkConfig(t *testing.T) {
+	testCases := []struct {
+		name        string
+		logSink     types.Object
+		expectError bool
+	}{
+		{
+			name:        "skip_when_log_sink_null",
+			logSink:     types.ObjectNull(logSinkTypes),
+			expectError: false,
+		},
+		{
+			name:        "skip_when_log_sink_unknown",
+			logSink:     types.ObjectUnknown(logSinkTypes),
+			expectError: false,
+		},
+		{
+			name: "skip_when_credentials_null",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				types.ObjectNull(logSinkCredentialsTypes),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_credentials_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				types.ObjectUnknown(logSinkCredentialsTypes),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_sink_type_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringUnknown(),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_creds_type_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringUnknown(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_push_url_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringUnknown(),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_token_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringUnknown()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_username_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringUnknown(), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_password_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringUnknown(), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "loki_happy",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "loki_with_creds_type_set",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "loki_with_token_set",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "loki_missing_username",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "loki_missing_password",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringNull(), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_happy",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "otlp_bearer_happy",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("tok")),
+			),
+			expectError: false,
+		},
+		{
+			name: "otlp_missing_creds_type",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_with_token",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_missing_username",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringNull(), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_missing_password",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringNull(), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_bearer_with_username",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringValue("u"), types.StringNull(), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_bearer_with_password",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringValue("p"), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_bearer_missing_token",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &distributionConfig{
+				LogSink: tc.logSink,
+			}
+			var diags diag.Diagnostics
+			validateLogSinkConfig(context.Background(), cfg, &diags)
+
+			if tc.expectError && !diags.HasError() {
+				t.Fatalf("expected validation error, got none")
+			}
+			if !tc.expectError && diags.HasError() {
+				t.Fatalf("unexpected validation errors: %v", diags)
 			}
 		})
 	}

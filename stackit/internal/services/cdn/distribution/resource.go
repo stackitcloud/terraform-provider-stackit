@@ -111,7 +111,7 @@ var schemaDescriptions = map[string]string{
 	"config_strip_response_cookies":                "Enable this to prevent origin-level cookies from being forwarded to the end user.",
 	"config_forward_host_header":                   "Enable this allows the 'Host' header to be passed through to the origin.",
 	"config_log_sink":                              "Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations.",
-	"config_log_sink_type":                         "The log sink protocol.",
+	"config_log_sink_type":                         "The log sink protocol",
 	"config_log_sink_push_url":                     "The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).",
 	"config_log_sink_credentials":                  "Authentication credentials the CDN uses when pushing logs. Loki requires `username` and `password`. OTLP requires `type` to be set to `basic` (with `username` and `password`) or `bearer` (with `token`).",
 	"config_log_sink_credentials_type":             "The authentication type when using an OTLP log sink. Leave unset for Loki.",
@@ -905,7 +905,9 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 	// Skip validation while values are still unknown (e.g. plan phase with
 	// interpolated references). The validation will re-run with concrete
 	// values before apply.
-	if logSink.PushUrl.IsUnknown() ||
+	if logSink.Type.IsUnknown() ||
+		logSink.PushUrl.IsUnknown() ||
+		creds.Type.IsUnknown() ||
 		creds.Token.IsUnknown() ||
 		creds.Username.IsUnknown() ||
 		creds.Password.IsUnknown() {
