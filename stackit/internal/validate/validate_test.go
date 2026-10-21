@@ -870,6 +870,46 @@ func TestFileExistsUnlessDisabled(t *testing.T) {
 		isValid     bool
 	}{
 		{
+			description: "file present AND disable flag is FALSE -> valid",
+			flag:        "disable_plan_validation",
+			path:        path.Root("local").AtName("file_path"),
+			input:       types.StringValue("testdata/file.txt"),
+			config: tfsdk.Config{
+				Schema: testSchema,
+				Raw: tftypes.NewValue(tftypes.Object{
+					AttributeTypes: map[string]tftypes.Type{
+						"local": objectType,
+					},
+				}, map[string]tftypes.Value{
+					"local": tftypes.NewValue(objectType, map[string]tftypes.Value{
+						"file_path":               tftypes.NewValue(tftypes.String, "testdata/file.txt"),
+						"disable_plan_validation": tftypes.NewValue(tftypes.Bool, false),
+					}),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			description: "file present AND disable flag is TRUE -> valid",
+			flag:        "disable_plan_validation",
+			path:        path.Root("local").AtName("file_path"),
+			input:       types.StringValue("testdata/file.txt"),
+			config: tfsdk.Config{
+				Schema: testSchema,
+				Raw: tftypes.NewValue(tftypes.Object{
+					AttributeTypes: map[string]tftypes.Type{
+						"local": objectType,
+					},
+				}, map[string]tftypes.Value{
+					"local": tftypes.NewValue(objectType, map[string]tftypes.Value{
+						"file_path":               tftypes.NewValue(tftypes.String, "testdata/file.txt"),
+						"disable_plan_validation": tftypes.NewValue(tftypes.Bool, true),
+					}),
+				}),
+			},
+			isValid: true,
+		},
+		{
 			description: "file missing BUT disable flag is TRUE -> valid",
 			flag:        "disable_plan_validation",
 			path:        path.Root("local").AtName("file_path"),

@@ -522,20 +522,16 @@ func URL(allowedSchemes ...string) *Validator {
 			}
 
 			if len(allowedSchemes) > 0 {
-				schemeValid := false
 				for _, scheme := range allowedSchemes {
 					if strings.EqualFold(u.Scheme, scheme) {
-						schemeValid = true
-						break
+						return
 					}
 				}
-				if !schemeValid {
-					resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
-						req.Path,
-						description,
-						req.ConfigValue.ValueString(),
-					))
-				}
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path,
+					description,
+					req.ConfigValue.ValueString(),
+				))
 			}
 		},
 	}
