@@ -516,6 +516,7 @@ var testConfigImageVarsMin = func() config.Variables {
 	return config.Variables{
 		"project_id":      config.StringVariable(testutil.ProjectId),
 		"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+		"name2":           config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
 		"disk_format":     config.StringVariable("qcow2"),
 		"local_file_path": config.StringVariable(localFilePath),
 	}
@@ -525,6 +526,7 @@ var testConfigImageVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigImageVarsMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+	updatedConfig["name2"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name2"])))
 	return updatedConfig
 }()
 
@@ -4788,45 +4790,73 @@ func TestAccKeyPairMax(t *testing.T) {
 }
 
 func TestAccImageMin(t *testing.T) {
-	t.Logf("TestAccImageMin name: %s", testutil.ConvertConfigVariable(testConfigImageVarsMin["name"]))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("fake-qcow2-image-binary-data")); err != nil {
+			t.Logf("Failed to write mock image bytes: %v", err)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	testVars := maps.Clone(testConfigImageVarsMin)
+	testVars["url"] = config.StringVariable(server.URL + "/dummy.img")
+
+	testVarsUpdated := maps.Clone(testConfigImageVarsMinUpdated)
+	testVarsUpdated["url"] = config.StringVariable(server.URL + "/dummy.img")
+
+	t.Logf("TestAccImageMin name: %s", testutil.ConvertConfigVariable(testVars["name"]))
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
-				ConfigVariables: testConfigImageVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.NewConfigBuilder().BuildProviderConfig()),
+				ConfigVariables: testVars,
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.NewConfigBuilder().Experiments(testutil.ExperimentIaaS).BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testVars["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
-					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMin["name"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMin["disk_format"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testConfigImageVarsMin["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testVars["name"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testVars["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testVars["local_file_path"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("stackit_image.image2", "project_id", testutil.ConvertConfigVariable(testVars["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "image_id"),
+					resource.TestCheckResourceAttr("stackit_image.image2", "name", testutil.ConvertConfigVariable(testVars["name2"])),
+					resource.TestCheckResourceAttr("stackit_image.image2", "disk_format", testutil.ConvertConfigVariable(testVars["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image2", "image_file.download.url", testutil.ConvertConfigVariable(testVars["url"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "protected"),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "scope"),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "checksum.digest"),
 				),
 			},
-			// Data source
+			// Data Source
 			{
-				ConfigVariables: testConfigImageVarsMin,
+				ConfigVariables: testVars,
 				Config: fmt.Sprintf(`
 					%s
 					%s
 
 					data "stackit_image" "image" {
 						project_id = stackit_image.image.project_id
-						image_id = stackit_image.image.image_id
+						image_id   = stackit_image.image.image_id
+					}
+
+					data "stackit_image" "image2" {
+						project_id = stackit_image.image2.project_id
+						image_id   = stackit_image.image2.image_id
 					}
 					`,
-					resourceImageMinConfig, testutil.NewConfigBuilder().BuildProviderConfig(),
+					resourceImageMinConfig, testutil.NewConfigBuilder().Experiments(testutil.ExperimentIaaS).BuildProviderConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_image.image", "project_id", testutil.ConvertConfigVariable(testVars["project_id"])),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "image_id", "stackit_image.image", "image_id"),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "name", "stackit_image.image", "name"),
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "disk_format", "stackit_image.image", "disk_format"),
@@ -4837,11 +4867,23 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("data.stackit_image.image2", "project_id", testutil.ConvertConfigVariable(testVars["project_id"])),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image2", "image_id", "stackit_image.image2", "image_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image2", "name", "stackit_image.image2", "name"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image2", "disk_format", "stackit_image.image2", "disk_format"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image2", "min_disk_size", "stackit_image.image2", "min_disk_size"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image2", "min_ram", "stackit_image.image2", "min_ram"),
+					resource.TestCheckResourceAttrPair("data.stackit_image.image2", "protected", "stackit_image.image2", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image2", "protected"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image2", "scope"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image2", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("data.stackit_image.image2", "checksum.digest"),
 				),
 			},
 			// Import
 			{
-				ConfigVariables: testConfigImageVarsMin,
+				ConfigVariables: testVars,
 				ResourceName:    "stackit_image.image",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_image.image"]
@@ -4860,18 +4902,28 @@ func TestAccImageMin(t *testing.T) {
 			},
 			// Update
 			{
-				ConfigVariables: testConfigImageVarsMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.NewConfigBuilder().BuildProviderConfig()),
+				ConfigVariables: testVarsUpdated,
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.NewConfigBuilder().Experiments(testutil.ExperimentIaaS).BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["project_id"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testVarsUpdated["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
-					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["name"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["disk_format"])),
-					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["local_file_path"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "name", testutil.ConvertConfigVariable(testVarsUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "disk_format", testutil.ConvertConfigVariable(testVarsUpdated["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image", "image_file.local.file_path", testutil.ConvertConfigVariable(testVarsUpdated["local_file_path"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
+
+					resource.TestCheckResourceAttr("stackit_image.image2", "project_id", testutil.ConvertConfigVariable(testVarsUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "image_id"),
+					resource.TestCheckResourceAttr("stackit_image.image2", "name", testutil.ConvertConfigVariable(testVarsUpdated["name2"])),
+					resource.TestCheckResourceAttr("stackit_image.image2", "disk_format", testutil.ConvertConfigVariable(testVarsUpdated["disk_format"])),
+					resource.TestCheckResourceAttr("stackit_image.image2", "image_file.download.url", testutil.ConvertConfigVariable(testVarsUpdated["url"])),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "protected"),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "scope"),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "checksum.algorithm"),
+					resource.TestCheckResourceAttrSet("stackit_image.image2", "checksum.digest"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -4888,18 +4940,18 @@ func TestAccImageMax(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	// Safely clone maps and inject dynamic server.URL
 	testVars := maps.Clone(testConfigImageVarsMax)
 	testVars["url"] = config.StringVariable(server.URL + "/dummy.img")
 
 	testVarsUpdated := maps.Clone(testConfigImageVarsMaxUpdated)
 	testVarsUpdated["url"] = config.StringVariable(server.URL + "/dummy.img")
+
 	t.Logf("TestAccImageMax name: %s", testutil.ConvertConfigVariable(testConfigImageVarsMax["name"]))
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
 		Steps: []resource.TestStep{
-
 			// Creation
 			{
 				ConfigVariables: testVars,
