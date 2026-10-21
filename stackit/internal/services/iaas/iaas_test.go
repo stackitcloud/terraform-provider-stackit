@@ -27,7 +27,7 @@ resource "stackit_image" "test" {
   disk_format = "qcow2"
   image_file = {
     local = {
-      file_path = "/tmp/test.qcow2"
+      file_path = "./testdata/mock-image.txt"
     }
     download = {
       url = "https://example.com/test.qcow2"
@@ -76,7 +76,7 @@ resource "stackit_image" "test" {
   }
 }
 `, projectId),
-				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
+				ExpectError: regexp.MustCompile("Missing Attribute Configuration"),
 			},
 		},
 	})

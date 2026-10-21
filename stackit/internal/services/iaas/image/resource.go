@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -207,12 +209,14 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 
 func (r *imageResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
+		//Mutually exclusive top-level fields
 		resourcevalidator.ExactlyOneOf(
 			path.MatchRoot("local_file_path"),
-			path.MatchRoot("image_file").AtName("local"),
-			path.MatchRoot("image_file").AtName("download"),
+			path.MatchRoot("image_file"),
 		),
+		// Disallow empty `image_file = {}` block by requiring at least local or download when image_file is used
 		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("local_file_path"),
 			path.MatchRoot("image_file").AtName("local"),
 			path.MatchRoot("image_file").AtName("download"),
 		),
@@ -468,6 +472,9 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					"local": schema.SingleNestedAttribute{
 						Description: "Configuration for uploading an image from a local file path.",
 						Optional:    true,
+						Validators: []validator.Object{
+							objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("download")),
+						},
 						Attributes: map[string]schema.Attribute{
 							"file_path": schema.StringAttribute{
 								Description: "Path to the local image file on the machine running Terraform. Updating this path triggers a resource replacement.",
@@ -492,6 +499,9 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 							core.Resource,
 						),
 						Optional: true,
+						Validators: []validator.Object{
+							objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("local")),
+						},
 						Attributes: map[string]schema.Attribute{
 							"url": schema.StringAttribute{
 								Description: "URL to download the image from via HTTP(S). Updating this URL forces the image to be re-downloaded (triggers replacement).",
