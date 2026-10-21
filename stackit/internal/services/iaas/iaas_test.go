@@ -37,7 +37,7 @@ resource "stackit_image" "test" {
 `, projectId),
 				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
 			},
-			// STEP 2: Invalid Step: Neither local_file_path nor image_file provided
+			// STEP 2: Neither local_file_path nor image_file provided
 			{
 				Config: testutil.NewConfigBuilder().BuildProviderConfig() + fmt.Sprintf(`
 resource "stackit_image" "test" {
@@ -48,7 +48,7 @@ resource "stackit_image" "test" {
 `, projectId),
 				ExpectError: regexp.MustCompile("Missing Attribute Configuration"),
 			},
-			// STEP 3: Invalid Step: Deprecated local_file_path AND new image_file.download provided
+			// STEP 3: Deprecated local_file_path AND new image_file.download provided
 			{
 				Config: testutil.NewConfigBuilder().BuildProviderConfig() + fmt.Sprintf(`
 resource "stackit_image" "test" {
@@ -65,7 +65,7 @@ resource "stackit_image" "test" {
 `, projectId),
 				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
 			},
-			// STEP 4: Invalid Step: Image File block is empty
+			// STEP 4: Image File block is empty
 			{
 				Config: testutil.NewConfigBuilder().BuildProviderConfig() + fmt.Sprintf(`
 resource "stackit_image" "test" {
@@ -76,7 +76,7 @@ resource "stackit_image" "test" {
   }
 }
 `, projectId),
-				ExpectError: regexp.MustCompile("Missing Attribute Configuration"),
+				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
 			},
 		},
 	})
