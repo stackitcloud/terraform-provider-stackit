@@ -209,7 +209,7 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 
 func (r *imageResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
-		//Mutually exclusive top-level fields
+		// Mutually exclusive top-level fields
 		resourcevalidator.ExactlyOneOf(
 			path.MatchRoot("local_file_path"),
 			path.MatchRoot("image_file"),
