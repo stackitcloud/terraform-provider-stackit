@@ -159,33 +159,28 @@ func (f *flavors) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *
 
 func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	region := f.providerData.GetRegionWithOverride(model.Region)
-
 	model.Region = types.StringValue(region)
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
 	})
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -197,13 +192,11 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	flavorsResp, err := f.client.ListFlavors(ctx, projectId, region).Size(pageSize).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", fmt.Sprintf("Calling ListFlavors: %v", err))
-
 		return
 	}
 
 	if flavorsResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", "ListFlavors returned an empty response")
-
 		return
 	}
 
@@ -218,12 +211,10 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 
 	if err := mapFields(flavorsResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

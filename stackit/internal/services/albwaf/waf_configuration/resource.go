@@ -65,35 +65,29 @@ func (r *wafResource) Metadata(_ context.Context, req resource.MetadataRequest, 
 // Use the modifier to set the effective region in the current plan.
 func (r *wafResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if !req.State.Raw.IsNull() {
 		var stateModel Model
-
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
 
 		if !resp.Diagnostics.HasError() {
@@ -102,7 +96,6 @@ func (r *wafResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -112,7 +105,6 @@ func (r *wafResource) Configure(ctx context.Context, req resource.ConfigureReque
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -217,7 +209,6 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -226,7 +217,6 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", model.Name)
@@ -234,14 +224,12 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Configuration", fmt.Sprint("Creating API payload: %w", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateWAF(ctx, projectId, region).CreateWAFPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Configuration", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -259,13 +247,11 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 	err = mapFields(ctx, createResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Configuration", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -278,7 +264,6 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -288,7 +273,6 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -296,7 +280,6 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	_, err := r.client.DeleteWAF(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting ALB WAF Configuration", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -309,7 +292,6 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -322,7 +304,6 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	if name == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Configuration", "Name must be defined when reading ALB WAF Configuration")
-
 		return
 	}
 
@@ -333,10 +314,8 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	response, err := r.client.GetWAF(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -350,13 +329,11 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	err = mapFields(ctx, response, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Configuration", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -369,7 +346,6 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -382,7 +358,6 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if name == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Configuration", "Name must be defined when updating ALB WAF Configuration")
-
 		return
 	}
 
@@ -393,14 +368,12 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Configuration", fmt.Sprint("Creating API payload: %w", err))
-
 		return
 	}
 
 	updateResp, err := r.client.UpdateWAF(ctx, projectId, region, name).UpdateWAFPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Configuration", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -418,13 +391,11 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	err = mapFields(ctx, updateResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Configuration", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -458,7 +429,6 @@ func toUpdatePayload(ctx context.Context, model *Model) (*albWaf.UpdateWAFPayloa
 	}
 
 	var labels *map[string]string
-
 	if !tfutils.IsUndefined(model.Labels) {
 		diags := model.Labels.ElementsAs(ctx, &labels, false)
 		if diags.HasError() {
@@ -479,7 +449,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateWAFPayloa
 	}
 
 	var labels *map[string]string
-
 	if !tfutils.IsUndefined(model.Labels) {
 		diags := model.Labels.ElementsAs(ctx, &labels, false)
 		if diags.HasError() {
@@ -512,7 +481,6 @@ func mapFields(ctx context.Context, wafResponse *albWaf.GetWAFResponse, model *M
 	}
 
 	var customRuleGroupName types.String
-
 	if wafResponse.CustomRuleGroupName != nil {
 		customRuleGroupName = types.StringValue(*wafResponse.CustomRuleGroupName)
 	} else {
@@ -520,7 +488,6 @@ func mapFields(ctx context.Context, wafResponse *albWaf.GetWAFResponse, model *M
 	}
 
 	var managedRuleSetName types.String
-
 	if wafResponse.ManagedRuleSetName != nil {
 		managedRuleSetName = types.StringValue(*wafResponse.ManagedRuleSetName)
 	} else {

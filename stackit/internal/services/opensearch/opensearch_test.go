@@ -27,7 +27,6 @@ func TestOpensearchInstanceSavesIDsOnError(t *testing.T) {
 	)
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
@@ -114,7 +113,6 @@ func TestOpensearchCredentialSavesIDsOnError(t *testing.T) {
 	const region = "eu01"
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`

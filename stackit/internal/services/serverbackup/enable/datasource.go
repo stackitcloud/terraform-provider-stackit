@@ -112,7 +112,6 @@ func (d *serverBackupEnableDataSource) Read(ctx context.Context, req datasource.
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -150,14 +149,12 @@ func (d *serverBackupEnableDataSource) Read(ctx context.Context, req datasource.
 	err = mapDataFields(serviceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup enable", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -11,7 +11,6 @@ func TestTimeoutHint(t *testing.T) {
 	defer cancelDeadlineExceeded()
 
 	deadlineAhead, cancelDeadlineAhead := context.WithTimeout(context.Background(), time.Hour)
-
 	defer cancelDeadlineAhead()
 
 	canceled, cancel := context.WithCancel(context.Background())

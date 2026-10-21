@@ -45,7 +45,6 @@ func parametersConfig(params map[string]string) string {
 	}
 
 	var parameters strings.Builder
-
 	parameters.WriteString("parameters = {")
 
 	for k, v := range params {
@@ -302,15 +301,12 @@ func testAccCheckRedisDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_redis_instance" {
 			continue
 		}
-
 		// instance terraform ID: "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

@@ -68,34 +68,28 @@ func (r *securityGroupResource) Metadata(_ context.Context, req resource.Metadat
 // Use the modifier to set the effective region in the current plan.
 func (r *securityGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -117,7 +111,6 @@ func (r *securityGroupResource) Configure(ctx context.Context, req resource.Conf
 // Schema defines the schema for the resource.
 func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Security group resource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -208,7 +201,6 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -217,7 +209,6 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -225,7 +216,6 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -234,7 +224,6 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 	securityGroup, err := r.client.CreateSecurityGroup(ctx, projectId, region).CreateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -248,14 +237,11 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 	err = mapFields(ctx, securityGroup, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -269,19 +255,17 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	securityGroupId := model.SecurityGroupId.ValueString()
 
+	securityGroupId := model.SecurityGroupId.ValueString()
 	if securityGroupId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -294,10 +278,8 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	securityGroupResp, err := r.client.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -312,14 +294,11 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	err = mapFields(ctx, securityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -334,7 +313,6 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -354,7 +332,6 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -363,15 +340,12 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing security group
 	updatedSecurityGroup, err := r.client.UpdateSecurityGroup(ctx, projectId, region, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -380,13 +354,11 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 	err = mapFields(ctx, updatedSecurityGroup, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -401,7 +373,6 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -420,10 +391,8 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	err := r.client.DeleteSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -470,7 +439,6 @@ func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model
 	}
 
 	var securityGroupId string
-
 	if model.SecurityGroupId.ValueString() != "" {
 		securityGroupId = model.SecurityGroupId.ValueString()
 	} else if securityGroupResp.Id != nil {

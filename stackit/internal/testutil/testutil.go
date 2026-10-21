@@ -217,7 +217,6 @@ func (b *ConfigBuilder) Experiments(experiments ...Experiment) *ConfigBuilder {
 	for _, e := range experiments {
 		b.experiments = append(b.experiments, string(e))
 	}
-
 	return b
 }
 
@@ -241,23 +240,19 @@ func (b *ConfigBuilder) BuildProviderConfig() string {
 {{- end }}
 }`
 	funcs := template.FuncMap{}
-
 	funcs["tfslice"] = func(s []string) string {
 		return "[\"" + strings.Join(s, "\", \"") + "\"]"
 	}
-
 	parsed := template.Must(template.New("providerConfig").Funcs(funcs).Parse(tmpl))
 
 	var bs bytes.Buffer
 
 	setEndpoints := make(map[string]string)
-
 	for k, v := range b.endpoints {
 		if v != "" {
 			setEndpoints[k] = v
 		}
 	}
-
 	// template needs public fields
 	data := struct {
 		Region              string
@@ -283,7 +278,6 @@ func (b *ConfigBuilder) BuildProviderConfig() string {
 
 func (b *ConfigBuilder) BuildClientOptions(service customEndpointConfig, setRegion bool) []sdkConf.ConfigurationOption {
 	var opts []sdkConf.ConfigurationOption
-
 	if b.serviceAccountToken != "" {
 		opts = append(opts, sdkConf.WithToken(b.serviceAccountToken))
 	}
@@ -309,7 +303,6 @@ func ResourceNameWithDateTime(name string) string {
 	dateTime := time.Now().Format(time.RFC3339)
 	// Remove timezone to have a smaller datetime
 	dateTimeTrimmed, _, _ := strings.Cut(dateTime, "+")
-
 	return fmt.Sprintf("tf-acc-%s-%s", name, dateTimeTrimmed)
 }
 
@@ -317,7 +310,6 @@ func GetTestProjectServiceAccountToken(path string) string {
 	var err error
 
 	token, tokenSet := os.LookupEnv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN")
-
 	if !tokenSet || token == "" {
 		token, err = readTestTokenFromCredentialsFile(path)
 		if err != nil {
@@ -407,7 +399,6 @@ func resolveVariablePath(caller string, variable config.Variable, path ...any) j
 		switch key := segment.(type) {
 		case int:
 			var list []json.RawMessage
-
 			if err := json.Unmarshal(raw, &list); err != nil {
 				panic(fmt.Sprintf("%s: cannot apply index %d, value is not a list: %s (%s)", caller, key, string(raw), err))
 			}
@@ -419,7 +410,6 @@ func resolveVariablePath(caller string, variable config.Variable, path ...any) j
 			raw = list[key]
 		case string:
 			var obj map[string]json.RawMessage
-
 			if err := json.Unmarshal(raw, &obj); err != nil {
 				panic(fmt.Sprintf("%s: cannot apply key %q, value is not an object: %s (%s)", caller, key, string(raw), err))
 			}
@@ -480,7 +470,6 @@ func buildAttrChecks(caller, resourceName, path string, raw json.RawMessage) []r
 
 	if bytes.HasPrefix(trimmed, []byte("[")) {
 		var items []json.RawMessage
-
 		if err := json.Unmarshal(trimmed, &items); err != nil {
 			panic(fmt.Sprintf("%s: %q: cannot parse list: %s (%s)", caller, path, err, string(trimmed)))
 		}
@@ -497,7 +486,6 @@ func buildAttrChecks(caller, resourceName, path string, raw json.RawMessage) []r
 
 	if bytes.HasPrefix(trimmed, []byte("{")) {
 		var obj map[string]json.RawMessage
-
 		if err := json.Unmarshal(trimmed, &obj); err != nil {
 			panic(fmt.Sprintf("%s: %q: cannot parse object: %s (%s)", caller, path, err, string(trimmed)))
 		}
@@ -567,7 +555,6 @@ func CheckAttrHasPrefix(prefix string) resource.CheckResourceAttrWithFunc {
 		if !strings.HasPrefix(value, prefix) {
 			return fmt.Errorf("should start with %s", prefix)
 		}
-
 		return nil
 	}
 }

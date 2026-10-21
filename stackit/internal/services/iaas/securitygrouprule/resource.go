@@ -115,34 +115,28 @@ func (r *securityGroupRuleResource) Metadata(_ context.Context, req resource.Met
 // Use the modifier to set the effective region in the current plan.
 func (r *securityGroupRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -178,7 +172,6 @@ func (r *securityGroupRuleResource) ValidateConfig(ctx context.Context, req reso
 	protocol := &protocolModel{}
 	diags := model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -435,7 +428,6 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -445,42 +437,35 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	var icmpParameters *icmpParametersModel
-
 	if !(model.IcmpParameters.IsNull() || model.IcmpParameters.IsUnknown()) {
 		icmpParameters = &icmpParametersModel{}
 		diags = model.IcmpParameters.As(ctx, icmpParameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var portRange *portRangeModel
-
 	if !(model.PortRange.IsNull() || model.PortRange.IsUnknown()) {
 		portRange = &portRangeModel{}
 		diags = model.PortRange.As(ctx, portRange, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var protocol *protocolModel
-
 	if !(model.Protocol.IsNull() || model.Protocol.IsUnknown()) {
 		protocol = &protocolModel{}
 		diags = model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -490,7 +475,6 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	payload, err := toCreatePayload(&model, icmpParameters, portRange, protocol)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -498,7 +482,6 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	securityGroupRule, err := r.client.CreateSecurityGroupRule(ctx, projectId, region, securityGroupId).CreateSecurityGroupRulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -510,14 +493,11 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	err = mapFields(securityGroupRule, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -531,7 +511,6 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -539,12 +518,11 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
-	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
 
+	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
 	if securityGroupRuleId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -558,10 +536,8 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	securityGroupRuleResp, err := r.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -576,14 +552,11 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	err = mapFields(securityGroupRuleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -604,7 +577,6 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -625,10 +597,8 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 	err := r.client.DeleteSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -676,7 +646,6 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model, regi
 	}
 
 	var securityGroupRuleId string
-
 	if model.SecurityGroupRuleId.ValueString() != "" {
 		securityGroupRuleId = model.SecurityGroupRuleId.ValueString()
 	} else if securityGroupRuleResp.Id != nil {
@@ -719,7 +688,6 @@ func mapIcmpParameters(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) 
 		if utils.IsUndefined(m.IcmpParameters) {
 			m.IcmpParameters = types.ObjectNull(icmpParametersTypes)
 		}
-
 		return nil
 	}
 
@@ -745,7 +713,6 @@ func mapPortRange(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error
 		if utils.IsUndefined(m.PortRange) {
 			m.PortRange = types.ObjectNull(portRangeTypes)
 		}
-
 		return nil
 	}
 
@@ -784,8 +751,8 @@ func mapProtocol(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error 
 		"name":   protocolNameValue,
 		"number": protocolNumberValue,
 	}
-	protocolObject, diags := types.ObjectValue(protocolTypes, protocolValues)
 
+	protocolObject, diags := types.ObjectValue(protocolTypes, protocolValues)
 	if diags.HasError() {
 		return fmt.Errorf("create protocol object: %w", core.DiagsToError(diags))
 	}

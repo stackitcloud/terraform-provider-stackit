@@ -102,7 +102,6 @@ func TestMapFields(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Should have failed")
 				}
-
 				return
 			}
 
@@ -159,8 +158,8 @@ func TestToCreatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			payload := toCreatePayload(tt.input)
-			diff := cmp.Diff(payload, tt.expected)
 
+			diff := cmp.Diff(payload, tt.expected)
 			if diff != "" {
 				t.Errorf("Payload does not match: %s", diff)
 			}
@@ -206,8 +205,8 @@ func TestToUpdatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			payload := toUpdatePayload(tt.input)
-			diff := cmp.Diff(payload, tt.expected)
 
+			diff := cmp.Diff(payload, tt.expected)
 			if diff != "" {
 				t.Errorf("Payload does not match: %s", diff)
 			}

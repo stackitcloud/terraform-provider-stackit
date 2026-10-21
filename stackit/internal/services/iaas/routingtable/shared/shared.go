@@ -57,7 +57,6 @@ func GetDatasourceGetAttributes() map[string]schema.Attribute {
 	// combine the schemas
 	getAttributes := RoutingTableResponseAttributes()
 	maps.Copy(getAttributes, datasourceGetAttributes())
-
 	getAttributes["id"] = schema.StringAttribute{
 		Description: "Terraform's internal datasource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`\".",
 		Computed:    true,
@@ -69,7 +68,6 @@ func GetDatasourceGetAttributes() map[string]schema.Attribute {
 func GetRouteDataSourceAttributes() map[string]schema.Attribute {
 	getAttributes := datasourceGetAttributes()
 	maps.Copy(getAttributes, RouteResponseAttributes())
-
 	getAttributes["route_id"] = schema.StringAttribute{
 		Description: "Route ID.",
 		Required:    true,
@@ -88,7 +86,6 @@ func GetRouteDataSourceAttributes() map[string]schema.Attribute {
 
 func GetRoutesDataSourceAttributes() map[string]schema.Attribute {
 	getAttributes := datasourceGetAttributes()
-
 	getAttributes["id"] = schema.StringAttribute{
 		Description: "Terraform's internal datasource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`,`route_id`\".",
 		Computed:    true,
@@ -243,7 +240,6 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaas.RoutingTab
 	}
 
 	var routingTableId string
-
 	if model.RoutingTableId.ValueString() != "" {
 		routingTableId = model.RoutingTableId.ValueString()
 	} else if routingTable.Id != nil {
@@ -259,16 +255,13 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaas.RoutingTab
 
 	// created at and updated at
 	createdAtTF, updatedAtTF := types.StringNull(), types.StringNull()
-
 	if routingTable.CreatedAt != nil {
 		createdAtValue := *routingTable.CreatedAt
-
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 
 	if routingTable.UpdatedAt != nil {
 		updatedAtValue := *routingTable.UpdatedAt
-
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
 

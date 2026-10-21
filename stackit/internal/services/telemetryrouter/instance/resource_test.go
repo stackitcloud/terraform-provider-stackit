@@ -93,7 +93,6 @@ func TestMapFields(t *testing.T) {
 				fltr, _ := types.ObjectValueFrom(ctx, filterTypes, filter{
 					Attributes: attrs,
 				})
-
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
@@ -112,8 +111,8 @@ func TestMapFields(t *testing.T) {
 				ProjectID: tt.expected.ProjectID,
 				Region:    tt.expected.Region,
 			}
-			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 
+			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -160,7 +159,6 @@ func TestToCreatePayload(t *testing.T) {
 				fltr, _ := types.ObjectValueFrom(ctx, filterTypes, filter{
 					Attributes: attrs,
 				})
-
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
@@ -232,7 +230,6 @@ func TestToUpdatePayload(t *testing.T) {
 				fltr, _ := types.ObjectValueFrom(ctx, filterTypes, filter{
 					Attributes: attrs,
 				})
-
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")

@@ -152,13 +152,11 @@ func Test_mapFieldsFromList(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			if err := mapFieldsFromList(ctx, tt.args.routeResp, tt.args.model, tt.args.region); (err != nil) != tt.wantErr {
 				t.Errorf("mapFieldsFromList() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -214,15 +212,13 @@ func Test_toUpdatePayload(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			got, err := toUpdatePayload(ctx, tt.args.model, tt.args.currentLabels)
 
+			got, err := toUpdatePayload(ctx, tt.args.model, tt.args.currentLabels)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -313,15 +309,13 @@ func Test_toNextHopPayload(t *testing.T) {
 			)),
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			got, err := toNextHopPayload(ctx, tt.args.model)
 
+			got, err := toNextHopPayload(ctx, tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toNextHopPayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -381,15 +375,13 @@ func Test_toDestinationPayload(t *testing.T) {
 			)),
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			got, err := toDestinationPayload(ctx, tt.args.model)
 
+			got, err := toDestinationPayload(ctx, tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toDestinationPayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -454,15 +446,13 @@ func Test_toCreatePayload(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			got, err := toCreatePayload(ctx, tt.args.model)
 
+			got, err := toCreatePayload(ctx, tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

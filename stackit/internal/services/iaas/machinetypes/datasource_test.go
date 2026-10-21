@@ -19,7 +19,6 @@ func filterValue(t *testing.T, filter *filterModel) types.Object {
 	}
 
 	var resp datasource.SchemaResponse
-
 	NewMachineTypesDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &resp)
 
 	filterType, ok := resp.Schema.Attributes["filter"].GetType().(types.ObjectType)
@@ -164,11 +163,11 @@ func TestMapFields(t *testing.T) {
 		},
 	}}
 	filter := filterValue(t, &filterModel{VCPU: types.Int64Value(1)})
+
 	model := DataSourceModel{
 		ProjectID: types.StringValue("project"),
 		Filter:    filter,
 	}
-
 	if err := mapFields(ctx, response, &model, "eu01"); err != nil {
 		t.Fatal(err)
 	}

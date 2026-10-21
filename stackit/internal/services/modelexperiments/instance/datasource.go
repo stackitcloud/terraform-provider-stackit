@@ -107,9 +107,7 @@ func (i *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 func (i *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// nolint:gocritic // function signature required by Terraform
 	var model Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -119,7 +117,6 @@ func (i *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	region := i.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -145,20 +142,17 @@ func (i *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	if getInstanceResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance", "Got empty response")
-
 		return
 	}
 
 	err = mapInstance(ctx, &getInstanceResp.Instance, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

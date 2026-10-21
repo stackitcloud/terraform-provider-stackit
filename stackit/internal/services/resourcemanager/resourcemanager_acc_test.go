@@ -82,36 +82,28 @@ var providerConfig = testutil.NewConfigBuilder().ServiceAccountToken(token).Buil
 func testConfigProjectNameParentContainerIdUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceProjectParentContainerId))
 	maps.Copy(tempConfig, testConfigResourceProjectParentContainerId)
-
 	tempConfig["name"] = config.StringVariable(projectNameParentContainerIdUpdated)
-
 	return tempConfig
 }
 
 func testConfigProjectNameParentUUIDUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceProjectParentUUID))
 	maps.Copy(tempConfig, testConfigResourceProjectParentUUID)
-
 	tempConfig["name"] = config.StringVariable(projectNameParentUUIDUpdated)
-
 	return tempConfig
 }
 
 func testConfigFolderNameParentContainerIdUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceFolderParentContainerId))
 	maps.Copy(tempConfig, testConfigResourceFolderParentContainerId)
-
 	tempConfig["name"] = config.StringVariable(folderNameParentContainerIdUpdated)
-
 	return tempConfig
 }
 
 func testConfigFolderNameParentUUIDUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceFolderParentUUID))
 	maps.Copy(tempConfig, testConfigResourceFolderParentUUID)
-
 	tempConfig["name"] = config.StringVariable(folderNameParentUUIDUpdated)
-
 	return tempConfig
 }
 
@@ -469,20 +461,16 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	}
 
 	projectsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_project" {
 			continue
 		}
-
 		// project terraform ID: "[container_id]"
 		containerId := rs.Primary.ID
-
 		projectsToDestroy = append(projectsToDestroy, containerId)
 	}
 
 	var containerParentId string
-
 	switch {
 	case testutil.TestProjectParentContainerID != "":
 		containerParentId = testutil.TestProjectParentContainerID
@@ -530,20 +518,16 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	}
 
 	foldersToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_folder" {
 			continue
 		}
-
 		// project terraform ID: "[container_id]"
 		containerId := rs.Primary.ID
-
 		foldersToDestroy = append(foldersToDestroy, containerId)
 	}
 
 	var containerParentId string
-
 	switch {
 	case testutil.TestProjectParentContainerID != "":
 		containerParentId = testutil.TestProjectParentContainerID

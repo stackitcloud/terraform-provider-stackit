@@ -33,6 +33,7 @@ func TestMapFields(t *testing.T) {
 
 		return &m
 	}
+
 	tests := []struct {
 		name    string
 		input   *albWaf.GetWAFResponse
@@ -83,7 +84,6 @@ func TestMapFields(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotErr := mapFields(t.Context(), tt.input, tt.state, tt.region)
@@ -91,7 +91,6 @@ func TestMapFields(t *testing.T) {
 				if !tt.wantErr {
 					t.Errorf("mapFieds() failed: %v", gotErr)
 				}
-
 				return
 			}
 
@@ -145,7 +144,6 @@ func TestToCreatePayload(t *testing.T) {
 				if !tt.wantErr {
 					t.Errorf("toCreatePayload() failed: %v", gotErr)
 				}
-
 				return
 			}
 

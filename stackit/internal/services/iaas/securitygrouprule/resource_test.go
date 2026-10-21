@@ -294,7 +294,6 @@ func TestMapFields(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(tt.args.input, &tt.args.state, tt.args.region)
@@ -361,13 +360,11 @@ func TestToCreatePayload(t *testing.T) {
 				portRange      *portRangeModel
 				protocol       *protocolModel
 			)
-
 			if tt.input != nil {
 				if !(tt.input.IcmpParameters.IsNull() || tt.input.IcmpParameters.IsUnknown()) {
 					icmpParameters = &icmpParametersModel{}
 
 					diags := tt.input.IcmpParameters.As(context.Background(), icmpParameters, basetypes.ObjectAsOptions{})
-
 					if diags.HasError() {
 						t.Fatalf("Error converting icmp parameters: %v", diags.Errors())
 					}
@@ -377,7 +374,6 @@ func TestToCreatePayload(t *testing.T) {
 					portRange = &portRangeModel{}
 
 					diags := tt.input.PortRange.As(context.Background(), portRange, basetypes.ObjectAsOptions{})
-
 					if diags.HasError() {
 						t.Fatalf("Error converting port range: %v", diags.Errors())
 					}
@@ -387,7 +383,6 @@ func TestToCreatePayload(t *testing.T) {
 					protocol = &protocolModel{}
 
 					diags := tt.input.Protocol.As(context.Background(), protocol, basetypes.ObjectAsOptions{})
-
 					if diags.HasError() {
 						t.Fatalf("Error converting protocol: %v", diags.Errors())
 					}

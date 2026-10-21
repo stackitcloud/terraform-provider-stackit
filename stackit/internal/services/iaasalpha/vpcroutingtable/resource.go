@@ -83,7 +83,6 @@ func (r *vpcRoutingTableResource) Configure(ctx context.Context, req resource.Co
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -92,7 +91,6 @@ func (r *vpcRoutingTableResource) Configure(ctx context.Context, req resource.Co
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -109,29 +107,23 @@ func (r *vpcRoutingTableResource) ModifyPlan(ctx context.Context, req resource.M
 	}
 
 	var configModel Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -139,7 +131,6 @@ func (r *vpcRoutingTableResource) ModifyPlan(ctx context.Context, req resource.M
 
 func (r *vpcRoutingTableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "VPC Regional routing table resource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.VpcExperiment, core.Resource),
@@ -236,7 +227,6 @@ func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.Creat
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,14 +245,12 @@ func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.Creat
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc routing table", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	routingTable, err := r.client.AddVPCRoutingTable(ctx, projectId, vpcId, region).AddVPCRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc routing table", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -270,7 +258,6 @@ func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.Creat
 
 	if routingTable.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc routing table", "response did not return a valid ID")
-
 		return
 	}
 
@@ -285,14 +272,11 @@ func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.Creat
 	err = mapFields(ctx, routingTable, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc routing table.", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -306,7 +290,6 @@ func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadReq
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -321,7 +304,6 @@ func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadReq
 	if routingTableId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -353,14 +335,11 @@ func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadReq
 	err = mapFields(ctx, routingTableResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading vpc routing table", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -375,7 +354,6 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -397,7 +375,6 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -406,14 +383,12 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc routing table", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	routingTable, err := r.client.UpdateVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).UpdateVPCRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc routing table", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -423,14 +398,11 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 	err = mapFields(ctx, routingTable, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc routing table", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -445,7 +417,6 @@ func (r *vpcRoutingTableResource) Delete(ctx context.Context, req resource.Delet
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -467,7 +438,6 @@ func (r *vpcRoutingTableResource) Delete(ctx context.Context, req resource.Delet
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -518,7 +488,6 @@ func mapFields(ctx context.Context, routingTable *iaas.VPCRoutingTable, model *M
 	}
 
 	var routingTableId string
-
 	if model.RoutingTableId.ValueString() != "" {
 		routingTableId = model.RoutingTableId.ValueString()
 	} else if routingTable.Id != nil {

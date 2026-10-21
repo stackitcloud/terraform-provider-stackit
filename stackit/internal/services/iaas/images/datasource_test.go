@@ -86,13 +86,13 @@ func TestMapFields(t *testing.T) {
 			"checksum":      types.ObjectNull(checksumAttrTypes),
 		}),
 	})
+
 	want := DataSourceModel{
 		ID:        types.StringValue("project,eu01"),
 		ProjectID: types.StringValue("project"),
 		Region:    types.StringValue("eu01"),
 		Results:   wantResults,
 	}
-
 	if diff := cmp.Diff(want, model); diff != "" {
 		t.Fatalf("mapped data does not match (-want +got):\n%s", diff)
 	}

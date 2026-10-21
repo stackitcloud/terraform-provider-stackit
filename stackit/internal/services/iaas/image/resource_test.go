@@ -165,7 +165,6 @@ func TestMapFields(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
@@ -390,25 +389,21 @@ func Test_UploadImage(t *testing.T) {
 			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				if tt.uploadFails {
 					w.WriteHeader(http.StatusInternalServerError)
-
 					_, _ = fmt.Fprintln(w, `{"status":"some error occurred"}`)
-
 					return
 				}
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-
 				_, _ = fmt.Fprintln(w, `{"status":"ok"}`)
 			})
-			server := httptest.NewServer(handler)
 
+			server := httptest.NewServer(handler)
 			defer server.Close()
 
 			uploadURL, err := url.Parse(server.URL)
 			if err != nil {
 				t.Error(err)
-
 				return
 			}
 

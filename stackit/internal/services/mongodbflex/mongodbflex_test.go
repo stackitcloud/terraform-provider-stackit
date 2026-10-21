@@ -26,7 +26,6 @@ func TestMongoDBInstanceSavesIDsOnError(t *testing.T) {
 	)
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
@@ -119,7 +118,6 @@ func TestMongoDBUserSavesIDsOnError(t *testing.T) {
 	const region = "eu01"
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`

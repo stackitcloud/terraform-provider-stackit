@@ -77,7 +77,6 @@ func RetryRequest[T any](ctx context.Context, fn func() (*T, error), config Retr
 		select {
 		case <-ctx.Done():
 			timer.Stop()
-
 			return nil, ctx.Err()
 		case <-timer.C:
 		}

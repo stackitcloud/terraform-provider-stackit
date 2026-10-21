@@ -129,7 +129,6 @@ func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req dat
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -168,13 +167,11 @@ func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req dat
 	err = mapDataSourceFields(ctx, accessTokenResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -194,7 +191,6 @@ func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAcce
 	}
 
 	var accessTokenID string
-
 	if model.AccessTokenID.ValueString() != "" {
 		accessTokenID = model.AccessTokenID.ValueString()
 	} else if accessToken.Id != "" {
@@ -206,8 +202,8 @@ func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAcce
 	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.InstanceID.ValueString(), accessTokenID)
 	model.AccessTokenID = types.StringValue(accessTokenID)
 	model.Region = types.StringValue(region)
-	model.CreatorID = types.StringValue(accessToken.CreatorId)
 
+	model.CreatorID = types.StringValue(accessToken.CreatorId)
 	if accessToken.Description != nil && *accessToken.Description != "" {
 		model.Description = types.StringPointerValue(accessToken.Description)
 	}

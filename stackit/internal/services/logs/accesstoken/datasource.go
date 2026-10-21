@@ -141,7 +141,6 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -180,13 +179,11 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 	err = mapDataSourceFields(ctx, accessTokenResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -206,7 +203,6 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 	}
 
 	var accessTokenID string
-
 	if model.AccessTokenID.ValueString() != "" {
 		accessTokenID = model.AccessTokenID.ValueString()
 	} else if accessToken.Id != "" {
@@ -232,7 +228,6 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 	permissionList := types.ListNull(types.StringType)
 
 	var diags diag.Diagnostics
-
 	if len(accessToken.Permissions) > 0 {
 		permissionList, diags = types.ListValueFrom(ctx, types.StringType, accessToken.Permissions)
 		if diags.HasError() {

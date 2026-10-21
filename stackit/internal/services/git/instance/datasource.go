@@ -42,7 +42,6 @@ func (g *gitDataSource) Configure(ctx context.Context, req datasource.ConfigureR
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_git", "datasource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -125,7 +124,6 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,10 +140,8 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -159,7 +155,6 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	err = mapFields(ctx, gitInstanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading git instance", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 

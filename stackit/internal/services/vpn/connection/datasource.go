@@ -232,7 +232,6 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -254,10 +253,8 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -271,13 +268,11 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 	err = mapDataSourceFields(ctx, connResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

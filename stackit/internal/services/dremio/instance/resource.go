@@ -165,34 +165,28 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel InstanceModel
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel InstanceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -209,7 +203,6 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.DremioExperiment, "stackit_dremio_instance", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -397,9 +390,7 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model InstanceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -407,20 +398,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	waiterTimeout := dremioWaiter.CreateDremioWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -428,7 +416,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -436,13 +423,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	instanceResp, err := r.client.CreateDremioInstance(ctx, projectId, region).CreateDremioInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	if instanceResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -460,19 +445,16 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	_, err = dremioWaiter.CreateDremioWaitHandler(ctx, r.client, projectId, region, instanceResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Dremio instance creation waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -482,34 +464,29 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model InstanceModel
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -521,7 +498,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -535,12 +511,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -550,10 +524,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model, state InstanceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -561,27 +533,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	waiterTimeout := dremioWaiter.UpdateDremioWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -590,13 +558,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	instanceResp, err := r.client.UpdateDremioInstance(ctx, projectId, region, instanceId).UpdateDremioInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	if instanceResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -614,19 +580,16 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	_, err = dremioWaiter.UpdateDremioWaitHandler(ctx, r.client, projectId, region, instanceResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Dremio instance", fmt.Sprintf("Dremio instance updating waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -639,7 +602,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -647,13 +609,11 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	waiterTimeout := dremioWaiter.DeleteDremioWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -661,7 +621,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -670,7 +629,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -682,7 +640,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err = dremioWaiter.DeleteDremioWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Dremio instance", fmt.Sprintf("Dremio instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -761,8 +718,8 @@ func mapModelFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse,
 		Catalog:     types.StringValue(instanceResp.Endpoints.Catalog),
 		Ui:          types.StringValue(instanceResp.Endpoints.Ui),
 	}
-	endpointsObj, diags := types.ObjectValueFrom(ctx, endpointsAttrTypes, endpoints)
 
+	endpointsObj, diags := types.ObjectValueFrom(ctx, endpointsAttrTypes, endpoints)
 	if diags.HasError() {
 		return fmt.Errorf("failed to parse endpoints")
 	}
@@ -812,7 +769,6 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 
 		if len(oauthResp.Parameters) > 0 {
 			var params []AuthParameterModel
-
 			for _, p := range oauthResp.Parameters {
 				params = append(params, AuthParameterModel{
 					Name:  types.StringValue(p.Name),
@@ -888,7 +844,6 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 		}
 
 		oAuthParams := []dremioSdk.AuthParameters{}
-
 		if len(model.Authentication.OAuth.Parameters) > 0 {
 			parameters := model.Authentication.OAuth.Parameters
 			for _, param := range parameters {

@@ -37,7 +37,6 @@ func TestCreateWriteOnlyKeyPayload(t *testing.T) {
 
 	s := testutil.NewMockServer(t)
 	t.Cleanup(s.Server.Close)
-
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -88,16 +87,13 @@ resource "stackit_volume" "volume" {
 			if err != nil {
 				t.Errorf("failed to read create request body: %v", err)
 				w.WriteHeader(http.StatusBadRequest)
-
 				return
 			}
 
 			var payload iaas.CreateVolumePayload
-
 			if err := json.Unmarshal(body, &payload); err != nil {
 				t.Errorf("failed to unmarshal create request body: %v", err)
 				w.WriteHeader(http.StatusBadRequest)
-
 				return
 			}
 
@@ -106,7 +102,6 @@ resource "stackit_volume" "volume" {
 			}
 
 			w.Header().Set("content-type", "application/json")
-
 			_ = json.NewEncoder(w).Encode(iaas.Volume{Id: &volumeId})
 		},
 	}

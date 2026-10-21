@@ -41,7 +41,6 @@ func parametersConfig(params map[string]string) string {
 	}
 
 	var parameters strings.Builder
-
 	parameters.WriteString("parameters = {")
 
 	for k, v := range params {
@@ -273,15 +272,12 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_rabbitmq_instance" {
 			continue
 		}
-
 		// instance terraform ID: "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

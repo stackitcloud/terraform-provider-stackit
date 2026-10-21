@@ -78,7 +78,6 @@ var testConfigVarsBucket = config.Variables{
 
 func configVarsBucketUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsBucket)
-
 	updatedConfig["bucket_name"] = config.StringVariable(bucketNameUpdated)
 	updatedConfig["credentials_name"] = config.StringVariable(credentialsNameUpdated)
 
@@ -155,7 +154,6 @@ var testConfigVarsHttp = config.Variables{
 
 func configVarsHttpUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsHttp)
-
 	updatedConfig["regions"] = config.ListVariable(config.StringVariable("EU"), config.StringVariable("US"), config.StringVariable("ASIA"))
 	updatedConfig["redirect_target_url"] = config.StringVariable("https://example.com/updated")
 	updatedConfig["monthly_limit_bytes"] = config.IntegerVariable(209715200)
@@ -640,15 +638,12 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	}
 
 	distributionsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_cdn_distribution" {
 			continue
 		}
-
 		// terraform ID: "[project_id],[distribution_id]"
 		distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
-
 		distributionsToDestroy = append(distributionsToDestroy, distributionId)
 	}
 
@@ -714,7 +709,6 @@ func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, er
 		zero     T
 		errOuter error
 	)
-
 	for range attempts {
 		dist, err := f()
 		if err == nil {

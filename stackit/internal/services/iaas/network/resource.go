@@ -103,34 +103,28 @@ func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureR
 // Use the modifier to set the effective region in the current plan.
 func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -168,9 +162,7 @@ func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigV
 
 func (r *networkResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var model Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -214,7 +206,6 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 // Schema defines the schema for the resource.
 func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network resource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -446,7 +437,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -455,7 +445,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -463,7 +452,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -472,7 +460,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	network, err := r.client.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -492,7 +479,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
-
 		return
 	}
 
@@ -500,14 +486,11 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	err = mapFields(ctx, network, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -521,7 +504,6 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -529,17 +511,15 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	networkId := model.NetworkId.ValueString()
 
+	networkId := model.NetworkId.ValueString()
 	if networkId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -547,10 +527,8 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	networkResp, err := r.client.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -565,14 +543,11 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	err = mapFields(ctx, networkResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -587,7 +562,6 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -597,7 +571,6 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -607,7 +580,6 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -616,7 +588,6 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	payload, err := toUpdatePayload(ctx, &model, &stateModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -624,14 +595,12 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	err = r.client.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
-
 		return
 	}
 
@@ -640,13 +609,11 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -661,7 +628,6 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -669,7 +635,6 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -680,10 +645,8 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	err := r.client.DeleteNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -697,7 +660,6 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))
-
 		return
 	}
 
@@ -736,7 +698,6 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	}
 
 	var networkId string
-
 	if model.NetworkId.ValueString() != "" {
 		networkId = model.NetworkId.ValueString()
 	} else {
@@ -777,8 +738,8 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixes := networkResp.Ipv4.Prefixes
-		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 
+		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 		if diags.HasError() {
 			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
 		}
@@ -789,12 +750,10 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 			_, netmask, err := net.ParseCIDR(respPrefixes[0])
 			if err != nil {
 				tflog.Error(ctx, fmt.Sprintf("ipv4_prefix_length: %+v", err))
-
 				// silently ignore parsing error for the netmask
 				model.IPv4PrefixLength = types.Int64Null()
 			} else {
 				ones, _ := netmask.Mask.Size()
-
 				model.IPv4PrefixLength = types.Int64Value(int64(ones))
 			}
 		}
@@ -842,14 +801,14 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	}
 
 	model.IPv6PrefixLength = types.Int64Null()
-	model.IPv6Prefix = types.StringNull()
 
+	model.IPv6Prefix = types.StringNull()
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Prefixes == nil {
 		model.IPv6Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixesV6 := networkResp.Ipv6.Prefixes
-		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 
+		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 		if diags.HasError() {
 			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
 		}
@@ -863,7 +822,6 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 				model.IPv6PrefixLength = types.Int64Null()
 			} else {
 				ones, _ := netmask.Mask.Size()
-
 				model.IPv6PrefixLength = types.Int64Value(int64(ones))
 			}
 		}
@@ -900,13 +858,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	}
 
 	var modelIPv6Nameservers []string
-
 	// Is true when IPv6Nameservers is not null or unset
 	if !utils.IsUndefined(model.IPv6Nameservers) {
 		// If ipv6Nameservers is empty, modelIPv6Nameservers will be set to an empty slice.
 		// empty slice != nil slice. Empty slice will result in an empty list in the payload []. Nil slice will result in a payload without the property set
 		modelIPv6Nameservers = []string{}
-
 		for _, ipv6ns := range model.IPv6Nameservers.Elements() {
 			ipv6NameserverString, ok := ipv6ns.(types.String)
 			if !ok {
@@ -918,7 +874,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	}
 
 	var ipv6Body *iaas.CreateNetworkIPv6
-
 	if !utils.IsUndefined(model.IPv6PrefixLength) {
 		ipv6Body = &iaas.CreateNetworkIPv6{
 			CreateNetworkIPv6WithPrefixLength: &iaas.CreateNetworkIPv6WithPrefixLength{
@@ -935,7 +890,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		}
 	} else if !utils.IsUndefined(model.IPv6Prefix) {
 		var gateway iaas.NullableString
-
 		if model.NoIPv6Gateway.ValueBool() {
 			gateway = *iaas.NewNullableString(nil)
 		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
@@ -962,7 +916,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 
 	if !utils.IsUndefined(model.IPv4Nameservers) {
 		modelIPv4Nameservers = []string{}
-
 		for _, ipv4ns := range model.IPv4Nameservers.Elements() {
 			ipv4NameserverString, ok := ipv4ns.(types.String)
 			if !ok {
@@ -974,7 +927,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	}
 
 	var ipv4Body *iaas.CreateNetworkIPv4
-
 	if !utils.IsUndefined(model.IPv4PrefixLength) {
 		ipv4Body = &iaas.CreateNetworkIPv4{
 			CreateNetworkIPv4WithPrefixLength: &iaas.CreateNetworkIPv4WithPrefixLength{
@@ -987,7 +939,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		}
 	} else if !utils.IsUndefined(model.IPv4Prefix) {
 		var gateway iaas.NullableString
-
 		if model.NoIPv4Gateway.ValueBool() {
 			gateway = *iaas.NewNullableString(nil)
 		} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
@@ -1031,13 +982,11 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 	}
 
 	var modelIPv6Nameservers []string
-
 	// Is true when IPv6Nameservers is not null or unset
 	if !utils.IsUndefined(model.IPv6Nameservers) {
 		// If ipv6Nameservers is empty, modelIPv6Nameservers will be set to an empty slice.
 		// empty slice != nil slice. Empty slice will result in an empty list in the payload []. Nil slice will result in a payload without the property set
 		modelIPv6Nameservers = []string{}
-
 		for _, ipv6ns := range model.IPv6Nameservers.Elements() {
 			ipv6NameserverString, ok := ipv6ns.(types.String)
 			if !ok {
@@ -1049,7 +998,6 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 	}
 
 	var ipv6Body *iaas.UpdateNetworkIPv6Body
-
 	if modelIPv6Nameservers != nil || !utils.IsUndefined(model.NoIPv6Gateway) || !utils.IsUndefined(model.IPv6Gateway) {
 		ipv6Body = &iaas.UpdateNetworkIPv6Body{}
 		// IPv6 nameservers should only be set, if it contains any value. If the slice is nil, it should NOT be set.
@@ -1067,13 +1015,10 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 	}
 
 	var ipv4Body *iaas.UpdateNetworkIPv4Body
-
 	if model.isIPv4UpdateConfigSet() {
 		ipv4Body = &iaas.UpdateNetworkIPv4Body{}
-
 		if !utils.IsUndefined(model.IPv4Nameservers) {
 			modelIPv4Nameservers := []string{}
-
 			for _, ipv4ns := range model.IPv4Nameservers.Elements() {
 				ipv4NameserverString, ok := ipv4ns.(types.String)
 				if !ok {

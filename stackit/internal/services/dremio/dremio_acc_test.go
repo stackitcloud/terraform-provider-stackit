@@ -76,16 +76,13 @@ var testDremioConfigVarsMax = config.Variables{
 func testDremioInstanceConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testDremioConfigVarsMin))
 	maps.Copy(tempConfig, testDremioConfigVarsMin)
-
 	tempConfig["display_name"] = config.StringVariable("tfAccDremioMinInstanceUpd")
-
 	return tempConfig
 }
 
 func testDremioInstanceConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testDremioConfigVarsMax))
 	maps.Copy(tempConfig, testDremioConfigVarsMax)
-
 	tempConfig["display_name"] = config.StringVariable("tfAccDremioMaxInstanceUpd")
 	tempConfig["description"] = config.StringVariable("description-upd")
 
@@ -508,15 +505,12 @@ func testAccDremioInstanceDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_dremio_instance" {
 			continue
 		}
-
 		// Dremio internal ID: "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

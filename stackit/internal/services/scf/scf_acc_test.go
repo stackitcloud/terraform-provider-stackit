@@ -61,7 +61,6 @@ var testConfigVarsMax = config.Variables{
 func testScfOrgConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
-
 	// update scf organization to a new name
 	tempConfig["name"] = config.StringVariable(nameMinUpdated)
 
@@ -71,7 +70,6 @@ func testScfOrgConfigVarsMinUpdated() config.Variables {
 func testScfOrgConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
-
 	// update scf organization to a new name, unsuspend it and assign a new quota
 	tempConfig["name"] = config.StringVariable(nameMaxUpdated)
 	tempConfig["quota_id"] = config.StringVariable(quotaIdMaxUpdated)
@@ -426,15 +424,12 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 	}
 
 	var orgsToDestroy []string
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_scf_organization" {
 			continue
 		}
-
 		// terraform ID: "[project_id],[region],[org_id]"
 		orgId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		orgsToDestroy = append(orgsToDestroy, orgId)
 	}
 

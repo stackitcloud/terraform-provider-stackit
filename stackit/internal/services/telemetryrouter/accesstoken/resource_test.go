@@ -176,8 +176,8 @@ func TestMapGetFields(t *testing.T) {
 				Region:     tt.expected.Region,
 				InstanceID: tt.expected.InstanceID,
 			}
-			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 
+			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}

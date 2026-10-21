@@ -72,6 +72,7 @@ func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "credentials_ref")
+
 	tests := []struct {
 		description string
 		input       *loadbalancer.CredentialsResponse
@@ -142,14 +143,13 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(tt.input, model, tt.region)
 
+			err := mapFields(tt.input, model, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

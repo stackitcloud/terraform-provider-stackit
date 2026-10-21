@@ -329,15 +329,12 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	}
 
 	bucketsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_objectstorage_bucket" {
 			continue
 		}
-
 		// bucket terraform ID: "[project_id],[region],[name]"
 		bucketName := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		bucketsToDestroy = append(bucketsToDestroy, bucketName)
 	}
 
@@ -363,15 +360,12 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	}
 
 	credentialsGroupsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_objectstorage_credentials_group" {
 			continue
 		}
-
 		// credentials group terraform ID: "[project_id],[region],[credentials_group_id]"
 		credentialsGroupId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
 	}
 

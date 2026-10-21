@@ -186,7 +186,6 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -219,13 +218,11 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 	err = mapFields(ctx, &scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

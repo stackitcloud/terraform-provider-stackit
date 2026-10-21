@@ -116,7 +116,8 @@ linters:
         - "-QF1001" # disable 'could apply De Morgan's law': readability of boolean expressions is subjective and should be decided on a case-by-case basis
         - "-QF1012" # disable 'use fmt.Fprintf instead' Fprintf returns bytes written and an error, which we'd have to handle/ignore to appease some other linter
     wsl_v5:
-      default: all
+      allow-whole-block: true
+      branch-max-lines: 4
   exclusions:
     generated: lax
     paths:
@@ -133,6 +134,9 @@ linters:
       - path: stackit/internal/services/iam/rolebindings/v1/services/
         linters:
           - tfclientcollection
+      - linters:
+          - wsl_v5
+        source: 'if resp\.Diagnostics\.HasError\(\)'
 formatters:
   settings:
     goimports:

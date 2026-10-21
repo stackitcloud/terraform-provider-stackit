@@ -219,6 +219,7 @@ func TestToCreatePayload(t *testing.T) {
 
 		return model
 	}
+
 	tests := map[string]struct {
 		Input    *Model
 		Expected *cdnSdk.CreateDistributionPayload
@@ -332,7 +333,6 @@ func TestToCreatePayload(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
-
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture, // reusing the existing one
@@ -628,7 +628,6 @@ func TestToCreatePayload(t *testing.T) {
 			IsValid:  false,
 		},
 	}
-
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			res, err := toCreatePayload(context.Background(), tc.Input)
@@ -1199,7 +1198,6 @@ func TestConvertConfig(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
-
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture,
@@ -1614,6 +1612,7 @@ func TestMapFields(t *testing.T) {
 		"strip_response_cookies": types.BoolUnknown(),
 		"forward_host_header":    types.BoolUnknown(),
 	})
+
 	tests := map[string]struct {
 		Input        *cdnSdk.Distribution
 		Expected     *Model
@@ -1658,7 +1657,6 @@ func TestMapFields(t *testing.T) {
 					"region":                 types.StringNull(),
 					"credentials":            types.ObjectNull(backendCredentialsTypes),
 				})
-
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backendWithGeofencing,
 					"regions":                regionsFixture,
@@ -1746,7 +1744,6 @@ func TestMapFields(t *testing.T) {
 					"disabled_rule_collection_ids":  populatedWafSet,
 					"log_only_rule_collection_ids":  populatedWafSet,
 				})
-
 				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
@@ -1762,7 +1759,6 @@ func TestMapFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				wafCopy := expectedWafConfig
-
 				wafCopy.EnabledRuleGroupIds = []string{}
 				wafCopy.DisabledRuleGroupIds = []string{}
 				wafCopy.LogOnlyRuleGroupIds = []string{}
@@ -1813,7 +1809,6 @@ func TestMapFields(t *testing.T) {
 					"errors": types.ListValueMust(types.StringType, []attr.Value{}),
 				})
 				domains := types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{managedDomain, customDomain})
-
 				m.Domains = domains
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -2021,7 +2016,6 @@ func TestMapFields(t *testing.T) {
 			IsValid: false,
 		},
 	}
-
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			model := &Model{}

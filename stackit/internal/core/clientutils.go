@@ -750,7 +750,6 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	for attempt := 0; attempt <= t.MaxRetries; attempt++ {
 		reqClone := req.Clone(req.Context())
-
 		if getBody != nil {
 			var bodyErr error
 
@@ -807,7 +806,6 @@ func (t *RetryTransport) getWaitDuration(resp *http.Response, attempt int) time.
 		if seconds, err := strconv.Atoi(retryAfter); err == nil {
 			return time.Duration(seconds) * time.Second
 		}
-
 		// Try parsing as HTTP-Date string
 		if date, err := http.ParseTime(retryAfter); err == nil {
 			if d := time.Until(date); d > 0 {

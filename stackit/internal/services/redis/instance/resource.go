@@ -126,34 +126,28 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // defined by terraform api
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -444,7 +438,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -453,17 +446,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var parameters *parametersModel
-
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
 		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -472,7 +462,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
-
 		return
 	}
 
@@ -480,15 +469,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model, parameters)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new instance
 	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -496,7 +482,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	if createResp.InstanceId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
-
 		return
 	}
 
@@ -514,7 +499,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
-
 		return
 	}
 
@@ -522,14 +506,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -543,7 +525,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -551,12 +532,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -569,10 +549,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -587,7 +565,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -595,14 +572,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = loadPlanNameAndVersion(ctx, r.client, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -616,7 +591,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -626,18 +600,15 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var parameters *parametersModel
-
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
 		parameters = &parametersModel{}
 		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -646,7 +617,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err := r.loadPlanId(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
-
 		return
 	}
 
@@ -654,15 +624,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model, parameters)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing instance
 	err = r.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -671,7 +638,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
-
 		return
 	}
 
@@ -679,13 +645,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -700,7 +664,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -710,7 +673,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -719,10 +681,8 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	err := r.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -736,7 +696,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -775,7 +734,6 @@ func mapFields(instance *redis.Instance, model *Model, region string) error {
 	}
 
 	var instanceId string
-
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
 	} else if instance.InstanceId != nil {
@@ -811,7 +769,6 @@ func mapFields(instance *redis.Instance, model *Model, region string) error {
 
 func mapParameters(params map[string]any) (types.Object, error) {
 	attributes := map[string]attr.Value{}
-
 	for attribute := range parametersTypes {
 		var (
 			valueInterface any
@@ -836,7 +793,6 @@ func mapParameters(params map[string]any) (types.Object, error) {
 		}
 		if slices.Contains(hyphenAttributes, attribute) {
 			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
-
 			valueInterface, ok = params[alteredAttribute]
 		} else {
 			valueInterface, ok = params[attribute]
@@ -849,7 +805,6 @@ func mapParameters(params map[string]any) (types.Object, error) {
 		}
 
 		var value attr.Value
-
 		switch parametersTypes[attribute].(type) {
 		default:
 			return types.ObjectNull(parametersTypes), fmt.Errorf("found unexpected attribute type '%T'", parametersTypes[attribute])
@@ -882,7 +837,6 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				// This may be int64, int32, int or float64
 				// We try to assert all 4
 				var valueInt32 int32
-
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
@@ -894,7 +848,6 @@ func mapParameters(params map[string]any) (types.Object, error) {
 
 				value = types.Int32Value(valueInt32)
 			}
-
 		case basetypes.ListType: // Assumed to be a list of strings
 			if valueInterface == nil {
 				value = types.ListNull(types.StringType)
@@ -902,7 +855,6 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				// This may be []string{} or []interface{}
 				// We try to assert all 2
 				var valueList []attr.Value
-
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as array of interface", attribute, valueInterface)
@@ -1030,8 +982,8 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	planName := model.PlanName.ValueString()
 	availableVersions := ""
 	availablePlanNames := ""
-	isValidVersion := false
 
+	isValidVersion := false
 	for _, offer := range res.Offerings {
 		if !strings.EqualFold(offer.Version, version) {
 			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, offer.Version)
@@ -1075,7 +1027,6 @@ func loadPlanNameAndVersion(ctx context.Context, client redis.DefaultAPI, model 
 			if strings.EqualFold(plan.Id, planId) && plan.Id != "" {
 				model.PlanName = types.StringValue(plan.Name)
 				model.Version = types.StringValue(offer.Version)
-
 				return nil
 			}
 		}

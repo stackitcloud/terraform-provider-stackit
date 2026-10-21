@@ -118,7 +118,6 @@ func (d *kubernetesVersionsDataSource) Read(ctx context.Context, req datasource.
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -156,13 +155,11 @@ func (d *kubernetesVersionsDataSource) Read(ctx context.Context, req datasource.
 
 	if err := mapFields(ctx, optionsResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading provider options", fmt.Sprintf("Mapping API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -206,7 +203,6 @@ func mapFields(_ context.Context, optionsResp *ske.ProviderOptions, model *Model
 		}
 
 		featureGateValues := map[string]attr.Value{}
-
 		if kv.FeatureGates != nil {
 			for k, v := range *kv.FeatureGates {
 				featureGateValues[k] = types.StringValue(v)

@@ -277,7 +277,6 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, &tt.state, testRegion)

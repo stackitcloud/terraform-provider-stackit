@@ -128,7 +128,6 @@ func (r *customRuleGroupResource) Configure(ctx context.Context, req resource.Co
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -330,28 +329,23 @@ func (r *customRuleGroupResource) ModifyPlan(ctx context.Context, req resource.M
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if !req.State.Raw.IsNull() {
 		var stateModel Model
-
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
 
 		if !resp.Diagnostics.HasError() {
@@ -360,7 +354,6 @@ func (r *customRuleGroupResource) ModifyPlan(ctx context.Context, req resource.M
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -391,7 +384,6 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -400,7 +392,6 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", model.Name)
@@ -408,14 +399,12 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Custom Rule Group", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateCustomRuleGroup(ctx, projectId, region).CreateCustomRuleGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Custom Rule Group", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -433,13 +422,11 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 	err = mapFields(ctx, createResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Custom Rule Group", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -452,7 +439,6 @@ func (r *customRuleGroupResource) Update(ctx context.Context, req resource.Updat
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -462,7 +448,6 @@ func (r *customRuleGroupResource) Update(ctx context.Context, req resource.Updat
 	projectId := model.ProjectId.ValueString()
 	customRuleGroupName := model.Name.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", customRuleGroupName)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -470,14 +455,12 @@ func (r *customRuleGroupResource) Update(ctx context.Context, req resource.Updat
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Custom Rule Group", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	updateResp, err := r.client.UpdateCustomRuleGroup(ctx, projectId, region, customRuleGroupName).UpdateCustomRuleGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Custom Rule Group", fmt.Sprintf("Calling API update endpoint: %v", err))
-
 		return
 	}
 
@@ -486,14 +469,12 @@ func (r *customRuleGroupResource) Update(ctx context.Context, req resource.Updat
 	err = mapFields(ctx, updateResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Custom Rule Group", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -506,7 +487,6 @@ func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadReq
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -516,7 +496,6 @@ func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadReq
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -524,10 +503,8 @@ func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadReq
 	customRuleGroupResp, err := r.client.GetCustomRuleGroup(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -541,13 +518,11 @@ func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadReq
 	err = mapFields(ctx, customRuleGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Custom Rule Group", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -560,7 +535,6 @@ func (r *customRuleGroupResource) Delete(ctx context.Context, req resource.Delet
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -570,7 +544,6 @@ func (r *customRuleGroupResource) Delete(ctx context.Context, req resource.Delet
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -578,10 +551,8 @@ func (r *customRuleGroupResource) Delete(ctx context.Context, req resource.Delet
 	_, err := r.client.DeleteCustomRuleGroup(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			tflog.Info(ctx, "ALB WAF Custom Rule Group was already deleted")
-
 			return
 		}
 
@@ -637,11 +608,10 @@ func toUpdatePayload(ctx context.Context, model *Model) (*albWaf.UpdateCustomRul
 
 func toRulesPayload(ctx context.Context, modelRules basetypes.ListValue) (*[]albWaf.CreateCustomRule, error) {
 	payloadRules := []albWaf.CreateCustomRule{}
-
 	if !tfutils.IsUndefined(modelRules) {
 		rules := []RuleModel{}
-		diags := modelRules.ElementsAs(ctx, &rules, true)
 
+		diags := modelRules.ElementsAs(ctx, &rules, true)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting to rule map: %w", core.DiagsToError(diags))
 		}
@@ -663,19 +633,16 @@ func toRulesPayload(ctx context.Context, modelRules basetypes.ListValue) (*[]alb
 			}
 
 			var log *bool
-
 			if !tfutils.IsUndefined(behavior.Log) {
 				log = behavior.Log.ValueBoolPointer()
 			}
 
 			var logMsg *string
-
 			if !tfutils.IsUndefined(behavior.LogMsg) {
 				logMsg = behavior.LogMsg.ValueStringPointer()
 			}
 
 			var description *string
-
 			if !tfutils.IsUndefined(rule.Description) {
 				description = rule.Description.ValueStringPointer()
 			}
@@ -700,8 +667,8 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 
 	if !tfutils.IsUndefined(conditions) {
 		conditionModels := []ConditionModel{}
-		diags := conditions.ElementsAs(ctx, &conditionModels, true)
 
+		diags := conditions.ElementsAs(ctx, &conditionModels, true)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting to rule map: %w", core.DiagsToError(diags))
 		}
@@ -718,7 +685,6 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 			var operatorModel = OperatorModel{}
 
 			diags = condition.Operator.As(ctx, &operatorModel, basetypes.ObjectAsOptions{})
-
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting operator: %w", core.DiagsToError(diags))
 			}
@@ -726,7 +692,6 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 			var variableModel = VariableModel{}
 
 			diags = condition.Variable.As(ctx, &variableModel, basetypes.ObjectAsOptions{})
-
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting variable: %w", core.DiagsToError(diags))
 			}
@@ -781,7 +746,6 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 
 	if rules != nil {
 		rulesList := []attr.Value{}
-
 		for _, rule := range *rules {
 			ruleTF := RuleModel{
 				Id:          types.Int32Value(rule.Id),
@@ -855,7 +819,6 @@ func mapConditions(ctx context.Context, rule *albWaf.GetCustomRule) (*basetypes.
 	if rule != nil {
 		if conditions, ok := rule.GetConditionsOk(); ok {
 			conditionsList := []attr.Value{}
-
 			for _, condition := range conditions {
 				conditionTF := ConditionModel{}
 

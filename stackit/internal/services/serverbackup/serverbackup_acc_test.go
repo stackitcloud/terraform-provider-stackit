@@ -64,15 +64,12 @@ var testConfigVarsMax = config.Variables{
 
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
-
 	tempConfig["retention_period"] = config.IntegerVariable(0)
-
 	return tempConfig
 }
 
 func configVarsMinUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMin)
-
 	tempConfig["retention_period"] = config.IntegerVariable(12)
 	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
 
@@ -81,10 +78,8 @@ func configVarsMinUpdated() config.Variables {
 
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
-
 	tempConfig["retention_period"] = config.IntegerVariable(12)
 	tempConfig["rrule"] = config.StringVariable("DTSTART;TZID=Europe/Berlin:20250430T010000 RRULE:FREQ=DAILY;INTERVAL=3")
-
 	return tempConfig
 }
 
@@ -323,7 +318,6 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 	}
 
 	var serverId string
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type == "stackit_server" {
 			// server terraform ID: "[project_id],[region],[server_id]"
@@ -337,15 +331,12 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 	}
 
 	schedulesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server_backup_schedule" {
 			continue
 		}
-
 		// server backup schedule terraform ID: "[project_id],[server_id],[backup_schedule_id]"
 		scheduleId := strings.Split(rs.Primary.ID, core.Separator)[3]
-
 		schedulesToDestroy = append(schedulesToDestroy, scheduleId)
 	}
 
@@ -356,7 +347,6 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Server not found") {
 			return nil
 		}
-
 		return fmt.Errorf("getting schedulesResp: %w", err)
 	}
 
@@ -388,15 +378,12 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 	}
 
 	serversToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server" {
 			continue
 		}
-
 		// server terraform ID: "[project_id],[region],[server_id]"
 		serverId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 

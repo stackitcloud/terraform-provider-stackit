@@ -80,34 +80,28 @@ type resourcePoolResource struct {
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 func (r *resourcePoolResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // defined by terraform api
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -134,7 +128,6 @@ func (r *resourcePoolResource) Configure(ctx context.Context, req resource.Confi
 // Schema defines the schema for the resource.
 func (r *resourcePoolResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Resource-pool resource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -256,7 +249,6 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -266,18 +258,15 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	waiterTimeout := wait.CreateResourcePoolWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to read the default wait handler timeout
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -286,7 +275,6 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Cannot create payload: %v", err))
-
 		return
 	}
 
@@ -296,7 +284,6 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -304,7 +291,6 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 
 	if resourcePool == nil || resourcePool.ResourcePool == nil || resourcePool.ResourcePool.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "error creating resource pool", "Calling API: Incomplete response (id missing)")
-
 		return
 	}
 
@@ -323,7 +309,6 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool",
 			fmt.Sprintf("resource pool creation waiting: %v%s", err, utils.TimeoutHint(ctx, "create", createTimeout)))
-
 		return
 	}
 
@@ -334,14 +319,12 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	// to get a compatible structure
 	if response.ResourcePool == nil || response.ResourcePool.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "response did not contain an ID")
-
 		return
 	}
 
 	getResponse, err := r.client.GetResourcePool(ctx, projectId, region, *response.ResourcePool.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
-
 		return
 	}
 
@@ -349,14 +332,12 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	err = mapFields(ctx, region, getResponse.ResourcePool, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -370,34 +351,29 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
-	resourcePoolId := model.ResourcePoolId.ValueString()
 
+	resourcePoolId := model.ResourcePoolId.ValueString()
 	if resourcePoolId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -409,7 +385,6 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 		if openapiError, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
 			if openapiError.StatusCode == http.StatusNotFound || openapiError.StatusCode == http.StatusGone {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 		}
@@ -425,14 +400,11 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapFields(ctx, region, response.ResourcePool, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -447,7 +419,6 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -455,19 +426,16 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	waiterTimeout := wait.UpdateResourcePoolWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit // false positive - only called to read the default wait handler timeout
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -479,7 +447,6 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -487,7 +454,6 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update resource pool", fmt.Sprintf("cannot create payload: %v", err))
-
 		return
 	}
 
@@ -496,11 +462,9 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &openapiError) {
 			if openapiError.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 		}
@@ -517,7 +481,6 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	// to get a compatible structure
 	if response.ResourcePool == nil || response.ResourcePool.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", "response did not contain an ID")
-
 		return
 	}
 
@@ -525,20 +488,17 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool",
 			fmt.Sprintf("resource pool update waiting: %v%s", err, utils.TimeoutHint(ctx, "update", updateTimeout)))
-
 		return
 	}
 
 	err = mapFields(ctx, region, getResponse.ResourcePool, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -553,7 +513,6 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -561,19 +520,16 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	waiterTimeout := wait.DeleteResourcePoolWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit // false positive - only called to read the default wait handler timeout
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -584,7 +540,6 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err := r.client.DeleteResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &openapiError) {
 			if openapiError.StatusCode == http.StatusNotFound {
 				return
@@ -603,7 +558,6 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool",
 			fmt.Sprintf("resource pool deletion waiting: %v%s", err, utils.TimeoutHint(ctx, "delete", deleteTimeout)))
-
 		return
 	}
 
@@ -657,7 +611,6 @@ func mapFields(ctx context.Context, region string, resourcePool *sfs.ResourcePoo
 		var diags diag.Diagnostics
 
 		model.IpAcl, diags = types.ListValueFrom(ctx, types.StringType, resourcePool.IpAcl)
-
 		if diags.HasError() {
 			return fmt.Errorf("failed to map ip acls: %w", core.DiagsToError(diags))
 		}
@@ -705,7 +658,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*sfs.CreateResourcePool
 	var (
 		aclList []string
 	)
-
 	if !utils.IsUndefined(model.IpAcl) {
 		tmp, err := utils.ListValueToStringSlice(model.IpAcl)
 		if err != nil {
@@ -750,7 +702,6 @@ func toUpdatePayload(ctx context.Context, model *Model) (*sfs.UpdateResourcePool
 	var (
 		aclList []string
 	)
-
 	if !utils.IsUndefined(model.IpAcl) {
 		tmp, err := utils.ListValueToStringSlice(model.IpAcl)
 		if err != nil {

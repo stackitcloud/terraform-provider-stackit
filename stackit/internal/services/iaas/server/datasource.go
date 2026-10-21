@@ -89,7 +89,6 @@ func (d *serverDataSource) Configure(ctx context.Context, req datasource.Configu
 // Schema defines the schema for the datasource.
 func (d *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Server datasource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -203,7 +202,6 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -219,7 +217,6 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	serverReq := d.client.GetServer(ctx, projectId, region, serverId)
-
 	serverReq = serverReq.Details(true)
 
 	serverResp, err := serverReq.Execute()
@@ -245,14 +242,11 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	err = mapDataSourceFields(ctx, serverResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -270,7 +264,6 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	}
 
 	var serverId string
-
 	if model.ServerId.ValueString() != "" {
 		serverId = model.ServerId.ValueString()
 	} else if serverResp.Id != nil {
@@ -288,32 +281,25 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	}
 
 	var createdAt basetypes.StringValue
-
 	if serverResp.CreatedAt != nil {
 		createdAtValue := *serverResp.CreatedAt
-
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 
 	var updatedAt basetypes.StringValue
-
 	if serverResp.UpdatedAt != nil {
 		updatedAtValue := *serverResp.UpdatedAt
-
 		updatedAt = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
 
 	var launchedAt basetypes.StringValue
-
 	if serverResp.LaunchedAt != nil {
 		launchedAtValue := *serverResp.LaunchedAt
-
 		launchedAt = types.StringValue(launchedAtValue.Format(time.RFC3339))
 	}
 
 	if serverResp.Nics != nil {
 		var respNics []string
-
 		for _, nic := range serverResp.Nics {
 			respNics = append(respNics, nic.NicId)
 		}

@@ -15,7 +15,6 @@ func GetEnvStringOrDefault(val types.String, envVar, defaultValue string) string
 		if v := os.Getenv(envVar); v != "" {
 			return os.Getenv(envVar)
 		}
-
 		return defaultValue
 	}
 

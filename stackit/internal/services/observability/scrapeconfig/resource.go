@@ -301,7 +301,6 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -316,7 +315,6 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	if !model.SAML2.IsNull() && !model.SAML2.IsUnknown() {
 		diags = model.SAML2.As(ctx, &saml2Model, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -326,7 +324,6 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
 		diags = model.BasicAuth.As(ctx, &basicAuthModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -336,7 +333,6 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
 		diags = model.Targets.ElementsAs(ctx, &targetsModel, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -346,14 +342,12 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	payload, err := toCreatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	_, err = r.client.CreateScrapeConfig(ctx, instanceId, projectId).CreateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -372,29 +366,23 @@ func (r *scrapeConfigResource) Create(ctx context.Context, req resource.CreateRe
 	_, err = wait.CreateScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Scrape config creation waiting: %v", err))
-
 		return
 	}
 
 	got, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
-
 		return
 	}
-
 	// Map response body to schema
 	err = mapFields(ctx, &got.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating scrape config", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -408,7 +396,6 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -422,10 +409,8 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 	scResp, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -440,14 +425,11 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapFields(ctx, &scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading scrape config", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -462,7 +444,6 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -477,7 +458,6 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	if !model.SAML2.IsNull() && !model.SAML2.IsUnknown() {
 		diags = model.SAML2.As(ctx, &saml2Model, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -487,7 +467,6 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
 		diags = model.BasicAuth.As(ctx, &basicAuthModel, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -497,7 +476,6 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	if !model.Targets.IsNull() && !model.Targets.IsUnknown() {
 		diags = model.Targets.ElementsAs(ctx, &targetsModel, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -507,14 +485,12 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	payload, err := toUpdatePayload(ctx, &model, &saml2Model, &basicAuthModel, targetsModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	_, err = r.client.UpdateScrapeConfig(ctx, instanceId, scName, projectId).UpdateScrapeConfigPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -527,20 +503,17 @@ func (r *scrapeConfigResource) Update(ctx context.Context, req resource.UpdateRe
 	scResp, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Calling API for updated data: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, &scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating scrape config", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -555,7 +528,6 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -570,10 +542,8 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err := r.client.DeleteScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -587,7 +557,6 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err = wait.DeleteScrapeConfigWaitHandler(ctx, r.client, instanceId, scName, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Scrape config deletion waiting: %v", err))
-
 		return
 	}
 
@@ -626,7 +595,6 @@ func mapFields(ctx context.Context, sc *observabilitySdk.Job, model *Model) erro
 	}
 
 	var scName string
-
 	if model.Name.ValueString() != "" {
 		scName = model.Name.ValueString()
 	} else if sc.JobName != "" {
@@ -671,8 +639,8 @@ func mapBasicAuth(sc *observabilitySdk.Job, model *Model) error {
 		"username": types.StringValue(sc.BasicAuth.Username),
 		"password": types.StringValue(sc.BasicAuth.Password),
 	}
-	basicAuthTF, diags := types.ObjectValue(basicAuthTypes, basicAuthMap)
 
+	basicAuthTF, diags := types.ObjectValue(basicAuthTypes, basicAuthMap)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
@@ -707,8 +675,8 @@ func mapSAML2(sc *observabilitySdk.Job, model *Model) error {
 	saml2Map := map[string]attr.Value{
 		"enable_url_parameters": types.BoolValue(flag),
 	}
-	saml2TF, diags := types.ObjectValue(saml2Types, saml2Map)
 
+	saml2TF, diags := types.ObjectValue(saml2Types, saml2Map)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
@@ -733,13 +701,11 @@ func mapTargets(ctx context.Context, sc *observabilitySdk.Job, model *Model) err
 	}
 
 	newTargets := []attr.Value{}
-
 	for i, sc := range sc.StaticConfigs {
 		nt := targetModel{}
 
 		// Map URLs
 		urls := []attr.Value{}
-
 		if sc.Targets != nil {
 			for _, v := range sc.Targets {
 				urls = append(urls, types.StringValue(v))
@@ -765,8 +731,8 @@ func mapTargets(ctx context.Context, sc *observabilitySdk.Job, model *Model) err
 			"urls":   nt.URLs,
 			"labels": nt.Labels,
 		}
-		targetTF, diags := types.ObjectValue(targetTypes, targetMap)
 
+		targetTF, diags := types.ObjectValue(targetTypes, targetMap)
 		if diags.HasError() {
 			return core.DiagsToError(diags)
 		}
@@ -827,8 +793,8 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ti := observabilitySdk.CreateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
-		diags := target.URLs.ElementsAs(ctx, &urls, false)
 
+		diags := target.URLs.ElementsAs(ctx, &urls, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
@@ -869,7 +835,6 @@ func setDefaultsCreateScrapeConfig(sc *observabilitySdk.CreateScrapeConfigPayloa
 	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
 		sc.SampleLimit = new(float32(DefaultSampleLimit))
 	}
-
 	// Make the API default more explicit by setting the field.
 	if saml2Model.EnableURLParameters.IsNull() || saml2Model.EnableURLParameters.IsUnknown() {
 		m := map[string]any{}
@@ -929,8 +894,8 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ti := observabilitySdk.UpdateScrapeConfigPayloadStaticConfigsInner{}
 
 		urls := []string{}
-		diags := target.URLs.ElementsAs(ctx, &urls, false)
 
+		diags := target.URLs.ElementsAs(ctx, &urls, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}

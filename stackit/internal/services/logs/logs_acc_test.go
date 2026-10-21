@@ -46,7 +46,6 @@ var testConfigVarsMin = config.Variables{
 func testConfigVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-logs-updated")
 	newVars["retention_days"] = config.IntegerVariable(14)
 
@@ -65,7 +64,6 @@ var testConfigVarsMax = config.Variables{
 func testConfigVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-logs-updated")
 	newVars["retention_days"] = config.IntegerVariable(14)
 	newVars["acl"] = config.StringVariable("192.168.0.1/16")
@@ -87,9 +85,7 @@ var testConfigAccessTokenVarsMin = config.Variables{
 func testConfigAccessTokenVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigAccessTokenVarsMin))
 	maps.Copy(newVars, testConfigAccessTokenVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-token-updated")
-
 	return newVars
 }
 
@@ -109,7 +105,6 @@ var testConfigAccessTokenVarsMax = config.Variables{
 func testConfigAccessTokenVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigAccessTokenVarsMax))
 	maps.Copy(newVars, testConfigAccessTokenVarsMax)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-token-updated")
 	newVars["description"] = config.StringVariable("tf-acc-test-token-decription-updated")
 
@@ -671,14 +666,12 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	}
 
 	var instancesToDestroy []string
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_logs_instance" {
 			continue
 		}
 
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -710,7 +703,6 @@ func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	// access tokens
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_logs_access_token" {
@@ -724,7 +716,6 @@ func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteAccessToken(ctx, testutil.ProjectId, region, instanceId, accessTokenId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue

@@ -190,7 +190,6 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -198,22 +197,18 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_container_id", containerId)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new project
 	createResp, err := r.client.CreateProject(ctx).CreateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -232,21 +227,18 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client, createResp.ContainerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
-
 		return
 	}
 
 	err = mapProjectFields(ctx, waitResp, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -260,7 +252,6 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -271,7 +262,6 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if containerId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -280,10 +270,8 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -297,14 +285,12 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	err = mapProjectFields(ctx, projectResp, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -319,7 +305,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -329,7 +314,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -337,22 +321,18 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := planModel.ContainerId.ValueString()
-
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Generate API request body from plan model and state model
 	payload, err := toUpdatePayload(ctx, &planModel, &stateModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing project
 	_, err = r.client.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -362,20 +342,17 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API for updated data: %v", err))
-
 		return
 	}
 
 	err = mapProjectFields(ctx, projectResp, &planModel.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -390,7 +367,6 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -398,17 +374,14 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
-
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing project
 	err := r.client.DeleteProject(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -422,7 +395,6 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, containerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -459,7 +431,6 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	}
 
 	var projectId string
-
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
 	} else if projectResp.ProjectId != "" {
@@ -469,7 +440,6 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	}
 
 	var containerId string
-
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
 	} else if projectResp.ContainerId != "" {
@@ -484,7 +454,6 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	}
 
 	var containerParentIdTF types.String
-
 	if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 		// the provided containerParentId is the UUID identifier
 		containerParentIdTF = types.StringValue(projectResp.Parent.Id)

@@ -57,34 +57,28 @@ type projectlockResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *projectlockResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -162,7 +156,6 @@ func (r *projectlockResource) Create(ctx context.Context, req resource.CreateReq
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -185,7 +178,6 @@ func (r *projectlockResource) Create(ctx context.Context, req resource.CreateReq
 
 		if !(ok && oapiErr.StatusCode == http.StatusConflict) {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project lock", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -194,7 +186,6 @@ func (r *projectlockResource) Create(ctx context.Context, req resource.CreateReq
 		projectResp, err = r.client.GetLock(ctx, region, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project lock", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 	}
@@ -205,13 +196,11 @@ func (r *projectlockResource) Create(ctx context.Context, req resource.CreateReq
 	err = mapFields(projectResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project lock", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -225,7 +214,6 @@ func (r *projectlockResource) Read(ctx context.Context, req resource.ReadRequest
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -242,10 +230,8 @@ func (r *projectlockResource) Read(ctx context.Context, req resource.ReadRequest
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -260,14 +246,12 @@ func (r *projectlockResource) Read(ctx context.Context, req resource.ReadRequest
 	err = mapFields(projectResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project lock", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -287,7 +271,6 @@ func (r *projectlockResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -303,7 +286,6 @@ func (r *projectlockResource) Delete(ctx context.Context, req resource.DeleteReq
 	_, err := r.client.DisableLock(ctx, region, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project lock", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 

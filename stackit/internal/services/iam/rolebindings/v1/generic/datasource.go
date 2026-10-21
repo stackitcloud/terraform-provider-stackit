@@ -58,7 +58,6 @@ func (r *RoleBindingDatasource[C]) Configure(ctx context.Context, req datasource
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.IamExperiment, fmt.Sprintf("stackit_%s_%s_role_binding", r.ApiName, r.ResourceType), core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -112,7 +111,6 @@ func (r *RoleBindingDatasource[C]) Read(ctx context.Context, req datasource.Read
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -128,7 +126,6 @@ func (r *RoleBindingDatasource[C]) Read(ctx context.Context, req datasource.Read
 	roleBindingResp, err := r.ExecReadRequest(ctx, r.apiClient, region, resourceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error reading %s %s role bindings", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -138,14 +135,12 @@ func (r *RoleBindingDatasource[C]) Read(ctx context.Context, req datasource.Read
 	err = mapDatasourceFields(roleBindingResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error reading %s %s role bindings", r.ApiName, r.ResourceType), fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

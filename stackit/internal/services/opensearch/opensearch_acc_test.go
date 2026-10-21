@@ -38,7 +38,6 @@ var testConfigVarsMin = config.Variables{
 var testConfigVarsMinUpdated = func() config.Variables {
 	updatedConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(updatedConfig, testConfigVarsMin)
-
 	updatedConfig["plan_name"] = config.StringVariable("stackit-opensearch-2.4.10-single")
 	updatedConfig["plan_id"] = config.StringVariable("f97a4935-0a77-4939-bfd1-33ba2e1f2b36")
 
@@ -70,7 +69,6 @@ var testConfigVarsMax = config.Variables{
 var testConfigVarsMaxUpdated = func() config.Variables {
 	updatedConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(updatedConfig, testConfigVarsMax)
-
 	updatedConfig["plan_name"] = config.StringVariable("stackit-opensearch-2.4.10-single")
 	updatedConfig["plan_id"] = config.StringVariable("f97a4935-0a77-4939-bfd1-33ba2e1f2b36")
 	updatedConfig["graphite"] = config.StringVariable("graphite.updated.com:2004")
@@ -545,15 +543,12 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_opensearch_instance" {
 			continue
 		}
-
 		// instance terraform ID: "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

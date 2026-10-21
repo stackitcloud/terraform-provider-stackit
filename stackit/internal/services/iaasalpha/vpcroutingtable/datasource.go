@@ -52,7 +52,6 @@ func (r *vpcRoutingTableDatasource) Configure(ctx context.Context, req datasourc
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table", core.Datasource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -62,7 +61,6 @@ func (r *vpcRoutingTableDatasource) Configure(ctx context.Context, req datasourc
 
 func (r *vpcRoutingTableDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "VPC Regional routing table datasource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.VpcExperiment, core.Datasource),
@@ -141,7 +139,6 @@ func (r *vpcRoutingTableDatasource) Read(ctx context.Context, req datasource.Rea
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -181,14 +178,11 @@ func (r *vpcRoutingTableDatasource) Read(ctx context.Context, req datasource.Rea
 	err = mapFields(ctx, routingTableResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

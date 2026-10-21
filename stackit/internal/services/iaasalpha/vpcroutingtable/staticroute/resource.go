@@ -96,7 +96,6 @@ func (r *staticRouteResource) Configure(ctx context.Context, req resource.Config
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table_static_route", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -106,7 +105,6 @@ func (r *staticRouteResource) Configure(ctx context.Context, req resource.Config
 
 func (r *staticRouteResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "VPC Routing table static route resource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.VpcExperiment, core.Resource),
@@ -231,27 +229,22 @@ func (r *staticRouteResource) ModifyPlan(ctx context.Context, req resource.Modif
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -262,20 +255,17 @@ func (r *staticRouteResource) Create(ctx context.Context, req resource.CreateReq
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	createTimeout, diags := model.Timeouts.Create(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -288,14 +278,12 @@ func (r *staticRouteResource) Create(ctx context.Context, req resource.CreateReq
 	payload, err := toCreatePayload(ctx, &model.SharedModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating static route", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	route, err := r.client.AddVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId).AddVPCStaticRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating static route", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -305,14 +293,11 @@ func (r *staticRouteResource) Create(ctx context.Context, req resource.CreateReq
 	err = mapFields(ctx, route, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating static route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -325,20 +310,17 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -352,7 +334,6 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 	if routeId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -366,7 +347,6 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -381,14 +361,11 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 	err = mapFields(ctx, route, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading static route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -401,20 +378,17 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	updateTimeout, diags := model.Timeouts.Update(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -435,7 +409,6 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -443,14 +416,12 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 	payload, err := toUpdatePayload(ctx, &model.SharedModel, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc static route", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	route, err := r.client.UpdateVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).UpdateVPCStaticRoutePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc static route", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -460,13 +431,11 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 	err = mapFields(ctx, route, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating static route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -480,20 +449,17 @@ func (r *staticRouteResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -514,7 +480,6 @@ func (r *staticRouteResource) Delete(ctx context.Context, req resource.DeleteReq
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -562,7 +527,6 @@ func mapFields(ctx context.Context, route *iaas.Route, model *SharedModel, regio
 	}
 
 	var routeId string
-
 	if model.RouteId.ValueString() != "" {
 		routeId = model.RouteId.ValueString()
 	} else if route.Id != nil {
@@ -604,7 +568,6 @@ func mapFields(ctx context.Context, route *iaas.Route, model *SharedModel, regio
 
 func mapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
 	nextHopMap := map[string]attr.Value{}
-
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
 	case *iaas.NexthopIPv4:
 		nextHopMap["type"] = types.StringValue(i.Type)
@@ -632,7 +595,6 @@ func mapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
 
 func mapRouteDestination(routeResp *iaas.Route) (types.Object, error) {
 	destinationMap := map[string]attr.Value{}
-
 	switch i := routeResp.Destination.GetActualInstance().(type) {
 	case *iaas.DestinationCIDRv4:
 		destinationMap["type"] = types.StringValue(i.Type)
@@ -681,7 +643,6 @@ func toCreatePayload(ctx context.Context, model *SharedModel) (*iaas.AddVPCStati
 
 func toUpdatePayload(ctx context.Context, model *SharedModel, currentLabels types.Map) (iaas.UpdateVPCStaticRoutePayload, error) {
 	var result iaas.UpdateVPCStaticRoutePayload
-
 	if model == nil {
 		return result, fmt.Errorf("nil model")
 	}
@@ -698,14 +659,13 @@ func toUpdatePayload(ctx context.Context, model *SharedModel, currentLabels type
 
 func toRouteDestination(ctx context.Context, destinationTF types.Object) (iaas.AddVPCStaticRoutePayloadDestination, error) {
 	var result iaas.AddVPCStaticRoutePayloadDestination
-
 	if utils.IsUndefined(destinationTF) {
 		return result, nil
 	}
 
 	model := Destination{}
-	diags := destinationTF.As(ctx, &model, basetypes.ObjectAsOptions{})
 
+	diags := destinationTF.As(ctx, &model, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return result, core.DiagsToError(diags)
 	}
@@ -724,14 +684,13 @@ func toRouteDestination(ctx context.Context, destinationTF types.Object) (iaas.A
 
 func toRouteNextHop(ctx context.Context, nextHopTF types.Object) (iaas.AddVPCStaticRoutePayloadNexthop, error) {
 	var result iaas.AddVPCStaticRoutePayloadNexthop
-
 	if utils.IsUndefined(nextHopTF) {
 		return result, nil
 	}
 
 	model := Nexthop{}
-	diags := nextHopTF.As(ctx, &model, basetypes.ObjectAsOptions{})
 
+	diags := nextHopTF.As(ctx, &model, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return result, core.DiagsToError(diags)
 	}

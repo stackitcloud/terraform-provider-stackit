@@ -73,34 +73,28 @@ type scheduleResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *scheduleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -116,7 +110,6 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -241,7 +234,6 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -266,7 +258,6 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	err := r.enableBackupsService(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Enabling server backup project before creation: %v", err))
-
 		return
 	}
 
@@ -274,14 +265,12 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	scheduleResp, err := r.client.CreateBackupSchedule(ctx, projectId, serverId, region).CreateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -293,13 +282,11 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -313,7 +300,6 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -322,12 +308,11 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	backupScheduleId := model.BackupScheduleId.ValueInt32()
 
+	backupScheduleId := model.BackupScheduleId.ValueInt32()
 	if backupScheduleId == 0 {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -341,10 +326,8 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -359,14 +342,12 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading backup schedule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -380,7 +361,6 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -401,14 +381,12 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	scheduleResp, err := r.client.UpdateBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).UpdateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -418,13 +396,11 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -438,7 +414,6 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -458,7 +433,6 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	err := r.client.DeleteBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -476,7 +450,6 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	err = r.disableBackupsService(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup schedule", fmt.Sprintf("Disabling server backup service after deleting schedule: %v", err))
-
 		return
 	}
 }
@@ -527,18 +500,16 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	)
 	model.Name = types.StringValue(schedule.Name)
 	model.Rrule = types.StringValue(schedule.Rrule)
-	model.Enabled = types.BoolValue(schedule.Enabled)
 
+	model.Enabled = types.BoolValue(schedule.Enabled)
 	if schedule.BackupProperties == nil {
 		model.BackupProperties = nil
 		return nil
 	}
 
 	volIds := types.ListNull(types.StringType)
-
 	if schedule.BackupProperties.VolumeIds != nil {
 		var modelVolIds []string
-
 		if model.BackupProperties != nil {
 			var err error
 
@@ -554,7 +525,6 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		var diags diag.Diagnostics
 
 		volIds, diags = types.ListValueFrom(ctx, types.StringType, reconciledVolIds)
-
 		if diags.HasError() {
 			return fmt.Errorf("failed to map volumeIds: %w", core.DiagsToError(diags))
 		}
@@ -579,14 +549,12 @@ func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Mode
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Enabling server backup service")
-
 	request := r.client.EnableServiceResource(ctx, projectId, serverId, region).
 		EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{})
 
 	if err := request.Execute(); err != nil {
 		if strings.Contains(err.Error(), "Tried to activate already active service") {
 			tflog.Debug(ctx, "Service for server backup already enabled")
-
 			return nil
 		}
 
@@ -617,7 +585,6 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 
 	if len(backups.Items) > 0 {
 		tflog.Debug(ctx, "Backups found - will not disable server backup service")
-
 		return nil
 	}
 
@@ -637,19 +604,16 @@ func toCreatePayload(model *Model) (*serverbackup.CreateBackupSchedulePayload, e
 	}
 
 	backupProperties := serverbackup.BackupProperties{}
-
 	if model.BackupProperties != nil {
 		ids := []string{}
 
 		var err error
-
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
 			ids, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
 			}
 		}
-
 		// we should provide null to the API in case no volumeIds were chosen, else it errors
 		if len(ids) == 0 {
 			ids = nil
@@ -676,19 +640,16 @@ func toUpdatePayload(model *Model) (*serverbackup.UpdateBackupSchedulePayload, e
 	}
 
 	backupProperties := serverbackup.BackupProperties{}
-
 	if model.BackupProperties != nil {
 		ids := []string{}
 
 		var err error
-
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
 			ids, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
 			}
 		}
-
 		// we should provide null to the API in case no volumeIds were chosen, else it errors
 		if len(ids) == 0 {
 			ids = nil

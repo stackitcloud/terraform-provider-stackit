@@ -135,13 +135,11 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -174,7 +172,6 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	if err := mapFields(ctx, optionsResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading provider options", fmt.Sprintf("Mapping API payload: %v", err))
-
 		return
 	}
 
@@ -198,16 +195,13 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 
 	// Machine Images
 	miList := make([]attr.Value, 0)
-
 	if optionsResp.MachineImages != nil {
 		for _, img := range optionsResp.MachineImages {
 			versionsList := make([]attr.Value, 0)
-
 			if img.Versions != nil {
 				for _, ver := range img.Versions {
 					// CRI list
 					criList := make([]types.String, 0)
-
 					for _, cri := range ver.Cri {
 						if cri.Name != nil {
 							criList = append(criList, types.StringValue(string(*cri.Name)))

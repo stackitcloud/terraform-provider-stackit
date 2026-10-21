@@ -106,7 +106,6 @@ func TestMapFields(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, tt.model, tt.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapFields error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -168,7 +167,6 @@ func TestToCreatePayload(t *testing.T) {
 			payload, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -240,7 +238,6 @@ func TestToUpdatePayload(t *testing.T) {
 			payload, err := toUpdatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

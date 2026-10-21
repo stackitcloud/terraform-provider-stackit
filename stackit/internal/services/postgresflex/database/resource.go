@@ -60,34 +60,28 @@ type databaseResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *databaseResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -103,7 +97,6 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -198,7 +191,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -208,7 +200,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -217,7 +208,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -238,7 +228,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	databaseResp, err := utils.RetryRequest(ctx, r.client.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -246,7 +235,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 	if databaseResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", "API didn't return response. A database might have been created")
-
 		return
 	}
 
@@ -255,7 +243,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	database, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseResp.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Getting database details after creation: %v", err))
-
 		return
 	}
 
@@ -263,14 +250,11 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(database, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -284,7 +268,6 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -293,17 +276,15 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	databaseIdStr := model.DatabaseId.ValueString()
 
+	databaseIdStr := model.DatabaseId.ValueString()
 	if databaseIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
@@ -313,7 +294,6 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Parsing database ID: %v", err))
-
 		return
 	}
 
@@ -321,7 +301,6 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -336,14 +315,12 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(databaseResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -357,7 +334,6 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -368,7 +344,6 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	region := model.Region.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseIdStr := model.DatabaseId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -378,7 +353,6 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Parsing database ID: %v", err))
-
 		return
 	}
 
@@ -386,7 +360,6 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -407,7 +380,6 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	err = utils.RetryRequestWithoutResponse(ctx, r.client.PartialUpdateDatabase(ctx, projectId, region, instanceId, databaseId).PartialUpdateDatabasePayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -416,7 +388,6 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	database, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Getting database details after update: %v", err))
-
 		return
 	}
 
@@ -424,14 +395,11 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(database, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -446,7 +414,6 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -457,7 +424,6 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	instanceId := model.InstanceId.ValueString()
 	databaseIdStr := model.DatabaseId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
@@ -467,7 +433,6 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Parsing database ID: %v", err))
-
 		return
 	}
 
@@ -489,7 +454,6 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -539,7 +503,6 @@ func mapFields(databaseResp *postgresflex.GetDatabaseResponse, model *Model, reg
 	}
 
 	var databaseId string
-
 	if model.DatabaseId.ValueString() != "" {
 		databaseId = model.DatabaseId.ValueString()
 	} else {

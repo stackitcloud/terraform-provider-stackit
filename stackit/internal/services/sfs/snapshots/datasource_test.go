@@ -25,12 +25,12 @@ func must[T any](t T, diags diag.Diagnostics) T {
 	if diags.HasError() {
 		panic(fmt.Sprintf("diagnostics contain error: %v", diags.Errors()))
 	}
-
 	return t
 }
 
 func TestMapDatasourceFields(t *testing.T) {
 	testTime := time.Now()
+
 	tests := []struct {
 		name     string
 		state    *dataSourceModel
@@ -93,7 +93,6 @@ func TestMapDatasourceFields(t *testing.T) {
 			true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()

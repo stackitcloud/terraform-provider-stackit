@@ -22,7 +22,6 @@ func MapLabels(ctx context.Context, responseLabels *map[string]string, currentLa
 		var diags diag.Diagnostics
 
 		labels, diags = types.MapValueFrom(ctx, types.StringType, *responseLabels)
-
 		if diags.HasError() {
 			return labels, fmt.Errorf("convert labels to string map: %w", core.DiagsToError(diags))
 		}

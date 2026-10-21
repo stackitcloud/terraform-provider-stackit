@@ -140,10 +140,8 @@ func testConfigVarsMax(templateID string) config.Variables {
 
 func configVarsMinUpdated(base config.Variables) config.Variables {
 	tempConfig := maps.Clone(base)
-
 	tempConfig["name"] = config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
 	tempConfig["rrule"] = config.StringVariable(futureRrule(2*time.Hour, 3))
-
 	return tempConfig
 }
 
@@ -165,7 +163,6 @@ func configVarsMaxUpdated(base config.Variables) config.Variables {
 	}
 
 	tempConfig := maps.Clone(base)
-
 	tempConfig["description"] = config.StringVariable("tf-acc-test description updated")
 	tempConfig["retention_count"] = config.IntegerVariable(5)
 	tempConfig["input"] = config.StringVariable(string(inputJson))
@@ -377,7 +374,6 @@ func testAccCheckVolumeAutomationDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_volume_automation" {
 			continue

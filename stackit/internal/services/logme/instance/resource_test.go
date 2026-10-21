@@ -217,8 +217,8 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state, testRegion)
 
+			err := mapFields(tt.input, state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -300,13 +300,11 @@ func TestToCreatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var parameters *parametersModel
-
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
 					parameters = &parametersModel{}
 
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
-
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())
 					}
@@ -389,13 +387,11 @@ func TestToUpdatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var parameters *parametersModel
-
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
 					parameters = &parametersModel{}
 
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
-
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())
 					}

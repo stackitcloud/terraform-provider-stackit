@@ -223,7 +223,6 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -233,7 +232,6 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
@@ -259,13 +257,11 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	err = mapDataSourceFields(ctx, networkResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -283,7 +279,6 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	}
 
 	var networkId string
-
 	if model.NetworkId.ValueString() != "" {
 		networkId = model.NetworkId.ValueString()
 	} else {
@@ -323,8 +318,8 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixes := networkResp.Ipv4.Prefixes
-		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 
+		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 		if diags.HasError() {
 			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
 		}
@@ -338,7 +333,6 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 				model.IPv4PrefixLength = types.Int64Null()
 			} else {
 				ones, _ := netmask.Mask.Size()
-
 				model.IPv4PrefixLength = types.Int64Value(int64(ones))
 			}
 		}
@@ -390,8 +384,8 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv6Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixesV6 := networkResp.Ipv6.Prefixes
-		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 
+		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 		if diags.HasError() {
 			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
 		}
@@ -405,7 +399,6 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 				model.IPv6PrefixLength = types.Int64Null()
 			} else {
 				ones, _ := netmask.Mask.Size()
-
 				model.IPv6PrefixLength = types.Int64Value(int64(ones))
 			}
 		}

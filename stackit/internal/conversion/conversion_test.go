@@ -72,13 +72,11 @@ func TestFromTerraformStringMapToInterfaceMap(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ToStringInterfaceMap(tt.args.ctx, tt.args.m)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FromTerraformStringMapToInterfaceMap() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -147,7 +145,6 @@ func TestToStringStringPointerMap(t *testing.T) {
 			got, err := ToStringStringPointerMap(context.Background(), tt.args.m)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ToStringStringPointerMap() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -487,13 +484,11 @@ func TestToLabelsMapPartialUpdatePayload(t *testing.T) {
 			isValid: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			got, err := ToLabelsMapPartialUpdatePayload(context.Background(), tt.args.currentLabels, tt.args.desiredLabels)
 			if (err != nil) == tt.isValid {
 				t.Errorf("ToLabelsMapPartialUpdatePayload() error = %v, isValid %v", err, tt.isValid)
-
 				return
 			}
 
@@ -791,7 +786,6 @@ func TestStringValueToPointer(t *testing.T) {
 			want: nil,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := StringValueToPointer(tt.args.s); !reflect.DeepEqual(got, tt.want) {
@@ -835,7 +829,6 @@ func TestStringValueToEnumPointer(t *testing.T) {
 			want: nil,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := StringValueToEnumPointer[opensearch.InstanceParametersJavaGarbageCollector](tt.args.s); !reflect.DeepEqual(got, tt.want) {
@@ -904,13 +897,11 @@ func TestStringListToEnumSlice(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := StringListToEnumSlice[opensearch.InstanceParametersPluginsInner](tt.args.list)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("StringListToEnumSlice() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

@@ -22,15 +22,12 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_secretsmanager_instance" {
 			continue
 		}
-
 		// instance terraform ID: "[project_id],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

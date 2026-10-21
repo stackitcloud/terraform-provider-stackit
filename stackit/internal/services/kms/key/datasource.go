@@ -141,7 +141,6 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -180,13 +179,11 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	err = mapFields(keyResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

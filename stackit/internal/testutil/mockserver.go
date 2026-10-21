@@ -37,7 +37,6 @@ func NewMockServer(t *testing.T, responses ...MockResponse) *MockServer {
 		responses:    responses,
 		t:            t,
 	}
-
 	mock.Server = httptest.NewServer(mock)
 
 	return mock
@@ -56,7 +55,6 @@ func (m *MockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if next.Handler != nil {
 		next.Handler(w, r)
-
 		return
 	}
 

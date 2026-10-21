@@ -186,7 +186,6 @@ func TestMapFields(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
@@ -493,7 +492,6 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				mockSettings: &mockSettings{
 					getServerExecute: func(no int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						var state string
-
 						if no <= 1 {
 							state = wait.ServerActiveStatus
 						} else {
@@ -528,7 +526,6 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				mockSettings: &mockSettings{
 					getServerExecute: func(no int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						var state string
-
 						switch no {
 						case 1:
 							state = wait.ServerActiveStatus
@@ -636,7 +633,6 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

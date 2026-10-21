@@ -63,7 +63,6 @@ func TestGetTimeFromString(t *testing.T) {
 				path: path.Root("foo"),
 				source: func(_ context.Context, p path.Path, _ any) (diags diag.Diagnostics) {
 					diags.AddAttributeError(p, "kapow", "kapow")
-
 					return diags
 				},
 				dateFormat: time.RFC3339,
@@ -71,13 +70,11 @@ func TestGetTimeFromString(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var target time.Time
 
 			gotDiags := GetTimeFromStringAttribute(context.Background(), tt.args.path, tt.args.source, tt.args.dateFormat, &target)
-
 			if tt.wantErr {
 				if !gotDiags.HasError() {
 					t.Errorf("expected error")

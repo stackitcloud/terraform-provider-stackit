@@ -26,7 +26,6 @@ func TestRabbitMQInstanceSavesIDsOnError(t *testing.T) {
 	)
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
@@ -58,7 +57,6 @@ resource "stackit_rabbitmq_instance" "instance" {
 			},
 		},
 	}
-
 	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -113,7 +111,6 @@ func TestRabbitMQCredentialsSavesIDsOnError(t *testing.T) {
 
 	s := testutil.NewMockServer(t)
 	t.Cleanup(s.Server.Close)
-
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	rabbitmq_custom_endpoint = "%s"

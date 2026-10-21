@@ -15,6 +15,7 @@ func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 
 	id := fmt.Sprintf("%s,%s,%s,%s", "oid", "aid", testRegion, "rtid")
+
 	tests := []struct {
 		description string
 		state       Model
@@ -98,7 +99,6 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, &tt.state, testRegion)

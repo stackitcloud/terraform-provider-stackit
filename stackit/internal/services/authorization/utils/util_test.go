@@ -130,7 +130,6 @@ func TestLockAssignment(t *testing.T) {
 			defer wg.Done()
 
 			unlock := LockAssignment(key1)
-
 			defer unlock()
 
 			time.Sleep(100 * time.Millisecond)
@@ -141,7 +140,6 @@ func TestLockAssignment(t *testing.T) {
 			defer wg.Done()
 
 			unlock := LockAssignment(key2)
-
 			defer unlock()
 
 			time.Sleep(100 * time.Millisecond)

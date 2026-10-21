@@ -147,7 +147,6 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -167,10 +166,8 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -184,13 +181,11 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	err = mapFields(ctx, gatewayResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN gateway", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

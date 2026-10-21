@@ -74,7 +74,6 @@ func (r *vpcResource) Configure(ctx context.Context, req resource.ConfigureReque
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -85,7 +84,6 @@ func (r *vpcResource) Configure(ctx context.Context, req resource.ConfigureReque
 // Schema defines the schema for the resource.
 func (r *vpcResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "VPC resource schema."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.VpcExperiment, core.Resource),
@@ -147,26 +145,21 @@ func (r *vpcResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	createTimeout, diags := model.Timeouts.Create(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	ctx = core.InitProviderContext(ctx)
@@ -175,7 +168,6 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 	payload, err := toCreatePayload(ctx, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -183,7 +175,6 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 	vpc, err := r.client.CreateVPC(ctx, projectId).CreateVPCPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -191,7 +182,6 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	if vpc == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc", "Missing VPC ID in response")
-
 		return
 	}
 
@@ -209,13 +199,11 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 	err = mapFields(ctx, vpc, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -226,31 +214,26 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 // Read refreshes the Terraform state with the latest data.
 func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
-	vpcId := model.VpcId.ValueString()
 
+	vpcId := model.VpcId.ValueString()
 	if vpcId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -263,7 +246,6 @@ func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -278,13 +260,11 @@ func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	err = mapFields(ctx, vpcResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading vpc", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -296,22 +276,18 @@ func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	updateTimeout, diags := model.Timeouts.Update(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -324,9 +300,7 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	// Retrieve values from state
 	var stateModel ResourceModel
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -335,15 +309,12 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	payload, err := toUpdatePayload(ctx, &model.Model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing network
 	vpcResp, err := r.client.PartialUpdateVPC(ctx, projectId, vpcId).PartialUpdateVPCPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -352,12 +323,10 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	err = mapFields(ctx, vpcResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -372,20 +341,17 @@ func (r *vpcResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -401,7 +367,6 @@ func (r *vpcResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -450,7 +415,6 @@ func mapFields(ctx context.Context, vpcResp *iaas.VPC, model *Model) error {
 	}
 
 	var vpcId string
-
 	if model.VpcId.ValueString() != "" {
 		vpcId = model.VpcId.ValueString()
 	} else if vpcResp.Id != "" {

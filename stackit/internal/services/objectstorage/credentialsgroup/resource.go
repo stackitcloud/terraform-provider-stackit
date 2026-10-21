@@ -57,34 +57,28 @@ type credentialsGroupResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -177,7 +171,6 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -200,7 +193,6 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	err := objectstorageUtils.EnableProject(ctx, projectId, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
-
 		return
 	}
 
@@ -208,7 +200,6 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	got, err := r.client.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -216,7 +207,6 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 
 	if got == nil || got.CredentialsGroup.CredentialsGroupId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", "Got empty credential group id id")
-
 		return
 	}
 
@@ -235,13 +225,11 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	err = mapFields(got, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentialsGroup", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,7 +243,6 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -263,12 +250,11 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	credentialsGroupId := model.CredentialsGroupId.ValueString()
 
+	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	if credentialsGroupId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -281,7 +267,6 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	found, err := readCredentialsGroups(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
-
 		return
 	}
 
@@ -289,17 +274,14 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 
 	if !found {
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
-
 	// update the region manually
 	model.Region = types.StringValue(region)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -319,7 +301,6 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -338,10 +319,8 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	_, err := r.client.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -399,7 +378,6 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 
 func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model *Model, region string) error {
 	var credentialsGroupId string
-
 	if !utils.IsUndefined(model.CredentialsGroupId) {
 		credentialsGroupId = model.CredentialsGroupId.ValueString()
 	} else if credentialsGroup.CredentialsGroupId != "" {
@@ -429,7 +407,6 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, model.ProjectId.ValueString(), region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return found, nil
 		}

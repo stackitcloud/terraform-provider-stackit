@@ -25,8 +25,8 @@ func (c expectOnlyEphemeralOpen) CheckPlan(_ context.Context, req plancheck.Chec
 		}
 
 		actions := resourceChange.Change.Actions
-		isSpecificResource := slices.Contains(c.configAddresses, resourceChange.Address)
 
+		isSpecificResource := slices.Contains(c.configAddresses, resourceChange.Address)
 		if isSpecificResource &&
 			string(resourceChange.Mode) == "ephemeral" &&
 			len(actions) == 1 && string(actions[0]) == "open" {

@@ -163,7 +163,6 @@ func TestToCreatePayload(t *testing.T) {
 			got, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) == tt.isValid {
 				t.Errorf("toCreatePayload() error = %v, isValid %v", err, tt.isValid)
-
 				return
 			}
 

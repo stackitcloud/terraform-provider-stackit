@@ -45,22 +45,18 @@ var testConfigVarsMax = config.Variables{
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
 	delete(tempConfig, "instance_name")
-
 	return tempConfig
 }
 
 func configVarsMinUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMin)
-
 	tempConfig["instance_name"] = config.StringVariable(testutil.ConvertConfigVariable(tempConfig["instance_name"]) + "-updated")
 	tempConfig["write_enabled"] = config.BoolVariable(false)
-
 	return tempConfig
 }
 
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
-
 	tempConfig["instance_name"] = config.StringVariable(testutil.ConvertConfigVariable(tempConfig["instance_name"]) + "-updated")
 	tempConfig["write_enabled"] = config.BoolVariable(false)
 	tempConfig["use_kms_key"] = config.BoolVariable(false)

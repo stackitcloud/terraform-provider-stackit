@@ -69,34 +69,28 @@ func (r *certificatesResource) Metadata(_ context.Context, req resource.Metadata
 // Use the modifier to set the effective region in the current plan.
 func (r *certificatesResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -107,7 +101,6 @@ func (r *certificatesResource) Configure(ctx context.Context, req resource.Confi
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -214,9 +207,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -225,7 +216,6 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -233,7 +223,6 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Certificate", fmt.Sprintf("Payload for create: %v", err))
-
 		return
 	}
 
@@ -242,7 +231,6 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Certificate", fmt.Sprintf("Calling API for create: %v", errStr))
-
 		return
 	}
 
@@ -261,12 +249,10 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 	err = mapFields(createResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Certificate", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -280,7 +266,6 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -298,11 +283,9 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 	readResp, err := r.client.GetCertificate(ctx, projectId, region, certId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 		}
@@ -319,14 +302,12 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapFields(readResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Certificate", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -345,7 +326,6 @@ func (r *certificatesResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -355,7 +335,6 @@ func (r *certificatesResource) Delete(ctx context.Context, req resource.DeleteRe
 	projectId := model.ProjectId.ValueString()
 	certId := model.CertID.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cert_id", certId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -365,7 +344,6 @@ func (r *certificatesResource) Delete(ctx context.Context, req resource.DeleteRe
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Certificate", fmt.Sprintf("Calling API for delete: %v", errStr))
-
 		return
 	}
 
@@ -413,7 +391,6 @@ func mapFields(cert *certSdk.GetCertificateResponse, m *Model, region string) er
 	if m == nil {
 		return fmt.Errorf("model input is nil")
 	}
-
 	return mapDataFields(cert, &m.DataSourceModel, region)
 }
 
@@ -428,7 +405,6 @@ func mapDataFields(cert *certSdk.GetCertificateResponse, m *DataSourceModel, reg
 	}
 
 	var certID string
-
 	if m.CertID.ValueString() != "" {
 		certID = m.CertID.ValueString()
 	} else if cert.Id != nil {

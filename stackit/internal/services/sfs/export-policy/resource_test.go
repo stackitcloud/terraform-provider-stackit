@@ -304,7 +304,6 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, tt.state, tt.region)
@@ -394,7 +393,6 @@ func TestToCreatePayload(t *testing.T) {
 			got, err := toCreatePayload(context.Background(), tt.model, tt.rules)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -472,7 +470,6 @@ func TestToUpdatePayload(t *testing.T) {
 			got, err := toUpdatePayload(context.Background(), tt.model, tt.rules)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

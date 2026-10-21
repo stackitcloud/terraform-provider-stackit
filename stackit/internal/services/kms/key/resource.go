@@ -84,34 +84,28 @@ func (r *keyResource) Configure(ctx context.Context, req resource.ConfigureReque
 // Use the modifier to set the effective region in the current plan.
 func (r *keyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -119,7 +113,6 @@ func (r *keyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 
 func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := fmt.Sprintf("KMS Key resource schema. %s", core.ResourceRegionFallbackDocstring)
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: fmt.Sprintf("%s\n\n ~> %s", description, deletionWarning),
@@ -246,7 +239,6 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -264,14 +256,12 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResponse, err := r.client.CreateKey(ctx, projectId, region, keyRingId).CreateKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -279,7 +269,6 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	if createResponse == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", "API returned empty response")
-
 		return
 	}
 
@@ -294,20 +283,17 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	waitHandlerResp, err := wait.CreateOrUpdateKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, createResponse.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for key creation", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	err = mapFields(waitHandlerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -320,7 +306,6 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -330,12 +315,11 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	keyId := model.KeyId.ValueString()
 
+	keyId := model.KeyId.ValueString()
 	if keyId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -347,10 +331,8 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	keyResponse, err := r.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -364,13 +346,11 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	err = mapFields(keyResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -388,7 +368,6 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -403,7 +382,6 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	err := r.client.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -453,7 +431,6 @@ func mapFields(key *kms.Key, model *Model, region string) error {
 	}
 
 	var keyId string
-
 	if model.KeyId.ValueString() != "" {
 		keyId = model.KeyId.ValueString()
 	} else {
@@ -480,7 +457,6 @@ func toCreatePayload(model *Model) (*kms.CreateKeyPayload, error) {
 	}
 
 	var accessScope *kms.AccessScope
-
 	if !utils.IsUndefined(model.AccessScope) {
 		accessScope = new(kms.AccessScope(model.AccessScope.ValueString()))
 	}

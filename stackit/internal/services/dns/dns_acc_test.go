@@ -66,15 +66,12 @@ var testConfigVarsMax = config.Variables{
 
 func configVarsInvalid(vars config.Variables) config.Variables {
 	tempConfig := maps.Clone(vars)
-
 	tempConfig["dns_name"] = config.StringVariable("foo")
-
 	return tempConfig
 }
 
 func configVarsMinUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMin)
-
 	tempConfig["record_record1"] = config.StringVariable("1.2.3.5")
 
 	return tempConfig
@@ -82,9 +79,7 @@ func configVarsMinUpdated() config.Variables {
 
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := maps.Clone(testConfigVarsMax)
-
 	tempConfig["record_record1"] = config.StringVariable("1.2.3.5")
-
 	return tempConfig
 }
 
@@ -107,7 +102,6 @@ func TestAccDnsMinResource(t *testing.T) {
 
 					// Ensure it ends with a dot (even if the random value already had one, be explicit)
 					base := testutil.ConvertConfigVariable(vars["dns_name"])
-
 					vars["dns_name"] = config.StringVariable(base + ".")
 
 					return vars
@@ -520,15 +514,12 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 	}
 
 	zonesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_dns_zone" {
 			continue
 		}
-
 		// zone terraform ID: "[projectId],[zoneId]"
 		zoneId := strings.Split(rs.Primary.ID, core.Separator)[1]
-
 		zonesToDestroy = append(zonesToDestroy, zoneId)
 	}
 

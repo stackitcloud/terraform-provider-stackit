@@ -107,34 +107,28 @@ func (r *volumeResource) Metadata(_ context.Context, req resource.MetadataReques
 // Use the modifier to set the effective region in the current plan.
 func (r *volumeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -155,7 +149,6 @@ func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRe
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -169,7 +162,6 @@ func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRe
 // Schema defines the schema for the resource.
 func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Volume resource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: fmt.Sprintf("%s \n\n-> **Note:** Write-Only argument `key_payload_base64_wo` is available to use in place of `key_payload_base64`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", description),
 		Description:         description,
@@ -419,13 +411,11 @@ func (v volumeResizeModifier) PlanModifyInt64(ctx context.Context, req planmodif
 	)
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("size"), &planSize)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("size"), &currentSize)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -442,7 +432,6 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -454,7 +443,6 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -463,16 +451,13 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var source = &sourceModel{}
-
 	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
 		diags = model.Source.As(ctx, source, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -482,7 +467,6 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	payload, err := toCreatePayload(ctx, &model, &configModel, source)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -491,7 +475,6 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	volume, err := r.client.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -499,7 +482,6 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	if volume.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", "Got empty volume id")
-
 		return
 	}
 
@@ -517,7 +499,6 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("volume creation waiting: %v", err))
-
 		return
 	}
 
@@ -525,14 +506,11 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	err = mapFields(ctx, volume, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -546,19 +524,17 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	volumeId := model.VolumeId.ValueString()
 
+	volumeId := model.VolumeId.ValueString()
 	if volumeId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -571,10 +547,8 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	volumeResp, err := r.client.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -589,14 +563,11 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	err = mapFields(ctx, volumeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -611,7 +582,6 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -621,7 +591,6 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	volumeId := model.VolumeId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
@@ -631,7 +600,6 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -640,15 +608,12 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing volume
 	updatedVolume, err := r.client.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -669,7 +634,6 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Resizing the volume, calling API: %v", err))
 			}
-
 			// Update volume model because the API doesn't return a volume object as response
 			updatedVolume.Size = modelSize
 		}
@@ -678,13 +642,11 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	err = mapFields(ctx, updatedVolume, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -699,7 +661,6 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -718,10 +679,8 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	err := r.client.DeleteVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -735,7 +694,6 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("volume deletion waiting: %v", err))
-
 		return
 	}
 
@@ -775,7 +733,6 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 	}
 
 	var volumeId string
-
 	if model.VolumeId.ValueString() != "" {
 		volumeId = model.VolumeId.ValueString()
 	} else if volumeResp.Id != nil {
@@ -796,7 +753,6 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 		sourceValues map[string]attr.Value
 		sourceObject basetypes.ObjectValue
 	)
-
 	if volumeResp.Source == nil {
 		sourceObject = types.ObjectNull(sourceTypes)
 	} else {
@@ -808,7 +764,6 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 		var diags diag.Diagnostics
 
 		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
-
 		if diags.HasError() {
 			return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
 		}
@@ -874,7 +829,6 @@ func toCreatePayload(ctx context.Context, model, configModel *Model, source *sou
 		// empty. That's why write-only field values must be read from the config model. Everything else comes from the
 		// plan model.
 		var keyPayload *string
-
 		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
 			// handle the legacy fallback logic
 			keyPayload = conversion.StringValueToPointer(model.EncryptionParameters.KeyPayloadBase64)

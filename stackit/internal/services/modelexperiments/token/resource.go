@@ -117,15 +117,12 @@ func (i *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -137,13 +134,11 @@ func (i *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		i.providerData.GetRegion(),
 		resp,
 	)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -262,7 +257,6 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -280,14 +274,12 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createInstanceTokenResp, err := i.client.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -295,7 +287,6 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	if createInstanceTokenResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", "Got empty response")
-
 		return
 	}
 
@@ -307,7 +298,6 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		"instance_id": instanceId,
 		"token_id":    tokenId,
 	})
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -315,7 +305,6 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	_, err = wait.CreateInstanceTokenWaitHandler(ctx, i.client, region, projectId, instanceId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", fmt.Sprintf("Waiting for instance to be active: %v", err))
-
 		return
 	}
 
@@ -323,14 +312,12 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	err = mapCreateResponse(ctx, createInstanceTokenResp, &model, region, instanceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -344,7 +331,6 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -353,12 +339,11 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	tokenId := model.TokenId.ValueString()
 
+	tokenId := model.TokenId.ValueString()
 	if tokenId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -372,12 +357,10 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	getInstanceTokenResp, err := i.client.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				// Remove the resource from the state so Terraform will recreate it
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 		}
@@ -391,20 +374,17 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	if getInstanceTokenResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", "Got empty response")
-
 		return
 	}
 
 	err = mapToken(ctx, &getInstanceTokenResp.Token, &model, region, instanceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -419,7 +399,6 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -429,7 +408,6 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -449,14 +427,12 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	payload, err := toUpdatePayload(&plan)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -464,7 +440,6 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	if updateInstanceTokenResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", "Got empty response")
-
 		return
 	}
 
@@ -473,13 +448,11 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	err = mapToken(ctx, &updateInstanceTokenResp.Token, &plan, region, instanceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -494,7 +467,6 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -515,11 +487,9 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	_, err := i.client.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 		}
@@ -535,7 +505,6 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI Model Experiments instance token", fmt.Sprintf("Waiting for instance to be deleted: %v", err))
-
 		return
 	}
 

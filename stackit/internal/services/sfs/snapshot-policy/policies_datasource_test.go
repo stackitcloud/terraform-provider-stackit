@@ -119,8 +119,8 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &model{}
-			err := mapFields(t.Context(), tt.resp, m)
 
+			err := mapFields(t.Context(), tt.resp, m)
 			if err != nil && !tt.wantErr {
 				t.Errorf("unexpected error: %v", err)
 			}

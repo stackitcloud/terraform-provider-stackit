@@ -53,7 +53,6 @@ func TestProviderData_GetRegionWithOverride(t *testing.T) {
 			want: "eu01",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.providerData.GetRegionWithOverride(tt.args.overrideRegion); got != tt.want {

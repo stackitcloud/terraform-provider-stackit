@@ -917,28 +917,24 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	}
 
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if configModel.ProjectId.IsUnknown() {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Validating plan: project ID not yet known", "The resource references a project ID, which is not yet known but needed for plan validation. Skipping plan validation, apply may fail.")
-
 		return
 	}
 
 	plan, err := loadPlanId(ctx, r.client, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Loading service plan: %v", err))
-
 		return
 	}
 
@@ -961,8 +957,8 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if plan.GetTotalMetricSamples() == 0 {
 		metricsRetentionDays := conversion.Int32ValueToPointer(configModel.MetricsRetentionDays)
 		metricsRetentionDays5mDownsampling := conversion.Int32ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
-		metricsRetentionDays1hDownsampling := conversion.Int32ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
 
+		metricsRetentionDays1hDownsampling := conversion.Int32ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
 		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
 		}
@@ -976,7 +972,6 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		if logsRetentionDays != nil {
 			resp.Diagnostics.AddAttributeError(path.Root("logs_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring logs retention days. Remove this from your config or use a different plan.", *plan.Name))
 		}
-
 		// If traces retention days are set, return an error to the user
 		if tracesRetentionDays != nil {
 			resp.Diagnostics.AddAttributeError(path.Root("traces_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring trace retention days. Remove this from your config or use a different plan.", *plan.Name))
@@ -991,7 +986,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1002,7 +996,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1012,35 +1005,29 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
 		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	projectId := model.ProjectId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	plan, err := loadPlanId(ctx, r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
-
 		return
 	}
-
 	// Generate API request body from model
 	createPayload, err := toCreatePayload(&model, plan.GetGrafanaGlobalDashboards() != 0)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*createPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -1059,7 +1046,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
-
 		return
 	}
 
@@ -1067,14 +1053,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to instance populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1083,14 +1067,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACL: %v", err))
-
 		return
 	}
 
 	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
-
 		return
 	}
 
@@ -1098,14 +1080,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapACLField(aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = setACL(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1120,7 +1100,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		// Set state to fully populated data
 		diags = setMetricsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1128,7 +1107,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		// Set metric retention days to zero
 		diags = setMetricsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1143,7 +1121,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 		diags = setLogsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1155,7 +1132,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 		diags = setTracesRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1163,15 +1139,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		// Set logs retention days to zero
 		diags = setLogsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 		// Set traces retention days to zero
 		diags = setTracesRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1187,7 +1160,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		// Set state to fully populated data
 		diags = setAlertConfig(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1202,7 +1174,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1210,12 +1181,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -1225,10 +1195,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	instanceResp, err := r.client.GetInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -1241,7 +1209,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	if instanceResp != nil && instanceResp.Status != "" && instanceResp.Status == "DELETE_SUCCEEDED" {
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -1249,28 +1216,24 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	plan, err := loadPlanId(ctx, r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan: %v", err))
-
 		return
 	}
 
 	aclListResp, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1279,14 +1242,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapACLField(aclListResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = setACL(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1296,22 +1257,17 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		metricsRetentionResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
-
 			return
 		}
-
 		// Map response body to schema
 		err = mapMetricsRetentionField(metricsRetentionResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
-
 			return
 		}
-
 		// Set state to fully populated data
 		diags = setMetricsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1322,22 +1278,17 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		logsRetentionResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
-
 			return
 		}
-
 		// Map response body to schema
 		err = mapLogsRetentionField(logsRetentionResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the logs retention: %v", err))
-
 			return
 		}
-
 		// Set state to fully populated data
 		diags = setLogsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1345,22 +1296,17 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		tracesRetentionResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
-
 			return
 		}
-
 		// Map response body to schema
 		err = mapTracesRetentionField(tracesRetentionResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the logs retention: %v", err))
-
 			return
 		}
-
 		// Set state to fully populated data
 		diags = setTracesRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1371,22 +1317,18 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
-
 			return
 		}
-
 		// Map response body to schema
 		err = mapAlertConfigField(ctx, alertConfigResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
-
 			return
 		}
 
 		// Set state to fully populated data
 		diags = setAlertConfig(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1402,7 +1344,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1416,7 +1357,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1426,7 +1366,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
 		diags = model.AlertConfig.As(ctx, &alertConfig, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1435,7 +1374,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	plan, err := loadPlanId(ctx, r.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
-
 		return
 	}
 
@@ -1443,7 +1381,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model, plan.GetGrafanaGlobalDashboards() != 0)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -1451,7 +1388,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags = req.State.Get(ctx, &previousState)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1459,19 +1395,16 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	previousStatePayload, err := toUpdatePayload(&previousState, plan.GetGrafanaGlobalDashboards() != 0)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating previous state payload: %v", err))
-
 		return
 	}
 
 	var instance *observabilitySdk.GetInstanceResponse
-
 	// This check is required, because when values should be updated, that needs to be updated via a different endpoint, the waiter will run into a timeout
 	if !cmp.Equal(previousStatePayload, payload) {
 		// Update existing instance
 		_, err = r.client.UpdateInstance(ctx, instanceId, projectId).UpdateInstancePayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -1480,14 +1413,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		instance, err = wait.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
-
 			return
 		}
 	} else {
 		instance, err = r.client.GetInstance(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance read: %v", err))
-
 			return
 		}
 	}
@@ -1495,13 +1426,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(ctx, instance, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1510,14 +1439,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
-
 		return
 	}
 
 	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
-
 		return
 	}
 
@@ -1525,13 +1452,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapACLField(aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
-
 		return
 	}
 
 	// Set state to ACL populated data
 	resp.Diagnostics.Append(setACL(ctx, &resp.State, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1546,7 +1471,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		// Set state to fully populated data
 		diags = setMetricsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1554,7 +1478,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		// Set metric retention days to zero
 		diags = setMetricsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1569,7 +1492,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 		diags = setLogsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1581,21 +1503,18 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 		diags = setTracesRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	} else {
 		diags = setLogsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
 		diags = setTracesRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1611,7 +1530,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		// Set state to fully populated data
 		diags = setAlertConfig(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1627,7 +1545,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1641,10 +1558,8 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err := r.client.DeleteInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -1658,7 +1573,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -1696,7 +1610,6 @@ func mapFields(ctx context.Context, r *observabilitySdk.GetInstanceResponse, mod
 	}
 
 	var instanceId string
-
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
 	} else if r.Id != "" {
@@ -1730,9 +1643,7 @@ func mapFields(ctx context.Context, r *observabilitySdk.GetInstanceResponse, mod
 
 	model.IsUpdatable = types.BoolPointerValue(r.IsUpdatable)
 	model.DashboardURL = types.StringValue(r.DashboardUrl)
-
 	i := r.Instance
-
 	model.GrafanaURL = types.StringValue(i.GrafanaUrl)
 	model.GrafanaPublicReadAccess = types.BoolValue(i.GrafanaPublicReadAccess)
 	//nolint:staticcheck // SA1019: This field deprecated but needs to be supported. It is removed on 5th July 2026.
@@ -1903,12 +1814,10 @@ func mapAlertConfigField(ctx context.Context, resp *observabilitySdk.GetAlertCon
 	}
 
 	var alertConfigTF *alertConfigModel
-
 	if !(model.AlertConfig.IsNull() || model.AlertConfig.IsUnknown()) {
 		alertConfigTF = &alertConfigModel{}
 
 		diags := model.AlertConfig.As(ctx, &alertConfigTF, basetypes.ObjectAsOptions{})
-
 		if diags.HasError() {
 			return fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
 		}
@@ -1929,12 +1838,10 @@ func mapAlertConfigField(ctx context.Context, resp *observabilitySdk.GetAlertCon
 	}
 
 	var globalConfigModel *globalConfigurationModel
-
 	if alertConfigTF != nil && !alertConfigTF.GlobalConfiguration.IsNull() && !alertConfigTF.GlobalConfiguration.IsUnknown() {
 		globalConfigModel = &globalConfigurationModel{}
 
 		diags := alertConfigTF.GlobalConfiguration.As(ctx, globalConfigModel, basetypes.ObjectAsOptions{})
-
 		if diags.HasError() {
 			return fmt.Errorf("mapping alert config: %w", core.DiagsToError(diags))
 		}
@@ -2072,8 +1979,8 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observabilitySdk.Global, glo
 	smtpAuthPassword := respGlobalConfigs.SmtpAuthPassword
 	smtpAuthUsername := respGlobalConfigs.SmtpAuthUsername
 	opsgenieApiKey := respGlobalConfigs.OpsgenieApiKey
-	opsgenieApiUrl := respGlobalConfigs.OpsgenieApiUrl
 
+	opsgenieApiUrl := respGlobalConfigs.OpsgenieApiUrl
 	if globalConfigsTF != nil {
 		if respGlobalConfigs.SmtpSmarthost == nil &&
 			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
@@ -2127,8 +2034,8 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 	}
 
 	receiversList := []attr.Value{}
-	emptyList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{})
 
+	emptyList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: receiversTypes}, []attr.Value{})
 	if diags.HasError() {
 		// Should not happen
 		return emptyList, fmt.Errorf("mapping empty list: %w", core.DiagsToError(diags))
@@ -2142,7 +2049,6 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		receiver := (*respReceivers)[i]
 
 		emailConfigList := []attr.Value{}
-
 		if receiver.EmailConfigs != nil {
 			for _, emailConfig := range receiver.EmailConfigs {
 				emailConfigMap := map[string]attr.Value{
@@ -2154,8 +2060,8 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 					"smart_host":    types.StringPointerValue(emailConfig.Smarthost),
 					"to":            types.StringValue(emailConfig.To),
 				}
-				emailConfigModel, diags := types.ObjectValue(emailConfigsTypes, emailConfigMap)
 
+				emailConfigModel, diags := types.ObjectValue(emailConfigsTypes, emailConfigMap)
 				if diags.HasError() {
 					return emptyList, fmt.Errorf("mapping email config: %w", core.DiagsToError(diags))
 				}
@@ -2165,7 +2071,6 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		}
 
 		opsgenieConfigList := []attr.Value{}
-
 		if receiver.OpsgenieConfigs != nil {
 			for _, opsgenieConfig := range receiver.OpsgenieConfigs {
 				opsGenieConfigMap := map[string]attr.Value{
@@ -2175,8 +2080,8 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 					"priority":      types.StringPointerValue(opsgenieConfig.Priority),
 					"send_resolved": types.BoolPointerValue(opsgenieConfig.SendResolved),
 				}
-				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
 
+				opsGenieConfigModel, diags := types.ObjectValue(opsgenieConfigsTypes, opsGenieConfigMap)
 				if diags.HasError() {
 					return emptyList, fmt.Errorf("mapping opsgenie config: %w", core.DiagsToError(diags))
 				}
@@ -2186,7 +2091,6 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		}
 
 		webhooksConfigList := []attr.Value{}
-
 		if receiver.WebHookConfigs != nil {
 			for _, webhookConfig := range receiver.WebHookConfigs {
 				webHookConfigsMap := map[string]attr.Value{
@@ -2195,8 +2099,8 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 					"google_chat":   types.BoolPointerValue(webhookConfig.GoogleChat),
 					"send_resolved": types.BoolPointerValue(webhookConfig.SendResolved),
 				}
-				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
 
+				webHookConfigsModel, diags := types.ObjectValue(webHooksConfigsTypes, webHookConfigsMap)
 				if diags.HasError() {
 					return emptyList, fmt.Errorf("mapping webhooks config: %w", core.DiagsToError(diags))
 				}
@@ -2210,7 +2114,6 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		}
 
 		var emailConfigs basetypes.ListValue
-
 		if len(emailConfigList) == 0 {
 			emailConfigs = types.ListNull(types.ObjectType{AttrTypes: emailConfigsTypes})
 		} else {
@@ -2221,7 +2124,6 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		}
 
 		var opsGenieConfigs basetypes.ListValue
-
 		if len(opsgenieConfigList) == 0 {
 			opsGenieConfigs = types.ListNull(types.ObjectType{AttrTypes: opsgenieConfigsTypes})
 		} else {
@@ -2232,7 +2134,6 @@ func mapReceiversToAttributes(ctx context.Context, respReceivers *[]observabilit
 		}
 
 		var webHooksConfigs basetypes.ListValue
-
 		if len(webhooksConfigList) == 0 {
 			webHooksConfigs = types.ListNull(types.ObjectType{AttrTypes: webHooksConfigsTypes})
 		} else {
@@ -2309,7 +2210,6 @@ func mapChildRoutesToAttributes(ctx context.Context, routes *[]observabilitySdk.
 	}
 
 	routesList := []attr.Value{}
-
 	for _, route := range *routes {
 		groupByModel, diags := types.ListValueFrom(ctx, types.StringType, route.GroupBy)
 		if diags.HasError() {
@@ -2365,8 +2265,8 @@ func toCreatePayload(model *Model, setGrafanaAdminEnabled bool) (*observabilityS
 	}
 
 	elements := model.Parameters.Elements()
-	pa := make(map[string]any, len(elements))
 
+	pa := make(map[string]any, len(elements))
 	for k := range elements {
 		pa[k] = elements[k].String()
 	}
@@ -2438,8 +2338,8 @@ func toUpdatePayload(model *Model, setGrafanaAdminEnabled bool) (*observabilityS
 	}
 
 	elements := model.Parameters.Elements()
-	pa := make(map[string]any, len(elements))
 
+	pa := make(map[string]any, len(elements))
 	for k, v := range elements {
 		pa[k] = v.String()
 	}
@@ -2479,8 +2379,8 @@ func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*
 	}
 
 	routeTF := mainRouteModel{}
-	diags := model.Route.As(ctx, &routeTF, basetypes.ObjectAsOptions{})
 
+	diags := model.Route.As(ctx, &routeTF, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping route: %w", core.DiagsToError(diags))
 	}
@@ -2506,8 +2406,8 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) ([]observab
 	}
 
 	receiversModel := []receiversModel{}
-	diags := model.Receivers.ElementsAs(ctx, &receiversModel, false)
 
+	diags := model.Receivers.ElementsAs(ctx, &receiversModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping receivers: %w", core.DiagsToError(diags))
 	}
@@ -2522,17 +2422,15 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) ([]observab
 
 		if !receiver.EmailConfigs.IsNull() && !receiver.EmailConfigs.IsUnknown() {
 			emailConfigs := []emailConfigsModel{}
-			diags := receiver.EmailConfigs.ElementsAs(ctx, &emailConfigs, false)
 
+			diags := receiver.EmailConfigs.ElementsAs(ctx, &emailConfigs, false)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping email configs: %w", core.DiagsToError(diags))
 			}
 
 			payloadEmailConfigs := []observabilitySdk.UpdateAlertConfigsPayloadReceiversInnerEmailConfigsInner{}
-
 			for i := range emailConfigs {
 				emailConfig := emailConfigs[i]
-
 				payloadEmailConfigs = append(payloadEmailConfigs, observabilitySdk.UpdateAlertConfigsPayloadReceiversInnerEmailConfigsInner{
 					AuthIdentity: conversion.StringValueToPointer(emailConfig.AuthIdentity),
 					AuthPassword: conversion.StringValueToPointer(emailConfig.AuthPassword),
@@ -2549,17 +2447,15 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) ([]observab
 
 		if !receiver.OpsGenieConfigs.IsNull() && !receiver.OpsGenieConfigs.IsUnknown() {
 			opsgenieConfigs := []opsgenieConfigsModel{}
-			diags := receiver.OpsGenieConfigs.ElementsAs(ctx, &opsgenieConfigs, false)
 
+			diags := receiver.OpsGenieConfigs.ElementsAs(ctx, &opsgenieConfigs, false)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping opsgenie configs: %w", core.DiagsToError(diags))
 			}
 
 			payloadOpsGenieConfigs := []observabilitySdk.UpdateAlertConfigsPayloadReceiversInnerOpsgenieConfigsInner{}
-
 			for i := range opsgenieConfigs {
 				opsgenieConfig := opsgenieConfigs[i]
-
 				payloadOpsGenieConfigs = append(payloadOpsGenieConfigs, observabilitySdk.UpdateAlertConfigsPayloadReceiversInnerOpsgenieConfigsInner{
 					ApiKey:       conversion.StringValueToPointer(opsgenieConfig.ApiKey),
 					ApiUrl:       conversion.StringValueToPointer(opsgenieConfig.ApiUrl),
@@ -2574,17 +2470,15 @@ func toReceiverPayload(ctx context.Context, model *alertConfigModel) ([]observab
 
 		if !receiver.WebHooksConfigs.IsNull() && !receiver.WebHooksConfigs.IsUnknown() {
 			receiverWebHooksConfigs := []webHooksConfigsModel{}
-			diags := receiver.WebHooksConfigs.ElementsAs(ctx, &receiverWebHooksConfigs, false)
 
+			diags := receiver.WebHooksConfigs.ElementsAs(ctx, &receiverWebHooksConfigs, false)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping webhooks configs: %w", core.DiagsToError(diags))
 			}
 
 			payloadWebHooksConfigs := []observabilitySdk.UpdateAlertConfigsPayloadReceiversInnerWebHookConfigsInner{}
-
 			for i := range receiverWebHooksConfigs {
 				webHooksConfig := receiverWebHooksConfigs[i]
-
 				payloadWebHooksConfigs = append(payloadWebHooksConfigs, observabilitySdk.UpdateAlertConfigsPayloadReceiversInnerWebHookConfigsInner{
 					Url:          conversion.StringValueToPointer(webHooksConfig.Url),
 					MsTeams:      conversion.BoolValueToPointer(webHooksConfig.MsTeams),
@@ -2616,7 +2510,6 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (observability
 		groupByPayload = []string{}
 
 		diags := routeTF.GroupBy.ElementsAs(ctx, &groupByPayload, false)
-
 		if diags.HasError() {
 			return observabilitySdk.UpdateAlertConfigsPayloadRoute{}, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 		}
@@ -2624,8 +2517,8 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (observability
 
 	if !routeTF.Routes.IsNull() && !routeTF.Routes.IsUnknown() {
 		childRoutes := []routeModelMiddle{}
-		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
 
+		diags := routeTF.Routes.ElementsAs(ctx, &childRoutes, false)
 		if diags.HasError() {
 			// If there is an error, we will try to map the child routes as if they are the last child routes
 			// This is done because the last child routes in the recursion have a different structure (don't have the `routes` fields)
@@ -2633,7 +2526,6 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (observability
 			lastChildRoutes := []routeModelNoRoutes{}
 
 			diags = routeTF.Routes.ElementsAs(ctx, &lastChildRoutes, true)
-
 			if diags.HasError() {
 				return observabilitySdk.UpdateAlertConfigsPayloadRoute{}, fmt.Errorf("mapping child routes: %w", core.DiagsToError(diags))
 			}
@@ -2651,13 +2543,11 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (observability
 					RepeatInterval: lastChildRoutes[i].RepeatInterval,
 					Routes:         types.ListNull(getRouteListType()),
 				}
-
 				childRoutes = append(childRoutes, childRoute)
 			}
 		}
 
 		childRoutesList := []observabilitySdk.UpdateAlertConfigsPayloadRouteRoutesInner{}
-
 		for i := range childRoutes {
 			childRoute := childRoutes[i]
 
@@ -2697,7 +2587,6 @@ func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*obser
 		groupByPayload = []string{}
 
 		diags := routeTF.GroupBy.ElementsAs(ctx, &groupByPayload, false)
-
 		if diags.HasError() {
 			return nil, fmt.Errorf("mapping group by: %w", core.DiagsToError(diags))
 		}
@@ -2750,8 +2639,8 @@ func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*obser
 
 func toGlobalConfigPayload(ctx context.Context, model *alertConfigModel) (*observabilitySdk.UpdateAlertConfigsPayloadGlobal, error) {
 	globalConfigModel := globalConfigurationModel{}
-	diags := model.GlobalConfiguration.As(ctx, &globalConfigModel, basetypes.ObjectAsOptions{})
 
+	diags := model.GlobalConfiguration.As(ctx, &globalConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping global configuration: %w", core.DiagsToError(diags))
 	}
@@ -2778,8 +2667,8 @@ func loadPlanId(ctx context.Context, client observabilitySdk.DefaultAPI, model *
 
 	planName := model.PlanName.ValueString()
 	avl := ""
-	plans := res.Plans
 
+	plans := res.Plans
 	for i := range plans {
 		p := plans[i]
 		if p.Name == nil {
@@ -2806,7 +2695,6 @@ func (r *instanceResource) getAlertConfigs(ctx context.Context, alertConfig *ale
 	instanceId := model.InstanceId.ValueString()
 
 	var err error
-
 	// Alert Config
 	if utils.IsUndefined(model.AlertConfig) {
 		*alertConfig, err = getMockAlertConfig(ctx)
@@ -2831,7 +2719,6 @@ func (r *instanceResource) getAlertConfigs(ctx context.Context, alertConfig *ale
 	if err != nil {
 		return fmt.Errorf("calling API to get alert config: %w", err)
 	}
-
 	// Map response body to schema
 	err = mapAlertConfigField(ctx, alertConfigResp, model)
 	if err != nil {
@@ -2964,7 +2851,6 @@ func setMetricsRetentionsZero(ctx context.Context, state *tfsdk.State) (diags di
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days"), 0)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_5m_downsampling"), 0)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_1h_downsampling"), 0)...)
-
 	return diags
 }
 
@@ -2972,7 +2858,6 @@ func setMetricsRetentions(ctx context.Context, state *tfsdk.State, model *Model)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days"), model.MetricsRetentionDays)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_5m_downsampling"), model.MetricsRetentionDays5mDownsampling)...)
 	diags = append(diags, state.SetAttribute(ctx, path.Root("metrics_retention_days_1h_downsampling"), model.MetricsRetentionDays1hDownsampling)...)
-
 	return diags
 }
 

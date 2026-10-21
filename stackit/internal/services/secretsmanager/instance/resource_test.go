@@ -100,8 +100,8 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, tt.ListACLResponse, state)
 
+			err := mapFields(tt.input, tt.ListACLResponse, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -367,7 +367,6 @@ func TestUpdateACL(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			// Will be compared to tt.expectedACLStates at the end
 			aclStates := make(map[string]bool)
-
 			aclStates["acl-1"] = true
 			aclStates["acl-2"] = true
 			aclStates["acl-3"] = true
@@ -402,20 +401,17 @@ func TestUpdateACL(t *testing.T) {
 				err := decoder.Decode(&payload)
 				if err != nil {
 					t.Errorf("Create ACL handler: failed to parse payload")
-
 					return
 				}
 
 				if payload.Cidr == "" {
 					t.Errorf("Create ACL handler: nil CIDR")
-
 					return
 				}
 
 				cidr := payload.Cidr
 				if cidrExists, cidrWasCreated := aclStates[cidr]; cidrWasCreated && cidrExists {
 					t.Errorf("Create ACL handler: attempted to create CIDR '%v' that already exists", payload.Cidr)
-
 					return
 				}
 
@@ -440,7 +436,6 @@ func TestUpdateACL(t *testing.T) {
 				respBytes, err := json.Marshal(resp)
 				if err != nil {
 					t.Errorf("Create ACL handler: failed to marshal response: %v", err)
-
 					return
 				}
 
@@ -455,34 +450,29 @@ func TestUpdateACL(t *testing.T) {
 			// Handler for deleting ACL
 			deleteACLHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				vars := mux.Vars(r)
-				aclId, ok := vars["aclId"]
 
+				aclId, ok := vars["aclId"]
 				if !ok {
 					t.Errorf("Delete ACL handler: no ACL ID")
-
 					return
 				}
 
 				cidr, ok := strings.CutPrefix(aclId, "id-")
 				if !ok {
 					t.Errorf("Delete ACL handler: got unexpected ACL ID '%v'", aclId)
-
 					return
 				}
 
 				cidr, _ = strings.CutSuffix(cidr, "-repeated")
 
 				cidrExists, cidrWasCreated := aclStates[cidr]
-
 				if !cidrWasCreated {
 					t.Errorf("Delete ACL handler: attempted to delete CIDR '%v' that wasn't created", cidr)
-
 					return
 				}
 
 				if cidrWasCreated && !cidrExists {
 					t.Errorf("Delete ACL handler: attempted to delete CIDR '%v' that was already deleted", cidr)
-
 					return
 				}
 
@@ -520,7 +510,6 @@ func TestUpdateACL(t *testing.T) {
 			router.HandleFunc("/v1/projects/{projectId}/instances/{instanceId}/acls/{aclId}", deleteACLHandler)
 
 			mockedServer := httptest.NewServer(router)
-
 			defer mockedServer.Close()
 
 			client, err := secretsmanager.NewAPIClient(

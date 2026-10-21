@@ -130,7 +130,6 @@ func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadReq
 	err = mapFields(keyRingResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading keyring", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 

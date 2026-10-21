@@ -60,7 +60,6 @@ func (d *templatesDataSource) Configure(ctx context.Context, req datasource.Conf
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_automation_templates", core.Datasource)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -123,22 +122,19 @@ func (d *templatesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 
 func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	model.Region = types.StringValue(region)
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
 	})
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -150,13 +146,11 @@ func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	templates, err := paginate.All(templatesReq)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading templates", fmt.Sprintf("Calling ListVolumeTemplates: %v", err))
-
 		return
 	}
 
 	if templates == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading templates", "ListVolumeTemplates returned an empty response")
-
 		return
 	}
 
@@ -164,12 +158,10 @@ func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	if err := mapFields(templates, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading templates", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

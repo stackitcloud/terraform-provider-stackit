@@ -52,7 +52,6 @@ func (d *affinityGroupDatasource) Metadata(_ context.Context, req datasource.Met
 
 func (d *affinityGroupDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptionMain := "Affinity Group schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		Description:         descriptionMain,
 		MarkdownDescription: descriptionMain,
@@ -116,7 +115,6 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -157,7 +155,6 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

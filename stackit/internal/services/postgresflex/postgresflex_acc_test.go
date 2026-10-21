@@ -64,7 +64,6 @@ var testConfigInstanceVarsMin = config.Variables{
 var testConfigInstanceVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigInstanceVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -98,7 +97,6 @@ var testConfigInstanceVarsMax = config.Variables{
 var testConfigInstanceVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigInstanceVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -134,7 +132,6 @@ var testConfigDatabaseVarsMin = config.Variables{
 var testConfigDatabaseVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigDatabaseVarsMin)
-
 	updatedConfig["username"] = config.StringVariable(fmt.Sprintf(
 		"%s_updated", testutil.ConvertConfigVariable(updatedConfig["username"]),
 	))
@@ -162,7 +159,6 @@ var testConfigUserVarsMin = config.Variables{
 var testConfigUserVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigUserVarsMin)
-
 	updatedConfig["username"] = config.StringVariable("acc_test_updated")
 	updatedConfig["roles"] = config.StringVariable("createdb")
 
@@ -936,7 +932,6 @@ func testCheckDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	for _, checkDestroyFunc := range checkDestroyFuncs {
 		err := checkDestroyFunc(s)
 		if err != nil {
@@ -965,7 +960,6 @@ func testUserDestroy(s *terraform.State) error {
 	var errs []error
 
 	usersToDestroy := []postgresUser{}
-
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "stackit_postgresflex_user" {
 			continue
@@ -1059,7 +1053,6 @@ func testDatabaseDestroy(s *terraform.State) error {
 	var errs []error
 
 	databasesToDestroy := []postgresDatabase{}
-
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "stackit_postgresflex_database" {
 			continue
@@ -1147,7 +1140,6 @@ func testInstanceDestroy(s *terraform.State) error {
 	var errs []error
 
 	instancesToDestroy := []postgresInstance{}
-
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "stackit_postgresflex_instance" {
 			continue

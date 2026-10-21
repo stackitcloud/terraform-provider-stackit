@@ -93,34 +93,28 @@ type volumeAutomationResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *volumeAutomationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -139,7 +133,6 @@ func (r *volumeAutomationResource) Configure(ctx context.Context, req resource.C
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_volume_automation", core.Resource)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -244,7 +237,6 @@ func (r *volumeAutomationResource) Create(ctx context.Context, req resource.Crea
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -260,14 +252,12 @@ func (r *volumeAutomationResource) Create(ctx context.Context, req resource.Crea
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume automation", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	automationResp, err := r.client.CreateVolumeAutomation(ctx, projectId, region).CreateVolumeAutomationPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume automation", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -277,13 +267,11 @@ func (r *volumeAutomationResource) Create(ctx context.Context, req resource.Crea
 	err = mapFields(ctx, automationResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume automation", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -297,7 +285,6 @@ func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -316,7 +303,6 @@ func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRe
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -330,13 +316,11 @@ func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRe
 	err = mapFields(ctx, automationResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume automation", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -350,7 +334,6 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -359,7 +342,6 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -377,7 +359,6 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	payload, err := toUpdatePayload(&plan)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume automation", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -390,7 +371,6 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume automation", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -402,7 +382,6 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume automation", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -411,13 +390,11 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	err = mapFields(ctx, automationResp, &plan, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume automation", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -431,7 +408,6 @@ func (r *volumeAutomationResource) Delete(ctx context.Context, req resource.Dele
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -503,7 +479,6 @@ func mapFields(_ context.Context, apiResp *automation.VolumeAutomation, model *M
 	model.Description = types.StringPointerValue(apiResp.Description)
 
 	var inputString *string
-
 	if apiResp.Input.Get() != nil {
 		inputJson, err := apiResp.Input.MarshalJSON()
 		if err != nil {

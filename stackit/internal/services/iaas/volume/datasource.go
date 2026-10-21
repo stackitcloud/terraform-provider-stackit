@@ -76,7 +76,6 @@ func (d *volumeDataSource) Configure(ctx context.Context, req datasource.Configu
 // Schema defines the schema for the resource.
 func (d *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Volume resource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -167,7 +166,6 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -204,13 +202,11 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	err = mapDatasourceFields(ctx, volumeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -228,7 +224,6 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 	}
 
 	var volumeId string
-
 	if model.VolumeId.ValueString() != "" {
 		volumeId = model.VolumeId.ValueString()
 	} else if volumeResp.Id != nil {
@@ -249,7 +244,6 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 		sourceValues map[string]attr.Value
 		sourceObject basetypes.ObjectValue
 	)
-
 	if volumeResp.Source == nil {
 		sourceObject = types.ObjectNull(sourceTypes)
 	} else {
@@ -261,7 +255,6 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 		var diags diag.Diagnostics
 
 		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
-
 		if diags.HasError() {
 			return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
 		}

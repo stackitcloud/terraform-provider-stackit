@@ -181,28 +181,23 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Use the modifier to set the effective region in the current plan.
 func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -210,7 +205,6 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	handleV3Migration(ctx, &planModel, &configModel, resp)
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -240,17 +234,13 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			"storage will be required in future", "storage will be a required field after February 2027. Set values to prevent breaking changes. Fallback to class 'premium-perf12-stackit' with a size of 40 gigabytes during deprecation period.")
 	} else {
 		var storageConfig = &storageModel{}
-
 		resp.Diagnostics.Append(configModel.Storage.As(ctx, storageConfig, basetypes.ObjectAsOptions{})...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
 		var storagePlan = &storageModel{}
-
 		resp.Diagnostics.Append(configModel.Storage.As(ctx, storagePlan, basetypes.ObjectAsOptions{})...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -303,20 +293,16 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 
 	// retention_days
 	var optionsConfig = &optionsModel{}
-
 	if !(configModel.Options.IsNull() || configModel.Options.IsUnknown()) {
 		resp.Diagnostics.Append(configModel.Options.As(ctx, optionsConfig, basetypes.ObjectAsOptions{})...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var optionsPlan = &optionsModel{}
-
 	if !(configModel.Options.IsNull() || configModel.Options.IsUnknown()) {
 		resp.Diagnostics.Append(configModel.Options.As(ctx, optionsPlan, basetypes.ObjectAsOptions{})...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -670,7 +656,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -679,39 +664,32 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
-
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var encryption *encryptionModel
-
 	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
 		encryption = &encryptionModel{}
 		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var flavor = &flavorModel{}
-
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -719,39 +697,32 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-
 			return
 		}
 	}
 
 	var storage = &storageModel{}
-
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
-
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var network = &networkModel{}
-
 	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -761,15 +732,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model, acl, encryption, flavor, storage, options, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new instance
 	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -777,7 +745,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	if createResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
-
 		return
 	}
 
@@ -791,13 +758,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
 	// which can be avoided by sleeping before wait
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
-
 		return
 	}
 
@@ -805,14 +770,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(ctx, waitResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -834,7 +796,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -842,12 +803,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -861,7 +821,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -874,11 +833,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	// Get flavor
 	var flavor = &flavorModel{}
-
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -901,14 +858,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(ctx, instanceResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -923,7 +877,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -939,22 +892,18 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
-
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var flavor = &flavorModel{}
-
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -962,39 +911,32 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-
 			return
 		}
 	}
 
 	var storage = &storageModel{}
-
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
-
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var network = &networkModel{}
-
 	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -1004,15 +946,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model, acl, flavor, storage, options, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing instance
 	err = r.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
-
 		return
 	}
 
@@ -1021,7 +960,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
-
 		return
 	}
 
@@ -1029,13 +967,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(ctx, waitResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1050,7 +986,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1060,7 +995,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -1070,7 +1004,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -1084,7 +1017,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -1123,7 +1055,6 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	}
 
 	var instanceId string
-
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
 	} else if resp.Id != "" {
@@ -1136,7 +1067,6 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		aclList basetypes.ListValue
 		diags   diag.Diagnostics
 	)
-
 	if resp.Network.Acl == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
@@ -1161,8 +1091,8 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"instance_address": types.StringPointerValue(resp.Network.InstanceAddress),
 		"router_address":   types.StringPointerValue(resp.Network.RouterAddress),
 	}
-	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 
+	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
 		return fmt.Errorf("mapping network: %w", core.DiagsToError(diags))
 	}
@@ -1173,8 +1103,8 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"cpu":         flavor.CPU,
 		"ram":         flavor.RAM,
 	}
-	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 
+	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
@@ -1183,8 +1113,8 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"class": types.StringPointerValue(resp.Storage.Class),
 		"size":  types.Int64PointerValue(resp.Storage.Size),
 	}
-	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 
+	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
@@ -1193,8 +1123,8 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"edition":        types.StringValue(string(resp.Edition)),
 		"retention_days": types.Int32Value(resp.RetentionDays),
 	}
-	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
 
+	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
 	}
@@ -1202,7 +1132,6 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	var encryptionValues map[string]attr.Value
 
 	encryptionObject := types.ObjectNull(encryptionTypes)
-
 	if resp.Encryption != nil {
 		encryptionValues = map[string]attr.Value{
 			"kek_key_id":      types.StringValue(resp.Encryption.KekKeyId),
@@ -1210,8 +1139,8 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 			"kek_key_version": types.StringValue(resp.Encryption.KekKeyVersion),
 			"service_account": types.StringValue(resp.Encryption.ServiceAccount),
 		}
-		encryptionObject, diags = types.ObjectValue(encryptionTypes, encryptionValues)
 
+		encryptionObject, diags = types.ObjectValue(encryptionTypes, encryptionValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating encryption: %w", core.DiagsToError(diags))
 		}
@@ -1251,7 +1180,6 @@ func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, fl
 
 	// Encryption
 	var encryptionPayload *sqlserverflex.InstanceEncryption
-
 	if encryption != nil {
 		encryptionPayload = &sqlserverflex.InstanceEncryption{
 			KekKeyId:       encryption.KekKeyId.ValueString(),
@@ -1283,7 +1211,6 @@ func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, fl
 
 	// Flavor
 	var flavorId string
-
 	if flavor != nil && !(flavor.Id.IsNull() || flavor.Id.IsUnknown()) {
 		flavorId = flavor.Id.ValueString()
 	} else if !model.FlavorId.IsNull() {
@@ -1304,7 +1231,6 @@ func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, fl
 
 	// Retention days
 	var retentionDays int32
-
 	if options != nil && !options.RetentionDays.IsNull() {
 		retentionDays = options.RetentionDays.ValueInt32()
 	} else if !model.RetentionDays.IsNull() {
@@ -1348,7 +1274,6 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	var flavorId *string
-
 	if flavor != nil && !(flavor.Id.IsNull() || flavor.Id.IsUnknown()) {
 		flavorId = flavor.Id.ValueStringPointer()
 	} else if !(model.FlavorId.IsNull() || model.FlavorId.IsUnknown()) {
@@ -1358,7 +1283,6 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	var versionPayload *sqlserverflex.InstanceVersionOpt
-
 	if version := conversion.StringValueToPointer(model.Version); version != nil {
 		versionPayload = new(sqlserverflex.InstanceVersionOpt(*version))
 	}
@@ -1373,7 +1297,6 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 
 	// Retention days
 	var retentionDays *int32
-
 	if !(model.RetentionDays.IsNull() || model.RetentionDays.IsUnknown()) {
 		retentionDays = model.RetentionDays.ValueInt32Pointer()
 	} else if !(options.RetentionDays.IsNull() || options.RetentionDays.IsUnknown()) {
@@ -1418,8 +1341,8 @@ func getAllFlavors(ctx context.Context, client sqlserverflexClient, projectId, r
 	}
 
 	currentPage := resp.Pagination.Page
-	totalPages := resp.Pagination.TotalPages
 
+	totalPages := resp.Pagination.TotalPages
 	for currentPage < totalPages {
 		nextPage := currentPage + 1
 
@@ -1489,7 +1412,6 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 		if f.Cpu == *cpu && f.Memory == *ram {
 			flavor.Id = types.StringValue(f.Id)
 			flavor.Description = types.StringValue(f.Description)
-
 			break
 		}
 

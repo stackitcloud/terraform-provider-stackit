@@ -204,7 +204,6 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -212,20 +211,17 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	waiterTimeout := wait.CreateRecordSetWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
@@ -233,15 +229,12 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	payload, err := toCreatePayload(&model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new recordset
 	recordSetResp, err := r.client.CreateRecordSet(ctx, projectId, zoneId).CreateRecordSetPayload(*payload).Execute()
 	if err != nil || recordSetResp.Rrset.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -260,7 +253,6 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetResp.Rrset.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Instance creation waiting: %v", err))
-
 		return
 	}
 
@@ -268,14 +260,11 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	err = mapFields(ctx, waitResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -289,32 +278,28 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
-	recordSetId := model.RecordSetId.ValueString()
 
+	recordSetId := model.RecordSetId.ValueString()
 	if recordSetId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -325,10 +310,8 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -339,7 +322,6 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	if recordSetResp != nil && recordSetResp.Rrset.State == dns.RECORDSETSTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -349,14 +331,12 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	err = mapFields(ctx, recordSetResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -371,7 +351,6 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -379,13 +358,11 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	waiterTimeout := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -393,7 +370,6 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
@@ -402,15 +378,12 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	payload, err := toUpdatePayload(&model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update recordset
 	_, err = r.client.PartialUpdateRecordSet(ctx, projectId, zoneId, recordSetId).PartialUpdateRecordSetPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
-
 		return
 	}
 
@@ -419,20 +392,17 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -447,7 +417,6 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -455,13 +424,11 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	waiterTimeout := wait.DeleteRecordSetWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -469,7 +436,6 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
@@ -478,7 +444,6 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	_, err := r.client.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -493,7 +458,6 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	_, err = wait.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -533,7 +497,6 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 	recordSet := recordSetResp.Rrset
 
 	var recordSetId string
-
 	if model.RecordSetId.ValueString() != "" {
 		recordSetId = model.RecordSetId.ValueString()
 	} else if recordSet.Id != "" {
@@ -572,8 +535,8 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 	model.RecordSetId = types.StringValue(recordSet.Id)
 	model.Active = types.BoolPointerValue(recordSet.Active)
 	model.Comment = types.StringPointerValue(recordSet.Comment)
-	model.Error = types.StringPointerValue(recordSet.Error)
 
+	model.Error = types.StringPointerValue(recordSet.Error)
 	if model.Name.IsNull() || model.Name.IsUnknown() {
 		model.Name = types.StringValue(recordSet.Name)
 	}
@@ -592,7 +555,6 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 	}
 
 	records := []dns.RecordPayload{}
-
 	for i, record := range model.Records.Elements() {
 		recordString, ok := record.(types.String)
 		if !ok {
@@ -619,7 +581,6 @@ func toUpdatePayload(model *Model) (*dns.PartialUpdateRecordSetPayload, error) {
 	}
 
 	records := []dns.RecordPayload{}
-
 	for i, record := range model.Records.Elements() {
 		recordString, ok := record.(types.String)
 		if !ok {

@@ -89,7 +89,6 @@ func (r *vpcNetworkRangeResource) Configure(ctx context.Context, req resource.Co
 	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_network_range", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -101,34 +100,28 @@ func (r *vpcNetworkRangeResource) Configure(ctx context.Context, req resource.Co
 // Use the modifier to set the effective region in the current plan.
 func (r *vpcNetworkRangeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel ResourceModel
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel ResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,9 +248,7 @@ func (r *vpcNetworkRangeResource) Schema(ctx context.Context, _ resource.SchemaR
 func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -265,19 +256,16 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	waiterTimeout := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	vpcId := model.VpcId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -288,7 +276,6 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	payload, err := toCreatePayload(ctx, &model.SharedModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -296,7 +283,6 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	networkRange, err := r.client.CreateVPCNetworkRange(ctx, projectId, vpcId, region).CreateVPCNetworkRangePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -304,7 +290,6 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 
 	if networkRange == nil || networkRange.VPCNetworkRangeIPv4 == nil || networkRange.VPCNetworkRangeIPv4.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Missing Network Range ID in response: %+v", networkRange))
-
 		return
 	}
 
@@ -323,7 +308,6 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	waitResp, err := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client, projectId, vpcId, region, *networkRange.VPCNetworkRangeIPv4.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Waiting for network range become ready: %v", err))
-
 		return
 	}
 
@@ -331,13 +315,11 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	err = mapFields(ctx, waitResp, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -348,33 +330,28 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 // Read refreshes the Terraform state with the latest data.
 func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	vpcId := model.VpcId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	networkRangeId := model.NetworkRangeId.ValueString()
 
+	networkRangeId := model.NetworkRangeId.ValueString()
 	if networkRangeId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -389,7 +366,6 @@ func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadReq
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -404,13 +380,11 @@ func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadReq
 	err = mapFields(ctx, networkRangeResp, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network range", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -422,9 +396,7 @@ func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadReq
 func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -432,13 +404,11 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 	waiterTimeout := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -455,9 +425,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 
 	// Retrieve values from state
 	var stateModel ResourceModel
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -466,15 +434,12 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 	payload, err := toUpdatePayload(ctx, &model.SharedModel, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network range", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing network
 	_, err = r.client.UpdateVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).UpdateVPCNetworkRangePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network range", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -483,19 +448,16 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 	waitResp, err := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client, projectId, vpcId, region, networkRangeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error update network range", fmt.Sprintf("Waiting for network range become ready: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network range", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -510,7 +472,6 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -518,13 +479,11 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 	waiterTimeout := wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -544,7 +503,6 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -558,7 +516,6 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 	_, err = wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client, projectId, vpcId, region, networkRangeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network range", fmt.Sprintf("Waiting for network range become deleted: %v", err))
-
 		return
 	}
 
@@ -620,7 +577,6 @@ func mapIpv4NetworkRange(ctx context.Context, ipv4Resp *iaas.VPCNetworkRangeIPv4
 	}
 
 	var networkRangeId string
-
 	if model.NetworkRangeId.ValueString() != "" {
 		networkRangeId = model.NetworkRangeId.ValueString()
 	} else if ipv4Resp.Id != nil {
@@ -662,7 +618,6 @@ func mapIpv4NetworkRange(ctx context.Context, ipv4Resp *iaas.VPCNetworkRangeIPv4
 		var diags diag.Diagnostics
 
 		model.Nameservers, diags = types.ListValueFrom(ctx, types.StringType, reconciledRangePrefixes)
-
 		if diags.HasError() {
 			return fmt.Errorf("failed to map nameservers: %w", core.DiagsToError(diags))
 		}
@@ -681,7 +636,6 @@ func mapIpv6NetworkRange(ctx context.Context, ipv6Resp *iaas.VPCNetworkRangeIPv6
 	}
 
 	var networkRangeId string
-
 	if model.NetworkRangeId.ValueString() != "" {
 		networkRangeId = model.NetworkRangeId.ValueString()
 	} else if ipv6Resp.Id != nil {
@@ -723,7 +677,6 @@ func mapIpv6NetworkRange(ctx context.Context, ipv6Resp *iaas.VPCNetworkRangeIPv6
 		var diags diag.Diagnostics
 
 		model.Nameservers, diags = types.ListValueFrom(ctx, types.StringType, reconciledRangePrefixes)
-
 		if diags.HasError() {
 			return fmt.Errorf("failed to map nameservers: %w", core.DiagsToError(diags))
 		}

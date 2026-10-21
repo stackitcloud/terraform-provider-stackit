@@ -111,15 +111,14 @@ func TestMapFields(t *testing.T) {
 			isValid:  false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
 				ProjectId: tt.expected.ProjectId,
 				KeyRingId: tt.expected.KeyRingId,
 			}
-			err := mapFields(tt.args.input, state, tt.args.region)
 
+			err := mapFields(tt.args.input, state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

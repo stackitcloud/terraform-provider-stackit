@@ -154,7 +154,6 @@ var testConfigServerVarsMin = config.Variables{
 var testConfigServerVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigServerVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 
@@ -188,7 +187,6 @@ var testConfigServerVarsMax = config.Variables{
 var testConfigServerVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigServerVarsMax)
-
 	updatedConfig["server_name"] = config.StringVariable(fmt.Sprintf("tf-acc-%s-updated", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
@@ -201,7 +199,6 @@ var testConfigServerVarsMaxUpdated = func() config.Variables {
 var testConfigServerVarsMaxUpdatedDesiredStatus = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigServerVarsMaxUpdated)
-
 	updatedConfig["server_name"] = config.StringVariable(fmt.Sprintf("tf-acc-%s-updated", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
@@ -247,7 +244,6 @@ var testConfigNetworkInterfaceVarsMax = config.Variables{
 var testConfigNetworkInterfaceVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkInterfaceVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["name"])))
 	updatedConfig["ipv4"] = config.StringVariable("10.2.10.21")
 	updatedConfig["security"] = config.BoolVariable(false)
@@ -267,9 +263,7 @@ var testConfigVolumeVarsMin = config.Variables{
 var testConfigVolumeVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVolumeVarsMin)
-
 	updatedConfig["size"] = config.IntegerVariable(20)
-
 	return updatedConfig
 }()
 
@@ -290,7 +284,6 @@ var testConfigVolumeVarsMax = config.Variables{
 var testConfigVolumeVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVolumeVarsMax)
-
 	updatedConfig["size"] = config.IntegerVariable(20)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])))
 	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["description"])))
@@ -312,9 +305,7 @@ var testConfigNetworkVarsMin = config.Variables{
 var testConfigNetworkVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-
 	return updatedConfig
 }()
 
@@ -336,7 +327,6 @@ var testConfigNetworkVarsMax = config.Variables{
 var testConfigNetworkVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["ipv4_gateway"] = config.StringVariable("")
 	updatedConfig["ipv4_nameservers"] = config.ListVariable(config.StringVariable("10.2.2.10"), config.StringVariable("10.2.2.3"))
@@ -358,9 +348,7 @@ var testConfigNetworkVarsVpc = config.Variables{
 var testConfigNetworkVarsVpcUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkVarsVpc)
-
 	updatedConfig["update"] = config.BoolVariable(true)
-
 	return updatedConfig
 }()
 
@@ -374,9 +362,7 @@ var testConfigNetworkAreaVarsMin = config.Variables{
 var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkAreaVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-
 	return updatedConfig
 }()
 
@@ -391,7 +377,6 @@ var testConfigNetworkAreaVarsMax = config.Variables{
 var testConfigNetworkAreaVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkAreaVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	// TODO: enable once the IaaS API supports IPv6
 	// updatedConfig["route_destination_type"] = config.StringVariable("cidrv6")
@@ -414,9 +399,7 @@ var testConfigNetworkAreaRegionVarsMin = config.Variables{
 var testConfigNetworkAreaRegionVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkAreaRegionVarsMin)
-
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
-
 	return updatedConfig
 }()
 
@@ -436,7 +419,6 @@ var testConfigNetworkAreaRegionVarsMax = config.Variables{
 var testConfigNetworkAreaRegionVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkAreaRegionVarsMax)
-
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
 	updatedConfig["default_nameservers"] = config.StringVariable("8.8.8.8")
 	updatedConfig["default_prefix_length"] = config.IntegerVariable(27)
@@ -476,9 +458,7 @@ var testConfigNetworkAreaRouteVarsMax = config.Variables{
 var testConfigNetworkAreaRouteVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkAreaRouteVarsMax)
-
 	updatedConfig["label"] = config.StringVariable("updated-label")
-
 	return updatedConfig
 }()
 
@@ -493,9 +473,7 @@ var testConfigSecurityGroupsVarsMin = config.Variables{
 func testConfigSecurityGroupsVarsMinUpdated() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigSecurityGroupsVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-
 	return updatedConfig
 }
 
@@ -521,7 +499,6 @@ var testConfigSecurityGroupsVarsMax = config.Variables{
 func testConfigSecurityGroupsVarsMaxUpdated() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigSecurityGroupsVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["name_remote"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name_remote"])))
 	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["description"])))
@@ -556,9 +533,7 @@ var testConfigImageVarsMin = func() config.Variables {
 var testConfigImageVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigImageVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-
 	return updatedConfig
 }()
 
@@ -604,7 +579,6 @@ var testConfigImageVarsMax = func() config.Variables {
 var testConfigImageVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigImageVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["min_disk_size"] = config.IntegerVariable(25)
 	updatedConfig["min_ram"] = config.IntegerVariable(4096)
@@ -644,9 +618,7 @@ var testConfigKeyPairMax = config.Variables{
 var testConfigKeyPairMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigKeyPairMax)
-
 	updatedConfig["label"] = config.StringVariable("updated")
-
 	return updatedConfig
 }()
 
@@ -662,9 +634,7 @@ var testConfigRoutingTableMin = config.Variables{
 var testConfigRoutingTableMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigRoutingTableMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
-
 	return updatedConfig
 }()
 
@@ -681,7 +651,6 @@ var testConfigRoutingTableMax = config.Variables{
 var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigRoutingTableMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
@@ -704,7 +673,6 @@ var testConfigRoutingTableRouteMin = config.Variables{
 var testConfigRoutingTableRouteMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigRoutingTableRouteMin)
-
 	// nothing possible to update of the required attributes...
 	return updatedConfig
 }()
@@ -723,9 +691,7 @@ var testConfigRoutingTableRouteMax = config.Variables{
 var testConfigRoutingTableRouteMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigRoutingTableRouteMax)
-
 	updatedConfig["label"] = config.StringVariable("route-updated-label-01")
-
 	return updatedConfig
 }()
 
@@ -6256,7 +6222,6 @@ func TestAccDatasourceIaaSProject(t *testing.T) {
 		publicProject = "data.stackit_iaas_project.public"
 		snaProject    = "data.stackit_iaas_project.sna"
 	)
-
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -6340,7 +6305,6 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	// networks
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_network" {
@@ -6358,7 +6322,6 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, region, networkId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden {
 					continue
@@ -6386,7 +6349,6 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	// network interfaces
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_network_interface" {
@@ -6426,15 +6388,12 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 
 	// network areas
 	networkAreasToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_network_area_region" {
 			continue
 		}
-
 		// terraform ID: "[organization_id],[network_area_id]"
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[1]
-
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
 
@@ -6470,15 +6429,12 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 
 	// network areas
 	networkAreasToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_network_area" {
 			continue
 		}
-
 		// terraform ID: "[organization_id],[network_area_id]"
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[1]
-
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
 
@@ -6513,15 +6469,12 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 	}
 
 	volumesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_volume" {
 			continue
 		}
-
 		// volume terraform ID: "[project_id],[region],[volume_id]"
 		volumeId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		volumesToDestroy = append(volumesToDestroy, volumeId)
 	}
 
@@ -6558,18 +6511,15 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 	// Servers
 
 	projectId := testutil.ProjectId // Default
-	serversToDestroy := []string{}
 
+	serversToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server" {
 			continue
 		}
-
 		// server terraform ID: "[project_id],[region],[server_id]"
 		projectId = strings.Split(rs.Primary.ID, core.Separator)[0]
-
 		serverId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
@@ -6580,12 +6530,10 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 	// Networks
 
 	networksToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_network" {
 			continue
 		}
-
 		// network terraform ID: "[project_id],[region],[network_id]"
 		split := strings.Split(rs.Primary.ID, core.Separator)
 		if len(split) != 2 {
@@ -6593,9 +6541,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		}
 
 		projectId = split[0]
-
 		networkId := split[2]
-
 		networksToDestroy = append(networksToDestroy, networkId)
 	}
 
@@ -6612,7 +6558,6 @@ func cleanUpServers(ctx context.Context, client *iaas.APIClient, projectId strin
 		if isIgnorableDestroyError(err) {
 			return nil // project or resource is already gone, nothing to do
 		}
-
 		return fmt.Errorf("getting serversResp: %w", err)
 	}
 
@@ -6634,7 +6579,6 @@ func cleanUpNetworks(ctx context.Context, client *iaas.APIClient, projectId stri
 		if isIgnorableDestroyError(err) {
 			return nil // project or resource is already gone, nothing to do
 		}
-
 		return fmt.Errorf("getting networksResp: %w", err)
 	}
 
@@ -6652,7 +6596,6 @@ func cleanUpNetworks(ctx context.Context, client *iaas.APIClient, projectId stri
 
 func isIgnorableDestroyError(err error) bool {
 	var oapiErr *oapierror.GenericOpenAPIError
-
 	if errors.As(err, &oapiErr) {
 		return oapiErr.StatusCode == http.StatusForbidden ||
 			oapiErr.StatusCode == http.StatusNotFound
@@ -6670,15 +6613,12 @@ func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 	}
 
 	affinityGroupsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_affinity_group" {
 			continue
 		}
-
 		// affinity group terraform ID: "[project_id],[region],[affinity_group_id]"
 		affinityGroupId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		affinityGroupsToDestroy = append(affinityGroupsToDestroy, affinityGroupId)
 	}
 
@@ -6713,15 +6653,12 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 	}
 
 	securityGroupsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_security_group" {
 			continue
 		}
-
 		// security group terraform ID: "[project_id],[region],[security_group_id]"
 		securityGroupId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		securityGroupsToDestroy = append(securityGroupsToDestroy, securityGroupId)
 	}
 
@@ -6756,15 +6693,12 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 	}
 
 	publicIpsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_public_ip" {
 			continue
 		}
-
 		// public IP terraform ID: "[project_id],[region],[public_ip_id]"
 		publicIpId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		publicIpsToDestroy = append(publicIpsToDestroy, publicIpId)
 	}
 
@@ -6799,12 +6733,10 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 	}
 
 	keyPairsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_key_pair" {
 			continue
 		}
-
 		// Key pair terraform ID: "[name]"
 		keyPairsToDestroy = append(keyPairsToDestroy, rs.Primary.ID)
 	}
@@ -6840,15 +6772,12 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 	}
 
 	imagesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_image" {
 			continue
 		}
-
 		// Image terraform ID: "[project_id],[region],[image_id]"
 		imageId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		imagesToDestroy = append(imagesToDestroy, imageId)
 	}
 
@@ -6883,7 +6812,6 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	// routing tables
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_routing_table" {
@@ -6897,7 +6825,6 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteRoutingTableFromArea(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
@@ -6920,7 +6847,6 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	// routes
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_routing_table_route" {
@@ -6935,7 +6861,6 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteRouteFromRoutingTable(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId, routingTableRouteId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
@@ -6960,7 +6885,6 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	projectsToDestroy := []string{}
 
 	var errs []error
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_project" {
 			continue
@@ -7022,7 +6946,6 @@ func validateImportedNameservers(expectedIPs []string) func(states []*terraform.
 
 		// get nameservers
 		importedIPs := make(map[string]bool)
-
 		for k, v := range attrs {
 			if strings.HasPrefix(k, "ipv4_nameservers.") && !strings.HasSuffix(k, ".#") {
 				importedIPs[v] = true

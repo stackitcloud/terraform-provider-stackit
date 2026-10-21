@@ -127,8 +127,8 @@ func TestMapDataSourceFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
-			err := mapDataSourceFields(tt.input, state, tt.region)
 
+			err := mapDataSourceFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

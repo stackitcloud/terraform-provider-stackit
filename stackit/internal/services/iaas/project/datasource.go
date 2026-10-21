@@ -70,7 +70,6 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		"created_at":      "Date-time when the project was created.",
 		"updated_at":      "Date-time when the project was last updated.",
 	}
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: descriptions["main"],
 		Description:         descriptions["main"],
@@ -117,7 +116,6 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -149,14 +147,11 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	err = mapDataSourceFields(projectResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Process API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,7 +169,6 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	}
 
 	var projectId string
-
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
 	} else if projectResp.Id != "" {
@@ -187,7 +181,6 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	model.ProjectId = types.StringValue(projectId)
 
 	var areaId basetypes.StringValue
-
 	if projectResp.AreaId.String != nil {
 		areaId = types.StringPointerValue(projectResp.AreaId.String)
 	} else if projectResp.AreaId.StaticAreaID != nil {
@@ -195,18 +188,14 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	}
 
 	var createdAt basetypes.StringValue
-
 	if projectResp.CreatedAt != nil {
 		createdAtValue := *projectResp.CreatedAt
-
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 
 	var updatedAt basetypes.StringValue
-
 	if projectResp.UpdatedAt != nil {
 		updatedAtValue := *projectResp.UpdatedAt
-
 		updatedAt = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
 

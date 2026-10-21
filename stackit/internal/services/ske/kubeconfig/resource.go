@@ -209,34 +209,28 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 	}
 
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -248,7 +242,6 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -275,14 +268,11 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Creating kubeconfig: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -301,7 +291,6 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -317,7 +306,6 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	// Prevent recreation of kubeconfig when updating to v2 api version
 	diags = resp.State.SetAttribute(ctx, path.Root("region"), region)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -330,10 +318,8 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	cluster, err := r.client.GetCluster(ctx, projectId, region, clusterName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -357,21 +343,18 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	hasExpired, err := checkHasExpired(&model, time.Now())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
-
 		return
 	}
 
 	clusterRecreation, err := checkClusterRecreation(cluster, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
-
 		return
 	}
 
 	credentialsRotation, err := checkCredentialsRotation(cluster, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("%v", err))
-
 		return
 	}
 
@@ -379,14 +362,11 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 		err := r.createKubeconfig(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("The existing kubeconfig is invalid, creating a new one: %v", err))
-
 			return
 		}
-
 		// Set state to fully populated data
 		diags = resp.State.Set(ctx, model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -401,7 +381,6 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	if err != nil {
 		return fmt.Errorf("creating API payload: %w", err)
 	}
-
 	// Create new kubeconfig
 	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Region.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
 	if err != nil {
@@ -431,7 +410,6 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -440,7 +418,6 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 	clusterName := model.ClusterName.ValueString()
 	kubeconfigUUID := model.KubeconfigId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
@@ -484,7 +461,6 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	expiration := conversion.Int64ValueToPointer(model.Expiration)
 
 	var expirationStringPtr *string
-
 	if expiration != nil {
 		expirationStringPtr = new(strconv.FormatInt(*expiration, 10))
 	}

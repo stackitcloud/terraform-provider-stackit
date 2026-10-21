@@ -59,7 +59,6 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
@@ -67,8 +66,8 @@ func TestMapFields(t *testing.T) {
 				ClusterName: tt.expected.ClusterName,
 			}
 			creationTime, _ := time.Parse(time.RFC3339, tt.expected.CreationTime.ValueString())
-			err := mapFields(tt.input, state, creationTime, testRegion)
 
+			err := mapFields(tt.input, state, creationTime, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -203,7 +202,6 @@ func TestCheckHasExpired(t *testing.T) {
 			got, err := checkHasExpired(tt.inputModel, tt.currentTime)
 			if (err != nil) != tt.expectedError {
 				t.Errorf("checkHasExpired() error = %v, expectedError %v", err, tt.expectedError)
-
 				return
 			}
 
@@ -273,7 +271,6 @@ func TestCheckCredentialsRotation(t *testing.T) {
 			got, err := checkCredentialsRotation(tt.inputCluster, tt.inputModel)
 			if (err != nil) != tt.expectedError {
 				t.Errorf("checkCredentialsRotation() error = %v, expectedError %v", err, tt.expectedError)
-
 				return
 			}
 
@@ -337,7 +334,6 @@ func TestCheckClusterRecreation(t *testing.T) {
 			got, err := checkClusterRecreation(tt.inputCluster, tt.inputModel)
 			if (err != nil) != tt.expectedError {
 				t.Errorf("checkClusterRecreation() error = %v, expectedError %v", err, tt.expectedError)
-
 				return
 			}
 

@@ -17,6 +17,7 @@ func fixtureDatasourceModel(mods ...func(model *DatasourceModel)) *DatasourceMod
 		OpenTelemetry: types.ObjectNull(datasourceOpenTelemetryTypes),
 		S3:            types.ObjectNull(datasourceS3Types),
 	})
+
 	model := &DatasourceModel{
 		ID:             types.StringValue("pid,rid,iid,dsid"),
 		DestinationID:  types.StringValue("dsid"),
@@ -30,7 +31,6 @@ func fixtureDatasourceModel(mods ...func(model *DatasourceModel)) *DatasourceMod
 		CreationTime:   types.StringValue(testTime.Format(time.RFC3339)),
 		Status:         types.StringValue("active"),
 	}
-
 	for _, mod := range mods {
 		mod(model)
 	}
@@ -97,7 +97,6 @@ func TestMapDataSourceFields(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(datasourceS3Types),
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -156,7 +155,6 @@ func TestMapDataSourceFields(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(datasourceOpenTelemetryTypes),
 					S3:            s3Val,
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -176,8 +174,8 @@ func TestMapDataSourceFields(t *testing.T) {
 				Region:     tt.expected.Region,
 				InstanceID: tt.expected.InstanceID,
 			}
-			err := mapDatasourceFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 
+			err := mapDatasourceFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}

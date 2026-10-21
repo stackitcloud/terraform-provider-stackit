@@ -139,7 +139,6 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -150,7 +149,6 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -179,14 +177,12 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	err = mapDataSourceFields(recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -206,7 +202,6 @@ func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourc
 	user := userResp.Item
 
 	var userId string
-
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
 	} else if user.Id != nil {

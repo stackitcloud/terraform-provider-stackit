@@ -133,17 +133,14 @@ func TestMapDataSourceFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var compiledRegex *regexp.Regexp
-
 			if tt.regexStr != "" {
 				compiledRegex = regexp.MustCompile(tt.regexStr)
 			}
 
 			// Handle nil model scenario
 			var modelPtr *ServiceAccountsModel
-
 			if tt.description != "nil_model" {
 				modelCopy := tt.initialModel
-
 				modelPtr = &modelCopy
 			}
 

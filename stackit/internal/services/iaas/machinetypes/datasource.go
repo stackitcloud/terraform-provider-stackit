@@ -87,7 +87,6 @@ func (d *machineTypesDataSource) Configure(ctx context.Context, req datasource.C
 	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_machine_types", "datasource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -185,16 +184,13 @@ func (d *machineTypesDataSource) Schema(ctx context.Context, _ datasource.Schema
 // nolint:gocritic // framework signature required
 func (d *machineTypesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var model DataSourceModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -203,23 +199,19 @@ func (d *machineTypesDataSource) Read(ctx context.Context, req datasource.ReadRe
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
-
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", model.ProjectID.ValueString())
 	ctx = tflog.SetField(ctx, "region", region)
 
 	request, err := toRequest(ctx, d.client, &model, &d.providerData)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading machine types", fmt.Sprintf("Creating API request: %v", err))
-
 		return
 	}
 
 	apiResponse, err := request.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading machine types", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -227,12 +219,10 @@ func (d *machineTypesDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	if err = mapFields(ctx, apiResponse, &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading machine types", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -248,13 +238,11 @@ func buildFilter(ctx context.Context, value types.Object) (string, error) {
 	}
 
 	var filter filterModel
-
 	if diags := value.As(ctx, &filter, basetypes.ObjectAsOptions{}); diags.HasError() {
 		return "", fmt.Errorf("converting filter: %w", core.DiagsToError(diags))
 	}
 
 	var conditions []string
-
 	if !filter.Name.IsNull() && !filter.Name.IsUnknown() {
 		conditions = append(conditions, "name == "+strconv.Quote(filter.Name.ValueString()))
 	}

@@ -49,7 +49,6 @@ func (v *vpcRegionDatasource) Configure(ctx context.Context, req datasource.Conf
 	v.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc_region", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -97,22 +96,18 @@ func (v *vpcRegionDatasource) Schema(ctx context.Context, _ datasource.SchemaReq
 
 func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DatasourceModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -120,7 +115,6 @@ func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	vpcId := model.VPCId.ValueString()
 	region := v.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -129,7 +123,6 @@ func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadReque
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -143,12 +136,10 @@ func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadReque
 	err = mapFields(ctx, regionalVPC, &model.SharedModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPC region", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

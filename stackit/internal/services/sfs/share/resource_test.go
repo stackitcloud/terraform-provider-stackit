@@ -24,6 +24,7 @@ var (
 
 func TestMapFields(t *testing.T) {
 	testTime := time.Now()
+
 	tests := []struct {
 		name     string
 		state    *Model
@@ -95,7 +96,6 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -144,7 +144,6 @@ func TestToCreatePayload(t *testing.T) {
 			got, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -188,7 +187,6 @@ func TestToUpdatePayload(t *testing.T) {
 			got, err := toUpdatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

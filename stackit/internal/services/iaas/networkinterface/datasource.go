@@ -141,7 +141,6 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -180,13 +179,11 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 	err = mapFields(ctx, networkInterfaceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

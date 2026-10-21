@@ -1442,7 +1442,6 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, tt.output, tt.region)

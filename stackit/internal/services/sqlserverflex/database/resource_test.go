@@ -119,15 +119,14 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &SharedModel{
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state, tt.region)
 
+			err := mapFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

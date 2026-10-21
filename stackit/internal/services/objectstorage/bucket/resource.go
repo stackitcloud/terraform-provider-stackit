@@ -64,39 +64,32 @@ func (r *bucketResource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 	// Note: This resource cannot be destroyed if the bucket contains objects. We added a check here to inform the user about this before accepting the deletion.
 	if req.Plan.Raw.IsNull() && !req.State.Raw.IsNull() {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_object_storage", "Note: This resource cannot be destroyed if the bucket contains objects. Please ensure the bucket is empty before attempting to destroy it.")
-
 		return
 	}
 
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -201,7 +194,6 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -220,7 +212,6 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	err := objectstorageUtils.EnableProject(ctx, projectId, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Enabling object storage project before creation: %v", err))
-
 		return
 	}
 
@@ -228,7 +219,6 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	_, err = r.client.CreateBucket(ctx, projectId, region, bucketName).ObjectLockEnabled(model.ObjectLock.ValueBool()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -247,7 +237,6 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	waitResp, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Bucket creation waiting: %v", err))
-
 		return
 	}
 
@@ -255,13 +244,11 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -275,7 +262,6 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -293,10 +279,8 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	bucketResp, err := r.client.GetBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -311,14 +295,12 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	err = mapFields(bucketResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -338,7 +320,6 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -357,17 +338,14 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	_, err := r.client.DeleteBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 
 			if oapiErr.StatusCode == http.StatusUnprocessableEntity {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", "Bucket isn't empty and cannot be deleted")
-
 				return
 			}
 		}
@@ -380,7 +358,6 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Bucket deletion waiting: %v", err))
-
 		return
 	}
 

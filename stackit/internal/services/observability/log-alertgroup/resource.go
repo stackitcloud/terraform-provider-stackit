@@ -235,7 +235,6 @@ func (r *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -245,7 +244,6 @@ func (r *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -253,14 +251,12 @@ func (r *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createAlertGroupResp, err := r.client.CreateLogsAlertgroups(ctx, instanceId, projectId).CreateLogsAlertgroupsPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -285,7 +281,6 @@ func (r *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 		err = mapFields(ctx, &alertGroup, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating log alert group", fmt.Sprintf("Processing API payload: %v", err))
-
 			return
 		}
 	}
@@ -293,7 +288,6 @@ func (r *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -307,7 +301,6 @@ func (r *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -317,7 +310,6 @@ func (r *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -325,10 +317,8 @@ func (r *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 	readAlertGroupResp, err := r.client.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -342,7 +332,6 @@ func (r *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 	err = mapFields(ctx, &readAlertGroupResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Error processing API response: %v", err))
-
 		return
 	}
 
@@ -366,7 +355,6 @@ func (r *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -376,7 +364,6 @@ func (r *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -384,10 +371,8 @@ func (r *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	_, err := r.client.DeleteLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -460,13 +445,11 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observabilitySdk.Creat
 	var rules []rule
 
 	diags := model.Rules.ElementsAs(ctx, &rules, false)
-
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	var oarrs []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner
-
 	for i := range rules {
 		rule := &rules[i]
 		oarr := observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner{}
@@ -545,7 +528,6 @@ func mapFields(ctx context.Context, alertGroup *observabilitySdk.AlertGroup, mod
 	}
 
 	var name string
-
 	if !utils.IsUndefined(model.Name) {
 		name = model.Name.ValueString()
 	} else if alertGroup.Name != "" {
@@ -558,7 +540,6 @@ func mapFields(ctx context.Context, alertGroup *observabilitySdk.AlertGroup, mod
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), name)
 
 	var interval string
-
 	if !utils.IsUndefined(model.Interval) {
 		interval = model.Interval.ValueString()
 	} else if alertGroup.Interval != nil {

@@ -17,7 +17,6 @@ var (
 
 func main() {
 	var debug bool
-
 	flag.BoolVar(&debug, "debug", false, "allows debugging the provider")
 	flag.Parse()
 

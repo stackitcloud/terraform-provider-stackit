@@ -238,34 +238,28 @@ func (r *loadBalancerResource) Metadata(_ context.Context, req resource.Metadata
 // Use the modifier to set the effective region in the current plan.
 func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -274,9 +268,7 @@ func (r *loadBalancerResource) ModifyPlan(ctx context.Context, req resource.Modi
 // ConfigValidators validates the resource configuration
 func (r *loadBalancerResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var model Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -294,7 +286,6 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 		if !externalAddressIsSet {
 			core.LogAndAddError(ctx, diags, "Error configuring load balancer", fmt.Sprintf("You need to provide either the `options.private_network_only = true` or `external_address` field. %v", err))
 		}
-
 		return
 	}
 
@@ -303,7 +294,6 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 		if !externalAddressIsSet {
 			core.LogAndAddError(ctx, diags, "Error configuring load balancer", "You need to provide either the `options.private_network_only = true` or `external_address` field.")
 		}
-
 		return
 	}
 
@@ -763,7 +753,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -772,7 +761,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -780,7 +768,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -788,7 +775,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -796,7 +782,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 
 	if createResp.Name == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", "Got empty load balancer name")
-
 		return
 	}
 
@@ -813,7 +798,6 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
-
 		return
 	}
 
@@ -821,14 +805,12 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -842,7 +824,6 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -860,10 +841,8 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -878,14 +857,12 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapFields(ctx, lbResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading load balancer", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -900,16 +877,13 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Get version from state. It's not included in the plan because it's a computed attribute
 	var stateVersion types.String
-
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("version"), &stateVersion)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -921,7 +895,6 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -930,14 +903,12 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	loadBalancer, err := r.client.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API: %v", utils.PrettyApiErr(ctx, &resp.Diagnostics, err)))
-
 		return
 	}
 
@@ -947,14 +918,12 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	err = mapFields(ctx, loadBalancer, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -968,7 +937,6 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -978,7 +946,6 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -987,10 +954,8 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err := r.client.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -1004,7 +969,6 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err = wait.DeleteLoadBalancerWaitHandler(ctx, r.client, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Load balancer deleting waiting: %v", err))
-
 		return
 	}
 
@@ -1116,8 +1080,8 @@ func toListenersPayload(ctx context.Context, model *Model) ([]loadbalancer.Liste
 	}
 
 	listenersModel := []listener{}
-	diags := model.Listeners.ElementsAs(ctx, &listenersModel, false)
 
+	diags := model.Listeners.ElementsAs(ctx, &listenersModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1127,7 +1091,6 @@ func toListenersPayload(ctx context.Context, model *Model) ([]loadbalancer.Liste
 	}
 
 	payload := []loadbalancer.Listener{}
-
 	for i := range listenersModel {
 		listenerModel := listenersModel[i]
 
@@ -1166,17 +1129,15 @@ func toServerNameIndicatorsPayload(ctx context.Context, l *listener) ([]loadbala
 	}
 
 	serverNameIndicatorsModel := []serverNameIndicator{}
-	diags := l.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicatorsModel, false)
 
+	diags := l.ServerNameIndicators.ElementsAs(ctx, &serverNameIndicatorsModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	payload := []loadbalancer.ServerNameIndicator{}
-
 	for i := range serverNameIndicatorsModel {
 		indicatorModel := serverNameIndicatorsModel[i]
-
 		payload = append(payload, loadbalancer.ServerNameIndicator{
 			Name: conversion.StringValueToPointer(indicatorModel.Name),
 		})
@@ -1191,8 +1152,8 @@ func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, e
 	}
 
 	tcp := tcp{}
-	diags := listener.TCP.As(ctx, &tcp, basetypes.ObjectAsOptions{})
 
+	diags := listener.TCP.As(ctx, &tcp, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1212,8 +1173,8 @@ func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, e
 	}
 
 	udp := udp{}
-	diags := listener.UDP.As(ctx, &udp, basetypes.ObjectAsOptions{})
 
+	diags := listener.UDP.As(ctx, &udp, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1233,8 +1194,8 @@ func toNetworksPayload(ctx context.Context, model *Model) ([]loadbalancer.Networ
 	}
 
 	networksModel := []network{}
-	diags := model.Networks.ElementsAs(ctx, &networksModel, false)
 
+	diags := model.Networks.ElementsAs(ctx, &networksModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1244,10 +1205,8 @@ func toNetworksPayload(ctx context.Context, model *Model) ([]loadbalancer.Networ
 	}
 
 	payload := []loadbalancer.Network{}
-
 	for i := range networksModel {
 		networkModel := networksModel[i]
-
 		payload = append(payload, loadbalancer.Network{
 			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
 			Role:      conversion.StringValueToEnumPointer[loadbalancer.NetworkRole](networkModel.Role),
@@ -1266,19 +1225,17 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	}
 
 	optionsModel := options{}
-	diags := model.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 
+	diags := model.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	accessControlPayload := &loadbalancer.LoadbalancerOptionAccessControl{}
-
 	if !utils.IsUndefined(optionsModel.ACL) {
 		var aclModel []types.String
 
 		diags := optionsModel.ACL.ElementsAs(ctx, &aclModel, false)
-
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
@@ -1296,14 +1253,11 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	}
 
 	var observabilityPayload *loadbalancer.LoadbalancerOptionObservability
-
 	if !utils.IsUndefined(optionsModel.Observability) {
 		observabilityModel := observability{}
-
 		observabilityPayload = &loadbalancer.LoadbalancerOptionObservability{}
 
 		diags := optionsModel.Observability.As(ctx, &observabilityModel, basetypes.ObjectAsOptions{})
-
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability: %w", core.DiagsToError(diags))
 		}
@@ -1312,7 +1266,6 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		observabilityLogsModel := observabilityOption{}
 
 		diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
-
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
 		}
@@ -1326,7 +1279,6 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		observabilityMetricsModel := observabilityOption{}
 
 		diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
-
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
 		}
@@ -1352,8 +1304,8 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) ([]loadbalancer.Tar
 	}
 
 	targetPoolsModel := []targetPool{}
-	diags := model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
 
+	diags := model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1363,7 +1315,6 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) ([]loadbalancer.Tar
 	}
 
 	payload := []loadbalancer.TargetPool{}
-
 	for i := range targetPoolsModel {
 		targetPoolModel := targetPoolsModel[i]
 
@@ -1400,8 +1351,8 @@ func toSessionPersistencePayload(ctx context.Context, tp *targetPool) (*loadbala
 	}
 
 	sessionPersistenceModel := sessionPersistence{}
-	diags := tp.SessionPersistence.As(ctx, &sessionPersistenceModel, basetypes.ObjectAsOptions{})
 
+	diags := tp.SessionPersistence.As(ctx, &sessionPersistenceModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -1417,8 +1368,8 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalan
 	}
 
 	activeHealthCheckModel := activeHealthCheck{}
-	diags := tp.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 
+	diags := tp.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
 	}
@@ -1438,8 +1389,8 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) ([]loadbalancer.Targe
 	}
 
 	targetsModel := []target{}
-	diags := tp.Targets.ElementsAs(ctx, &targetsModel, false)
 
+	diags := tp.Targets.ElementsAs(ctx, &targetsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting Targets list: %w", core.DiagsToError(diags))
 	}
@@ -1449,10 +1400,8 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) ([]loadbalancer.Targe
 	}
 
 	payload := []loadbalancer.Target{}
-
 	for i := range targetsModel {
 		targetModel := targetsModel[i]
-
 		payload = append(payload, loadbalancer.Target{
 			DisplayName: conversion.StringValueToPointer(targetModel.DisplayName),
 			Ip:          conversion.StringValueToPointer(targetModel.Ip),
@@ -1473,7 +1422,6 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	}
 
 	var name string
-
 	if m.Name.ValueString() != "" {
 		name = m.Name.ValueString()
 	} else if lb.Name != nil {
@@ -1534,7 +1482,6 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	listenersList := []attr.Value{}
-
 	for i, listenerResp := range loadBalancerResp.Listeners {
 		listenerMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(listenerResp.DisplayName),
@@ -1586,7 +1533,6 @@ func mapServerNameIndicators(serverNameIndicatorsResp []loadbalancer.ServerNameI
 	}
 
 	serverNameIndicatorsList := []attr.Value{}
-
 	for i, serverNameIndicatorResp := range serverNameIndicatorsResp {
 		serverNameIndicatorMap := map[string]attr.Value{
 			"name": types.StringPointerValue(serverNameIndicatorResp.Name),
@@ -1656,7 +1602,6 @@ func mapNetworks(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	networksList := []attr.Value{}
-
 	for i, networkResp := range loadBalancerResp.Networks {
 		networkMap := map[string]attr.Value{
 			"network_id": types.StringPointerValue(networkResp.NetworkId),
@@ -1696,8 +1641,8 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 	// we set it to false in the TF state to prevent an inconsistent result after apply error
 	if !utils.IsUndefined(m.Options) {
 		optionsModel := options{}
-		diags := m.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 
+		diags := m.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return fmt.Errorf("convert options: %w", core.DiagsToError(diags))
 		}
@@ -1748,8 +1693,8 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 		"logs":    observabilityLogsTF,
 		"metrics": observabilityMetricsTF,
 	}
-	observabilityTF, diags := types.ObjectValue(observabilityTypes, observabilityMap)
 
+	observabilityTF, diags := types.ObjectValue(observabilityTypes, observabilityMap)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
@@ -1777,10 +1722,8 @@ func mapACL(accessControlResp *loadbalancer.LoadbalancerOptionAccessControl, o m
 	}
 
 	aclList := []attr.Value{}
-
 	for _, rangeResp := range accessControlResp.AllowedSourceRanges {
 		rangeTF := types.StringValue(rangeResp)
-
 		aclList = append(aclList, rangeTF)
 	}
 
@@ -1801,7 +1744,6 @@ func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error
 	}
 
 	targetPoolsList := []attr.Value{}
-
 	for i, targetPoolResp := range loadBalancerResp.TargetPools {
 		targetPoolMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(targetPoolResp.Name),
@@ -1875,7 +1817,6 @@ func mapTargets(targetsResp []loadbalancer.Target, tp map[string]attr.Value) err
 	}
 
 	targetsList := []attr.Value{}
-
 	for i, targetResp := range targetsResp {
 		targetMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(targetResp.DisplayName),

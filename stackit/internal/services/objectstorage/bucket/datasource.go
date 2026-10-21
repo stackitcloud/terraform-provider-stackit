@@ -111,7 +111,6 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -149,14 +148,12 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	err = mapFields(bucketResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bucket", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

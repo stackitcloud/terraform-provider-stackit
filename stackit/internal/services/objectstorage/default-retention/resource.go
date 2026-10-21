@@ -64,34 +64,28 @@ var descriptions = map[string]string{
 
 func (r *defaultRetentionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic
 	var configModel model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -194,7 +188,6 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -218,7 +211,6 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 	result, err := apiRequest.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -227,14 +219,12 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 	err = mapFields(result, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -247,7 +237,6 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -268,13 +257,11 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 
 			if oapiErr.StatusCode == http.StatusConflict {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting default-retention", "Encountered conflict")
-
 				return
 			}
 		}
@@ -294,7 +281,6 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -313,10 +299,8 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 	result, err := r.client.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -330,14 +314,12 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 	err = mapFields(result, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading default-retention", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -350,7 +332,6 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -374,7 +355,6 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 	result, err := apiRequest.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -383,14 +363,12 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 	err = mapFields(result, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

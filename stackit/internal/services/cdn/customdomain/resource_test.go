@@ -223,12 +223,10 @@ func TestMapFields(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			model := tc.InitialModel
-
 			model.DistributionId = tc.Expected.DistributionId
 			model.ProjectId = tc.Expected.ProjectId
 
 			err := mapCustomDomainResourceFields(tc.Input, model)
-
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}

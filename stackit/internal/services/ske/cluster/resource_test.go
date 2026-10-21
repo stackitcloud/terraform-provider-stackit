@@ -24,6 +24,7 @@ const testRegion = "region"
 
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
+
 	tests := []struct {
 		description     string
 		stateExtensions types.Object
@@ -830,7 +831,6 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
@@ -838,8 +838,8 @@ func TestMapFields(t *testing.T) {
 				Extensions: tt.stateExtensions,
 				NodePools:  tt.stateNodePools,
 			}
-			err := mapFields(context.Background(), tt.input, state, tt.region)
 
+			err := mapFields(context.Background(), tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1344,7 +1344,6 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			var diags diag.Diagnostics
 
 			versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(tt.availableVersions, tt.kubernetesVersionMin, tt.currentKubernetesVersion, &diags)
-
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1998,8 +1997,8 @@ func TestGetMaintenanceTimes(t *testing.T) {
 				"start":                                types.StringPointerValue(tt.startTF),
 				"end":                                  types.StringPointerValue(tt.endTF),
 			}
-			maintenanceObject, diags := types.ObjectValue(maintenanceTypes, maintenanceValues)
 
+			maintenanceObject, diags := types.ObjectValue(maintenanceTypes, maintenanceValues)
 			if diags.HasError() {
 				t.Fatalf("failed to create flavor: %v", core.DiagsToError(diags))
 			}
@@ -2013,7 +2012,6 @@ func TestGetMaintenanceTimes(t *testing.T) {
 				if tt.isValid {
 					t.Errorf("getMaintenanceTimes failed on valid input: %v", err)
 				}
-
 				return
 			}
 
@@ -2239,8 +2237,8 @@ func TestGetCurrentVersion(t *testing.T) {
 				Name:      types.StringValue("name"),
 			}
 			kubernetesVersion, machineImageVersions := getCurrentVersions(context.Background(), client, model)
-			diff := cmp.Diff(kubernetesVersion, tt.expectedKubernetesVersion)
 
+			diff := cmp.Diff(kubernetesVersion, tt.expectedKubernetesVersion)
 			if diff != "" {
 				t.Errorf("Kubernetes version does not match: %s", diff)
 			}
@@ -2728,7 +2726,6 @@ func TestSortK8sVersion(t *testing.T) {
 
 			joinK8sVersions := func(in []ske.KubernetesVersion, sep string) string {
 				var builder strings.Builder
-
 				for i, l := 0, len(in); i < l; i++ {
 					if i > 0 {
 						builder.WriteString(sep)
@@ -3085,8 +3082,8 @@ func TestToAccessPayload(t *testing.T) {
 			m := &Model{
 				Access: tt.input,
 			}
-			got, err := toAccessPayload(t.Context(), m)
 
+			got, err := toAccessPayload(t.Context(), m)
 			if err != nil && !tt.wantErr {
 				t.Fatalf("unexpected error: %v", err)
 			}

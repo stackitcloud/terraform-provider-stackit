@@ -311,7 +311,6 @@ func TestMapDataSourceFields(t *testing.T) {
 					"bucket_url":             types.StringNull(),
 					"region":                 types.StringNull(),
 				})
-
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backendWithGeofencing,
 					"regions":                regionsFixture,
@@ -403,7 +402,6 @@ func TestMapDataSourceFields(t *testing.T) {
 					"errors": types.ListValueMust(types.StringType, []attr.Value{}),
 				})
 				domains := types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{managedDomain, customDomain})
-
 				m.Domains = domains
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {

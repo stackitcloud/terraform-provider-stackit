@@ -116,7 +116,6 @@ func (r *gatewayResource) Configure(ctx context.Context, req resource.ConfigureR
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -275,7 +274,6 @@ func (r *gatewayResource) ValidateConfig(ctx context.Context, req resource.Valid
 	var model Model
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -286,9 +284,7 @@ func (r *gatewayResource) ValidateConfig(ctx context.Context, req resource.Valid
 
 	if model.RoutingType.ValueString() == string(vpn.ROUTINGTYPE_BGP_ROUTE_BASED) {
 		var bgp types.Object
-
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("bgp"), &bgp)...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -311,27 +307,22 @@ func (r *gatewayResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -362,7 +353,6 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -371,21 +361,18 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateGateway(ctx, projectId, region).CreateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -393,7 +380,6 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 
 	if createResp.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", "Got empty gateway id")
-
 		return
 	}
 
@@ -411,20 +397,17 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Gateway creation waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -437,7 +420,6 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -447,7 +429,6 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	projectId := model.ProjectId.ValueString()
 	gatewayId := model.GatewayId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -455,10 +436,8 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	gatewayResp, err := r.client.GetGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -472,13 +451,11 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	err = mapFields(ctx, gatewayResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN gateway", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -491,7 +468,6 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -501,7 +477,6 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectId := model.ProjectId.ValueString()
 	gatewayId := model.GatewayId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -509,7 +484,6 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -523,7 +497,6 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 	_, err = tfutils.RetryRequest(ctx, r.client.UpdateGateway(ctx, projectId, region, gatewayId).UpdateGatewayPayload(*payload).Execute, retryConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", err.Error())
-
 		return
 	}
 
@@ -532,20 +505,17 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", fmt.Sprintf("Gateway update waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -558,7 +528,6 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -568,7 +537,6 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 	projectId := model.ProjectId.ValueString()
 	gatewayId := model.GatewayId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -576,7 +544,6 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 	err := r.client.DeleteGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -585,7 +552,6 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 	_, err = wait.DeleteGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Gateway deletion waiting: %v", err))
-
 		return
 	}
 
@@ -704,7 +670,6 @@ func getNetworkConfigPayload(ctx context.Context, model *Model) (vpn.NetworkConf
 	var networkConfigModel NetworkConfigModel
 
 	diags := model.NetworkConfig.As(ctx, &networkConfigModel, basetypes.ObjectAsOptions{})
-
 	if diags.HasError() {
 		return vpn.NetworkConfig{}, core.DiagsToError(diags)
 	}
@@ -732,7 +697,6 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	}
 
 	var gatewayId string
-
 	if model.GatewayId.ValueString() != "" {
 		gatewayId = model.GatewayId.ValueString()
 	} else if gateway.Id != nil {
@@ -755,7 +719,6 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 
 	if gateway.Bgp != nil {
 		bgpModel := &BGPGatewayConfigModel{}
-
 		bgpModel.LocalAsn = types.Int64Value(int64(gateway.Bgp.LocalAsn))
 
 		listVal, diags := types.ListValueFrom(ctx, types.StringType, gateway.Bgp.OverrideAdvertisedRoutes)

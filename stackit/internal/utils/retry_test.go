@@ -116,7 +116,6 @@ func TestRetryRequest(t *testing.T) {
 				var cancel context.CancelFunc
 
 				ctx, cancel = tt.ctx()
-
 				defer cancel()
 			}
 
@@ -268,7 +267,6 @@ func TestRetryRequestWithoutResponse(t *testing.T) {
 				var cancel context.CancelFunc
 
 				ctx, cancel = tt.ctx()
-
 				defer cancel()
 			}
 

@@ -78,7 +78,6 @@ func (d *distributionDataSource) Configure(ctx context.Context, req datasource.C
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_distribution", "datasource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -94,7 +93,6 @@ func (r *distributionDataSource) Metadata(_ context.Context, req datasource.Meta
 
 func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	backendOptions := []string{"http", "bucket"}
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Datasource),
 		Description:         "CDN distribution data source schema.",
@@ -411,7 +409,6 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -442,7 +439,6 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	err = mapDataSourceFields(ctx, &distributionResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Error processing API response: %v", err))
-
 		return
 	}
 
@@ -475,7 +471,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// Distribution Errors
 	distributionErrors := []attr.Value{}
-
 	if distribution.Errors != nil {
 		for _, e := range distribution.Errors {
 			distributionErrors = append(distributionErrors, types.StringValue(e.En))
@@ -502,7 +497,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// Blocked Countries
 	var blockedCountries []attr.Value
-
 	if distribution.Config.BlockedCountries != nil {
 		for _, c := range distribution.Config.BlockedCountries {
 			blockedCountries = append(blockedCountries, types.StringValue(string(c)))
@@ -516,17 +510,13 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// redirects
 	redirectsVal := types.ObjectNull(redirectsTypes)
-
 	if distribution.Config.Redirects != nil && distribution.Config.Redirects.Rules != nil {
 		var tfRules []attr.Value
-
 		for _, r := range distribution.Config.Redirects.Rules {
 			var tfMatchers []attr.Value
-
 			if r.Matchers != nil {
 				for _, m := range r.Matchers {
 					var tfValues []attr.Value
-
 					if m.Values != nil {
 						for _, v := range m.Values {
 							tfValues = append(tfValues, types.StringValue(v))
@@ -610,7 +600,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		redirectsVal, objDiags = types.ObjectValue(redirectsTypes, map[string]attr.Value{
 			"rules": tfRulesList,
 		})
-
 		if objDiags.HasError() {
 			return core.DiagsToError(objDiags)
 		}
@@ -642,7 +631,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		// Geofencing
 		if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; len(geofencingAPI) > 0 {
 			geofencingMapElems := make(map[string]attr.Value)
-
 			for url, countries := range geofencingAPI {
 				listVal, diags := types.ListValueFrom(ctx, types.StringType, countries)
 				if diags.HasError() {
@@ -688,7 +676,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// Map Waf
 	var pl *string
-
 	if distribution.Config.Waf.ParanoiaLevel != nil {
 		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
 	}
@@ -720,14 +707,12 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	var diagWaf diag.Diagnostics
 
 	wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
-
 	if diagWaf.HasError() {
 		return core.DiagsToError(diagWaf)
 	}
 
 	// Optimizer
 	optimizerVal := types.ObjectNull(optimizerTypes)
-
 	if o := distribution.Config.Optimizer; o != nil {
 		if enabled, ok := o.GetEnabledOk(); ok {
 			var diags diag.Diagnostics
@@ -735,7 +720,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			optimizerVal, diags = types.ObjectValue(optimizerTypes, map[string]attr.Value{
 				"enabled": types.BoolPointerValue(enabled),
 			})
-
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
@@ -753,7 +737,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	}
 
 	var cacheKeyHeaders []attr.Value
-
 	for _, h := range distribution.Config.CacheConfig.CacheKeyHeaders {
 		cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
 	}
@@ -764,7 +747,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	}
 
 	var queryStringVaryParams []attr.Value
-
 	for _, p := range distribution.Config.CacheConfig.QueryStringVaryParameters {
 		queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
 	}
@@ -785,7 +767,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// blockedIps
 	var blockedIps []attr.Value
-
 	if distribution.Config.BlockedIps != nil {
 		for _, ip := range distribution.Config.BlockedIps {
 			blockedIps = append(blockedIps, types.StringValue(ip))
@@ -798,7 +779,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	}
 
 	var defaultCacheDuration types.String
-
 	if distribution.Config.DefaultCacheDuration.IsSet() {
 		defaultCacheDuration = types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
 	} else {
@@ -806,7 +786,6 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	}
 
 	var monthlyLimitBytes types.Int64
-
 	if distribution.Config.MonthlyLimitBytes.IsSet() {
 		monthlyLimitBytes = types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
 	} else {
@@ -837,11 +816,9 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// Domains
 	domains := []attr.Value{}
-
 	if distribution.Domains != nil {
 		for _, d := range distribution.Domains {
 			domainErrors := []attr.Value{}
-
 			if d.Errors != nil {
 				for _, e := range d.Errors {
 					domainErrors = append(domainErrors, types.StringValue(e.En))

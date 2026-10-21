@@ -25,7 +25,6 @@ func MapLabels(ctx context.Context, responseLabels map[string]any, currentLabels
 		var diags diag.Diagnostics
 
 		labelsTF, diags = types.MapValueFrom(ctx, types.StringType, responseLabels)
-
 		if diags.HasError() {
 			return labelsTF, fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
 		}
@@ -42,7 +41,6 @@ func ReadXRequestId(ctx context.Context) (string, error) {
 		if requestIdHeader, ok := (*resp).Header[wait.XRequestIDHeader]; ok && len(requestIdHeader) > 0 {
 			return requestIdHeader[0], nil
 		}
-
 		return "", fmt.Errorf("no XRequestID header found in response")
 	}
 

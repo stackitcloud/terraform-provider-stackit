@@ -143,7 +143,6 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -158,7 +157,6 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key pair", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -167,7 +165,6 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 	keyPair, err := r.client.CreateKeyPair(ctx).CreateKeyPairPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key pair", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -177,14 +174,11 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 	err = mapFields(ctx, keyPair, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key pair", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -198,7 +192,6 @@ func (r *keyPairResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -212,10 +205,8 @@ func (r *keyPairResource) Read(ctx context.Context, req resource.ReadRequest, re
 	keyPairResp, err := r.client.GetKeyPair(ctx, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -230,14 +221,11 @@ func (r *keyPairResource) Read(ctx context.Context, req resource.ReadRequest, re
 	err = mapFields(ctx, keyPairResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key pair", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -252,7 +240,6 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -268,7 +255,6 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -277,15 +263,12 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating key pair", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing key pair
 	updatedKeyPair, err := r.client.UpdateKeyPair(ctx, name).UpdateKeyPairPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating key pair", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -294,13 +277,11 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 	err = mapFields(ctx, updatedKeyPair, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating key pair", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -315,7 +296,6 @@ func (r *keyPairResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -330,10 +310,8 @@ func (r *keyPairResource) Delete(ctx context.Context, req resource.DeleteRequest
 	err := r.client.DeleteKeyPair(ctx, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -362,7 +340,6 @@ func (r *keyPairResource) ImportState(ctx context.Context, req resource.ImportSt
 	}
 
 	name := idParts[0]
-
 	ctx = tflog.SetField(ctx, "name", name)
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
@@ -379,7 +356,6 @@ func mapFields(ctx context.Context, keyPairResp *iaas.Keypair, model *Model) err
 	}
 
 	var name string
-
 	if model.Name.ValueString() != "" {
 		name = model.Name.ValueString()
 	} else if keyPairResp.Name != nil {

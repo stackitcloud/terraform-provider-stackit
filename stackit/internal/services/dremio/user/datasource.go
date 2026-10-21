@@ -53,7 +53,6 @@ func (d *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.DremioExperiment, "stackit_dremio_user", core.Datasource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -118,9 +117,7 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// nolint:gocritic // function signature required by Terraform
 	var model UserDataSourceModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -131,7 +128,6 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -159,13 +155,11 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	err = mapFields(userResp, &model.Model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

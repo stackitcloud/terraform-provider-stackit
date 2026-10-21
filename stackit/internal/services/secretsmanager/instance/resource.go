@@ -179,7 +179,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -187,15 +186,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	var acl []string
-
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
 		diags = model.ACLs.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -205,15 +201,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new instance
 	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -221,12 +214,10 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	if createResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
-
 		return
 	}
 
 	instanceId := createResp.Id
-
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"instance_id": instanceId,
@@ -236,14 +227,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACL: %v", err))
-
 		return
 	}
 
 	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
-
 		return
 	}
 
@@ -251,14 +240,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(createResp, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -272,7 +259,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -280,12 +266,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -295,10 +280,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -312,7 +295,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
-
 		return
 	}
 
@@ -320,14 +302,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(instanceResp, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -341,7 +321,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -350,7 +329,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
@@ -358,26 +336,21 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update instance
 	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
 	var acl []string
-
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
 		diags = model.ACLs.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -387,14 +360,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
-
 		return
 	}
 
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance acl", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -403,7 +374,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
-
 		return
 	}
 
@@ -411,13 +381,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(instanceResp, aclList, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -432,7 +400,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -441,7 +408,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
@@ -449,10 +415,8 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -497,7 +461,6 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 	}
 
 	var instanceId string
-
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
 	} else if instance.Id != "" {
@@ -609,7 +572,6 @@ func updateACL(ctx context.Context, projectId, instanceId string, acl []string, 
 	}
 
 	aclStates := make(map[string]*aclState)
-
 	for _, cidr := range acl {
 		aclStates[cidr] = &aclState{
 			isInModel: true,

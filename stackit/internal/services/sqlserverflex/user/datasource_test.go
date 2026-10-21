@@ -109,7 +109,6 @@ func TestMapDataSourceFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &DataSourceModel{
@@ -117,8 +116,8 @@ func TestMapDataSourceFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
-			err := mapDataSourceFields(tt.input, state, tt.region)
 
+			err := mapDataSourceFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

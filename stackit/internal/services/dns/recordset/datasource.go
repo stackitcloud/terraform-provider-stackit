@@ -137,20 +137,17 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
@@ -158,7 +155,6 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
@@ -185,20 +181,17 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if recordSetResp != nil && recordSetResp.Rrset.State == dns.RECORDSETSTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", "Record set was deleted successfully")
-
 		return
 	}
 
 	err = mapFields(ctx, recordSetResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

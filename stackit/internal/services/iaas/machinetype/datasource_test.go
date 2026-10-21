@@ -172,7 +172,6 @@ func TestMapDataSourceFields(t *testing.T) {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
-
 				return
 			}
 
@@ -242,7 +241,6 @@ func TestSortMachineTypeByName(t *testing.T) {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
-
 				return
 			}
 
@@ -251,7 +249,6 @@ func TestSortMachineTypeByName(t *testing.T) {
 			}
 
 			var result []string
-
 			for _, mt := range sorted {
 				result = append(result, mt.Name)
 			}

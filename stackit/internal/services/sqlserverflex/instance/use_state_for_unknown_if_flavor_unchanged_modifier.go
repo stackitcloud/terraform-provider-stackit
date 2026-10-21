@@ -51,17 +51,14 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx contex
 
 	diags := req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var stateFlavor = &flavorModel{}
-
 	if !(stateModel.Flavor.IsNull() || stateModel.Flavor.IsUnknown()) {
 		diags = stateModel.Flavor.As(ctx, stateFlavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -71,17 +68,14 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx contex
 
 	diags = req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planFlavor = &flavorModel{}
-
 	if !(planModel.Flavor.IsNull() || planModel.Flavor.IsUnknown()) {
 		diags = planModel.Flavor.As(ctx, planFlavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}

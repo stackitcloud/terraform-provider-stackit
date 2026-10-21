@@ -60,7 +60,6 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -142,7 +141,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -153,7 +151,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	instanceId := model.InstanceId.ValueString()
 	userIdStr := model.UserId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
@@ -163,7 +160,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
-
 		return
 	}
 
@@ -190,7 +186,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
-
 		return
 	}
 
@@ -198,14 +193,12 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	err = mapDataSourceFields(recordSetResp, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -227,7 +220,6 @@ func mapDataSourceFields(userResp *postgresflex.GetUserResponse, instanceResp *p
 	}
 
 	var userId string
-
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
 	} else {

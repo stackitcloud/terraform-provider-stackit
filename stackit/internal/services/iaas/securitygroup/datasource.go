@@ -53,7 +53,6 @@ func (d *securityGroupDataSource) Configure(ctx context.Context, req datasource.
 // Schema defines the schema for the resource.
 func (d *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Security group datasource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -110,7 +109,6 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -147,13 +145,11 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 	err = mapFields(ctx, securityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

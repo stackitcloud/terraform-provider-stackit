@@ -88,7 +88,6 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.DremioExperiment, "stackit_dremio_instance", core.Datasource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -164,7 +163,6 @@ func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *A
 
 		if len(oauthResp.Parameters) > 0 {
 			var params []AuthParameterModel
-
 			for _, p := range oauthResp.Parameters {
 				params = append(params, AuthParameterModel{
 					Name:  types.StringValue(p.Name),
@@ -317,9 +315,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// nolint:gocritic // function signature required by Terraform
 	var model InstanceDataSourceModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -329,7 +325,6 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -356,13 +351,11 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapDatasourceFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

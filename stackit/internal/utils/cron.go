@@ -19,7 +19,6 @@ func SimplifyCronString(cron string) string {
 	})
 
 	whiteSpaceRegex := regexp.MustCompile(`\s+`)
-
 	simplifiedCron = whiteSpaceRegex.ReplaceAllString(simplifiedCron, " ")
 
 	return simplifiedCron

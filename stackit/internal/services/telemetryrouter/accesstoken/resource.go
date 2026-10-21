@@ -84,7 +84,6 @@ func (r *telemetryRouterAccessTokenResource) Configure(ctx context.Context, req 
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -103,27 +102,22 @@ func (r *telemetryRouterAccessTokenResource) ModifyPlan(ctx context.Context, req
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -247,7 +241,6 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -257,7 +250,6 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 	instanceId := model.InstanceID.ValueString()
 	projectId := model.ProjectID.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -265,14 +257,12 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 	payload, err := toCreatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateAccessToken(ctx, projectId, region, instanceId).CreateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -280,7 +270,6 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 
 	if createResp == nil || createResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", "Create API response: Incomplete response (id missing)")
-
 		return
 	}
 
@@ -299,13 +288,11 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 	waitResp, err := wait.CreateAccessTokenWaitHandler(ctx, r.client, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
-
 		return
 	}
 
 	if waitResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", "Got empty credential id")
-
 		return
 	}
 
@@ -315,13 +302,11 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 	err = mapFields(ctx, createResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -334,7 +319,6 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -349,7 +333,6 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 	if accessTokenID == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -363,10 +346,8 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -380,13 +361,11 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 	err = mapFields(ctx, accessTokenResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -401,7 +380,6 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -421,14 +399,12 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	accessTokenResponse, err := r.client.UpdateAccessToken(ctx, projectID, region, instanceID, accessTokenID).UpdateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -437,20 +413,17 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 	_, err = wait.UpdateAccessTokenWaitHandler(ctx, r.client, projectID, region, instanceID, accessTokenResponse.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, accessTokenResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -465,7 +438,6 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -485,7 +457,6 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 	err := r.client.DeleteAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter access token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -494,7 +465,6 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 	_, err = wait.DeleteAccessTokenWaitHandler(ctx, r.client, projectID, region, instanceID, accessTokenID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become deleted: %v", err))
-
 		return
 	}
 
@@ -505,7 +475,6 @@ func (r *telemetryRouterAccessTokenResource) ImportState(ctx context.Context, re
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryRouter access token", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`,`access_token_id`", req.ID))
-
 		return
 	}
 
@@ -563,8 +532,8 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		description = v.Description
 		displayName = v.DisplayName
 		status = string(v.Status)
-		hasExpirationTime = v.HasExpirationTime()
 
+		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()
 		}
@@ -582,8 +551,8 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		description = v.Description
 		displayName = v.DisplayName
 		status = string(v.Status)
-		hasExpirationTime = v.HasExpirationTime()
 
+		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()
 		}
@@ -597,8 +566,8 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		description = v.Description
 		displayName = v.DisplayName
 		status = string(v.Status)
-		hasExpirationTime = v.HasExpirationTime()
 
+		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()
 		}
@@ -607,7 +576,6 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 	}
 
 	var accessTokenID string
-
 	if model.AccessTokenID.ValueString() != "" {
 		accessTokenID = model.AccessTokenID.ValueString()
 	} else if id != "" {

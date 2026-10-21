@@ -112,7 +112,6 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -150,28 +149,24 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	if credentialsGroupResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credentials", fmt.Sprintf("Response is nil: %v", err))
-
 		return
 	}
 
 	credential := findCredential(*credentialsGroupResp, credentialId)
 	if credential == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading credential", fmt.Sprintf("Credential with ID %q not found in credentials group %q", credentialId, credentialsGroupId))
-
 		return
 	}
 
 	err = mapDataSourceFields(credential, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -189,7 +184,6 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 	}
 
 	var credentialId string
-
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
 	} else if credentialResp.KeyId != "" {
@@ -227,7 +221,6 @@ func findCredential(credentialsGroupResp objectstorage.ListAccessKeysResponse, c
 		if credential.KeyId != credentialId {
 			continue
 		}
-
 		return &credential
 	}
 

@@ -54,7 +54,6 @@ func TestAdaptRegion(t *testing.T) {
 			types.StringValue("eu01-m"),
 		},
 	}
-
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			plan := tfsdk.Plan{

@@ -34,7 +34,6 @@ var testConfigProviderCredentials = config.Variables{
 // Based on os.UserHomeDir().
 func getHomeEnvVariableName() string {
 	env := "HOME"
-
 	switch runtime.GOOS {
 	case "windows":
 		env = "USERPROFILE"
@@ -108,7 +107,6 @@ func cleanupTemporaryHome(tempHomePath string, t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to restore home directory back to normal: %v", err)
 	}
-
 	// revert back to original home folder
 	env := getHomeEnvVariableName()
 	if err := os.Setenv(env, originalHomeDir); err != nil {
@@ -131,7 +129,6 @@ func TestAccEnvVarTokenValid(t *testing.T) {
 		t.Skipf(
 			"Acceptance tests skipped unless env '%s' set",
 			resource.EnvTfAcc)
-
 		return
 	}
 
@@ -144,7 +141,6 @@ func TestAccEnvVarTokenValid(t *testing.T) {
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", token)
 
 	tempHomeFolder := createTemporaryHome(false, t)
-
 	defer cleanupTemporaryHome(tempHomeFolder, t)
 
 	resource.Test(t, resource.TestCase{
@@ -164,7 +160,6 @@ func TestAccEnvVarTokenInvalid(t *testing.T) {
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "foo")
 
 	tempHomeFolder := createTemporaryHome(false, t)
-
 	defer cleanupTemporaryHome(tempHomeFolder, t)
 
 	resource.Test(t, resource.TestCase{
@@ -185,7 +180,6 @@ func TestAccCredentialsFileValid(t *testing.T) {
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "")
 
 	tempHomeFolder := createTemporaryHome(true, t)
-
 	defer cleanupTemporaryHome(tempHomeFolder, t)
 
 	resource.Test(t, resource.TestCase{
@@ -205,7 +199,6 @@ func TestAccCredentialsFileInvalid(t *testing.T) {
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "")
 
 	tempHomeFolder := createTemporaryHome(false, t)
-
 	defer cleanupTemporaryHome(tempHomeFolder, t)
 
 	resource.Test(t, resource.TestCase{
@@ -227,10 +220,8 @@ func TestAccProviderConfigureValidValues(t *testing.T) {
 		t.Skipf(
 			"Acceptance tests skipped unless env '%s' set",
 			resource.EnvTfAcc)
-
 		return
 	}
-
 	// use service account token for these tests
 	token, err := getServiceAccountToken()
 	if err != nil {
@@ -241,7 +232,6 @@ func TestAccProviderConfigureValidValues(t *testing.T) {
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", token)
 
 	tempHomeFolder := createTemporaryHome(true, t)
-
 	defer cleanupTemporaryHome(tempHomeFolder, t)
 
 	resource.Test(t, resource.TestCase{
@@ -261,10 +251,8 @@ func TestAccProviderConfigureAnInvalidValue(t *testing.T) {
 		t.Skipf(
 			"Acceptance tests skipped unless env '%s' set",
 			resource.EnvTfAcc)
-
 		return
 	}
-
 	// use service account token for these tests
 	token, err := getServiceAccountToken()
 	if err != nil {
@@ -275,7 +263,6 @@ func TestAccProviderConfigureAnInvalidValue(t *testing.T) {
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", token)
 
 	tempHomeFolder := createTemporaryHome(true, t)
-
 	defer cleanupTemporaryHome(tempHomeFolder, t)
 
 	resource.Test(t, resource.TestCase{

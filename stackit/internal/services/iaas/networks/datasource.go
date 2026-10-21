@@ -69,7 +69,6 @@ func (d *networksDataSource) Configure(ctx context.Context, req datasource.Confi
 	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_networks", "datasource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -128,7 +127,6 @@ func (d *networksDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -163,13 +161,11 @@ func (d *networksDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, networksResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping networks", err.Error())
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -195,7 +191,6 @@ func mapFields(ctx context.Context, networksResp *iaas.NetworkListResponse, mode
 			NetworkId: types.StringValue(netResp.Id),
 			Name:      types.StringValue(netResp.Name),
 		}
-
 		items = append(items, item)
 	}
 

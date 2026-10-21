@@ -52,7 +52,6 @@ func CheckExperimentEnabledWithoutError(ctx context.Context, data *core.Provider
 		errTitle := fmt.Sprintf("The experimental feature %s does not exist.", experiment)
 		errContent := "This is a bug in the STACKIT Terraform Provider. Please open an issue here: https://github.com/stackitcloud/terraform-provider-stackit/issues"
 		diags.AddError(errTitle, errContent)
-
 		return false
 	}
 

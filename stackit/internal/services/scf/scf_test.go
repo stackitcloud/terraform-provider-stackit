@@ -22,7 +22,6 @@ func TestScfOrganizationSavesIDsOnError(t *testing.T) {
 	const name = "scf-org-error-test"
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`

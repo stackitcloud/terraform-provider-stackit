@@ -125,7 +125,6 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -165,14 +164,12 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup schedule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

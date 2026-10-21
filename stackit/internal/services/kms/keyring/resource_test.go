@@ -73,8 +73,8 @@ func TestMapFields(t *testing.T) {
 				ProjectId: tt.expected.ProjectId,
 				KeyRingId: tt.expected.KeyRingId,
 			}
-			err := mapFields(tt.input, state, testRegion)
 
+			err := mapFields(tt.input, state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

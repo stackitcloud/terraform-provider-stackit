@@ -134,7 +134,6 @@ func (d *imagesDataSource) Configure(ctx context.Context, req datasource.Configu
 	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_images", "datasource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -262,7 +261,6 @@ func toRequest(ctx context.Context, client iaas.DefaultAPI, model *DataSourceMod
 		var filter filterModel
 
 		diags := model.Filter.As(ctx, &filter, basetypes.ObjectAsOptions{})
-
 		if diags.HasError() {
 			return iaas.ApiListImagesRequest{}, fmt.Errorf("converting filter: %w", core.DiagsToError(diags))
 		}
@@ -278,42 +276,34 @@ func toRequest(ctx context.Context, client iaas.DefaultAPI, model *DataSourceMod
 // nolint:gocritic // framework signature required
 func (d *imagesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var model DataSourceModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
-
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", model.ProjectID.ValueString())
 	ctx = tflog.SetField(ctx, "region", region)
 
 	request, err := toRequest(ctx, d.client, &model, &d.providerData)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Creating API request: %v", err))
-
 		return
 	}
 
 	apiResponse, err := request.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -321,12 +311,10 @@ func (d *imagesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	if err = mapFields(ctx, apiResponse, &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -420,8 +408,8 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 			VideoModel:             types.StringPointerValue(c.VideoModel.Get()),
 			VirtioScsi:             types.BoolPointerValue(c.VirtioScsi),
 		}
-		obj, ds := types.ObjectValueFrom(ctx, configAttrTypes, config)
 
+		obj, ds := types.ObjectValueFrom(ctx, configAttrTypes, config)
 		if ds.HasError() {
 			return m, fmt.Errorf("mapping config: %w", core.DiagsToError(ds))
 		}
@@ -436,8 +424,8 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 			Algorithm: types.StringValue(image.Checksum.Algorithm),
 			Digest:    types.StringValue(image.Checksum.Digest),
 		}
-		obj, ds := types.ObjectValueFrom(ctx, checksumAttrTypes, cs)
 
+		obj, ds := types.ObjectValueFrom(ctx, checksumAttrTypes, cs)
 		if ds.HasError() {
 			return m, fmt.Errorf("mapping checksum: %w", core.DiagsToError(ds))
 		}

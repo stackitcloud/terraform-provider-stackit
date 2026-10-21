@@ -50,7 +50,6 @@ var testConfigVarsMaxPrivatePreview = config.Variables{
 
 func configVarsMaxPrivatePreviewUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMaxPrivatePreview)
-
 	temp["backup_schedule"] = config.StringVariable("0 12 * * *")
 	temp["acl1"] = config.StringVariable("192.168.2.0/16")
 	temp["retention_days"] = config.IntegerVariable(40)

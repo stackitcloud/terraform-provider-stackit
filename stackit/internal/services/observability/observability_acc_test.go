@@ -129,16 +129,13 @@ var testConfigVarsMax = config.Variables{
 func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
-
 	tempConfig["alert_rule_name"] = config.StringVariable("alert1-updated")
-
 	return tempConfig
 }
 
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
-
 	tempConfig["plan_name"] = config.StringVariable("Observability-Large-EU01")
 	tempConfig["alert_interval"] = config.StringVariable("1h")
 	tempConfig["alert_rule_expression"] = config.StringVariable(alert_rule_expression_updated)
@@ -1082,15 +1079,12 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_observability_instance" {
 			continue
 		}
-
 		// instance terraform ID: = "[project_id],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

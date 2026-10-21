@@ -163,7 +163,6 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -202,13 +201,11 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 	err = mapFields(securityGroupRuleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

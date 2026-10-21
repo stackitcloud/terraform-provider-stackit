@@ -76,8 +76,8 @@ func TestMapFields(t *testing.T) {
 				ServerId:  tt.expected.ServerId,
 			}
 			ctx := context.TODO()
-			err := mapFields(ctx, tt.input, state, "eu01")
 
+			err := mapFields(ctx, tt.input, state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

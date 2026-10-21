@@ -480,27 +480,22 @@ func (r *vpnConnectionResource) ModifyPlan(ctx context.Context, req resource.Mod
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -533,7 +528,6 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -545,7 +539,6 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -555,7 +548,6 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	projectId := planModel.ProjectID.ValueString()
 	region := r.providerData.GetRegionWithOverride(planModel.Region)
 	gatewayId := planModel.GatewayID.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -563,14 +555,12 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	payload, err := toCreatePayload(ctx, &planModel, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateGatewayConnection(ctx, projectId, region, gatewayId).CreateGatewayConnectionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -579,13 +569,11 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	err = mapResourceFields(ctx, createResp, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -598,7 +586,6 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -609,7 +596,6 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	gatewayId := model.GatewayID.ValueString()
 	connectionId := model.ConnectionID.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -619,7 +605,6 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -633,13 +618,11 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 	err = mapResourceFields(ctx, connResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -653,7 +636,6 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -664,7 +646,6 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -676,7 +657,6 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -687,7 +667,6 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	region := r.providerData.GetRegionWithOverride(planModel.Region)
 	gatewayId := planModel.GatewayID.ValueString()
 	connectionId := planModel.ConnectionID.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -696,14 +675,12 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	payload, err := toUpdatePayload(ctx, &planModel, &stateModel, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	connResp, err := r.client.UpdateGatewayConnection(ctx, projectId, region, gatewayId, connectionId).UpdateGatewayConnectionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", err.Error())
-
 		return
 	}
 
@@ -712,13 +689,11 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	err = mapResourceFields(ctx, connResp, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -731,7 +706,6 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -742,7 +716,6 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	gatewayId := model.GatewayID.ValueString()
 	connectionId := model.ConnectionID.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -752,7 +725,6 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -1017,7 +989,6 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 	}
 
 	var connectionId string
-
 	if respConnectionId, _ := conn.GetIdOk(); respConnectionId != nil {
 		connectionId = *respConnectionId
 	} else if model.ConnectionID.ValueString() != "" {
@@ -1032,7 +1003,6 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 	model.Region = types.StringValue(region)
 
 	enabled, _ := conn.GetEnabledOk()
-
 	model.Enabled = types.BoolPointerValue(enabled)
 
 	model.RemoteSubnets = types.ListNull(types.StringType)
@@ -1193,7 +1163,6 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhasePayload) (phase BasePha
 	}
 
 	rekeyTime, _ := apiPhase.GetRekeyTimeOk()
-
 	phase.RekeyTime = types.Int32PointerValue(rekeyTime)
 
 	return phase, nil

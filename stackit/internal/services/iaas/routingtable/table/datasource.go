@@ -51,7 +51,6 @@ func (d *routingTableDataSource) Configure(ctx context.Context, req datasource.C
 	d.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_table", core.Datasource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -63,7 +62,6 @@ func (d *routingTableDataSource) Configure(ctx context.Context, req datasource.C
 func (d *routingTableDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Routing table datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This datasource is for SNA, not VPC, based networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Datasource),
@@ -77,7 +75,6 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -88,7 +85,6 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -116,13 +112,11 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	err = mapDatasourceFields(ctx, routingTableResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -140,7 +134,6 @@ func mapDatasourceFields(ctx context.Context, routingTable *iaas.RoutingTable, m
 	}
 
 	var routingTableId string
-
 	if model.RoutingTableId.ValueString() != "" {
 		routingTableId = model.RoutingTableId.ValueString()
 	} else if routingTable.Id != nil {
@@ -155,7 +148,6 @@ func mapDatasourceFields(ctx context.Context, routingTable *iaas.RoutingTable, m
 		model.NetworkAreaId.ValueString(),
 		routingTableId,
 	}
-
 	model.Id = types.StringValue(
 		strings.Join(idParts, core.Separator),
 	)

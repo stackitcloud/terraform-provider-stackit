@@ -83,8 +83,8 @@ func TestMapTokenFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapToken(ctx, tt.input, tt.state, "eu01", "id")
 
+			err := mapToken(ctx, tt.input, tt.state, "eu01", "id")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -213,8 +213,8 @@ func TestMapCreateResponseFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapCreateResponse(ctx, tt.input, tt.state, "eu01", "id")
 
+			err := mapCreateResponse(ctx, tt.input, tt.state, "eu01", "id")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

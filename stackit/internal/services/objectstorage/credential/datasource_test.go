@@ -16,6 +16,7 @@ func TestMapDatasourceFields(t *testing.T) {
 	const testRegion = "eu01"
 
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
+
 	tests := []struct {
 		description string
 		input       *objectstorage.AccessKey
@@ -103,7 +104,6 @@ func TestMapDatasourceFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &DataSourceModel{
@@ -111,8 +111,8 @@ func TestMapDatasourceFields(t *testing.T) {
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 				CredentialId:       tt.expected.CredentialId,
 			}
-			err := mapDataSourceFields(tt.input, model, "eu01")
 
+			err := mapDataSourceFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

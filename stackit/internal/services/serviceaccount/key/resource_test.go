@@ -34,8 +34,8 @@ func TestComputeValidUntil(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			int64TTlDays := int64(*tt.ttlDays)
-			validUntil, err := computeValidUntil(&int64TTlDays)
 
+			validUntil, err := computeValidUntil(&int64TTlDays)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -93,8 +93,8 @@ func TestMapResponse(t *testing.T) {
 				Json:                types.StringValue("{}"),
 				RotateWhenChanged:   types.MapValueMust(types.StringType, map[string]attr.Value{}),
 			}
-			err := mapCreateResponse(tt.input, model)
 
+			err := mapCreateResponse(tt.input, model)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -107,7 +107,6 @@ func TestMapResponse(t *testing.T) {
 				model.Json = types.StringValue("{}")
 
 				diff := cmp.Diff(*model, tt.expected)
-
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

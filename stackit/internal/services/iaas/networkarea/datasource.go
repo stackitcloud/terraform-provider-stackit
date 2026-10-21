@@ -55,7 +55,6 @@ func (d *networkAreaDataSource) Configure(ctx context.Context, req datasource.Co
 func (d *networkAreaDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Network area datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This datasource is for SNA, not VPC, networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,
@@ -110,7 +109,6 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -145,13 +143,11 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	err = mapFields(ctx, networkAreaResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

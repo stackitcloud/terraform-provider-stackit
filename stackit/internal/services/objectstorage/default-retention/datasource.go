@@ -93,7 +93,6 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -112,10 +111,8 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 	result, err := d.client.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -129,14 +126,12 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 	err = mapFields(result, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading default-retention", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

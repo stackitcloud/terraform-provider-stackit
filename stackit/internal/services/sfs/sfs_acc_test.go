@@ -60,9 +60,7 @@ var testConfigExportPolicyVarsMin = config.Variables{
 var testConfigExportPolicyVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigExportPolicyVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-
 	return updatedConfig
 }
 
@@ -106,7 +104,6 @@ var testConfigResourcePoolVarsMin = config.Variables{
 var testConfigResourcePoolVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigResourcePoolVarsMin)
-
 	updatedConfig["performance_class"] = config.StringVariable("Premium")
 	updatedConfig["size_gigabytes"] = config.IntegerVariable(512)
 	updatedConfig["ip_acl"] = config.ListVariable(config.StringVariable("172.17.0.0/24"), config.StringVariable("172.17.0.250/32"))
@@ -132,7 +129,6 @@ var testConfigResourcePoolVarsMax = config.Variables{
 var testConfigResourcePoolVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigResourcePoolVarsMax)
-
 	updatedConfig["performance_class"] = config.StringVariable("Premium")
 	updatedConfig["snapshots_are_visible"] = config.BoolVariable(false)
 	updatedConfig["size_gigabytes"] = config.IntegerVariable(1024)
@@ -154,9 +150,7 @@ var testConfigShareVarsMin = config.Variables{
 var testConfigShareVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigShareVarsMin)
-
 	updatedConfig["space_hard_limit_gigabytes"] = config.IntegerVariable(50)
-
 	return updatedConfig
 }
 
@@ -175,7 +169,6 @@ var testConfigShareVarsMax = config.Variables{
 var testConfigShareVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigShareVarsMax)
-
 	updatedConfig["space_hard_limit_gigabytes"] = config.IntegerVariable(50)
 	updatedConfig["label"] = config.StringVariable("bar")
 
@@ -1037,15 +1030,12 @@ func testAccExportPolicyDestroy(s *terraform.State) error {
 	}
 
 	policyToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_sfs_export_policy" {
 			continue
 		}
-
 		// export policy transform id: "[projectId],[region],[policyId]"
 		policyId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		policyToDestroy = append(policyToDestroy, policyId)
 	}
 
@@ -1078,15 +1068,12 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 	}
 
 	resourcePoolsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_sfs_resource_pool" {
 			continue
 		}
-
 		// export policy transform id: "[project_id],[region],[resource_pool_id]"
 		resourcePoolId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		resourcePoolsToDestroy = append(resourcePoolsToDestroy, resourcePoolId)
 	}
 
@@ -1141,16 +1128,13 @@ func testAccProjectLockDestroyed(s *terraform.State) error {
 	}
 
 	var projectLocksToDestroy []projectLock
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_sfs_project_lock" {
 			continue
 		}
-
 		// transform id: "[projectId],[region]"
 		projectId := rs.Primary.Attributes["project_id"]
 		region := rs.Primary.Attributes["region"]
-
 		projectLocksToDestroy = append(projectLocksToDestroy,
 			projectLock{
 				ProjectId: projectId,
@@ -1165,7 +1149,6 @@ func testAccProjectLockDestroyed(s *terraform.State) error {
 			var oapiErr *oapierror.GenericOpenAPIError
 
 			ok := errors.As(err, &oapiErr)
-
 			if !(ok && oapiErr.StatusCode == http.StatusNotFound) {
 				errs = append(errs, err)
 			}

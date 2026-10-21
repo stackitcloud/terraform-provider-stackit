@@ -151,7 +151,6 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -162,7 +161,6 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -191,14 +189,12 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	err = mapDataSourceFields(ctx, recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -222,7 +218,6 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *valkey.Credential
 	credentials := credentialsResp.Raw.Credentials
 
 	var credentialId string
-
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
 	} else if credentialsResp.Id != "" {

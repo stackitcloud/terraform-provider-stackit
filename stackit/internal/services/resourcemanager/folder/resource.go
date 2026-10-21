@@ -187,7 +187,6 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -196,7 +195,6 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	containerParentId := model.ContainerParentId.ValueString()
 	folderName := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "container_parent_id", containerParentId)
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 
@@ -204,14 +202,12 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	folderCreateResp, err := r.client.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -219,7 +215,6 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	if folderCreateResp.ContainerId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", "Container ID is missing")
-
 		return
 	}
 
@@ -237,14 +232,12 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 	folderGetResponse, err := r.client.GetFolderDetails(ctx, folderCreateResp.ContainerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	err = mapFolderFields(ctx, folderGetResponse, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "API response processing error", err.Error())
-
 		return
 	}
 
@@ -258,7 +251,6 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -269,22 +261,18 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if containerId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
 	folderName := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -298,14 +286,12 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	err = mapFolderFields(ctx, folderResp, &model.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	// Set refreshed model
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -320,7 +306,6 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -330,7 +315,6 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -338,22 +322,18 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := planModel.ContainerId.ValueString()
-
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Generate API request body from model
 	payload, err := toUpdatePayload(ctx, &planModel, &stateModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing folder
 	_, err = r.client.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -363,20 +343,17 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API for updated data: %v", err))
-
 		return
 	}
 
 	err = mapFolderFields(ctx, folderResp, &planModel.Model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -391,7 +368,6 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -399,17 +375,14 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
-
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing folder
 	err := r.client.DeleteFolder(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -459,7 +432,6 @@ func mapFolderFields(
 	}
 
 	var folderId string
-
 	if model.FolderId.ValueString() != "" {
 		folderId = model.FolderId.ValueString()
 	} else if folderGetResponse.FolderId != "" {
@@ -469,7 +441,6 @@ func mapFolderFields(
 	}
 
 	var containerId string
-
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
 	} else if folderGetResponse.ContainerId != "" {
@@ -484,7 +455,6 @@ func mapFolderFields(
 	}
 
 	var containerParentIdTF types.String
-
 	if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
 		// the provided containerParent is the UUID identifier
 		containerParentIdTF = types.StringValue(folderGetResponse.Parent.Id)

@@ -53,7 +53,6 @@ var testConfigInstanceVarsPrivatePreviewMax = config.Variables{
 var testConfigInstanceVarsPrivatePreviewMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigInstanceVarsPrivatePreviewMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))

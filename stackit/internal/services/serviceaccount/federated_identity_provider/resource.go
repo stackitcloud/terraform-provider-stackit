@@ -174,7 +174,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -183,14 +182,12 @@ func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating federated identity provider", fmt.Sprintf("failed to convert model to payload: %v", err))
-
 		return
 	}
 
@@ -199,7 +196,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating federated identity provider", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -207,7 +203,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating federated identity provider", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -219,7 +214,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -239,7 +233,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 		// due to security purposes, attempting to get access federation for a non-existent Service Account will return 403.
 		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -252,7 +245,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("failed to map response to model: %v", err))
-
 		return
 	}
 
@@ -265,7 +257,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -275,7 +266,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -291,7 +281,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating federated identity provider", fmt.Sprintf("failed to convert model to payload: %v", err))
-
 		return
 	}
 
@@ -300,7 +289,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating federated identity provider", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -308,7 +296,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating federated identity provider", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -320,7 +307,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Delete(ctx context.Con
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -335,7 +321,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Delete(ctx context.Con
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting federated identity provider", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -397,8 +382,8 @@ func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityPro
 
 	model.Id = utils.BuildInternalTerraformId(projectId, serviceAccountEmail, federationId)
 	model.ProjectId = types.StringValue(projectId)
-	model.ServiceAccountEmail = types.StringValue(serviceAccountEmail)
 
+	model.ServiceAccountEmail = types.StringValue(serviceAccountEmail)
 	if federationId != "" {
 		model.FederationId = types.StringValue(federationId)
 	} else {
@@ -435,7 +420,6 @@ func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityPro
 				"value":    types.StringType,
 			},
 		}, assertions)
-
 		model.Assertions = assertionsValue
 	} else {
 		model.Assertions = types.ListNull(types.ObjectType{
@@ -460,7 +444,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*serviceaccount.CreateF
 		var assertions []AssertionModel
 
 		diags := model.Assertions.ElementsAs(ctx, &assertions, false)
-
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to extract assertions from model")
 		}
@@ -499,7 +482,6 @@ func toUpdatePayload(ctx context.Context, model *Model) (*serviceaccount.Partial
 		var assertions []AssertionModel
 
 		diags := model.Assertions.ElementsAs(ctx, &assertions, false)
-
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to extract assertions from model")
 		}

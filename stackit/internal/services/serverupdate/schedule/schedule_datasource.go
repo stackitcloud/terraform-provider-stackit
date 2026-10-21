@@ -113,7 +113,6 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -124,7 +123,6 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	serverId := model.ServerId.ValueString()
 	updateScheduleId := model.UpdateScheduleId.ValueInt32()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
@@ -153,14 +151,12 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(scheduleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update schedule", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

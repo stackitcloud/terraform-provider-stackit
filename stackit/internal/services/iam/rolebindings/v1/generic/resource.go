@@ -68,7 +68,6 @@ func (r *RoleBindingResource[C]) Configure(ctx context.Context, req resource.Con
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.IamExperiment, fmt.Sprintf("stackit_%s_%s_role_binding_v1", r.ApiName, r.ResourceType), core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -124,7 +123,6 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -140,7 +138,6 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 	roleBindingResp, err := r.ExecCreateRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -149,13 +146,11 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -176,7 +171,6 @@ func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequ
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -193,7 +187,6 @@ func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequ
 	roleBindingResp, err := r.ExecReadRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error reading %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -203,14 +196,12 @@ func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequ
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error reading %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -224,7 +215,6 @@ func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.Update
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -240,7 +230,6 @@ func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.Update
 	roleBindingResp, err := r.ExecUpdateRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error updating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -249,13 +238,11 @@ func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.Update
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error updating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -276,7 +263,6 @@ func (r *RoleBindingResource[C]) Delete(ctx context.Context, req resource.Delete
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

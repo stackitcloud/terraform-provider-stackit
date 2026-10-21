@@ -8,7 +8,6 @@ func IsEmptyNetwork(network *ske.Network) bool {
 	if !network.HasId() && !network.HasControlPlane() {
 		return true
 	}
-
 	return false
 }
 
@@ -16,6 +15,5 @@ func IsEmptyExtension(extension *ske.Extension) bool {
 	if !extension.HasDns() && !extension.HasAcl() && !extension.HasObservability() {
 		return true
 	}
-
 	return false
 }

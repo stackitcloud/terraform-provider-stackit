@@ -146,7 +146,6 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	orgId := model.OrgId.ValueString()
 
 	region := s.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -173,7 +172,6 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	err = mapFieldsDataSource(ScfOrgManager, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 

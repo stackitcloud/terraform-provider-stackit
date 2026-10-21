@@ -382,7 +382,6 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -392,7 +391,6 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(state.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -419,14 +417,12 @@ func (r *clusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	err = mapFields(ctx, clusterResp, &state, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

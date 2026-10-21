@@ -124,8 +124,8 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(context.Background(), tt.input, state)
 
+			err := mapFields(context.Background(), tt.input, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

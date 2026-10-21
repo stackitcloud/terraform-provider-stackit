@@ -31,7 +31,6 @@ func startMockTokenServer() *httptest.Server {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-
 		_ = json.NewEncoder(w).Encode(resp) // nolint:gosec // mock_access_token is not sensitive information
 	})
 
@@ -184,7 +183,6 @@ func TestGetAccessToken(t *testing.T) {
 			setupEnv: func() {
 				// Write temp file and set env
 				tmpFile := writeTempPEMFile(t, privateKey)
-
 				_ = os.Setenv("STACKIT_PRIVATE_KEY_PATH", tmpFile)
 			},
 			cleanupEnv: func() {

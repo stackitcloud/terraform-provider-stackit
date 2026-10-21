@@ -136,13 +136,11 @@ func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx = core.InitProviderContext(ctx)
-
 	projectId := model.ProjectId.ValueString()
 
 	// Compile the regex if provided
@@ -150,12 +148,10 @@ func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 		compiledRegex *regexp.Regexp
 		err           error
 	)
-
 	if !model.EmailRegex.IsNull() && model.EmailRegex.ValueString() != "" {
 		compiledRegex, err = regexp.Compile(model.EmailRegex.ValueString())
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid email_regex", err.Error())
-
 			return
 		}
 	}
@@ -182,7 +178,6 @@ func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 	err = mapDataSourceFields(listSaResp.Items, &model, compiledRegex)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service accounts", fmt.Sprintf("Error processing API response: %v", err))
-
 		return
 	}
 
@@ -230,8 +225,8 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 
 	sort.SliceStable(matchedItems, func(i, j int) bool {
 		emailA := matchedItems[i].Email.ValueString()
-		emailB := matchedItems[j].Email.ValueString()
 
+		emailB := matchedItems[j].Email.ValueString()
 		if sortAsc {
 			return emailA < emailB
 		}

@@ -134,7 +134,6 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,7 +143,6 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	// Set logging context with the project ID and service account name.
 	projectId := model.ProjectId.ValueString()
 	serviceAccountName := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_name", serviceAccountName)
 
@@ -152,7 +150,6 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -160,7 +157,6 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	serviceAccountResp, err := r.client.CreateServiceAccount(ctx, projectId).CreateServiceAccountPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -172,7 +168,6 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	err = mapFields(serviceAccountResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
@@ -182,7 +177,6 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -197,7 +191,6 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -211,10 +204,8 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -236,7 +227,6 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 		err = mapFields(&serviceAccounts[i], &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error processing API response: %v", err))
-
 			return
 		}
 
@@ -264,7 +254,6 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -274,7 +263,6 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	projectId := model.ProjectId.ValueString()
 	serviceAccountName := model.Name.ValueString()
 	serviceAccountEmail := model.Email.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "service_account_name", serviceAccountName)
 
@@ -282,10 +270,8 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	err := r.client.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 

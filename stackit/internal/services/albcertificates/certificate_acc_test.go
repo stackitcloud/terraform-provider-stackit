@@ -241,15 +241,12 @@ func testAccCheckCertDestroy(s *terraform.State) error {
 	}
 
 	certificatesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_certificate" {
 			continue
 		}
-
 		// certificate terraform ID: = "[project_id],[region],[cert_id]"
 		certificateID := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		certificatesToDestroy = append(certificatesToDestroy, certificateID)
 	}
 
@@ -260,7 +257,6 @@ func testAccCheckCertDestroy(s *terraform.State) error {
 
 	if certificateResp.Items == nil || (certificateResp.Items != nil && len(certificateResp.Items) == 0) {
 		fmt.Print("No certificates found for project \n")
-
 		return nil
 	}
 

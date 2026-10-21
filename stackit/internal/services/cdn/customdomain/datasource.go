@@ -56,7 +56,6 @@ func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.C
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_cdn_custom_domain", core.Datasource)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -124,7 +123,6 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -132,15 +130,10 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-
 	distributionId := model.DistributionId.ValueString()
-
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
-
 	name := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "name", name)
 
 	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
@@ -164,14 +157,12 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	err = mapCustomDomainDataSourceFields(customDomainResp, &model, projectId, distributionId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN custom domain", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -228,7 +219,6 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 	model.Status = types.StringValue(string(customDomainResponse.CustomDomain.Status))
 
 	customDomainErrors := []attr.Value{}
-
 	if customDomainResponse.CustomDomain.Errors != nil {
 		for _, e := range customDomainResponse.CustomDomain.Errors {
 			if e.En == "" {

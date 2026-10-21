@@ -239,7 +239,6 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -249,7 +248,6 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -274,11 +272,9 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = core.LogResponse(ctx)
 
 	var options = &optionsModel{}
-
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -301,14 +297,11 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, instanceResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

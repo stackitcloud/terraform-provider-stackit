@@ -128,7 +128,6 @@ var testConfigVarsMax = config.Variables{
 func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
-
 	tempConfig["listener_port"] = config.StringVariable("1234")
 	tempConfig["host"] = config.StringVariable("www.example.com")
 	tempConfig["target_pool_port"] = config.StringVariable("5431")
@@ -139,7 +138,6 @@ func configVarsMinUpdated() config.Variables {
 func configVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
-
 	tempConfig["ephemeral_address"] = config.BoolVariable(false)
 	tempConfig["web_socket"] = config.BoolVariable(false)
 	tempConfig["query_parameters"] = config.ListVariable(
@@ -657,15 +655,12 @@ func testAccCheckALBDestroy(s *terraform.State) error {
 	}
 
 	loadBalancersToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_application_load_balancer" {
 			continue
 		}
-
 		// loadbalancer terraform ID: = "[project_id],[region],[name]"
 		loadBalancerName := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		loadBalancersToDestroy = append(loadBalancersToDestroy, loadBalancerName)
 	}
 
@@ -676,7 +671,6 @@ func testAccCheckALBDestroy(s *terraform.State) error {
 
 	if loadBalancersResp.LoadBalancers == nil || (loadBalancersResp.LoadBalancers != nil && len(loadBalancersResp.LoadBalancers) == 0) {
 		fmt.Print("No load balancers found for project \n")
-
 		return nil
 	}
 

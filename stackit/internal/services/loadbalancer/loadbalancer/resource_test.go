@@ -372,6 +372,7 @@ func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "name")
+
 	tests := []struct {
 		description             string
 		input                   *loadbalancer.LoadBalancer
@@ -758,7 +759,6 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
@@ -860,7 +860,6 @@ func Test_validateConfig(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -1311,7 +1310,6 @@ func Test_mapSessionPersistence(t *testing.T) {
 				if !tt.wantErr {
 					t.Errorf("mapSessionPersistence() failed: %v", gotErr)
 				}
-
 				return
 			}
 

@@ -140,34 +140,28 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Use the modifier to set the effective region in the current plan.
 func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -364,7 +358,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -373,27 +366,22 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var acl []string
-
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var flavor = &flavorModel{}
-
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -401,28 +389,23 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-
 			return
 		}
 	}
 
 	var storage = &storageModel{}
-
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
-
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -432,15 +415,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new instance
 	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -448,13 +428,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	if createResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API response is empty")
-
 		return
 	}
 
 	if createResp.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API response does not contain instance id")
-
 		return
 	}
 
@@ -465,7 +443,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		"region":      region,
 		"instance_id": instanceId,
 	})
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -473,7 +450,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
-
 		return
 	}
 
@@ -481,13 +457,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -495,28 +469,24 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	backupScheduleOptionsPayload, err := toUpdateBackupScheduleOptionsPayload(ctx, &model, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
-
 		return
 	}
 
 	err = mapOptions(&model, options, backupScheduleOptions)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -530,7 +500,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -539,12 +508,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -553,33 +521,27 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var flavor = &flavorModel{}
-
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var storage = &storageModel{}
-
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
-
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -588,10 +550,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -606,14 +566,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -628,7 +585,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -638,28 +594,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var acl []string
-
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		diags = model.ACL.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var flavor = &flavorModel{}
-
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -667,28 +618,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-
 			return
 		}
 	}
 
 	var storage = &storageModel{}
-
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
 	var options = &optionsModel{}
-
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -698,15 +644,12 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	payload, err := toUpdatePayload(&model, acl, flavor, storage, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing instance
 	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
-
 		return
 	}
 
@@ -715,7 +658,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
-
 		return
 	}
 
@@ -723,34 +665,29 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	backupScheduleOptionsPayload, err := toUpdateBackupScheduleOptionsPayload(ctx, &model, options)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
-
 		return
 	}
 
 	err = mapOptions(&model, options, backupScheduleOptions)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -765,7 +702,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -775,7 +711,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -784,10 +719,8 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	err := r.client.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -801,7 +734,6 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -850,7 +782,6 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	instance := resp.Item
 
 	var instanceId string
-
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
 	} else if instance.Id != nil {
@@ -863,7 +794,6 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 		aclList basetypes.ListValue
 		diags   diag.Diagnostics
 	)
-
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
@@ -883,7 +813,6 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	}
 
 	var flavorValues map[string]attr.Value
-
 	if instance.Flavor == nil {
 		flavorValues = map[string]attr.Value{
 			"id":          flavor.Id,
@@ -906,7 +835,6 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	}
 
 	var storageValues map[string]attr.Value
-
 	if instance.Storage == nil {
 		storageValues = map[string]attr.Value{
 			"class": storage.Class,
@@ -925,7 +853,6 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	}
 
 	var optionsValues map[string]attr.Value
-
 	if instance.Options == nil {
 		optionsValues = map[string]attr.Value{
 			"type":                              options.Type,
@@ -1010,7 +937,6 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 
 func mapOptions(model *Model, options *optionsModel, backupScheduleOptions *mongodbflex.BackupSchedule) error {
 	var optionsValues map[string]attr.Value
-
 	if backupScheduleOptions == nil {
 		optionsValues = map[string]attr.Value{
 			"type":                              options.Type,
@@ -1133,7 +1059,6 @@ func toUpdateBackupScheduleOptionsPayload(ctx context.Context, model *Model, con
 	}
 
 	var currOptions = &optionsModel{}
-
 	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
 		diags := model.Options.As(ctx, currOptions, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1225,7 +1150,6 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 		if *f.Cpu == *cpu && *f.Memory == *ram {
 			flavor.Id = types.StringValue(*f.Id)
 			flavor.Description = types.StringValue(*f.Description)
-
 			break
 		}
 

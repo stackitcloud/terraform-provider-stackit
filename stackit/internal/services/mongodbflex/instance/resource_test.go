@@ -1089,8 +1089,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: tt.inputFlavor.CPU,
 				RAM: tt.inputFlavor.RAM,
 			}
-			err := loadFlavorId(context.Background(), client, model, flavorModel, testRegion)
 
+			err := loadFlavorId(context.Background(), client, model, flavorModel, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

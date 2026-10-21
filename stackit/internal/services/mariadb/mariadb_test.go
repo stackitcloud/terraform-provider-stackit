@@ -25,7 +25,6 @@ func TestMariaDBInstanceSavesIDsOnError(t *testing.T) {
 	)
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
@@ -123,7 +122,6 @@ func TestMariaDBCredentialsSavesIDsOnError(t *testing.T) {
 	)
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`

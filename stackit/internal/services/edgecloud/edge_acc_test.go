@@ -366,7 +366,6 @@ func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if !ok || oapiErr.StatusCode != http.StatusNotFound {
 			err := client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 			if err != nil {

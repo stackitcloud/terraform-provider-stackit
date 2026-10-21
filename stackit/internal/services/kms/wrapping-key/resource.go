@@ -84,34 +84,28 @@ func (r *wrappingKeyResource) Configure(ctx context.Context, request resource.Co
 // Use the modifier to set the effective region in the current plan.
 func (r *wrappingKeyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -250,7 +244,6 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -268,14 +261,12 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createWrappingKeyResp, err := r.client.CreateWrappingKey(ctx, projectId, region, keyRingId).CreateWrappingKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -283,7 +274,6 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 
 	if createWrappingKeyResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", "API returned empty response")
-
 		return
 	}
 
@@ -300,20 +290,17 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 	wrappingKey, err := wait.CreateWrappingKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, wrappingKeyId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for wrapping key creation", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	err = mapFields(wrappingKey, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -336,12 +323,11 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	wrappingKeyId := model.WrappingKeyId.ValueString()
 
+	wrappingKeyId := model.WrappingKeyId.ValueString()
 	if wrappingKeyId == "" {
 		// Resource not yet created; ID is unknown.
 		response.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -353,10 +339,8 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	wrappingKeyResponse, err := r.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -370,7 +354,6 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	err = mapFields(wrappingKeyResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading wrapping key", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -409,7 +392,6 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 	err := r.client.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -456,7 +438,6 @@ func mapFields(wrappingKey *kms.WrappingKey, model *Model, region string) error 
 	}
 
 	var wrappingKeyId string
-
 	if model.WrappingKeyId.ValueString() != "" {
 		wrappingKeyId = model.WrappingKeyId.ValueString()
 	} else {
@@ -485,7 +466,6 @@ func toCreatePayload(model *Model) (*kms.CreateWrappingKeyPayload, error) {
 	}
 
 	var accessScope *kms.AccessScope
-
 	if !utils.IsUndefined(model.AccessScope) {
 		accessScope = new(kms.AccessScope(model.AccessScope.ValueString()))
 	}

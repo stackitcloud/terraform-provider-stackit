@@ -47,13 +47,12 @@ func TestMapPublicIpRanges(t *testing.T) {
 			},
 			expected: func() Model {
 				cidrs := []string{"192.168.0.0/24", "192.168.1.0/24"}
-				ipRangesList := make([]attr.Value, 0, len(cidrs))
 
+				ipRangesList := make([]attr.Value, 0, len(cidrs))
 				for _, cidr := range cidrs {
 					ipRange, _ := types.ObjectValue(publicIpRangesTypes, map[string]attr.Value{
 						"cidr": types.StringValue(cidr),
 					})
-
 					ipRangesList = append(ipRangesList, ipRange)
 				}
 
@@ -103,7 +102,6 @@ func TestMapPublicIpRanges(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Expected error but got nil")
 				}
-
 				return
 			} else if err != nil {
 				t.Fatalf("Unexpected error: %v", err)

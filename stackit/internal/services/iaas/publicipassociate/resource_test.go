@@ -83,7 +83,6 @@ func TestMapFields(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(tt.args.input, &tt.args.state, tt.args.region)

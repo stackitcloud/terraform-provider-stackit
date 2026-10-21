@@ -397,7 +397,6 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -429,14 +428,12 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if instanceResp != nil && instanceResp.Status != "" && instanceResp.Status == "DELETE_SUCCEEDED" {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")
-
 		return
 	}
 
 	aclListResp, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
-
 		return
 	}
 
@@ -444,14 +441,12 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	err = mapFields(ctx, instanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to instance populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -459,21 +454,18 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	plan, err := loadPlanId(ctx, d.client, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan: %v", err))
-
 		return
 	}
 
 	err = mapACLField(aclListResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the ACL: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = setACL(ctx, &resp.State, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -483,22 +475,17 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		metricsRetentionResp, err := d.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
-
 			return
 		}
-
 		// Map response body to schema
 		err = mapMetricsRetentionField(metricsRetentionResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the metrics retention: %v", err))
-
 			return
 		}
-
 		// Set state to fully populated data
 		diags := setMetricsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -507,20 +494,17 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		logsRetentionResp, err := d.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
-
 			return
 		}
 
 		err = mapLogsRetentionField(logsRetentionResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the logs retention: %v", err))
-
 			return
 		}
 
 		diags = setLogsRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -529,20 +513,17 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		tracesRetentionResp, err := d.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get traces retention: %v", err))
-
 			return
 		}
 
 		err = mapTracesRetentionField(tracesRetentionResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response for the traces retention: %v", err))
-
 			return
 		}
 
 		diags = setTracesRetentions(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -553,22 +534,18 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		alertConfigResp, err := d.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
-
 			return
 		}
-
 		// Map response body to schema
 		err = mapAlertConfigField(ctx, alertConfigResp, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API response for the alert config: %v", err))
-
 			return
 		}
 
 		// Set state to fully populated data
 		diags = setAlertConfig(ctx, &resp.State, &model)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}

@@ -54,9 +54,7 @@ func (m useNullForUnknownBasedOnProtocolModifier) PlanModifyObject(ctx context.C
 
 	// If there is an unknown configuration value, check if the value of protocol.name attribute corresponds to an icmp protocol. If it does, set the attribute value to null
 	var model Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -69,7 +67,6 @@ func (m useNullForUnknownBasedOnProtocolModifier) PlanModifyObject(ctx context.C
 	protocol := &protocolModel{}
 	diags := model.Protocol.As(ctx, protocol, basetypes.ObjectAsOptions{})
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -141,8 +141,8 @@ func TestMapFields(t *testing.T) {
 				ProjectId: tt.expected.ProjectId,
 			}
 			ctx := context.TODO()
-			err := mapFields(ctx, tt.input, state, "eu01")
 
+			err := mapFields(ctx, tt.input, state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -248,8 +248,8 @@ func TestToCreatePayload(t *testing.T) {
 						automation.NullableString{},
 					),
 				}
-				diff := cmp.Diff(tt.expected, output, cmpOpts)
 
+				diff := cmp.Diff(tt.expected, output, cmpOpts)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -334,8 +334,8 @@ func TestToUpdatePayload(t *testing.T) {
 						automation.NullableString{},
 					),
 				}
-				diff := cmp.Diff(output, tt.expected, cmpOpts)
 
+				diff := cmp.Diff(output, tt.expected, cmpOpts)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

@@ -66,34 +66,28 @@ type instanceResource struct {
 
 func (i *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, i.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -125,7 +119,6 @@ func (i *instanceResource) Configure(ctx context.Context, req resource.Configure
 	i.enablementClient = clients.ServiceEnablementV2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &i.providerData, &resp.Diagnostics, "stackit_edgecloud_instance", "resource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -239,7 +232,6 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -249,7 +241,6 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	displayName := model.DisplayName.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "display_name", displayName)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -258,14 +249,12 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err := i.enablementClient.EnableServiceRegional(ctx, region, projectId, utils.EdgecloudServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API to enable edge-cloud: %v", err))
-
 		return
 	}
 
 	_, err = enablementWait.EnableServiceWaitHandler(ctx, i.enablementClient, region, projectId, utils.EdgecloudServiceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait for edge-cloud enablement: %v", err))
-
 		return
 	}
 
@@ -276,7 +265,6 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	createResp, err := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -284,7 +272,6 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	if createResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API returned nil response")
-
 		return
 	}
 
@@ -301,20 +288,17 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client, projectId, region, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Mapping API response fields to model: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -328,7 +312,6 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -337,12 +320,11 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	region := i.providerData.GetRegionWithOverride(model.Region)
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -355,10 +337,8 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -372,7 +352,6 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(edgeCloudInstanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
@@ -386,7 +365,6 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -396,7 +374,6 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -408,7 +385,6 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	err := i.client.UpdateInstance(ctx, projectId, region, instanceId).UpdateInstancePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -417,14 +393,12 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Mapping fields: %v", err))
-
 		return
 	}
 
@@ -439,7 +413,6 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -449,7 +422,6 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -457,7 +429,6 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	err := i.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -472,7 +443,6 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err = edgewait.DeleteInstanceWaitHandler(ctx, i.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -511,7 +481,6 @@ func mapFields(resp *edge.Instance, model *Model) error {
 
 	// Build the ID by combining the project id, region and instance id and assign the model's fields.
 	var instanceId string
-
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
 	} else if resp.Id != "" {
@@ -519,8 +488,8 @@ func mapFields(resp *edge.Instance, model *Model) error {
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), instanceId)
-	model.InstanceId = types.StringValue(instanceId)
 
+	model.InstanceId = types.StringValue(instanceId)
 	if resp.Created.String() != "" {
 		model.Created = types.StringValue(resp.Created.String())
 	} else {

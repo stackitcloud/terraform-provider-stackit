@@ -168,7 +168,6 @@ func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.Rea
 	err = mapFields(wrappingKeyResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading wrapping key", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 

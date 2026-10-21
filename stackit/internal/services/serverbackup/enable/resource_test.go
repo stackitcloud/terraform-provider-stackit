@@ -14,6 +14,7 @@ func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 
 	id := fmt.Sprintf("%s,%s,%s", "pid", "sid", testRegion)
+
 	tests := []struct {
 		description string
 		input       *serverbackup.GetBackupServiceResponse
@@ -52,15 +53,14 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 				ServerId:  tt.expected.ServerId,
 			}
-			err := mapFields(tt.input, model, "eu01")
 
+			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

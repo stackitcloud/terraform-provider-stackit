@@ -90,34 +90,28 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 // Use the modifier to set the effective region in the current plan.
 func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -238,7 +232,6 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -254,11 +247,9 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var roles []string
-
 	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
 		diags = model.Roles.ElementsAs(ctx, &roles, false)
 		resp.Diagnostics.Append(diags...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -268,17 +259,14 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	payload, err := toCreatePayload(&model, roles)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new user
 	// Workaround: The user creation will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
 	userResp, err := utils.RetryRequest(ctx, r.client.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -286,12 +274,10 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	if userResp == nil || userResp.Id == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return user Id. A user might have been created")
-
 		return
 	}
 
 	userId := strconv.FormatInt(userResp.Id, 10)
-
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"region":      region,
@@ -302,7 +288,6 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	_, err = wait.CreateUserWaitHandler(ctx, r.client, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("user creation waiting: %v", err))
-
 		return
 	}
 
@@ -310,14 +295,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	err = mapFieldsCreate(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -331,7 +313,6 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -340,17 +321,15 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userIdStr := model.UserId.ValueString()
 
+	userIdStr := model.UserId.ValueString()
 	if userIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
@@ -359,7 +338,6 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
-
 		return
 	}
 
@@ -367,7 +345,6 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -382,14 +359,12 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	err = mapFields(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -410,7 +385,6 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -421,7 +395,6 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	instanceId := model.InstanceId.ValueString()
 	userIdStr := model.UserId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
@@ -430,7 +403,6 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Parsing user ID: %v", err))
-
 		return
 	}
 
@@ -453,7 +425,6 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("user deletion waiting: %v", err))
-
 		return
 	}
 
@@ -500,7 +471,6 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 	}
 
 	userId := strconv.FormatInt(userResp.Id, 10)
-
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringValue(userResp.Username)
@@ -542,7 +512,6 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 	}
 
 	var userId string
-
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
 	} else if userResp.Id != 0 {

@@ -111,7 +111,6 @@ var testConfigDatasource = config.Variables{
 
 func configVarsMinUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsMin)
-
 	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
 
 	return updatedConfig
@@ -119,7 +118,6 @@ func configVarsMinUpdated() config.Variables {
 
 func configVarsMaxUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsMax)
-
 	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
 	updatedConfig["nodepool_os_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateMachineVersion())
 	updatedConfig["maintenance_end"] = config.StringVariable("03:03:03+00:00")
@@ -630,14 +628,12 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 	}
 
 	clustersToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_ske_cluster" {
 			continue
 		}
 
 		clusterName := rs.Primary.Attributes["name"]
-
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
 
@@ -715,7 +711,6 @@ func (s *SkeProviderOptions) getMachineVersionAt(position int) string {
 	for _, mi := range s.options.MachineImages {
 		if mi.Name != nil && *mi.Name == s.nodePoolOsName && mi.Versions != nil {
 			count := 0
-
 			for _, v := range mi.Versions {
 				if v.State != nil && v.Version != nil {
 					if count == position {
@@ -743,7 +738,6 @@ func (s *SkeProviderOptions) getK8sVersionAt(position int) string {
 	}
 
 	count := 0
-
 	for _, v := range s.options.KubernetesVersions {
 		if v.State != nil && *v.State == "supported" && v.Version != nil {
 			if count == position {

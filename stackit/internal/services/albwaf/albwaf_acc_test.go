@@ -49,9 +49,7 @@ var testCustomRuleGroupMin = config.Variables{
 var testCustomRuleGroupMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testCustomRuleGroupMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-
 	return updatedConfig
 }
 
@@ -72,7 +70,6 @@ var testCustomRuleGroupMax = config.Variables{
 var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testCustomRuleGroupMax)
-
 	// Name should not be updated, test if the update works in place
 	updatedConfig["description"] = config.StringVariable("new description")
 	updatedConfig["action"] = config.StringVariable("ACTION_ALLOW")
@@ -95,9 +92,7 @@ var testManagedRuleSet = config.Variables{
 var testManagedRuleSetUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testManagedRuleSet)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-
 	return updatedConfig
 }
 
@@ -116,7 +111,6 @@ var testConfigVarsMax = config.Variables{
 var testConfigVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVarsMax)
-
 	updatedConfig["waf_configuration_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_name"])))
 	updatedConfig["rule_set_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["rule_set_name"])))
 	updatedConfig["custom_rule_group_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["custom_rule_group_name"])))
@@ -133,9 +127,7 @@ var testConfigVarsMin = config.Variables{
 var testConfigVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVarsMin)
-
 	updatedConfig["waf_configuration_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_name"])))
-
 	return updatedConfig
 }
 
@@ -710,12 +702,10 @@ func testAlbWafCustomRuleGroupDestroy(s *terraform.State) error {
 	}
 
 	customRuleGroupsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_waf_custom_rule_group" {
 			continue
 		}
-
 		// custom rule group transform id: "[projectId],[region],[name]"
 		terraformId := strings.Split(rs.Primary.ID, core.Separator)
 		if len(terraformId) == 3 {
@@ -749,12 +739,10 @@ func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 	}
 
 	managedRuleSetsToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_waf_managed_rule_set" {
 			continue
 		}
-
 		// managed rule set transform id: "[projectId],[region],[name]"
 		terraformId := strings.Split(rs.Primary.ID, core.Separator)
 		if len(terraformId) == 3 {
@@ -788,12 +776,10 @@ func testAlbWafWafConfigurationDestroy(s *terraform.State) error {
 	}
 
 	wafConfigurationToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_waf_configuration" {
 			continue
 		}
-
 		// waf configuration transform id: "[projectId],[region],[name]"
 		terraformId := strings.Split(rs.Primary.ID, core.Separator)
 		if len(terraformId) == 3 {

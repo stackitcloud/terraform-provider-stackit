@@ -52,34 +52,28 @@ type serverBackupEnableResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *serverBackupEnableResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -95,7 +89,6 @@ func (r *serverBackupEnableResource) Configure(ctx context.Context, req resource
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -181,7 +174,6 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -204,7 +196,6 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 
 		if !(ok && oapiErr.StatusCode == http.StatusConflict) {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup enable", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -214,7 +205,6 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup enable", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -224,13 +214,11 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 	err = mapFields(serviceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup enable", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -244,7 +232,6 @@ func (r *serverBackupEnableResource) Read(ctx context.Context, req resource.Read
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -263,7 +250,6 @@ func (r *serverBackupEnableResource) Read(ctx context.Context, req resource.Read
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -278,14 +264,12 @@ func (r *serverBackupEnableResource) Read(ctx context.Context, req resource.Read
 	err = mapFields(serviceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup enable", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -305,7 +289,6 @@ func (r *serverBackupEnableResource) Delete(ctx context.Context, req resource.De
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -323,7 +306,6 @@ func (r *serverBackupEnableResource) Delete(ctx context.Context, req resource.De
 	err := r.client.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}

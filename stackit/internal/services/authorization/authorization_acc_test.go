@@ -811,15 +811,12 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	}
 
 	var projectsToDestroy []string
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_project" {
 			continue
 		}
-
 		// project terraform ID: "[container_id]"
 		containerId := rs.Primary.ID
-
 		projectsToDestroy = append(projectsToDestroy, containerId)
 	}
 
@@ -866,15 +863,12 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	}
 
 	foldersToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_folder" {
 			continue
 		}
-
 		// project terraform ID: "[container_id]"
 		containerId := rs.Primary.ID
-
 		foldersToDestroy = append(foldersToDestroy, containerId)
 	}
 
@@ -912,12 +906,10 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 	}
 
 	var orgRoleAssignmentsToDestroy []authorization.Member
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_authorization_organization_role_assignment" {
 			continue
 		}
-
 		// project terraform ID: "resource_id,role,subject"
 		terraformId := strings.Split(rs.Primary.ID, ",")
 

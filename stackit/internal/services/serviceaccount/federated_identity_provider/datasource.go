@@ -112,7 +112,6 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -132,7 +131,6 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 		// due to security purposes, attempting to get access federation for a non-existent Service Account will return 403.
 		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -145,7 +143,6 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("failed to map response to model: %v", err))
-
 		return
 	}
 

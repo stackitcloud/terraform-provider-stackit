@@ -14,6 +14,7 @@ func TestMapFields(t *testing.T) {
 
 	id := fmt.Sprintf("%s,%s", "pid", testRegion)
 	retentionDays := int32(30)
+
 	tests := []struct {
 		description string
 		input       *objectstorage.ComplianceLockResponse
@@ -51,14 +52,13 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(tt.input, model, "eu01")
 
+			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

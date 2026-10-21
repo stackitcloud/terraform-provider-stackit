@@ -31,7 +31,6 @@ func BetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *d
 Defaulting to the provider feature flag.`, value)
 		core.LogAndAddWarning(ctx, diags, "Invalid value for STACKIT_TF_ENABLE_BETA_RESOURCES environment variable.", warnDetails)
 	}
-
 	// ProviderData should always be set, but we check just in case
 	if data == nil {
 		return false
@@ -47,7 +46,6 @@ Defaulting to the provider feature flag.`, value)
 func CheckBetaResourcesEnabled(ctx context.Context, data *core.ProviderData, diags *diag.Diagnostics, resourceName string, resourceType core.ResourceType) {
 	if !BetaResourcesEnabled(ctx, data, diags) {
 		core.LogAndAddErrorBeta(ctx, diags, resourceName, resourceType)
-
 		return
 	}
 

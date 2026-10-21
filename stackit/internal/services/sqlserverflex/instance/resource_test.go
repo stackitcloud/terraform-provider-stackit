@@ -344,7 +344,6 @@ func TestMapFields(t *testing.T) {
 			isValid:  false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.region)
@@ -895,8 +894,8 @@ func TestLoadFlavorId(t *testing.T) {
 				CPU: tt.inputFlavor.CPU,
 				RAM: tt.inputFlavor.RAM,
 			}
-			err := loadFlavorId(context.Background(), client, model, flavorModel)
 
+			err := loadFlavorId(context.Background(), client, model, flavorModel)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1362,8 +1361,8 @@ func TestGetFlavor(t *testing.T) {
 				returnError:      tt.getFlavorsFails,
 				listFlavorsResps: []*sqlserverflex.ListFlavorsResponse{tt.mockedResp},
 			}
-			got, err := getFlavor(context.Background(), client, "pid", "region", tt.flavorId)
 
+			got, err := getFlavor(context.Background(), client, "pid", "region", tt.flavorId)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1557,13 +1556,11 @@ func TestGetAllFlavors(t *testing.T) {
 			wantErr: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := getAllFlavors(tt.args.ctx, tt.args.client, tt.args.projectId, tt.args.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getAllFlavors() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

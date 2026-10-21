@@ -30,7 +30,6 @@ func ToString(ctx context.Context, v attr.Value) (string, error) {
 	}
 
 	var s string
-
 	if err := tv.Copy().As(&s); err != nil {
 		return "", err
 	}
@@ -80,7 +79,6 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 	labels := make(map[string]attr.Value, len(m))
 	for l, v := range m {
 		stringValue := types.StringValue(v)
-
 		labels[l] = stringValue
 	}
 
@@ -95,8 +93,8 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 // ToStringInterfaceMap converts a basetypes.MapValue of Strings to a map[string]interface{}.
 func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]any, error) {
 	labels := map[string]string{}
-	diags := m.ElementsAs(ctx, &labels, false)
 
+	diags := m.ElementsAs(ctx, &labels, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
 	}
@@ -112,8 +110,8 @@ func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string
 // ToStringInterfaceMap converts a basetypes.MapValue of Strings to a map[string]*string
 func ToStringStringPointerMap(ctx context.Context, m basetypes.MapValue) (map[string]*string, error) {
 	labels := map[string]string{}
-	diags := m.ElementsAs(ctx, &labels, false)
 
+	diags := m.ElementsAs(ctx, &labels, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
 	}
@@ -132,7 +130,6 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
-
 	return new(s.ValueString())
 }
 
@@ -142,7 +139,6 @@ func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
-
 	return new(T(s.ValueString()))
 }
 
@@ -232,7 +228,6 @@ func StringListToEnumSlice[T ~string](list basetypes.ListValue) ([]T, error) {
 
 	// Instantiate an empty slice to ensure the slice is not nil
 	listStr := []T{}
-
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {

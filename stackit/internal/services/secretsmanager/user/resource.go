@@ -177,7 +177,6 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -186,7 +185,6 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
@@ -194,15 +192,12 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new user
 	userResp, err := r.client.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -210,12 +205,10 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	if userResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "Got empty user id")
-
 		return
 	}
 
 	userId := userResp.Id
-
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"instance_id": instanceId,
@@ -226,13 +219,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	err = mapFields(userResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -246,7 +237,6 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,12 +245,11 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
 
+	userId := model.UserId.ValueString()
 	if userId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -271,10 +260,8 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -289,14 +276,12 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	err = mapFields(userResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -311,7 +296,6 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -321,7 +305,6 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
@@ -330,15 +313,12 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing user
 	err = r.client.UpdateUser(ctx, projectId, instanceId, userId).UpdateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
-
 		return
 	}
 
@@ -347,29 +327,24 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	user, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API to get user's current state: %v", err))
-
 		return
 	}
 
 	// Get existing state
 	diags = req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	// Map response body to schema
 	err = mapFields(user, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -383,7 +358,6 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -393,7 +367,6 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
@@ -402,7 +375,6 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	err := r.client.DeleteUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			return
 		}
@@ -474,7 +446,6 @@ func mapFields(user *secretsmanager.User, model *Model) error {
 	}
 
 	var userId string
-
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
 	} else if user.Id != "" {

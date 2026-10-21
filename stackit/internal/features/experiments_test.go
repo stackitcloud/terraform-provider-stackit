@@ -37,7 +37,6 @@ func TestValidExperiment(t *testing.T) {
 			want: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ValidExperiment(tt.args.experiment, tt.args.diags); got != tt.want {
@@ -134,7 +133,6 @@ func TestCheckExperimentEnabled(t *testing.T) {
 			wantDiagsWarning: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			CheckExperimentEnabled(tt.args.ctx, tt.args.data, tt.args.experiment, tt.args.resourceName, tt.args.resourceType, tt.args.diags)
@@ -244,7 +242,6 @@ func TestCheckExperimentEnabledWithoutError(t *testing.T) {
 			wantDiagsWarning: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := CheckExperimentEnabledWithoutError(tt.args.ctx, tt.args.data, tt.args.experiment, tt.args.resourceName, tt.args.resourceType, tt.args.diags); got != tt.wantEnabled {

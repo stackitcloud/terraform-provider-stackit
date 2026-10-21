@@ -147,7 +147,6 @@ func (d *telemetryRouterInstanceDataSource) Read(ctx context.Context, req dataso
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -167,10 +166,8 @@ func (d *telemetryRouterInstanceDataSource) Read(ctx context.Context, req dataso
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -194,13 +191,11 @@ func (d *telemetryRouterInstanceDataSource) Read(ctx context.Context, req dataso
 	err = mapFields(ctx, instanceResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter instance", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

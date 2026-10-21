@@ -85,7 +85,6 @@ func TestMapFields(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
 				}
-
 				return
 			}
 
@@ -134,7 +133,6 @@ func TestMapFields(t *testing.T) {
 			var mappedAssertions []AssertionModel
 
 			diags := model.Assertions.ElementsAs(ctx, &mappedAssertions, false)
-
 			if diags.HasError() {
 				t.Fatalf("failed to decode assertions: %v", diags.Errors())
 			}

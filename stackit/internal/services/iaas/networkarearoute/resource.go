@@ -89,34 +89,28 @@ func (r *networkAreaRouteResource) Metadata(_ context.Context, req resource.Meta
 // Use the modifier to set the effective region in the current plan.
 func (r *networkAreaRouteResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel ModelV1
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel ModelV1
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -127,7 +121,6 @@ func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.C
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -142,7 +135,6 @@ func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.C
 func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network area route resource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This resource is for SNA, not VPC, based networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,
@@ -304,9 +296,7 @@ func (r *networkAreaRouteResource) UpgradeState(_ context.Context) map[int64]res
 			},
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
 				var priorStateData ModelV0
-
 				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
-
 				if resp.Diagnostics.HasError() {
 					return
 				}
@@ -344,7 +334,6 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -354,7 +343,6 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	organizationId := model.OrganizationId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkAreaId := model.NetworkAreaId.ValueString()
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
@@ -363,7 +351,6 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -371,7 +358,6 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	routes, err := r.client.CreateNetworkAreaRoute(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -379,13 +365,11 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 
 	if len(routes.Items) == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "Empty response from API")
-
 		return
 	}
 
 	if len(routes.Items) != 1 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "New static route not found or more than 1 route found in API response.")
-
 		return
 	}
 
@@ -400,14 +384,11 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	err = mapFields(ctx, &route, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -421,7 +402,6 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -429,12 +409,11 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
 
+	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
 	if networkAreaRouteId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -448,10 +427,8 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	networkAreaRouteResp, err := r.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -466,14 +443,11 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	err = mapFields(ctx, networkAreaRouteResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -488,7 +462,6 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -509,7 +482,6 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 	err := r.client.DeleteNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -531,7 +503,6 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -553,7 +524,6 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -562,15 +532,12 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing network area route
 	networkAreaRouteResp, err := r.client.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -579,13 +546,11 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 	err = mapFields(ctx, networkAreaRouteResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -627,7 +592,6 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *ModelV1
 	}
 
 	var networkAreaRouteId string
-
 	if model.NetworkAreaRouteId.ValueString() != "" {
 		networkAreaRouteId = model.NetworkAreaRouteId.ValueString()
 	} else if networkAreaRoute.Id != nil {

@@ -64,7 +64,6 @@ func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.Co
 	d.client = clients.IaaSv2Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,9 +141,7 @@ func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 
 func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -183,7 +180,6 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	if len(apiResp.Items) == 0 {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "No machine types found", "No matching machine types.")
-
 		return
 	}
 
@@ -196,18 +192,15 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	sorted, err := sortMachineTypeByName(machineTypes, sortAscending)
 	if err != nil {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Unable to sort", err.Error())
-
 		return
 	}
 
 	if err := mapDataSourceFields(ctx, sorted[0], &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading machine type", fmt.Sprintf("Failed to translate API response: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -233,12 +226,10 @@ func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, mod
 	model.Vcpus = types.Int64Value(machineType.Vcpus)
 
 	extra := types.MapNull(types.StringType)
-
 	if len(machineType.ExtraSpecs) > 0 {
 		var diags diag.Diagnostics
 
 		extra, diags = types.MapValueFrom(ctx, types.StringType, machineType.ExtraSpecs)
-
 		if diags.HasError() {
 			return fmt.Errorf("converting extraspecs: %w", core.DiagsToError(diags))
 		}
@@ -256,7 +247,6 @@ func sortMachineTypeByName(input []*iaas.MachineType, ascending bool) ([]*iaas.M
 
 	// Filter out nil or missing name
 	var filtered []*iaas.MachineType
-
 	for _, m := range input {
 		if m != nil {
 			filtered = append(filtered, m)
@@ -267,7 +257,6 @@ func sortMachineTypeByName(input []*iaas.MachineType, ascending bool) ([]*iaas.M
 		if ascending {
 			return filtered[i].Name < filtered[j].Name
 		}
-
 		return filtered[i].Name > filtered[j].Name
 	})
 

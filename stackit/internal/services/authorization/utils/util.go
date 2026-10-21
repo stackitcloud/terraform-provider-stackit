@@ -39,7 +39,6 @@ func LockAssignment(id string) func() {
 		mu = &sync.Mutex{}
 		assignmentLocks[id] = mu
 	}
-
 	assignmentLocksMu.Unlock()
 
 	mu.Lock()

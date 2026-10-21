@@ -41,9 +41,7 @@ var testConfigVarsMin = config.Variables{
 func testConfigVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-link-updated")
-
 	return newVars
 }
 
@@ -61,7 +59,6 @@ var testConfigVarsMax = config.Variables{
 func testConfigVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-link-updated")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryLink Updated")
 	newVars["enabled"] = config.BoolVariable(true)
@@ -76,9 +73,7 @@ func testConfigVarsMaxUpdated() config.Variables {
 func testConfigVarsMaxRotated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMaxUpdated())
-
 	newVars["access_token_wo_version"] = config.IntegerVariable(2)
-
 	return newVars
 }
 
@@ -361,14 +356,12 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	}
 
 	var linksToDestroy []link
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_telemetrylink" {
 			continue
 		}
 
 		parts := strings.Split(rs.Primary.ID, core.Separator)
-
 		linksToDestroy = append(linksToDestroy, link{
 			resourceType: parts[0],
 			resourceId:   parts[1],
@@ -377,16 +370,13 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	for _, l := range linksToDestroy {
 		var err error
-
 		switch l.resourceType {
 		case "organization":
 			err = client.DefaultAPI.DeleteOrganizationTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
-
 				if errors.As(err, &oapiErr) {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						continue
@@ -403,7 +393,6 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 			err = client.DefaultAPI.DeleteFolderTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
-
 				if errors.As(err, &oapiErr) {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						continue
@@ -420,7 +409,6 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 			err = client.DefaultAPI.DeleteProjectTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
-
 				if errors.As(err, &oapiErr) {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						continue

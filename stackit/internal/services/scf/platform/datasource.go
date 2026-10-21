@@ -140,7 +140,6 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 	projectId := model.ProjectId.ValueString()
 	platformId := model.PlatformId.ValueString()
 	region := s.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "platform_id", platformId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -168,7 +167,6 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 	err = mapFields(scfPlatformResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf platform", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 

@@ -61,7 +61,6 @@ func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.
 	d.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_tables", core.Datasource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -73,7 +72,6 @@ func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.
 func (d *routingTablesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Routing table datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This datasource is for SNA, not VPC, based networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Datasource),
@@ -120,7 +118,6 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -130,7 +127,6 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	organizationId := model.OrganizationId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	networkAreaId := model.NetworkAreaId.ValueString()
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
@@ -157,13 +153,11 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	err = mapDataSourceRoutingTables(ctx, routingTablesResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -190,7 +184,6 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaas.Routing
 	model.Id = utils.BuildInternalTerraformId(organizationId, region, networkAreaId)
 
 	itemsList := []attr.Value{}
-
 	for i, routingTable := range routingTables.Items {
 		var routingTableModel shared.RoutingTableReadModel
 

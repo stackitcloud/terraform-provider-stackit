@@ -69,8 +69,8 @@ func TestMapDataSourceFields(t *testing.T) {
 				ResourceID:   tt.expected.ResourceID,
 				Region:       tt.expected.Region,
 			}
-			err := mapDataSourceFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 
+			err := mapDataSourceFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}

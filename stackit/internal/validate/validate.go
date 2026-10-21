@@ -100,8 +100,8 @@ func IP(allowZeroAddress bool) *Validator {
 		description: description,
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			ip := net.ParseIP(req.ConfigValue.ValueString())
-			invalidZeroAddress := !allowZeroAddress && (net.IPv4zero.Equal(ip) || net.IPv6zero.Equal(ip))
 
+			invalidZeroAddress := !allowZeroAddress && (net.IPv4zero.Equal(ip) || net.IPv6zero.Equal(ip))
 			if ip == nil || invalidZeroAddress {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
@@ -204,8 +204,8 @@ func MinorVersionNumber() *Validator {
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			exp := MajorMinorVersionRegex
 			r := regexp.MustCompile(exp)
-			version := req.ConfigValue.ValueString()
 
+			version := req.ConfigValue.ValueString()
 			if !r.MatchString(version) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
@@ -302,7 +302,6 @@ func Rrule() *Validator {
 			// So we will accept a ' ' (which is valid per API docs),
 			// but replace it with a '\n' for the rrule-go validations
 			value := req.ConfigValue.ValueString()
-
 			value = strings.ReplaceAll(value, " ", "\n")
 
 			if _, err := rrule.StrToRRuleSet(value); err != nil {
@@ -398,8 +397,8 @@ func IsLowercased() *Validator {
 		description: description,
 		validate: func(_ context.Context, request validator.StringRequest, response *validator.StringResponse) {
 			val := request.ConfigValue.ValueString()
-			lowercased := strings.ToLower(val)
 
+			lowercased := strings.ToLower(val)
 			if val != lowercased {
 				response.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					request.Path,

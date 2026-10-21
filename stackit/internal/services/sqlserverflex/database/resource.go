@@ -69,27 +69,22 @@ func (r *databaseResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -180,22 +175,18 @@ func (r *databaseResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 
 func (r *databaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	createTimeout, diags := model.Timeouts.Create(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -205,7 +196,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -216,7 +206,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	_, err = utils.RetryRequest(ctx, r.client.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating database", err.Error())
-
 		return
 	}
 
@@ -235,7 +224,6 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	apiResp, err := r.client.GetDatabase(ctx, projectId, region, instanceId, model.Name.ValueString()).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading database after creation", err.Error())
-
 		return
 	}
 
@@ -244,12 +232,10 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	err = mapFields(apiResp, &model.SharedModel, region)
 	if err != nil {
 		resp.Diagnostics.AddError("Error mapping resource", err.Error())
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -259,22 +245,18 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -288,7 +270,6 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -302,12 +283,10 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	err = mapFields(apiResp, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -321,22 +300,18 @@ func (r *databaseResource) Update(ctx context.Context, _ resource.UpdateRequest,
 
 func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
@@ -430,7 +405,6 @@ func toCreatePayload(model *Model) (*sqlserverflex.CreateDatabasePayload, error)
 
 	if !model.Compatibility.IsNull() && !model.Compatibility.IsUnknown() {
 		compatibility := int32(model.Compatibility.ValueInt64()) // nolint:gosec // user input is controlled by schema
-
 		payload.Compatibility = &compatibility
 	}
 

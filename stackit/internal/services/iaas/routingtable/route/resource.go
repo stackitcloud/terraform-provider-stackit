@@ -58,7 +58,6 @@ func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureReq
 	var ok bool
 
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
-
 	if !ok {
 		return
 	}
@@ -67,7 +66,6 @@ func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -84,29 +82,23 @@ func (r *routeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 
 	var configModel shared.RouteModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel shared.RouteModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -116,7 +108,6 @@ func (r *routeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Routing table route resource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This resource is for SNA, not VPC, based networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Resource),
@@ -253,7 +244,6 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -274,14 +264,12 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 	payload, err := toCreatePayload(ctx, &model.RouteReadModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table route", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	routeResp, err := r.client.AddRoutesToRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).AddRoutesToRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table route", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -291,7 +279,6 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 	err = mapFieldsFromList(ctx, routeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -299,7 +286,6 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -313,7 +299,6 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -323,12 +308,11 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
-	routeId := model.RouteId.ValueString()
 
+	routeId := model.RouteId.ValueString()
 	if routeId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -343,10 +327,8 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	routeResp, err := r.client.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -361,14 +343,12 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	err = shared.MapRouteModel(ctx, routeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -383,7 +363,6 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -407,7 +386,6 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -416,14 +394,12 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table route", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	route, err := r.client.UpdateRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).UpdateRouteOfRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table route", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -433,14 +409,11 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	err = shared.MapRouteModel(ctx, route, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -454,7 +427,6 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -477,7 +449,6 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	err := r.client.DeleteRouteFromRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -511,7 +482,6 @@ func (r *routeResource) ImportState(ctx context.Context, req resource.ImportStat
 	networkAreaId := idParts[2]
 	routingTableId := idParts[3]
 	routeId := idParts[4]
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
@@ -596,8 +566,8 @@ func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaas.
 	}
 
 	nexthopModel := shared.RouteNextHop{}
-	diags := model.NextHop.As(ctx, &nexthopModel, basetypes.ObjectAsOptions{})
 
+	diags := model.NextHop.As(ctx, &nexthopModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
@@ -626,8 +596,8 @@ func toDestinationPayload(ctx context.Context, model *shared.RouteReadModel) (*i
 	}
 
 	destinationModel := shared.RouteDestination{}
-	diags := model.Destination.As(ctx, &destinationModel, basetypes.ObjectAsOptions{})
 
+	diags := model.Destination.As(ctx, &destinationModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}

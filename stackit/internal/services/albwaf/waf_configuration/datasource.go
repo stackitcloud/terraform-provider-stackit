@@ -97,7 +97,6 @@ func (d *wafDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -107,7 +106,6 @@ func (d *wafDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
@@ -115,11 +113,9 @@ func (d *wafDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 	foundWAF, err := d.client.GetWAF(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			utils.LogError(ctx, &resp.Diagnostics, err, "Error reading ALB WAF Configuration:", fmt.Sprintf("Calling API: %v", err), map[int]string{http.StatusNotFound: fmt.Sprintf("ALB WAF Configuration %s not found", name)})
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -133,13 +129,11 @@ func (d *wafDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 	err = mapFields(ctx, foundWAF, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Configuration", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

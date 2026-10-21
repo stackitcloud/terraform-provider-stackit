@@ -191,7 +191,6 @@ func TestCheckBetaResourcesEnabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var envValue string
-
 			if tt.betaEnabled {
 				envValue = "true"
 			} else {

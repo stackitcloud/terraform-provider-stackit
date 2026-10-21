@@ -112,8 +112,8 @@ func TestMapFields(t *testing.T) {
 				InstanceID:        tt.expected.InstanceID,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
-			err := mapFields(context.Background(), tt.input, state)
 
+			err := mapFields(context.Background(), tt.input, state)
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}

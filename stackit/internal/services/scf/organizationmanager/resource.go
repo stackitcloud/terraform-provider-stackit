@@ -90,34 +90,28 @@ func (s *scfOrganizationManagerResource) Metadata(_ context.Context, request res
 // Use the modifier to set the effective region in the current plan.
 func (r *scfOrganizationManagerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -225,7 +219,6 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	orgId := model.OrgId.ValueString()
 	userName := model.UserName.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "username", userName)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -240,14 +233,12 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	scfOrgManagerCreateResponse, err := s.client.CreateOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Calling API to create org manager: %v", err))
-
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
 	userId := scfOrgManagerCreateResponse.Guid
-
 	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
@@ -258,7 +249,6 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	err = mapFieldsCreate(scfOrgManagerCreateResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Mapping fields: %v", err))
-
 		return
 	}
 
@@ -290,7 +280,6 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 	region := s.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -299,11 +288,9 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	scfOrgManager, err := s.client.GetOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			core.LogAndAddWarning(ctx, &response.Diagnostics, "SCF Organization manager not found", "SCF Organization manager not found, remove from state")
 			response.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -317,7 +304,6 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	err = mapFieldsRead(scfOrgManager, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
@@ -348,7 +334,6 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -357,10 +342,8 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	_, err := s.client.DeleteOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusGone || oapiErr.StatusCode == http.StatusNotFound) {
 			tflog.Info(ctx, "Scf organization manager was already deleted")
-
 			return
 		}
 

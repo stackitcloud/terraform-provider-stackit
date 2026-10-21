@@ -28,7 +28,6 @@ func VpcCheckDestroy(s *terraform.State) error {
 	vpcsToDestroy := []vpcIds{}
 
 	var errs []error
-
 	// vpc
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_vpc" {
@@ -92,7 +91,6 @@ func VpcRegionDestroy(s *terraform.State) error {
 		toDestroy []regionIds
 		errs      []error
 	)
-
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "stackit_vpc_region" {
 			continue
@@ -164,7 +162,6 @@ func VpcNetworkRangeDestroy(s *terraform.State) error {
 	networkRangesToDestroy := []networkRangeIds{}
 
 	var errs []error
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_vpc_network_range" {
 			continue

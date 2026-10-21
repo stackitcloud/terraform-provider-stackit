@@ -100,27 +100,22 @@ func (r *logsInstanceResource) ModifyPlan(ctx context.Context, req resource.Modi
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -226,7 +221,6 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -235,25 +229,21 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	projectId := model.ProjectID.ValueString()
 	region := model.Region.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	payload, err := toCreatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	regionId := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "region", regionId)
 
 	createResp, err := r.client.CreateLogsInstance(ctx, projectId, regionId).CreateLogsInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -261,7 +251,6 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	if createResp == nil || createResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", "Create API response: Incomplete response (id missing)")
-
 		return
 	}
 
@@ -279,20 +268,17 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 	waitResp, err := wait.CreateLogsInstanceWaitHandler(ctx, r.client, projectId, regionId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Waiting for Logs Instance to become active: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -305,7 +291,6 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -314,12 +299,11 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 
 	projectID := model.ProjectID.ValueString()
 	region := model.Region.ValueString()
-	instanceID := model.InstanceID.ValueString()
 
+	instanceID := model.InstanceID.ValueString()
 	if instanceID == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -332,10 +316,8 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -349,13 +331,11 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapFields(ctx, instanceResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading logs instance", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -370,7 +350,6 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -388,14 +367,12 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	payload, err := toUpdatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs Instance", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	updateResp, err := r.client.UpdateLogsInstance(ctx, projectID, region, instanceID).UpdateLogsInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs Instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -404,13 +381,11 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	err = mapFields(ctx, updateResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs Instance", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -425,7 +400,6 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -443,7 +417,6 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 	err := r.client.DeleteLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -458,7 +431,6 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 	_, err = wait.DeleteLogsInstanceWaitHandler(ctx, r.client, projectID, region, instanceID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs Instance", fmt.Sprintf("Waiting for Logs Instance to be deleted: %v", err))
-
 		return
 	}
 
@@ -469,7 +441,6 @@ func (r *logsInstanceResource) ImportState(ctx context.Context, req resource.Imp
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing Logs Instance", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`", req.ID))
-
 		return
 	}
 
@@ -516,7 +487,6 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	}
 
 	var instanceID string
-
 	if model.InstanceID.ValueString() != "" {
 		instanceID = model.InstanceID.ValueString()
 	} else if instance.Id != "" {
@@ -528,7 +498,6 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	aclList := types.ListNull(types.StringType)
 
 	var diags diag.Diagnostics
-
 	if len(instance.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, instance.Acl)
 		if diags.HasError() {

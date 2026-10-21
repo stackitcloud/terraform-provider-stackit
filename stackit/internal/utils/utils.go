@@ -51,7 +51,6 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 
 	// Remove elements from list1Copy that are not in list2
 	i := 0
-
 	for _, elem := range list1Copy {
 		if inList2[elem] {
 			list1Copy[i] = elem
@@ -78,7 +77,6 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 
 func ListValueToStringSlice(list basetypes.ListValue) ([]string, error) {
 	result := []string{}
-
 	for _, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
@@ -132,15 +130,12 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 	var oapiErr *oapierror.GenericOpenAPIError
 
 	ok := errors.As(err, &oapiErr)
-
 	if !ok {
 		core.LogAndAddError(ctx, inputDiags, summary, fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	var description string
-
 	if len(descriptions) != 0 {
 		description, ok = descriptions[oapiErr.StatusCode]
 	}
@@ -155,7 +150,6 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 // FormatPossibleValues formats a slice into a comma-separated-list for usage in the provider docs
 func FormatPossibleValues(values ...string) string {
 	var formattedValues []string
-
 	for _, value := range values {
 		if value == "unknown_default_open_api" {
 			continue
@@ -210,7 +204,6 @@ func Coalesce[T interface {
 
 func Join(separator string, parts ...types.String) types.String {
 	var builder strings.Builder
-
 	for i, l := 0, len(parts); i < l; i++ {
 		if !IsUndefined(parts[i]) {
 			if i > 0 {
@@ -228,13 +221,10 @@ func Join(separator string, parts ...types.String) types.String {
 // It will also keep the entier body intact, instead of cutting out important information in long responses.
 func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) string {
 	var oapiErr *oapierror.GenericOpenAPIError
-
 	if errors.As(err, &oapiErr) {
 		var prettyJSON bytes.Buffer
-
 		if errJson := json.Indent(&prettyJSON, oapiErr.Body, "", "  "); errJson != nil {
 			core.LogAndAddError(ctx, diags, "Error indenting JSON response from API. This is an issue with the API. Please notify the respective team.", errJson.Error())
-
 			// if there is an error formating the JSON just return the unformatted error to the user
 			return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, string(oapiErr.Body))
 		}

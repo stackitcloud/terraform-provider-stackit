@@ -23,7 +23,6 @@ func TestSfsResourcePoolSavesIDsOnError(t *testing.T) {
 	)
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
@@ -104,7 +103,6 @@ func TestSfsShareSavesIDsOnError(t *testing.T) {
 	)
 
 	s := testutil.NewMockServer(t)
-
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`
@@ -179,8 +177,8 @@ resource "stackit_sfs_share" "example" {
 // those tests slow and flaky.
 func TestSfsResourcePoolCreateTimeout(t *testing.T) {
 	projectId := uuid.NewString()
-	s := testutil.NewMockServer(t)
 
+	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
 
 	tfConfig := fmt.Sprintf(`

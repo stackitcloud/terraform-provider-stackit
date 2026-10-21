@@ -132,7 +132,6 @@ func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -145,7 +144,6 @@ func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	if err = mapGetCustomRoleResponse(ctx, roleResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading custom role", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 

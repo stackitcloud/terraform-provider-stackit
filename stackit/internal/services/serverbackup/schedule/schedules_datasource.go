@@ -148,7 +148,6 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -158,7 +157,6 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -186,14 +184,12 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	err = mapSchedulesDatasourceFields(ctx, schedules, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup schedules", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -225,8 +221,8 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 			Rrule:            types.StringValue(schedule.Rrule),
 			Enabled:          types.BoolValue(schedule.Enabled),
 		}
-		ids, diags := types.ListValueFrom(ctx, types.StringType, schedule.BackupProperties.VolumeIds)
 
+		ids, diags := types.ListValueFrom(ctx, types.StringType, schedule.BackupProperties.VolumeIds)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 		}

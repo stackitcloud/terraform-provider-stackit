@@ -56,7 +56,6 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -64,7 +63,6 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -75,11 +73,9 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	exportPolicyResp, err := d.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &openapiError) {
 			if openapiError.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 		}
@@ -95,14 +91,12 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	err = mapFields(ctx, exportPolicyResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading export policy", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -113,7 +107,6 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 // Schema implements datasource.DataSource.
 func (d *exportPolicyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "SFS export policy datasource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,

@@ -16,6 +16,7 @@ func Test_mapFields(t *testing.T) {
 	)
 
 	id := fmt.Sprintf("%s,%s", projectId, testRegion)
+
 	tests := []struct {
 		name     string
 		response sfsLockResponse
@@ -57,14 +58,13 @@ func Test_mapFields(t *testing.T) {
 			isValid:  false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(tt.response, model, "eu01")
 
+			err := mapFields(tt.response, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -60,8 +60,8 @@ func TestMapFields(t *testing.T) {
 				InstanceId:        tt.expected.InstanceId,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
-			err := mapFields(tt.input, state)
 
+			err := mapFields(tt.input, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

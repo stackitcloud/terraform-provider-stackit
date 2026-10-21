@@ -80,7 +80,6 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network area resource schema.\n\n" +
 		"This resource is for SNA, not VPC, networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,
@@ -142,9 +141,7 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -159,7 +156,6 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
@@ -167,27 +163,23 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	networkArea, err := r.client.CreateNetworkArea(ctx, organizationId).CreateNetworkAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
 	networkAreaId := *networkArea.Id
-
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
 	// Map response body to schema
 	err = mapFields(ctx, networkArea, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -198,20 +190,17 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 // Read refreshes the Terraform state with the latest data.
 func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	organizationId := model.OrganizationId.ValueString()
-	networkAreaId := model.NetworkAreaId.ValueString()
 
+	networkAreaId := model.NetworkAreaId.ValueString()
 	if networkAreaId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -223,10 +212,8 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	networkAreaResp, err := r.client.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -241,13 +228,11 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	err = mapFields(ctx, networkAreaResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -259,9 +244,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -276,9 +259,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 
 	// Retrieve values from state
 	var stateModel Model
-
 	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -287,15 +268,12 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing network
 	networkAreaUpdateResp, err := r.client.PartialUpdateNetworkArea(ctx, organizationId, networkAreaId).PartialUpdateNetworkAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -304,12 +282,10 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	err = mapFields(ctx, networkAreaUpdateResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -324,7 +300,6 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -340,10 +315,8 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -356,10 +329,8 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	regionsListResp, err := r.client.ListNetworkAreaRegions(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -373,7 +344,6 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 		err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-
 			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
 				continue
 			}
@@ -386,7 +356,6 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 		_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Waiting for networea deletion: %v", err))
-
 			return
 		}
 	}
@@ -395,10 +364,8 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	err = r.client.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -428,7 +395,6 @@ func (r *networkAreaResource) ImportState(ctx context.Context, req resource.Impo
 
 	organizationId := idParts[0]
 	networkAreaId := idParts[1]
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
@@ -447,7 +413,6 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, model *Mo
 	}
 
 	var networkAreaId string
-
 	if model.NetworkAreaId.ValueString() != "" {
 		networkAreaId = model.NetworkAreaId.ValueString()
 	} else if networkAreaResp.Id != nil {

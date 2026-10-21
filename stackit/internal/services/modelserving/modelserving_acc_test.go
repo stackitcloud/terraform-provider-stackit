@@ -100,7 +100,6 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 	}
 
 	tokensToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_modelserving_token" {
 			continue
@@ -128,7 +127,6 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 
 	if len(tokensResp.Tokens) == 0 {
 		fmt.Print("No tokens found for project \n")
-
 		return nil
 	}
 

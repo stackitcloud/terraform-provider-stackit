@@ -231,8 +231,8 @@ func TestMapTunnels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			tfTunnels, err := mapTunnels(ctx, tt.input)
 
+			tfTunnels, err := mapTunnels(ctx, tt.input)
 			if (err == nil) != tt.isValid {
 				t.Errorf("unexpected error: %s", err)
 			}

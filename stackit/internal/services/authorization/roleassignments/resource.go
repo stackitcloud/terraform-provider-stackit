@@ -84,7 +84,6 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 	}
 
 	features.CheckExperimentEnabled(ctx, &providerData, features.IamExperiment, fmt.Sprintf("stackit_authorization_%s_role_assignment", r.apiName), core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -167,7 +166,6 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -195,13 +193,11 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	listMemberResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing current resource members", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	if err := checkDuplicate(model, listMemberResp); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error while checking for duplicate role assignments", err.Error())
-
 		return
 	}
 
@@ -209,21 +205,18 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	payload, err := toCreatePayload(&model, r.apiName)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.authorizationClient.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	listMembersResponse, err := authorizationUtils.TypeConverter[authorization.ListMembersResponse](createResp)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -232,13 +225,11 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	err = mapListMembersResponse(listMembersResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,7 +246,6 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -269,7 +259,6 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	listResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorizations", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -280,7 +269,6 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	if err != nil {
 		if errors.Is(err, errRoleAssignmentNotFound) {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -292,7 +280,6 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -311,7 +298,6 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -336,10 +322,8 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	_, err := r.authorizationClient.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -419,7 +403,6 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 		if m.Role == model.Role.ValueString() && m.Subject == model.Subject.ValueString() {
 			model.Role = types.StringValue(m.Role)
 			model.Subject = types.StringValue(m.Subject)
-
 			return nil
 		}
 	}
@@ -435,7 +418,6 @@ func checkDuplicate(model Model, listMemberResp *authorization.ListMembersRespon
 		if errors.Is(err, errRoleAssignmentNotFound) {
 			return nil
 		}
-
 		return err
 	}
 

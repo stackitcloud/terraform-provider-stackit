@@ -93,7 +93,6 @@ func Test_initClientCollection_NoErr(t *testing.T) {
 			wantErr: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := initClientCollection(tt.args.clientFactory)
@@ -261,7 +260,6 @@ func (h *testHelper[T]) run(t *testing.T) {
 				CustomEndpoints: func() CustomEndpointConfig {
 					cfg := CustomEndpointConfig{}
 					h.customEndpointSetter(&cfg)
-
 					return cfg
 				}(),
 				ProviderDefaultRegion: "eu01",
@@ -285,7 +283,6 @@ func (h *testHelper[T]) run(t *testing.T) {
 			got, err := h.factoryMethod(f)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("mismatch error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -1073,11 +1070,10 @@ func TestDefaultClientFactory_newDremioV1BetaClient(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
-			got, err := f.newDremioV1BetaClient()
 
+			got, err := f.newDremioV1BetaClient()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newDremioV1BetaClient() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -1161,11 +1157,10 @@ func TestDefaultClientFactory_newSecretsManagerV1Client(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
-			got, err := f.newSecretsManagerV1Client()
 
+			got, err := f.newSecretsManagerV1Client()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newSecretsManagerV1Client() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -1249,11 +1244,10 @@ func TestDefaultClientFactory_newSecretsManagerV1AlphaClient(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
-			got, err := f.newSecretsManagerV1AlphaClient()
 
+			got, err := f.newSecretsManagerV1AlphaClient()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newSecretsManagerV1AlphaClient() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -1337,11 +1331,10 @@ func TestDefaultClientFactory_newObservabilityV1Client(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
-			got, err := f.newObservabilityV1Client()
 
+			got, err := f.newObservabilityV1Client()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newObservabilityV1Client() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -1432,11 +1425,10 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
-			got, err := f.newObjectStorageV2Client()
 
+			got, err := f.newObjectStorageV2Client()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newObjectStorageV2Client() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

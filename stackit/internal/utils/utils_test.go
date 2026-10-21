@@ -74,8 +74,8 @@ func TestReconcileStrLists(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output := ReconcileStringSlices(tt.list1, tt.list2)
-			diff := cmp.Diff(output, tt.expected)
 
+			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -178,8 +178,8 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output := ConvertPointerSliceToStringSlice(tt.input)
-			diff := cmp.Diff(output, tt.expected)
 
+			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -264,7 +264,6 @@ func TestFormatPossibleValues(t *testing.T) {
 			want: fmt.Sprintf("%s `foo`, `bar`.", gotPrefix),
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := FormatPossibleValues(tt.args.values...); got != tt.want {
@@ -306,7 +305,6 @@ func TestIsUndefined(t *testing.T) {
 			want: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := IsUndefined(tt.args.val); got != tt.want {
@@ -341,7 +339,6 @@ func TestBuildInternalTerraformId(t *testing.T) {
 			want: types.StringValue("abc,foo,bar,xyz"),
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := BuildInternalTerraformId(tt.args.idParts...); !reflect.DeepEqual(got, tt.want) {
@@ -421,7 +418,6 @@ func TestCheckListRemoval(t *testing.T) {
 			true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			// create resp
@@ -445,16 +441,14 @@ func TestCheckListRemoval(t *testing.T) {
 			}
 
 			CheckListRemoval(context.Background(), tt.configModelList, tt.planModelList, tt.path, tt.listType, tt.createEmptyList, &resp)
-
 			// check targetList
 			var respList types.List
-
 			resp.Plan.GetAttribute(context.Background(), tt.path, &respList)
 
 			if tt.createEmptyList {
 				emptyList, _ := types.ListValueFrom(context.Background(), tt.listType, []string{})
-				diffEmptyList := cmp.Diff(emptyList, respList)
 
+				diffEmptyList := cmp.Diff(emptyList, respList)
 				if diffEmptyList != "" {
 					t.Fatalf("an empty list should have been created but was not: %s", diffEmptyList)
 				}
@@ -551,7 +545,6 @@ func TestSetAndLogStateFields(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -608,7 +601,6 @@ func TestCoalesce(t *testing.T) {
 		{"first and second element undefined", []attr.Value{null, null, baz}, baz},
 		{"all elements undefined", []attr.Value{null, null, null}, nil},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotR := Coalesce(tt.vals...); !reflect.DeepEqual(gotR, tt.want) {
@@ -694,7 +686,6 @@ func TestMap(t *testing.T) {
 			want: []*string{},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Map(tt.args.input, tt.args.mapFn); !reflect.DeepEqual(got, tt.want) {

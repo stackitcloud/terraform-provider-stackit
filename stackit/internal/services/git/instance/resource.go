@@ -84,7 +84,6 @@ func (g *gitResource) Configure(ctx context.Context, req resource.ConfigureReque
 	}
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_git", "resource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -190,7 +189,6 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -200,13 +198,11 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 	// Set logging context with the project ID and instance ID.
 	projectId := model.ProjectId.ValueString()
 	instanceName := model.Name.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_name", instanceName)
 
 	payload, diags := toCreatePayload(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -217,7 +213,6 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -236,21 +231,18 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 	_, err = wait.CreateGitInstanceWaitHandler(ctx, g.client, projectId, gitInstanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", fmt.Sprintf("Git instance creation waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, gitInstanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", fmt.Sprintf("Mapping fields: %v", err))
-
 		return
 	}
 
 	// Set the state with fully populated data.
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -265,7 +257,6 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -274,12 +265,11 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
 
+	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -289,10 +279,8 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -306,7 +294,6 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	err = mapFields(ctx, gitInstanceResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading git instance", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
@@ -334,7 +321,6 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -343,7 +329,6 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
@@ -351,7 +336,6 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	err := g.client.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -366,7 +350,6 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	_, err = wait.DeleteGitInstanceWaitHandler(ctx, g.client, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for instance deletion", fmt.Sprintf("Instance deletion waiting: %v", err))
-
 		return
 	}
 
@@ -388,7 +371,6 @@ func (g *gitResource) ImportState(ctx context.Context, req resource.ImportStateR
 
 		return
 	}
-
 	// Set the project ID and instance ID attributes in the state.
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
@@ -410,7 +392,6 @@ func mapFields(ctx context.Context, resp *git.Instance, model *Model) error {
 	aclList := types.ListNull(types.StringType)
 
 	var diags diag.Diagnostics
-
 	if len(resp.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, resp.Acl)
 		if diags.HasError() {

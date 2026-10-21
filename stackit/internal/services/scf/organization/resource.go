@@ -94,34 +94,28 @@ func (s *scfOrganizationResource) Metadata(_ context.Context, request resource.M
 // Use the modifier to set the effective region in the current plan.
 func (r *scfOrganizationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -244,7 +238,6 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	orgName := model.Name.ValueString()
 	quotaId := model.QuotaId.ValueString()
 	suspended := model.Suspended.ValueBool()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_name", orgName)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -252,7 +245,6 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Creating API payload: %v\n", err))
-
 		return
 	}
 
@@ -262,7 +254,6 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to create org: %v", err))
-
 		return
 	}
 
@@ -284,7 +275,6 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 			}).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to apply quota: %v", err))
-
 			return
 		}
 
@@ -299,7 +289,6 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 			}).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to update suspended: %v", err))
-
 			return
 		}
 	}
@@ -308,14 +297,12 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to load created org: %v", err))
-
 		return
 	}
 
 	err = mapFields(scfOrgResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -346,18 +333,15 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
-	orgId := model.OrgId.ValueString()
 
+	orgId := model.OrgId.ValueString()
 	if orgId == "" {
 		// Resource not yet created; ID is unknown.
 		response.State.RemoveResource(ctx)
-
 		return
 	}
-
 	// Extract the region
 	region := s.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -367,10 +351,8 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -384,7 +366,6 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	err = mapFields(scfOrgResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
@@ -422,7 +403,6 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 	org, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error retrieving organization state", fmt.Sprintf("Getting organization state: %v", err))
-
 		return
 	}
 
@@ -435,7 +415,6 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 			}).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error updating organization", fmt.Sprintf("Processing API payload: %v", err))
-
 			return
 		}
 
@@ -452,7 +431,6 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 			}).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error applying organization quota", fmt.Sprintf("Processing API payload: %v", err))
-
 			return
 		}
 
@@ -462,7 +440,6 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 	err = mapFields(org, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error updating organization", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -504,7 +481,6 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 	_, err := s.client.DeleteOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -519,7 +495,6 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 	_, err = wait.DeleteOrganizationWaitHandler(ctx, s.client, projectId, model.Region.ValueString(), orgId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error waiting for scf org deletion", fmt.Sprintf("SCFOrganization deleting waiting: %v", err))
-
 		return
 	}
 

@@ -60,15 +60,12 @@ var testConfigVarsMax = config.Variables{
 
 func configVarsMinUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMin)
-
 	temp["name"] = config.StringVariable(testutil.ConvertConfigVariable(temp["name"]) + "changed")
-
 	return temp
 }
 
 func configVarsMaxUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMax)
-
 	temp["backup_schedule"] = config.StringVariable("0 12 * * *")
 	temp["acl1"] = config.StringVariable("192.168.2.0/16")
 	temp["retention_days"] = config.IntegerVariable(40)
@@ -215,7 +212,6 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					if len(s) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(s))
 					}
-
 					return nil
 				},
 			},
@@ -598,15 +594,12 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_sqlserverflex_instance" {
 			continue
 		}
-
 		// instance terraform ID: = "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

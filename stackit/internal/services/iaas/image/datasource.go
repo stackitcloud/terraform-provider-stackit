@@ -74,7 +74,6 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 // Schema defines the schema for the datasource.
 func (d *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Image datasource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -215,7 +214,6 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -253,14 +251,11 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	err = mapDataSourceFields(ctx, imageResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -278,7 +273,6 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	}
 
 	var imageId string
-
 	if model.ImageId.ValueString() != "" {
 		imageId = model.ImageId.ValueString()
 	} else if imageResp.Id != nil {
@@ -297,7 +291,6 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	)
 
 	diags := diag.Diagnostics{}
-
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
 		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.CdromBus.Get())
@@ -341,7 +334,6 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 		checksumModel  = &checksumModel{}
 		checksumObject basetypes.ObjectValue
 	)
-
 	if imageResp.Checksum != nil {
 		checksumModel.Algorithm = types.StringValue(imageResp.Checksum.Algorithm)
 		checksumModel.Digest = types.StringValue(imageResp.Checksum.Digest)

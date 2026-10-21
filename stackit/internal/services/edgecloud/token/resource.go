@@ -94,7 +94,6 @@ func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = clients.EdgeV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_edgecloud_token", "resource")
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -223,32 +222,25 @@ func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 
 	var configModel Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if !req.State.Raw.IsNull() {
 		var stateModel Model
-
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -262,7 +254,6 @@ func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 			shouldRecreate, err := edgeCloudUtils.CheckExpiration(stateModel.ExpiresAt, recreateBefore, time.Now())
 			if err != nil {
 				resp.Diagnostics.AddError("Error checking kubeconfig expiration in plan", err.Error())
-
 				return
 			}
 
@@ -280,7 +271,6 @@ func (r *tokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -292,7 +282,6 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -303,7 +292,6 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	expirationSeconds := model.Expiration.ValueInt64()
 	region := model.Region.ValueString()
 	tokenUUID := uuid.New().String()
-
 	model.TokenId = types.StringValue(tokenUUID)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -317,29 +305,24 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		tokenResp *edgeCloud.Token
 		err       error
 	)
-
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
-
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
 
 		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
-
 			return
 		}
 
 		model.Id = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, tokenUUID))
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
-
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
 
 		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
-
 			return
 		}
 
@@ -349,23 +332,18 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = core.LogResponse(ctx)
 
 	creationTime := time.Now()
-
 	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
-
 	expirationDuration := time.Duration(model.Expiration.ValueInt64()) * time.Second
 	expiresAtTime := creationTime.Add(expirationDuration)
-
 	model.ExpiresAt = types.StringValue(expiresAtTime.Format(time.RFC3339))
 
 	if tokenResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "API response is nil")
-
 		return
 	}
 
 	if tokenResp.Token == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "token field in the API response is empty")
-
 		return
 	}
 
@@ -373,7 +351,6 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -388,18 +365,15 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	if expired, err := edgeCloudUtils.CheckExpiration(model.ExpiresAt, types.Int64Null(), time.Now()); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading token", fmt.Sprintf("Checking expiration: %v", err))
-
 		return
 	} else if expired {
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -414,7 +388,6 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -435,13 +408,11 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	ctx = tflog.SetField(ctx, "token_id", model.TokenId.ValueString())
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -458,7 +429,6 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

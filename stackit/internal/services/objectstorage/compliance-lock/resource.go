@@ -51,34 +51,28 @@ type compliancelockResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *compliancelockResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -156,7 +150,6 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -177,7 +170,6 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 
 		if !(ok && oapiErr.StatusCode == http.StatusConflict) {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating compliance lock", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -186,7 +178,6 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 		complianceResp, err = r.client.GetComplianceLock(ctx, projectId, region).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 	}
@@ -197,13 +188,11 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 	err = mapFields(complianceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating compliance lock", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -217,7 +206,6 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -234,7 +222,6 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -249,14 +236,12 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 	err = mapFields(complianceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -276,7 +261,6 @@ func (r *compliancelockResource) Delete(ctx context.Context, req resource.Delete
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -292,7 +276,6 @@ func (r *compliancelockResource) Delete(ctx context.Context, req resource.Delete
 	_, err := r.client.DeleteComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting compliance lock", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 

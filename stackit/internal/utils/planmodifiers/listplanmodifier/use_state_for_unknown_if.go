@@ -61,7 +61,6 @@ func (m useStateForUnknownIf) PlanModifyList(ctx context.Context, req planmodifi
 	m.ifFunc(ctx, req, funcResponse)
 
 	resp.Diagnostics.Append(funcResponse.Diagnostics...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

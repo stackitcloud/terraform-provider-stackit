@@ -143,9 +143,7 @@ func (d *networkAreaRegionDataSource) Schema(_ context.Context, _ datasource.Sch
 // Read refreshes the Terraform state with the latest data.
 func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -153,7 +151,6 @@ func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.R
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -164,7 +161,6 @@ func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.R
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "Reading network area region", fmt.Sprintf("Region configuration for %q for network area %q does not exist.", region, networkAreaId), nil)
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -174,13 +170,11 @@ func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.R
 	err = mapFields(ctx, networkAreaRegionResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

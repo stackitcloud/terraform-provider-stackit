@@ -152,7 +152,6 @@ func TestMapProjectFields(t *testing.T) {
 			}
 
 			var containerParentId = types.StringNull()
-
 			if tt.uuidContainerParentId {
 				containerParentId = types.StringValue(testUUID)
 			} else if tt.projectResp != nil {
@@ -456,13 +455,11 @@ func TestToMembersPayload(t *testing.T) {
 			wantErr: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := toMembersPayload(tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toMembersPayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

@@ -561,7 +561,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	diags := req.Config.Get(ctx, &providerConfig)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -652,7 +651,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		var experimentValues []string
 
 		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
-
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
 		}
@@ -665,7 +663,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		providerDataInternal, err := core.NewProviderDataInternal(providerData, p.clientFactory)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up provider data: %v", err))
-
 			return
 		}
 
@@ -675,7 +672,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		mockRoundTripper, err := sdkauth.NoAuth()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up round tripper for ephemeral provider data: %v", err))
-
 			return
 		}
 
@@ -691,7 +687,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Workload Identity Federation via provided OIDC Token
 	oidc_token := ""
-
 	setStringField(providerConfig.WifFederatedToken, func(v string) { oidc_token = v })
 
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token != "" {
@@ -703,7 +698,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Workload Identity Federation via OIDC Token from file
 	oidc_token_path := ""
-
 	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { oidc_token_path = v })
 
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token_path != "" {
@@ -716,8 +710,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
 		oidcReqURL := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
-		oidcReqToken := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 
+		oidcReqToken := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestGHOIDCToken(oidcReqURL, oidcReqToken)
 		}
@@ -736,7 +730,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
-
 		return
 	}
 
@@ -887,7 +880,6 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 	}
-
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
 
@@ -1004,7 +996,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasRoutingTableRoute.NewRoutingTableRouteResource,
 		iaasVolume.NewVolumeResource,
 	}
-
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
 	resources = append(resources, iamRoleBindingsV1.NewRoleBindingResources()...)

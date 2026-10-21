@@ -712,8 +712,8 @@ func TestMapFields(t *testing.T) {
 			aclErr := mapACLField(tt.listACLResp, state)
 			metricsErr := mapMetricsRetentionField(tt.getMetricsRetentionResp, state)
 			logsErr := mapLogsRetentionField(tt.getLogsRetentionResp, state)
-			tracesErr := mapTracesRetentionField(tt.getTracesRetentionResp, state)
 
+			tracesErr := mapTracesRetentionField(tt.getTracesRetentionResp, state)
 			if !tt.isValid && err == nil && aclErr == nil && metricsErr == nil && logsErr == nil && tracesErr == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1064,8 +1064,8 @@ func TestMapAlertConfigField(t *testing.T) {
 				ACL:        types.SetNull(types.StringType),
 				Parameters: types.MapNull(types.StringType),
 			}
-			err := mapAlertConfigField(context.Background(), tt.alertConfigResp, state)
 
+			err := mapAlertConfigField(context.Background(), tt.alertConfigResp, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1656,8 +1656,8 @@ func TestGetRouteNestedObjectAux(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output := getRouteNestedObjectAux(tt.isDatasource, tt.startingLevel, tt.recursionLimit)
-			diff := cmp.Diff(output, tt.expected)
 
+			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -1742,8 +1742,8 @@ func TestGetRouteListTypeAux(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			output := getRouteListTypeAux(tt.startingLevel, tt.recursionLimit)
-			diff := cmp.Diff(output, tt.expected)
 
+			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
 			}
@@ -1753,11 +1753,9 @@ func TestGetRouteListTypeAux(t *testing.T) {
 
 func makeTestMap(t *testing.T) basetypes.MapValue {
 	p := make(map[string]attr.Value, 1)
-
 	p["key"] = types.StringValue("value")
 
 	params, diag := types.MapValueFrom(context.Background(), types.StringType, p)
-
 	if diag.HasError() {
 		t.Fail()
 	}
@@ -1770,7 +1768,6 @@ func toTerraformStringMapMust(ctx context.Context, m map[string]string) basetype
 	labels := make(map[string]attr.Value, len(m))
 	for l, v := range m {
 		stringValue := types.StringValue(v)
-
 		labels[l] = stringValue
 	}
 

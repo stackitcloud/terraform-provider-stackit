@@ -130,7 +130,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -140,7 +139,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
@@ -168,14 +166,12 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	err = mapDataSourceFields(userResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -193,7 +189,6 @@ func mapDataSourceFields(user *secretsmanager.User, model *DataSourceModel) erro
 	}
 
 	var userId string
-
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
 	} else if user.Id != "" {

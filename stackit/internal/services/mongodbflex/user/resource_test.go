@@ -170,8 +170,8 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId:        tt.expected.InstanceId,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
-			err := mapFieldsCreate(tt.input, state, tt.region)
 
+			err := mapFieldsCreate(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -314,8 +314,8 @@ func TestMapFields(t *testing.T) {
 				UserId:            tt.expected.UserId,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
-			err := mapFields(tt.input, state, tt.region)
 
+			err := mapFields(tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -69,8 +69,8 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapDataSourceFields(tt.input, state)
 
+			err := mapDataSourceFields(tt.input, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

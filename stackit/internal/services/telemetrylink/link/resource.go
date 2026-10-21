@@ -116,27 +116,22 @@ func (r *telemetryLinkResource) ModifyPlan(ctx context.Context, req resource.Mod
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -271,7 +266,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -283,7 +277,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -293,19 +286,16 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 	resourceType := planModel.ResourceType.ValueString()
 	resourceID := planModel.ResourceID.ValueString()
 	region := r.providerData.GetRegionWithOverride(planModel.Region)
-
 	ctx = tflog.SetField(ctx, "resource_type", resourceType)
 	ctx = tflog.SetField(ctx, "resource_id", resourceID)
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var response *telemetrylink.TelemetryLinkResponse
-
 	switch planModel.ResourceType.ValueString() {
 	case resourceTypeOrganization:
 		payload, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(&planModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
-
 			return
 		}
 
@@ -315,7 +305,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -323,7 +312,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 
 		if createResp == nil || createResp.Id == "" {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", "Create API response: Incomplete response (id missing)")
-
 			return
 		}
 
@@ -340,7 +328,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 		response, err = wait.CreateOrganizationTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
-
 			return
 		}
 
@@ -348,7 +335,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 		payload, err := toCreateOrUpdateFolderTelemetryLinkPayload(&planModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
-
 			return
 		}
 
@@ -358,7 +344,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -366,7 +351,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 
 		if createResp == nil || createResp.Id == "" {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", "Create API response: Incomplete response (id missing)")
-
 			return
 		}
 
@@ -383,14 +367,12 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 		response, err = wait.CreateFolderTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
-
 			return
 		}
 	case resourceTypeProject:
 		payload, err := toCreateOrUpdateProjectTelemetryLinkPayload(&planModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
-
 			return
 		}
 
@@ -400,7 +382,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -408,7 +389,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 
 		if createResp == nil || createResp.Id == "" {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", "Create API response: Incomplete response (id missing)")
-
 			return
 		}
 
@@ -425,25 +405,21 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 		response, err = wait.CreateProjectTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
-
 			return
 		}
 	default:
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", planModel.ResourceType.ValueString()))
-
 		return
 	}
 
 	err := mapFields(ctx, response, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -456,7 +432,6 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -475,7 +450,6 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 		err      error
 		response *telemetrylink.TelemetryLinkResponse
 	)
-
 	switch resourceType {
 	case resourceTypeOrganization:
 		response, err = r.client.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
@@ -485,7 +459,6 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 		response, err = r.client.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
 	default:
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", model.ResourceType.ValueString()))
-
 		return
 	}
 
@@ -493,10 +466,8 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -510,13 +481,11 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 	err = mapFields(ctx, response, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -533,7 +502,6 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -544,7 +512,6 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -556,7 +523,6 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -573,13 +539,11 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 
 	// Uses PartialUpdate* to omit AccessToken, preserving backend tokens for write-only (access_token_wo) support.
 	var response *telemetrylink.TelemetryLinkResponse
-
 	switch resourceType {
 	case resourceTypeOrganization:
 		payload, err := toPartialUpdateOrganizationTelemetryLinkPayload(&planModel, &stateModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
-
 			return
 		}
 
@@ -588,7 +552,6 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -597,14 +560,12 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 		response, err = wait.PartialUpdateOrganizationTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
-
 			return
 		}
 	case resourceTypeFolder:
 		payload, err := toPartialUpdateFolderTelemetryLinkPayload(&planModel, &stateModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
-
 			return
 		}
 
@@ -613,7 +574,6 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -622,14 +582,12 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 		response, err = wait.PartialUpdateFolderTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
-
 			return
 		}
 	case resourceTypeProject:
 		payload, err := toPartialUpdateProjectTelemetryLinkPayload(&planModel, &stateModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
-
 			return
 		}
 
@@ -638,7 +596,6 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -647,25 +604,21 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 		response, err = wait.PartialUpdateProjectTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
-
 			return
 		}
 	default:
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
-
 		return
 	}
 
 	err := mapFields(ctx, response, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -681,7 +634,6 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -697,13 +649,11 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var err error
-
 	switch resourceType {
 	case resourceTypeOrganization:
 		err = r.client.DeleteOrganizationTelemetryLink(ctx, resourceID, region).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -712,14 +662,12 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 		_, err = wait.DeleteOrganizationTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become deleted: %v", err))
-
 			return
 		}
 	case resourceTypeFolder:
 		err = r.client.DeleteFolderTelemetryLink(ctx, resourceID, region).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -728,14 +676,12 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 		_, err = wait.DeleteFolderTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become deleted: %v", err))
-
 			return
 		}
 	case resourceTypeProject:
 		err = r.client.DeleteProjectTelemetryLink(ctx, resourceID, region).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-
 			return
 		}
 
@@ -744,12 +690,10 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 		_, err = wait.DeleteProjectTelemetryLinkWaitHandler(ctx, r.client, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become deleted: %v", err))
-
 			return
 		}
 	default:
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
-
 		return
 	}
 
@@ -760,7 +704,6 @@ func (r *telemetryLinkResource) ImportState(ctx context.Context, req resource.Im
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryLink", fmt.Sprintf("Invalid import ID %q: expected format is `resource_type`,`resource_id`,`region`", req.ID))
-
 		return
 	}
 

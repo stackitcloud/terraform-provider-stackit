@@ -294,9 +294,7 @@ func (r *zoneResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -304,34 +302,28 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	waiterTimeout := wait.CreateZoneWaitHandler(ctx, r.client, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new zone
 	createResp, err := r.client.CreateZone(ctx, projectId).CreateZonePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -344,7 +336,6 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"project_id": projectId,
 		"zone_id":    zoneId,
 	})
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -352,7 +343,6 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
-
 		return
 	}
 
@@ -360,13 +350,10 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	err = mapFields(ctx, waitResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -380,31 +367,27 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	zoneId := model.ZoneId.ValueString()
 
+	zoneId := model.ZoneId.ValueString()
 	if zoneId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -414,10 +397,8 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -430,7 +411,6 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	if zoneResp != nil && zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -438,14 +418,11 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	err = mapFields(ctx, zoneResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -460,7 +437,6 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -468,20 +444,17 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	waiterTimeout := wait.PartialUpdateZoneWaitHandler(ctx, r.client, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
@@ -489,15 +462,12 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	payload, err := toUpdatePayload(&model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Update existing zone
 	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -506,20 +476,17 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -534,7 +501,6 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -542,20 +508,17 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	waiterTimeout := wait.DeleteZoneWaitHandler(ctx, r.client, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
-
 	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
@@ -563,10 +526,8 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err := r.client.DeleteZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -580,7 +541,6 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
-
 		return
 	}
 
@@ -621,17 +581,14 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	z := zoneResp.Zone
 
 	var rc *int64
-
 	if z.RecordCount != nil {
 		recordCount64 := int64(*z.RecordCount)
-
 		rc = &recordCount64
 	} else {
 		rc = nil
 	}
 
 	var zoneId string
-
 	if model.ZoneId.ValueString() != "" {
 		zoneId = model.ZoneId.ValueString()
 	} else if z.Id != "" {
@@ -691,7 +648,6 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 	}
 
 	modelPrimaries := []string{}
-
 	for _, primary := range model.Primaries.Elements() {
 		primaryString, ok := primary.(types.String)
 		if !ok {

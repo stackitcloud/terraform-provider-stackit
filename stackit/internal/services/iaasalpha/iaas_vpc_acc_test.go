@@ -96,7 +96,6 @@ var testConfigVPCVarsMax = config.Variables{
 var testConfigVPCVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -123,7 +122,6 @@ var testConfigVPCRoutingTableVarsMin = config.Variables{
 var testConfigVPCRoutingTableVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableVarsMin)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -153,7 +151,6 @@ var testConfigVPCRoutingTableVarsMax = config.Variables{
 var testConfigVPCRoutingTableVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableVarsMax)
-
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf(
 		"%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"]),
 	))
@@ -183,7 +180,6 @@ var testConfigVPCRoutingTableStaticRouteVarsMin = config.Variables{
 var testConfigVPCRoutingTableStaticRouteVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableStaticRouteVarsMin)
-
 	// currently only cidrv4 supported
 	updatedConfig["nexthop_type"] = config.StringVariable("blackhole")
 	updatedConfig["nexthop_value"] = nil
@@ -211,7 +207,6 @@ var testConfigVPCRoutingTableStaticRouteVarsMax = config.Variables{
 var testConfigVPCRoutingTableStaticRouteVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCRoutingTableStaticRouteVarsMax)
-
 	// currently only cidrv4 supported
 	updatedConfig["nexthop_type"] = config.StringVariable("blackhole")
 	updatedConfig["nexthop_value"] = nil
@@ -250,9 +245,7 @@ var testConfigVPCNetworkRangeVarsMin = config.Variables{
 var testConfigVPCNetworkRangeVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCNetworkRangeVarsMin)
-
 	updatedConfig["description"] = config.StringVariable("network range acc test update")
-
 	return updatedConfig
 }()
 
@@ -280,7 +273,6 @@ var testConfigVPCNetworkRangeVarsMax = config.Variables{
 var testConfigVPCNetworkRangeVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVPCNetworkRangeVarsMax)
-
 	updatedConfig["description"] = config.StringVariable("network range acc test update")
 	updatedConfig["default_prefix_length"] = config.IntegerVariable(27)
 	updatedConfig["max_prefix_length"] = config.IntegerVariable(27)
@@ -1482,7 +1474,6 @@ func testCheckDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	for _, checkDestroyFunc := range checkDestroyFuncs {
 		err := checkDestroyFunc(s)
 		if err != nil {
@@ -1511,7 +1502,6 @@ func testVpcRoutingTableCheckDestroy(s *terraform.State) error {
 	rtToDestroy := []routingTableIds{}
 
 	var errs []error
-
 	// vpc
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_vpc_routing_table" {
@@ -1590,7 +1580,6 @@ func testVpcRoutingTableStaticRouteDestroy(s *terraform.State) error {
 	routesToDestroy := []staticRouteIds{}
 
 	var errs []error
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_vpc_routing_table_static_route" {
 			continue

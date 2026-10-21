@@ -51,7 +51,6 @@ var testConfigVarsMax = config.Variables{
 func configVarsMaxUpdated() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigVarsMax)
-
 	updatedConfig["parameters_max_disk_threshold"] = config.IntegerVariable(85)
 	updatedConfig["parameters_metrics_frequency"] = config.IntegerVariable(10)
 	updatedConfig["parameters_graphite"] = config.StringVariable("graphite.stackit.cloud:2003")
@@ -447,15 +446,12 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_mariadb_instance" {
 			continue
 		}
-
 		// instance terraform ID: "[project_id],[region],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

@@ -95,7 +95,6 @@ func (d *compliancelockDataSource) Read(ctx context.Context, req datasource.Read
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -131,14 +130,12 @@ func (d *compliancelockDataSource) Read(ctx context.Context, req datasource.Read
 	err = mapFields(complianceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

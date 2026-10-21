@@ -104,7 +104,6 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -122,7 +121,6 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	found, err := readCredentialsGroups(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
-
 		return
 	}
 
@@ -131,7 +129,6 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	if !found {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("Credentials group with ID %q does not exists in project %q", credentialsGroupId, projectId))
-
 		return
 	}
 
@@ -142,7 +139,6 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -60,7 +60,6 @@ var testModelexperimentsConfigVarsMax = config.Variables{
 func testModelexperimentsInstanceConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testModelexperimentsConfigVarsMin))
 	maps.Copy(tempConfig, testModelexperimentsConfigVarsMin)
-
 	tempConfig["name"] = config.StringVariable("tfAccTest-minInstance-upd")
 	tempConfig["token_name"] = config.StringVariable("tfAccTest-minInstanceToken-upd")
 
@@ -70,7 +69,6 @@ func testModelexperimentsInstanceConfigVarsMinUpdated() config.Variables {
 func testModelexperimentsInstanceConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testModelexperimentsConfigVarsMax))
 	maps.Copy(tempConfig, testModelexperimentsConfigVarsMax)
-
 	// Instance
 	tempConfig["name"] = config.StringVariable("tfAccTest-maxInstance-upd")
 	tempConfig["description"] = config.StringVariable("instanceDescription-upd")
@@ -402,7 +400,6 @@ func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
 	}
 
 	instancesToDestroy := []string{}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_modelexperiments_instance" {
 			continue
@@ -430,7 +427,6 @@ func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
 
 	if len(instancesResp.Instances) == 0 {
 		fmt.Print("No instances found for project \n")
-
 		return nil
 	}
 

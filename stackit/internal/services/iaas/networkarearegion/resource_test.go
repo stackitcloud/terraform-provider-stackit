@@ -159,7 +159,6 @@ func Test_mapFields(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -242,13 +241,11 @@ func Test_toCreatePayload(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := toCreatePayload(context.Background(), tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -307,13 +304,11 @@ func Test_toUpdatePayload(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := toUpdatePayload(context.Background(), tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -446,7 +441,6 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 			wantErr: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := mapIpv4NetworkRanges(context.Background(), tt.args.networkAreaRangesList, tt.args.model); (err != nil) != tt.wantErr {
@@ -801,12 +795,10 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			isValid: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			// Will be compared to tt.expectedNetworkRangesStates at the end
 			networkRangesStates := make(map[string]bool)
-
 			networkRangesStates["pr-1"] = true
 			networkRangesStates["pr-2"] = true
 			networkRangesStates["pr-3"] = true
@@ -841,13 +833,11 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 				err := decoder.Decode(&payload)
 				if err != nil {
 					t.Errorf("Create network range handler: failed to parse payload")
-
 					return
 				}
 
 				if payload.Ipv4 == nil {
 					t.Errorf("Create network range handler: nil Ipv4")
-
 					return
 				}
 
@@ -857,7 +847,6 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 					prefix := networkRange.Prefix
 					if prefixExists, prefixWasCreated := networkRangesStates[prefix]; prefixWasCreated && prefixExists {
 						t.Errorf("Create network range handler: attempted to create range '%v' that already exists", payload.Ipv4)
-
 						return
 					}
 
@@ -886,7 +875,6 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 					respBytes, err := json.Marshal(resp)
 					if err != nil {
 						t.Errorf("Create network range handler: failed to marshal response: %v", err)
-
 						return
 					}
 
@@ -902,16 +890,14 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			// Handler for deleting Network range
 			deleteNetworkRangeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				vars := mux.Vars(r)
-				networkRangeId, ok := vars["networkRangeId"]
 
+				networkRangeId, ok := vars["networkRangeId"]
 				if !ok {
 					t.Errorf("Delete network range handler: no range ID")
-
 					return
 				}
 
 				var prefix string
-
 				for _, rangeItem := range getAllNetworkRangesResp.Items {
 					if *rangeItem.Id == networkRangeId {
 						prefix = rangeItem.Prefix
@@ -921,13 +907,11 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 				prefixExists, prefixWasCreated := networkRangesStates[prefix]
 				if !prefixWasCreated {
 					t.Errorf("Delete network range handler: attempted to delete range '%v' that wasn't created", prefix)
-
 					return
 				}
 
 				if prefixWasCreated && !prefixExists {
 					t.Errorf("Delete network range handler: attempted to delete range '%v' that was already deleted", prefix)
-
 					return
 				}
 
@@ -965,7 +949,6 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			router.HandleFunc("/v2/organizations/{organizationId}/network-areas/{areaId}/regions/{region}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
 
 			mockedServer := httptest.NewServer(router)
-
 			defer mockedServer.Close()
 
 			client, err := iaas.NewAPIClient(
@@ -1034,13 +1017,11 @@ func Test_toDefaultNameserversPayload(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := toDefaultNameserversPayload(context.Background(), tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toDefaultNameserversPayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -1119,13 +1100,11 @@ func Test_toNetworkRangesPayload(t *testing.T) {
 			wantErr: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := toNetworkRangesPayload(context.Background(), tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toNetworkRangesPayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

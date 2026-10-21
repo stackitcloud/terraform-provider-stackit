@@ -34,6 +34,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		OpenTelemetry: types.ObjectNull(openTelemetryTypes),
 		S3:            types.ObjectNull(s3Types),
 	})
+
 	model := &Model{
 		ID:             types.StringValue("pid,rid,iid,dsid"),
 		DestinationID:  types.StringValue("dsid"),
@@ -47,7 +48,6 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		CreationTime:   types.StringValue(testTime.Format(time.RFC3339)),
 		Status:         types.StringValue("active"),
 	}
-
 	for _, mod := range mods {
 		mod(model)
 	}
@@ -116,7 +116,6 @@ func TestMapFields(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -157,7 +156,6 @@ func TestMapFields(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -221,7 +219,6 @@ func TestMapFields(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(openTelemetryTypes),
 					S3:            s3Val,
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -242,8 +239,8 @@ func TestMapFields(t *testing.T) {
 				InstanceID: tt.expected.InstanceID,
 				Config:     tt.expected.Config,
 			}
-			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 
+			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -295,7 +292,6 @@ func TestToCreatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -343,7 +339,6 @@ func TestToCreatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -390,7 +385,6 @@ func TestToCreatePayload(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(openTelemetryTypes),
 					S3:            s3Val,
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -472,7 +466,6 @@ func TestToUpdatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -520,7 +513,6 @@ func TestToUpdatePayload(t *testing.T) {
 					OpenTelemetry: openTelemetryVal,
 					S3:            types.ObjectNull(s3Types),
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
@@ -567,7 +559,6 @@ func TestToUpdatePayload(t *testing.T) {
 					OpenTelemetry: types.ObjectNull(openTelemetryTypes),
 					S3:            s3Val,
 				})
-
 				model.Config = cfg
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")

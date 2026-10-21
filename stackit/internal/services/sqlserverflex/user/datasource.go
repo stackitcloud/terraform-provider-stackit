@@ -140,7 +140,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -151,7 +150,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	instanceId := model.InstanceId.ValueString()
 	userIdStr := model.UserId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
@@ -160,7 +158,6 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
-
 		return
 	}
 
@@ -187,14 +184,12 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	err = mapDataSourceFields(recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -212,7 +207,6 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 	}
 
 	var userId string
-
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
 	} else if userResp.Id != 0 {

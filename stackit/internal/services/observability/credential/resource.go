@@ -154,7 +154,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -172,7 +171,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -180,7 +178,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	if got == nil || got.Credentials.Username == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty username")
-
 		return
 	}
 
@@ -198,13 +195,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	err = mapFields(&got.Credentials, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -222,7 +217,6 @@ func mapFields(r *observabilitySdk.Credentials, model *Model) error {
 	}
 
 	var userName string
-
 	if model.Username.ValueString() != "" {
 		userName = model.Username.ValueString()
 	} else if r.Username != "" {
@@ -246,7 +240,6 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,22 +248,19 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userName := model.Username.ValueString()
 
+	userName := model.Username.ValueString()
 	if userName == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
 	_, err := r.client.GetCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -292,7 +282,6 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -312,7 +301,6 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -326,7 +314,6 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	_, err := r.client.DeleteCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}

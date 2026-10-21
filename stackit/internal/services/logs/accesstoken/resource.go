@@ -108,27 +108,22 @@ func (r *logsAccessTokenResource) ModifyPlan(ctx context.Context, req resource.M
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -264,7 +259,6 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -274,7 +268,6 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 	instanceId := model.InstanceID.ValueString()
 	projectId := model.ProjectID.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -282,14 +275,12 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 	payload, err := toCreatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs access token", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateAccessToken(ctx, projectId, region, instanceId).CreateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs access token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -300,13 +291,11 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 	err = mapFields(ctx, createResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -319,7 +308,6 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -329,12 +317,11 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 	projectID := model.ProjectID.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceID := model.InstanceID.ValueString()
-	accessTokenID := model.AccessTokenID.ValueString()
 
+	accessTokenID := model.AccessTokenID.ValueString()
 	if accessTokenID == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -348,10 +335,8 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -365,13 +350,11 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 	err = mapFields(ctx, accessTokenResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -386,7 +369,6 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -406,14 +388,12 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs access token", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	err = r.client.UpdateAccessToken(ctx, projectID, region, instanceID, accessTokenID).UpdateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs access token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -422,20 +402,17 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs access token", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, accessTokenResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs access token", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -450,7 +427,6 @@ func (r *logsAccessTokenResource) Delete(ctx context.Context, req resource.Delet
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -470,7 +446,6 @@ func (r *logsAccessTokenResource) Delete(ctx context.Context, req resource.Delet
 	err := r.client.DeleteAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -489,7 +464,6 @@ func (r *logsAccessTokenResource) ImportState(ctx context.Context, req resource.
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing Logs access token", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`,`access_token_id`", req.ID))
-
 		return
 	}
 
@@ -543,7 +517,6 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	}
 
 	var accessTokenID string
-
 	if model.AccessTokenID.ValueString() != "" {
 		accessTokenID = model.AccessTokenID.ValueString()
 	} else if accessToken.Id != "" {
@@ -573,7 +546,6 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	permissionList := types.ListNull(types.StringType)
 
 	var diags diag.Diagnostics
-
 	if len(accessToken.Permissions) > 0 {
 		permissionList, diags = types.ListValueFrom(ctx, types.StringType, accessToken.Permissions)
 		if diags.HasError() {

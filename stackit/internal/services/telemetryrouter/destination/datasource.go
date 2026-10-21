@@ -278,7 +278,6 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -300,10 +299,8 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -327,13 +324,11 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 	err = mapDatasourceFields(ctx, destinationResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -354,7 +349,6 @@ func mapDatasourceFields(ctx context.Context, destination *telemetryrouter.Desti
 	}
 
 	var destinationID string
-
 	if model.DestinationID.ValueString() != "" {
 		destinationID = model.DestinationID.ValueString()
 	} else if destination.Id != "" {
@@ -413,7 +407,6 @@ func mapDatasourceFilter(ctx context.Context, apiConf *telemetryrouter.Destinati
 	}
 
 	attrList := []attr.Value{}
-
 	for _, currentAttr := range apiConf.Filter.Attributes {
 		values, diags := types.ListValueFrom(ctx, types.StringType, currentAttr.Values)
 		if diags.HasError() {
@@ -437,7 +430,6 @@ func mapDatasourceFilter(ctx context.Context, apiConf *telemetryrouter.Destinati
 		attrConfigs basetypes.ListValue
 		diags       diag.Diagnostics
 	)
-
 	if len(attrList) == 0 {
 		attrConfigs = types.ListNull(types.ObjectType{AttrTypes: datasourceAttributeTypes})
 	} else {

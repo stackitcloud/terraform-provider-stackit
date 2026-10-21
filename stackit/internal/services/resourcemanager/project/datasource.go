@@ -138,7 +138,6 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -146,16 +145,13 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	containerId := model.ContainerId.ValueString()
-
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	if containerId == "" && projectId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", "Either container_id or project_id must be set")
-
 		return
 	}
 
@@ -163,7 +159,6 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	var identifier = containerId
 
 	identifierType := "Container"
-
 	if projectId != "" {
 		identifier = projectId
 		identifierType = "Project"
@@ -191,13 +186,11 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	err = mapProjectFields(ctx, projectResp, &model, &resp.State)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading project", fmt.Sprintf("Processing API response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -16,6 +16,7 @@ func TestMapDatasourceFields(t *testing.T) {
 	now := time.Now()
 	testTime := types.StringValue(now.Format(time.RFC3339))
 	testTimePlus1h := types.StringValue(now.Add(1 * time.Hour).Format(time.RFC3339))
+
 	tests := []struct {
 		name     string
 		state    *dataSourceModel
@@ -106,7 +107,6 @@ func TestMapDatasourceFields(t *testing.T) {
 			isValid: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()

@@ -55,9 +55,7 @@ var testConfigVarsMin = config.Variables{
 func testConfigVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-telemetryrouter-upd")
-
 	return newVars
 }
 
@@ -76,7 +74,6 @@ var testConfigVarsMax = config.Variables{
 func testConfigVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-telemetryrouter-upd")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryRouter Instance Updated")
 	newVars["filter_key"] = config.StringVariable("other")
@@ -98,9 +95,7 @@ var testConfigAccessTokenVarsMin = config.Variables{
 func testConfigAccessTokenVarsMinUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigAccessTokenVarsMin))
 	maps.Copy(newVars, testConfigAccessTokenVarsMin)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-token-updated")
-
 	return newVars
 }
 
@@ -116,7 +111,6 @@ var testConfigAccessTokenVarsMax = config.Variables{
 func testConfigAccessTokenVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigAccessTokenVarsMax))
 	maps.Copy(newVars, testConfigAccessTokenVarsMax)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-token-updated")
 	newVars["description"] = config.StringVariable("tf-acc-test-token-decription-updated")
 
@@ -140,7 +134,6 @@ var testConfigDestinationVarsOTLPBasicAuth = config.Variables{
 func testConfigDestinationVarsOTLPBasicAuthUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigDestinationVarsOTLPBasicAuth))
 	maps.Copy(newVars, testConfigDestinationVarsOTLPBasicAuth)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-tlmr-dest-upd")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryRouter Destination Updated")
 	newVars["config_filter_key"] = config.StringVariable("other")
@@ -168,7 +161,6 @@ var testConfigDestinationVarsOTLPBearerToken = config.Variables{
 func testConfigDestinationVarsOTLPBearerTokenUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigDestinationVarsOTLPBearerToken))
 	maps.Copy(newVars, testConfigDestinationVarsOTLPBearerToken)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-tlmr-dest-upd")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryRouter Destination Updated")
 	newVars["config_filter_key"] = config.StringVariable("other")
@@ -197,7 +189,6 @@ var testConfigDestinationVarsS3 = config.Variables{
 func testConfigDestinationVarsS3Updated() config.Variables {
 	newVars := make(config.Variables, len(testConfigDestinationVarsS3))
 	maps.Copy(newVars, testConfigDestinationVarsS3)
-
 	newVars["display_name"] = config.StringVariable("tf-acc-test-tlmr-dest-upd")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryRouter Destination Updated")
 	newVars["config_filter_key"] = config.StringVariable("other")
@@ -1096,7 +1087,6 @@ func testAccCheckTelemetryRouterInstanceDestroy(s *terraform.State) error {
 	}
 
 	var instancesToDestroy []string
-
 	// instances
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_telemetryrouter_instance" {
@@ -1104,7 +1094,6 @@ func testAccCheckTelemetryRouterInstanceDestroy(s *terraform.State) error {
 		}
 
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
@@ -1141,7 +1130,6 @@ func testAccCheckTelemetryRouterAccessTokenDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	// access tokens
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_telemetryrouter_access_token" {
@@ -1155,7 +1143,6 @@ func testAccCheckTelemetryRouterAccessTokenDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteAccessToken(ctx, testutil.ProjectId, region, instanceId, accessTokenId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue
@@ -1183,7 +1170,6 @@ func testAccCheckTelemetryRouterDestinationDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-
 	// destinations
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_telemetryrouter_destination" {
@@ -1197,7 +1183,6 @@ func testAccCheckTelemetryRouterDestinationDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteDestination(ctx, testutil.ProjectId, region, instanceId, destinationId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-
 			if errors.As(err, &oapiErr) {
 				if oapiErr.StatusCode == http.StatusNotFound {
 					continue

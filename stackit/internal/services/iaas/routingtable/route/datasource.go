@@ -47,7 +47,6 @@ func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasou
 	d.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Datasource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -59,7 +58,6 @@ func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasou
 func (d *routingTableRouteDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Routing table route datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This datasource is for SNA, not VPC, networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Datasource),
@@ -73,7 +71,6 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -85,7 +82,6 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	routeId := model.RouteId.ValueString()
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -115,13 +111,11 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 	err = shared.MapRouteModel(ctx, routeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table route", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

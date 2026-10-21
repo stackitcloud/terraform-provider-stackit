@@ -125,7 +125,6 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,7 +143,6 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 		response *telemetrylink.TelemetryLinkResponse
 		err      error
 	)
-
 	switch resourceType {
 	case resourceTypeOrganization:
 		response, err = d.client.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
@@ -154,7 +152,6 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 		response, err = d.client.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
 	default:
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
-
 		return
 	}
 
@@ -179,13 +176,11 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 	err = mapDataSourceFields(ctx, response, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

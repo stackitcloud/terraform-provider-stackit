@@ -115,9 +115,7 @@ func (i *instanceTokenDataSource) Schema(_ context.Context, _ datasource.SchemaR
 // ReadRequest and new state values set on the ReadResponse.
 func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model InstanceTokenDataSourceModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -128,7 +126,6 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 	region := i.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	tokenId := model.TokenId.ValueString()
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -155,20 +152,17 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	if getInstanceTokenResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", "Got empty response")
-
 		return
 	}
 
 	err = mapDataSourceFields(ctx, &getInstanceTokenResp.Token, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}

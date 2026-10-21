@@ -15,6 +15,7 @@ func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 
 	id := fmt.Sprintf("%s,%s,%s,%s,%s", "pid", "vid", testRegion, "rtid", "rid")
+
 	tests := []struct {
 		description string
 		state       SharedModel
@@ -110,7 +111,6 @@ func TestMapFields(t *testing.T) {
 			wantErr:     true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.input, &tt.state, testRegion)
@@ -335,7 +335,6 @@ func TestToUpdatePayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var current types.Map
-
 			if tt.currentLabels != nil {
 				current = *tt.currentLabels
 			} else {

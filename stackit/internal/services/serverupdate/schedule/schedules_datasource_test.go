@@ -73,7 +73,6 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &schedulesDataSourceModel{
@@ -81,8 +80,8 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				ServerId:  tt.expected.ServerId,
 			}
 			ctx := context.TODO()
-			err := mapSchedulesDatasourceFields(ctx, tt.input, state, tt.region)
 
+			err := mapSchedulesDatasourceFields(ctx, tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

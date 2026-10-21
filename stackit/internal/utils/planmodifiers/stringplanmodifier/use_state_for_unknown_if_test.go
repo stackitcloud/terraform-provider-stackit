@@ -205,8 +205,8 @@ func TestUnchangedPaths(t *testing.T) {
 		t.Helper()
 
 		plan := tfsdk.Plan{Schema: testSchema}
-		diags := plan.Set(ctx, modelFromValues(t, values))
 
+		diags := plan.Set(ctx, modelFromValues(t, values))
 		if diags.HasError() {
 			t.Fatalf("failed to construct plan: %v", diags.Errors())
 		}
@@ -218,8 +218,8 @@ func TestUnchangedPaths(t *testing.T) {
 		t.Helper()
 
 		state := tfsdk.State{Schema: testSchema}
-		diags := state.Set(ctx, modelFromValues(t, values))
 
+		diags := state.Set(ctx, modelFromValues(t, values))
 		if diags.HasError() {
 			t.Fatalf("failed to construct state: %v", diags.Errors())
 		}
@@ -351,11 +351,10 @@ func TestUnchangedPaths(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plan := newPlan(t, tt.plan)
 			state := newState(t, tt.state)
-			configPlan := plan
 
+			configPlan := plan
 			if tt.configItems != nil {
 				configValues := tt.plan
-
 				configValues.items = tt.configItems
 				configPlan = newPlan(t, configValues)
 			}

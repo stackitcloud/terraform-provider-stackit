@@ -87,7 +87,6 @@ func TestMapFields(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)
@@ -329,13 +328,11 @@ func TestToNextHopPayload(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := toNextHopPayload(tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toNextHopPayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -421,13 +418,11 @@ func TestToDestinationPayload(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := toDestinationPayload(tt.args.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toDestinationPayload() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -514,13 +509,11 @@ func TestMapRouteNextHop(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := mapRouteNextHop(tt.args.routeResp)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapRouteNextHop() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 
@@ -577,13 +570,11 @@ func TestMapRouteDestination(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := mapRouteDestination(tt.args.routeResp)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapRouteDestination() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
 

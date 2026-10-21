@@ -21,6 +21,7 @@ func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 
 	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
+
 	tests := []struct {
 		description string
 		input       *objectstorage.CreateAccessKeyResponse
@@ -121,7 +122,6 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
@@ -130,8 +130,8 @@ func TestMapFields(t *testing.T) {
 				CredentialId:       tt.expected.CredentialId,
 				RotateWhenChanged:  types.MapNull(types.StringType),
 			}
-			err := mapFields(tt.input, model, "eu01")
 
+			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -360,8 +360,8 @@ func TestReadCredentials(t *testing.T) {
 					t.Errorf("Failed to write response: %v", err)
 				}
 			})
-			mockedServer := httptest.NewServer(handler)
 
+			mockedServer := httptest.NewServer(handler)
 			defer mockedServer.Close()
 
 			client, err := objectstorage.NewAPIClient(
@@ -378,8 +378,8 @@ func TestReadCredentials(t *testing.T) {
 				CredentialId:       tt.expectedModel.CredentialId,
 				RotateWhenChanged:  types.MapNull(types.StringType),
 			}
-			found, err := readCredentials(context.Background(), model, "eu01", client.DefaultAPI)
 
+			found, err := readCredentials(context.Background(), model, "eu01", client.DefaultAPI)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

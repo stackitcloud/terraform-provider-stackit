@@ -68,13 +68,11 @@ type credentialResource struct {
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic,tfmodifyplan // function signature required by Terraform // adaptRegion is called in modifyPlanRegion function
 	r.modifyPlanRegion(ctx, &req, resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	r.modifyPlanExpiration(ctx, &req, resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -84,34 +82,28 @@ func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.Modify
 // Use the modifier to set the effective region in the current plan.
 func (r *credentialResource) modifyPlanRegion(ctx context.Context, req *resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	var configModel Model
-
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -127,13 +119,11 @@ func (r *credentialResource) modifyPlanExpiration(ctx context.Context, req *reso
 	)
 
 	resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, p, req.State, time.RFC3339, &stateDate)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, p, resp.Plan, time.RFC3339, &planDate)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -143,7 +133,6 @@ func (r *credentialResource) modifyPlanExpiration(ctx context.Context, req *reso
 	// this will prevent no-op updates
 	if stateDate.Equal(planDate) && !stateDate.IsZero() {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, types.StringValue(stateDate.Format(time.RFC3339)))...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -278,7 +267,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -297,7 +285,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	err := objectstorageUtils.EnableProject(ctx, projectId, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Enabling object storage project before creation: %v", err))
-
 		return
 	}
 
@@ -305,15 +292,12 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
-
 	// Create new credential
 	credentialResp, err := r.client.CreateAccessKey(ctx, projectId, region).CredentialsGroup(credentialsGroupId).CreateAccessKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -335,7 +319,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	err = mapFields(credentialResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
 
@@ -344,19 +327,15 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 			actualDate time.Time
 			planDate   time.Time
 		)
-
 		resp.Diagnostics.Append(utils.ToTime(ctx, time.RFC3339, model.ExpirationTimestamp, &actualDate)...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
 		resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, path.Root("expiration_timestamp"), req.Plan, time.RFC3339, &planDate)...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
-
 		// replace the planned expiration date with the original date, iff
 		// they represent the same point in time, (perhaps with different textual representations)
 		if actualDate.Equal(planDate) {
@@ -366,7 +345,6 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -380,7 +358,6 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -389,12 +366,11 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
-	credentialId := model.CredentialId.ValueString()
 
+	credentialId := model.CredentialId.ValueString()
 	if credentialId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -408,7 +384,6 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	found, err := readCredentials(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Finding credential: %v", err))
-
 		return
 	}
 
@@ -416,7 +391,6 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	if !found {
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -427,13 +401,11 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	if !utils.IsUndefined(model.ExpirationTimestamp) {
 		resp.Diagnostics.Append(utils.ToTime(ctx, time.RFC3339, model.ExpirationTimestamp, &currentApiDate)...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
 		resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, path.Root("expiration_timestamp"), req.State, time.RFC3339, &stateDate)...)
-
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -448,7 +420,6 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -475,7 +446,6 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -496,7 +466,6 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	_, err := r.client.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
@@ -567,7 +536,6 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 	}
 
 	var credentialId string
-
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
 	} else if credentialResp.KeyId != "" {
@@ -612,7 +580,6 @@ func readCredentials(ctx context.Context, model *Model, region string, client ob
 	credentialsGroupResp, err := client.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return false, nil
 		}
@@ -625,7 +592,6 @@ func readCredentials(ctx context.Context, model *Model, region string, client ob
 	}
 
 	foundCredential := false
-
 	for _, credential := range credentialsGroupResp.AccessKeys {
 		if credential.KeyId != credentialId {
 			continue

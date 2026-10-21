@@ -50,7 +50,6 @@ func (e *kubeconfigEphemeralResource) Configure(ctx context.Context, req ephemer
 	}
 
 	features.CheckExperimentEnabled(ctx, &ephemeralProviderData.ProviderData, features.SkeExperiment, "stackit_ske_kubeconfig", core.EphemeralResource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -131,7 +130,6 @@ func (e *kubeconfigEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 	var model ephemeralModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -148,13 +146,11 @@ func (e *kubeconfigEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Calling SKE API: %v", err))
-
 		return
 	}
 
 	if kubeconfigResp == nil || kubeconfigResp.Kubeconfig == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", "API returned an empty response")
-
 		return
 	}
 
@@ -169,10 +165,8 @@ func (e *kubeconfigEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 // getKubeconfig initializes the API call to generate a new kubeconfig
 func getKubeconfig(ctx context.Context, client ske.DefaultAPI, projectId, region, clusterName string, expiration *int64) (*ske.Kubeconfig, error) {
 	payload := ske.CreateKubeconfigPayload{}
-
 	if expiration != nil {
 		expirationStr := strconv.FormatInt(*expiration, 10)
-
 		payload.ExpirationSeconds = &expirationStr
 	}
 

@@ -79,26 +79,22 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
-
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -108,11 +104,9 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 	response, err := r.client.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &openapiError) {
 			if openapiError.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
-
 				return
 			}
 		}
@@ -128,14 +122,11 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 	err = mapDataSourceFields(ctx, region, response.ResourcePool, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -146,7 +137,6 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 // Schema implements datasource.DataSource.
 func (r *resourcePoolDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Resource-pool datasource schema. Must have a `region` specified in the provider configuration."
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
@@ -264,7 +254,6 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.R
 		var diags diag.Diagnostics
 
 		model.IpAcl, diags = types.ListValueFrom(ctx, types.StringType, resourcePool.IpAcl)
-
 		if diags.HasError() {
 			return fmt.Errorf("failed to map ip acls: %w", core.DiagsToError(diags))
 		}

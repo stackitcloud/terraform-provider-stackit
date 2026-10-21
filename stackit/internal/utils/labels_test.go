@@ -65,7 +65,6 @@ func TestMapLabels(t *testing.T) {
 			isValid:        true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output, err := MapLabels(context.Background(), tt.input.responseLabels, tt.input.currentLabels)

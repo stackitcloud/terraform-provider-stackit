@@ -160,7 +160,6 @@ func TestMapDataSourceFields(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			err := mapDataSourceFields(context.Background(), tt.args.input, &tt.args.state, tt.args.region)

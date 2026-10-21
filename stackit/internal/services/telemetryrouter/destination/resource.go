@@ -224,27 +224,22 @@ func (r *telemetryRouterDestinationResource) ModifyPlan(ctx context.Context, req
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -459,9 +454,7 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 
 func (r *telemetryRouterDestinationResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var resourceModel Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &resourceModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -504,7 +497,6 @@ func validateConfig(ctx context.Context, respDiags *diag.Diagnostics, model *Mod
 		}
 
 		ot := &openTelemetry{}
-
 		diags = conf.OpenTelemetry.As(ctx, ot, basetypes.ObjectAsOptions{})
 		respDiags.Append(diags...)
 
@@ -548,7 +540,6 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -558,7 +549,6 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 	instanceId := model.InstanceID.ValueString()
 	projectId := model.ProjectID.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
-
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -566,14 +556,12 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 	payload, err := toCreatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	createResp, err := r.client.CreateDestination(ctx, projectId, region, instanceId).CreateDestinationPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -581,7 +569,6 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 
 	if createResp == nil || createResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", "Create API response: Incomplete response (id missing)")
-
 		return
 	}
 
@@ -600,20 +587,17 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 	waitResp, err := wait.CreateDestinationWaitHandler(ctx, r.client, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -626,7 +610,6 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -641,7 +624,6 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 	if destinationID == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -655,10 +637,8 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 		var oapiErr *oapierror.GenericOpenAPIError
 
 		ok := errors.As(err, &oapiErr)
-
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -672,13 +652,11 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 	err = mapFields(ctx, instanceResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -694,7 +672,6 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -714,14 +691,12 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 	payload, err := toUpdatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	updateResp, err := r.client.UpdateDestination(ctx, projectID, region, instanceID, destinationID).UpdateDestinationPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -730,20 +705,17 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 	waitResp, err := wait.UpdateDestinationWaitHandler(ctx, r.client, projectID, region, instanceID, updateResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
-
 		return
 	}
 
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
-
 		return
 	}
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -759,7 +731,6 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -779,7 +750,6 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 	err := r.client.DeleteDestination(ctx, projectID, region, instanceID, destinationID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -788,7 +758,6 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 	_, err = wait.DeleteDestinationWaitHandler(ctx, r.client, projectID, region, instanceID, destinationID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become deleted: %v", err))
-
 		return
 	}
 
@@ -799,7 +768,6 @@ func (r *telemetryRouterDestinationResource) ImportState(ctx context.Context, re
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryRouter destination", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`,`destination_id`", req.ID))
-
 		return
 	}
 
@@ -856,7 +824,6 @@ func toConfig(ctx context.Context, diags diag.Diagnostics, model *Model) (*telem
 	result := telemetryrouter.DestinationConfig{}
 
 	var conf config
-
 	diags.Append(model.Config.As(ctx, &conf, basetypes.ObjectAsOptions{})...)
 
 	if diags.HasError() {
@@ -894,7 +861,6 @@ func toConfig(ctx context.Context, diags diag.Diagnostics, model *Model) (*telem
 func toConfigFilter(ctx context.Context, diags diag.Diagnostics, conf *config) (*telemetryrouter.ConfigFilter, error) {
 	if !conf.Filter.IsNull() && !conf.Filter.IsUnknown() {
 		var fltr filter
-
 		diags.Append(conf.Filter.As(ctx, &fltr, basetypes.ObjectAsOptions{})...)
 
 		if diags.HasError() {
@@ -902,7 +868,6 @@ func toConfigFilter(ctx context.Context, diags diag.Diagnostics, conf *config) (
 		}
 
 		var attributes []attribute
-
 		diags.Append(fltr.Attributes.ElementsAs(ctx, &attributes, false)...)
 
 		if diags.HasError() {
@@ -951,7 +916,6 @@ func toOpenTelemetry(ctx context.Context, diags diag.Diagnostics, conf *config) 
 
 		if !tfutils.IsUndefined(ot.BasicAuth) {
 			var basicAuthVal basicAuth
-
 			diags.Append(ot.BasicAuth.As(ctx, &basicAuthVal, basetypes.ObjectAsOptions{})...)
 
 			if diags.HasError() {
@@ -988,7 +952,6 @@ func toS3(ctx context.Context, diags diag.Diagnostics, conf *config) (*telemetry
 
 		if !tfutils.IsUndefined(s3Inst.AccessKey) {
 			var accKey accessKey
-
 			diags.Append(s3Inst.AccessKey.As(ctx, &accKey, basetypes.ObjectAsOptions{})...)
 
 			if diags.HasError() {
@@ -1020,7 +983,6 @@ func mapFields(ctx context.Context, destination *telemetryrouter.DestinationResp
 	}
 
 	var destinationID string
-
 	if model.DestinationID.ValueString() != "" {
 		destinationID = model.DestinationID.ValueString()
 	} else if destination.Id != "" {
@@ -1049,7 +1011,6 @@ func mapConfig(ctx context.Context, destination *telemetryrouter.DestinationResp
 	var conf config
 
 	confIsEmpty := true
-
 	if !model.Config.IsNull() {
 		diags := model.Config.As(ctx, &conf, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1092,7 +1053,6 @@ func mapFilter(ctx context.Context, apiConf *telemetryrouter.DestinationConfig, 
 	}
 
 	attrList := []attr.Value{}
-
 	for _, currentAttr := range apiConf.Filter.Attributes {
 		values, diags := types.ListValueFrom(ctx, types.StringType, currentAttr.Values)
 		if diags.HasError() {
@@ -1116,7 +1076,6 @@ func mapFilter(ctx context.Context, apiConf *telemetryrouter.DestinationConfig, 
 		attrConfigs basetypes.ListValue
 		diags       diag.Diagnostics
 	)
-
 	if len(attrList) == 0 {
 		attrConfigs = types.ListNull(types.ObjectType{AttrTypes: attributeTypes})
 	} else {
@@ -1149,7 +1108,6 @@ func mapOpenTelemetry(ctx context.Context, apiConf *telemetryrouter.DestinationC
 	diags := conf.OpenTelemetry.As(ctx, &ot, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty: true,
 	})
-
 	if diags.HasError() {
 		return fmt.Errorf("converting opentelemetry object: %v", diags.Errors())
 	}
@@ -1167,7 +1125,6 @@ func mapOpenTelemetry(ctx context.Context, apiConf *telemetryrouter.DestinationC
 		diags = ot.BasicAuth.As(ctx, &ba, basetypes.ObjectAsOptions{
 			UnhandledNullAsEmpty: true,
 		})
-
 		if diags.HasError() {
 			return fmt.Errorf("converting basic auth object: %v", diags.Errors())
 		}
@@ -1204,7 +1161,6 @@ func mapS3(ctx context.Context, apiConf *telemetryrouter.DestinationConfig, conf
 	diags := conf.S3.As(ctx, &s3Struct, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty: true,
 	})
-
 	if diags.HasError() {
 		return fmt.Errorf("converting s3 object: %v", diags.Errors())
 	}
@@ -1218,14 +1174,13 @@ func mapS3(ctx context.Context, apiConf *telemetryrouter.DestinationConfig, conf
 		var ak accessKey
 
 		diags = s3Struct.AccessKey.As(ctx, &ak, basetypes.ObjectAsOptions{})
-
 		if diags.HasError() {
 			return fmt.Errorf("converting access key object: %v", diags.Errors())
 		}
 
 		ak.ID = types.StringValue(apiConf.S3.AccessKey.Id)
-		s3Struct.AccessKey, diags = types.ObjectValueFrom(ctx, accessKeyTypes, ak)
 
+		s3Struct.AccessKey, diags = types.ObjectValueFrom(ctx, accessKeyTypes, ak)
 		if diags.HasError() {
 			return fmt.Errorf("mapping access key: %w", core.DiagsToError(diags))
 		}

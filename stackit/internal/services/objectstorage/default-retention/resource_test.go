@@ -17,6 +17,7 @@ func TestMapFields(t *testing.T) {
 	)
 
 	id := fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testBucketName)
+
 	tests := []struct {
 		description string
 		input       *defaultretention.DefaultRetentionResponse
@@ -48,14 +49,13 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &model{
 				ProjectId: tt.expected.ProjectId,
 			}
-			err := mapFields(tt.input, model, "eu01")
 
+			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

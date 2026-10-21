@@ -81,7 +81,6 @@ func (r *routingTableResource) Configure(ctx context.Context, req resource.Confi
 	r.client = clients.IaaSv2Client
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table", core.Resource, &resp.Diagnostics)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -98,29 +97,23 @@ func (r *routingTableResource) ModifyPlan(ctx context.Context, req resource.Modi
 	}
 
 	var configModel Model
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
-
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -129,7 +122,6 @@ func (r *routingTableResource) ModifyPlan(ctx context.Context, req resource.Modi
 func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Routing table resource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This resource is for SNA, not VPC, based networks."
-
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Resource),
@@ -237,7 +229,6 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -256,14 +247,12 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	routingTable, err := r.client.AddRoutingTableToArea(ctx, organizationId, networkAreaId, region).AddRoutingTableToAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -273,14 +262,11 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 	err = mapFields(ctx, routingTable, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table.", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -294,7 +280,6 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -302,12 +287,11 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	organizationId := model.OrganizationId.ValueString()
-	routingTableId := model.RoutingTableId.ValueString()
 
+	routingTableId := model.RoutingTableId.ValueString()
 	if routingTableId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -322,10 +306,8 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	routingTableResp, err := r.client.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -340,14 +322,11 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	err = mapFields(ctx, routingTableResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -362,7 +341,6 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -384,7 +362,6 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -393,14 +370,12 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 	payload, err := toUpdatePayload(ctx, &model, stateModel.Labels)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table", fmt.Sprintf("Creating API payload: %v", err))
-
 		return
 	}
 
 	routingTable, err := r.client.UpdateRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).UpdateRoutingTableOfAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -410,14 +385,11 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 	err = mapFields(ctx, routingTable, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table", fmt.Sprintf("Processing API payload: %v", err))
-
 		return
 	}
-
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -432,7 +404,6 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -443,7 +414,6 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
@@ -453,10 +423,8 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	err := r.client.DeleteRoutingTableFromArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
@@ -488,7 +456,6 @@ func (r *routingTableResource) ImportState(ctx context.Context, req resource.Imp
 	region := idParts[1]
 	networkAreaId := idParts[2]
 	routingTableId := idParts[3]
-
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
@@ -511,7 +478,6 @@ func mapFields(ctx context.Context, routingTable *iaas.RoutingTable, model *Mode
 	}
 
 	var routingTableId string
-
 	if model.RoutingTableId.ValueString() != "" {
 		routingTableId = model.RoutingTableId.ValueString()
 	} else if routingTable.Id != nil {
@@ -529,16 +495,13 @@ func mapFields(ctx context.Context, routingTable *iaas.RoutingTable, model *Mode
 
 	// created at and updated at
 	createdAtTF, updatedAtTF := types.StringNull(), types.StringNull()
-
 	if routingTable.CreatedAt != nil {
 		createdAtValue := *routingTable.CreatedAt
-
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
 
 	if routingTable.UpdatedAt != nil {
 		updatedAtValue := *routingTable.UpdatedAt
-
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
 
