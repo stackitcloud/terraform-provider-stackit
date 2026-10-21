@@ -65,6 +65,19 @@ resource "stackit_image" "test" {
 `, projectId),
 				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
 			},
+			// STEP 4: Invalid Step: Image File block is empty
+			{
+				Config: testutil.NewConfigBuilder().BuildProviderConfig() + fmt.Sprintf(`
+resource "stackit_image" "test" {
+  project_id      = "%s"
+  name            = "test-image"
+  disk_format     = "qcow2"
+  image_file = {
+  }
+}
+`, projectId),
+				ExpectError: regexp.MustCompile("Missing Attribute Configuration"),
+			},
 		},
 	})
 }
@@ -83,6 +96,7 @@ provider "stackit" {
 	default_region        = "%s"
 	iaas_custom_endpoint  = "%s"
 	service_account_token = "mock-token"
+ 	experiments           = ["iaas"]
 }
 
 resource "stackit_image" "test" {
@@ -131,6 +145,7 @@ provider "stackit" {
 	default_region        = "%s"
 	iaas_custom_endpoint  = "%s"
 	service_account_token = "mock-token"
+	experiments           = ["iaas"]
 }
 
 resource "stackit_image" "test" {

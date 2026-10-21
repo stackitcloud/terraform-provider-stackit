@@ -212,6 +212,10 @@ func (r *imageResource) ConfigValidators(_ context.Context) []resource.ConfigVal
 			path.MatchRoot("image_file").AtName("local"),
 			path.MatchRoot("image_file").AtName("download"),
 		),
+		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("image_file").AtName("local"),
+			path.MatchRoot("image_file").AtName("download"),
+		),
 	}
 }
 
@@ -527,6 +531,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	filePath, isDownload, err := resolveFilePath(ctx, &resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Resolving file path: %v", err))
+		return
 	}
 
 	// Cleanup on exit
@@ -1066,8 +1071,7 @@ func downloadImage(ctx context.Context, diags *diag.Diagnostics, downloadURL str
 		return "", fmt.Errorf("download image: %w", err)
 	}
 	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
+		if closeErr := resp.Body.Close(); closeErr != nil {
 			core.LogAndAddError(ctx, diags, "Error uploading image", fmt.Sprintf("Closing response body: %v", err))
 		}
 	}()
