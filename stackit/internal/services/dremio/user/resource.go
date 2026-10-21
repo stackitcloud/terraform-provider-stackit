@@ -63,7 +63,7 @@ type UserModel struct {
 }
 
 var descriptions = map[string]string{
-	"main":        "Manages a STACKIT Dremio instances user.",
+	"main":        "Manages a STACKIT Dremio instances user. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 	"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
 	"project_id":  "STACKIT Project ID to which the resource is associated.",
 	"instance_id": "The Dremio instance ID.",
@@ -121,6 +121,10 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Dremio", &resp.Diagnostics) {
 		return
 	}
 

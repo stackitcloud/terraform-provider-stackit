@@ -101,11 +101,11 @@ func TestMapFields(t *testing.T) {
 					Version: "1.2.3",
 				},
 				Maintenance: &ske.Maintenance{
-					AutoUpdate: ske.MaintenanceAutoUpdate{
+					AutoUpdate: &ske.MaintenanceAutoUpdate{
 						KubernetesVersion:   new(true),
 						MachineImageVersion: new(true),
 					},
-					TimeWindow: ske.TimeWindow{
+					TimeWindow: &ske.TimeWindow{
 						Start: time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60)),
 						End:   time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC),
 					},
@@ -657,11 +657,11 @@ func TestMapFields(t *testing.T) {
 					Version: "1.2.3",
 				},
 				Maintenance: &ske.Maintenance{
-					AutoUpdate: ske.MaintenanceAutoUpdate{
+					AutoUpdate: &ske.MaintenanceAutoUpdate{
 						KubernetesVersion:   new(true),
 						MachineImageVersion: new(true),
 					},
-					TimeWindow: ske.TimeWindow{
+					TimeWindow: &ske.TimeWindow{
 						Start: time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60)),
 						End:   time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC),
 					},
@@ -1971,7 +1971,7 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			apiResponse := &ske.Cluster{
 				Maintenance: &ske.Maintenance{
-					TimeWindow: ske.TimeWindow{
+					TimeWindow: &ske.TimeWindow{
 						Start: tt.startAPI,
 						End:   tt.endAPI,
 					},

@@ -36,8 +36,12 @@ type alertGroupDataSource struct {
 
 // Configure adds the provider configured client to the resource.
 func (d *alertGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Observability", &resp.Diagnostics) {
 		return
 	}
 
@@ -54,7 +58,7 @@ func (d *alertGroupDataSource) Metadata(_ context.Context, req datasource.Metada
 // Schema defines the schema for the alert group data source.
 func (d *alertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability alert group datasource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration.",
+		Description: "Observability alert group datasource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

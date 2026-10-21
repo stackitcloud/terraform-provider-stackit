@@ -691,22 +691,22 @@ func mapRouteNextHop(routeResp *iaas.Route) (*NexthopModelV1, error) {
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
 	case *iaas.NexthopIPv4:
 		return &NexthopModelV1{
-			Type:  types.StringValue(i.Type),
+			Type:  types.StringValue(string(i.Type)),
 			Value: types.StringValue(i.Value),
 		}, nil
 	case *iaas.NexthopIPv6:
 		return &NexthopModelV1{
-			Type:  types.StringValue(i.Type),
+			Type:  types.StringValue(string(i.Type)),
 			Value: types.StringValue(i.Value),
 		}, nil
 	case *iaas.NexthopBlackhole:
 		return &NexthopModelV1{
-			Type:  types.StringValue(i.Type),
+			Type:  types.StringValue(string(i.Type)),
 			Value: types.StringNull(),
 		}, nil
 	case *iaas.NexthopInternet:
 		return &NexthopModelV1{
-			Type:  types.StringValue(i.Type),
+			Type:  types.StringValue(string(i.Type)),
 			Value: types.StringNull(),
 		}, nil
 	default:
@@ -718,12 +718,12 @@ func mapRouteDestination(routeResp *iaas.Route) (*DestinationModelV1, error) {
 	switch i := routeResp.Destination.GetActualInstance().(type) {
 	case *iaas.DestinationCIDRv4:
 		return &DestinationModelV1{
-			Type:  types.StringValue(i.Type),
+			Type:  types.StringValue(string(i.Type)),
 			Value: types.StringValue(i.Value),
 		}, nil
 	case *iaas.DestinationCIDRv6:
 		return &DestinationModelV1{
-			Type:  types.StringValue(i.Type),
+			Type:  types.StringValue(string(i.Type)),
 			Value: types.StringValue(i.Value),
 		}, nil
 	default:
