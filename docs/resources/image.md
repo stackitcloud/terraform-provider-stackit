@@ -39,7 +39,7 @@ resource "stackit_image" "example_image" {
 ### Optional
 
 - `config` (Attributes) Properties to set hardware and scheduling settings for an image. (see [below for nested schema](#nestedatt--config))
-- `image_file` (Attributes) Representation of an image file. (see [below for nested schema](#nestedatt--image_file))
+- `image_file` (Attributes) Configuration of an image file. (see [below for nested schema](#nestedatt--image_file))
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `local_file_path` (String, Deprecated) The filepath of the raw image file to be uploaded.
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
