@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -173,10 +174,6 @@ func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error
 		return err
 	})
 	g.Go(func() (err error) {
-		cc.ServiceAccountV2Client, err = clientFactory.newServiceAccountV2Client()
-		return err
-	})
-	g.Go(func() (err error) {
 		cc.ObjectStorageV2Client, err = clientFactory.newObjectStorageV2Client()
 		return err
 	})
@@ -201,6 +198,12 @@ func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error
 	return cc, nil
 }
 
+const (
+	defaultMaxRetries  = 3
+	defaultBaseBackoff = 10 * time.Second
+	defaultMaxJitter   = 500 * time.Millisecond
+)
+
 var _ ClientFactory = &DefaultClientFactory{}
 
 type DefaultClientFactory struct {
@@ -216,9 +219,9 @@ func (f *DefaultClientFactory) defaultConfigOptions(customEndpoint string) []con
 	// Retry HTTP 429 rate limits for every service, outside the authentication transport.
 	retryRoundTripper := &RetryTransport{
 		Base:        f.RoundTripper,
-		MaxRetries:  3,
-		BaseBackoff: 10 * time.Second,
-		MaxJitter:   500 * time.Millisecond, // Always added to wait time
+		MaxRetries:  defaultMaxRetries,
+		BaseBackoff: defaultBaseBackoff,
+		MaxJitter:   defaultMaxJitter, // Always added to wait time
 	}
 
 	apiClientConfigOptions := []config.ConfigurationOption{
@@ -770,6 +773,14 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		err = resp.Body.Close()
 		if err != nil {
 			return nil, err
+		}
+
+		if err := req.Context().Err(); err != nil {
+			return nil, err
+		}
+		// Fail immediately if the next retry cannot start before the deadline.
+		if deadline, ok := req.Context().Deadline(); ok && totalWait >= time.Until(deadline) {
+			return nil, context.DeadlineExceeded
 		}
 
 		select {

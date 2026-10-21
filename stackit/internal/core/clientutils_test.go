@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -1359,12 +1358,7 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 			want: func() objectstorage.DefaultAPI {
 				apiClient, err := objectstorage.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithCustomAuth(&RetryTransport{
-						Base:        testRoundTripper,
-						MaxRetries:  3,
-						BaseBackoff: 10 * time.Second,
-						MaxJitter:   500 * time.Millisecond,
-					}),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
@@ -1385,12 +1379,7 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 				apiClient, err := objectstorage.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 					config.WithEndpoint(testCustomEndpoint),
-					config.WithCustomAuth(&RetryTransport{
-						Base:        testRoundTripper,
-						MaxRetries:  3,
-						BaseBackoff: 10 * time.Second,
-						MaxJitter:   500 * time.Millisecond,
-					}),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)

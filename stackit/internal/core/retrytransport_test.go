@@ -16,9 +16,9 @@ import (
 func expectedRetryTransport(base http.RoundTripper) *RetryTransport {
 	return &RetryTransport{
 		Base:        base,
-		MaxRetries:  3,
-		BaseBackoff: 10 * time.Second,
-		MaxJitter:   500 * time.Millisecond,
+		MaxRetries:  defaultMaxRetries,
+		BaseBackoff: defaultBaseBackoff,
+		MaxJitter:   defaultMaxJitter,
 	}
 }
 
@@ -35,13 +35,47 @@ func TestDefaultClientFactory_RetryRequests(t *testing.T) {
 		statuses     []int
 		transportErr error
 	}{
-		{name: "success", statuses: []int{http.StatusOK}},
-		{name: "rate limit then success", statuses: []int{http.StatusTooManyRequests, http.StatusOK}},
-		{name: "multiple rate limits then success", statuses: []int{http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusOK}},
-		{name: "retry limit", statuses: []int{http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusTooManyRequests}},
-		{name: "not found is not retried", statuses: []int{http.StatusNotFound}},
-		{name: "server error is not retried", statuses: []int{http.StatusInternalServerError}},
-		{name: "transport error is not retried", transportErr: transportErr},
+		{
+			name:     "success",
+			statuses: []int{http.StatusOK},
+		},
+		{
+			name: "rate limit then success",
+			statuses: []int{
+				http.StatusTooManyRequests,
+				http.StatusOK,
+			},
+		},
+		{
+			name: "multiple rate limits then success",
+			statuses: []int{
+				http.StatusTooManyRequests,
+				http.StatusTooManyRequests,
+				http.StatusTooManyRequests,
+				http.StatusOK,
+			},
+		},
+		{
+			name: "retry limit",
+			statuses: []int{
+				http.StatusTooManyRequests,
+				http.StatusTooManyRequests,
+				http.StatusTooManyRequests,
+				http.StatusTooManyRequests,
+			},
+		},
+		{
+			name:     "not found is not retried",
+			statuses: []int{http.StatusNotFound},
+		},
+		{
+			name:     "server error is not retried",
+			statuses: []int{http.StatusInternalServerError},
+		},
+		{
+			name:         "transport error is not retried",
+			transportErr: transportErr,
+		},
 	}
 
 	for _, tt := range tests {
@@ -180,23 +214,116 @@ func TestRetryTransport_ContextCancellation(t *testing.T) {
 				Body:       http.NoBody,
 			}, nil
 		}))
-		ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
+		go func() {
+			time.Sleep(time.Second)
+			cancel()
+		}()
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com", http.NoBody)
 		if err != nil {
 			t.Fatal(err)
 		}
+		start := time.Now()
 		resp, err := transport.RoundTrip(req)
+		if elapsed := time.Since(start); elapsed != time.Second {
+			t.Fatalf("elapsed = %s, want %s", elapsed, time.Second)
+		}
 		if resp != nil {
 			if closeErr := resp.Body.Close(); closeErr != nil {
 				t.Error(closeErr)
 			}
 		}
-		if !errors.Is(err, context.DeadlineExceeded) {
-			t.Fatalf("error = %v, want context deadline exceeded", err)
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("error = %v, want context canceled", err)
 		}
 		if attempts != 1 {
 			t.Fatalf("attempts = %d, want 1", attempts)
 		}
 	})
+}
+
+func TestRetryTransport_ContextDeadline(t *testing.T) {
+	tests := []struct {
+		name         string
+		retryAfter   string
+		timeout      time.Duration
+		wantElapsed  time.Duration
+		wantAttempts int
+		wantErr      error
+	}{
+		{
+			name:         "retry after exceeds remaining time",
+			retryAfter:   "60",
+			timeout:      time.Second,
+			wantAttempts: 1,
+			wantErr:      context.DeadlineExceeded,
+		},
+		{
+			name:         "backoff exceeds remaining time",
+			timeout:      time.Second,
+			wantAttempts: 1,
+			wantErr:      context.DeadlineExceeded,
+		},
+		{
+			name:         "backoff equals remaining time",
+			timeout:      defaultBaseBackoff,
+			wantAttempts: 1,
+			wantErr:      context.DeadlineExceeded,
+		},
+		{
+			name:         "retry fits before deadline",
+			timeout:      2 * defaultBaseBackoff,
+			wantElapsed:  defaultBaseBackoff,
+			wantAttempts: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				attempts := 0
+				transport := expectedRetryTransport(retryTestRoundTripper(func(*http.Request) (*http.Response, error) {
+					attempts++
+					status := http.StatusTooManyRequests
+					if attempts > 1 {
+						status = http.StatusOK
+					}
+					return &http.Response{
+						StatusCode: status,
+						Header:     http.Header{"Retry-After": {tt.retryAfter}},
+						Body:       http.NoBody,
+					}, nil
+				}))
+				// A one-nanosecond upper bound makes the jitter zero for exact timing checks.
+				transport.MaxJitter = time.Nanosecond
+				ctx, cancel := context.WithTimeout(t.Context(), tt.timeout)
+				defer cancel()
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com", http.NoBody)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				start := time.Now()
+				resp, err := transport.RoundTrip(req)
+				if resp != nil {
+					if closeErr := resp.Body.Close(); closeErr != nil {
+						t.Error(closeErr)
+					}
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error = %v, want %v", err, tt.wantErr)
+				}
+				if elapsed := time.Since(start); elapsed != tt.wantElapsed {
+					t.Errorf("elapsed = %s, want %s", elapsed, tt.wantElapsed)
+				}
+				if attempts != tt.wantAttempts {
+					t.Errorf("attempts = %d, want %d", attempts, tt.wantAttempts)
+				}
+				if err := ctx.Err(); err != nil {
+					t.Errorf("context expired instead of returning early: %v", err)
+				}
+			})
+		})
+	}
 }
