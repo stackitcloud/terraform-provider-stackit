@@ -2180,3 +2180,128 @@ func TestValidateLogSinkConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestToPatchLogSinkPayload(t *testing.T) {
+	pushURL := "https://example.com"
+
+	expectedLoki := &cdnSdk.ConfigPatchLogSink{
+		LokiLogSinkPatch: &cdnSdk.LokiLogSinkPatch{
+			Credentials: &cdnSdk.LokiLogSinkCredentials{
+				Username: "testuser",
+				Password: "testpassword",
+			},
+			PushUrl: &pushURL,
+			Type:    cdnSdk.LOKILOGSINKPATCHTYPE_LOKI,
+		},
+	}
+
+	expectedOtlpBasic := &cdnSdk.ConfigPatchLogSink{
+		OtlpLogSinkPatch: &cdnSdk.OtlpLogSinkPatch{
+			Credentials: &cdnSdk.OtlpLogSinkPatchCredentials{
+				OtlpLogSinkBasicCredentials: &cdnSdk.OtlpLogSinkBasicCredentials{
+					Type:     cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
+					Username: "testuser",
+					Password: "testpassword",
+				},
+			},
+			PushUrl: &pushURL,
+			Type:    cdnSdk.OTLPLOGSINKPATCHTYPE_OTLP,
+		},
+	}
+
+	expectedOtlpBearer := &cdnSdk.ConfigPatchLogSink{
+		OtlpLogSinkPatch: &cdnSdk.OtlpLogSinkPatch{
+			Credentials: &cdnSdk.OtlpLogSinkPatchCredentials{
+				OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
+					Type:  cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER,
+					Token: "testtoken",
+				},
+			},
+			PushUrl: &pushURL,
+			Type:    cdnSdk.OTLPLOGSINKPATCHTYPE_OTLP,
+		},
+	}
+
+	testCases := []struct {
+		name        string
+		input       types.Object
+		expected    *cdnSdk.ConfigPatchLogSink
+		expectError bool
+	}{
+		{
+			name: "happy_path_loki",
+			input: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    expectedLoki,
+			expectError: false,
+		},
+		{
+			name: "happy_path_otlp_basic",
+			input: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    expectedOtlpBasic,
+			expectError: false,
+		},
+		{
+			name: "happy_path_otlp_bearer",
+			input: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("testtoken")),
+			),
+			expected:    expectedOtlpBearer,
+			expectError: false,
+		},
+		{
+			name: "error_unknown_sink_type",
+			input: testBuildLogSinkObject(
+				types.StringValue("invalid"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "error_unknown_otlp_creds_type",
+			input: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringValue("invalid"), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    nil,
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := toPatchLogSinkPayload(context.Background(), tc.input)
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("expected error, got none")
+				}
+				if result != nil {
+					t.Fatalf("expected nil result on error, got %v", result)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			diff := cmp.Diff(tc.expected, result, cmpopts.EquateEmpty())
+			if diff != "" {
+				t.Fatalf("Patch payload not as expected: %s", diff)
+			}
+		})
+	}
+}
