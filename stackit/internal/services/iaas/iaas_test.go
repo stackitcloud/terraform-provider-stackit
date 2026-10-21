@@ -172,7 +172,9 @@ resource "stackit_image" "test" {
 							Handler: func(w http.ResponseWriter, _ *http.Request) {
 								w.Header().Set("Content-Type", "application/octet-stream")
 								w.WriteHeader(http.StatusOK)
-								_, _ = w.Write(mockImageBytes)
+								if _, err := w.Write(mockImageBytes); err != nil {
+									t.Errorf("failed to write mock image bytes: %v", err)
+								}
 							},
 						},
 						// 2. API Creation fails
