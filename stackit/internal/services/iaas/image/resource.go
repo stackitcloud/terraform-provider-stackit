@@ -466,11 +466,11 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 				Attributes: map[string]schema.Attribute{
 					"local": schema.SingleNestedAttribute{
-						Description: "Representation of a local image file.",
+						Description: "Configuration for uploading an image from a local file path.",
 						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"file_path": schema.StringAttribute{
-								Description: "Path to the local file.",
+								Description: "Path to the local image file on the machine running Terraform. Updating this path triggers a resource replacement.",
 								Required:    true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
@@ -480,21 +480,21 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								},
 							},
 							"disable_plan_validation": schema.BoolAttribute{
-								Description: "Whether to disable plan-time validation. (default: false)",
+								Description: "If set to `true`, disables the plan-time check that verifies the file exists on the local filesystem (defaults to `false`). Useful when running plans in remote environments where the file isn't available yet.",
 								Optional:    true,
 							},
 						},
 					},
 					"download": schema.SingleNestedAttribute{
 						Description: features.AddExperimentDescription(
-							"File to download the image from a remote server.",
+							"Configuration of an image file to be downloaded.",
 							features.IaasExperiment,
 							core.Resource,
 						),
 						Optional: true,
 						Attributes: map[string]schema.Attribute{
 							"url": schema.StringAttribute{
-								Description: "URL to download the image from. Currently, a new download is only possible by changing the url.",
+								Description: "URL to download the image from via HTTP(S). Updating this URL forces the image to be re-downloaded (triggers replacement).",
 								Required:    true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),

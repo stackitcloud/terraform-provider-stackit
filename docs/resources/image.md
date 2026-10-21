@@ -79,17 +79,17 @@ Optional:
 
 Optional:
 
-- `download` (Attributes) File to download the image from a remote server.
+- `download` (Attributes) Configuration of an image file to be downloaded.
 
 ~> This resource is part of the experimental feature iaas and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion. (see [below for nested schema](#nestedatt--image_file--download))
-- `local` (Attributes) Representation of a local image file. (see [below for nested schema](#nestedatt--image_file--local))
+- `local` (Attributes) Configuration for uploading an image from a local file path. (see [below for nested schema](#nestedatt--image_file--local))
 
 <a id="nestedatt--image_file--download"></a>
 ### Nested Schema for `image_file.download`
 
 Required:
 
-- `url` (String) URL to download the image from. Currently, a new download is only possible by changing the url.
+- `url` (String) URL to download the image from via HTTP(S). Updating this URL forces the image to be re-downloaded (triggers replacement).
 
 
 <a id="nestedatt--image_file--local"></a>
@@ -97,11 +97,11 @@ Required:
 
 Required:
 
-- `file_path` (String) Path to the local file.
+- `file_path` (String) Path to the local image file on the machine running Terraform. Updating this path triggers a resource replacement.
 
 Optional:
 
-- `disable_plan_validation` (Boolean) Whether to disable plan-time validation. (default: false)
+- `disable_plan_validation` (Boolean) If set to `true`, disables the plan-time check that verifies the file exists on the local filesystem (defaults to `false`). Useful when running plans in remote environments where the file isn't available yet.
 
 
 
