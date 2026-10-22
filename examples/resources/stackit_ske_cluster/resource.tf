@@ -13,6 +13,12 @@ resource "stackit_ske_cluster" "example" {
       availability_zones = ["eu01-3"]
       volume_type        = "storage_premium_perf6"
       volume_size        = "48"
+      cri = {
+        name = "containerd"
+        kata = {
+          enabled = false
+        }
+      }
     }
   ]
   network = {

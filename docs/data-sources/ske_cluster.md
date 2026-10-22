@@ -174,7 +174,7 @@ Read-Only:
 
 - `allow_system_components` (Boolean) Allow system components to run on this node pool.
 - `availability_zones` (List of String) Specify a list of availability zones.
-- `cri` (String) Specifies the container runtime.
+- `cri` (Attributes) Configures the container runtime. (see [below for nested schema](#nestedatt--node_pools--cri))
 - `labels` (Map of String) Labels to add to each node.
 - `machine_type` (String) The machine type.
 - `max_surge` (Number) The maximum number of nodes upgraded simultaneously.
@@ -189,6 +189,23 @@ Read-Only:
 - `taints` (Attributes List) Specifies a taint list as defined below. (see [below for nested schema](#nestedatt--node_pools--taints))
 - `volume_size` (Number) The volume size in GB.
 - `volume_type` (String) Specifies the volume type.
+
+<a id="nestedatt--node_pools--cri"></a>
+### Nested Schema for `node_pools.cri`
+
+Read-Only:
+
+- `kata` (Attributes) Configures Kata Containers workload isolation. (see [below for nested schema](#nestedatt--node_pools--cri--kata))
+- `name` (String) Specifies the container runtime.
+
+<a id="nestedatt--node_pools--cri--kata"></a>
+### Nested Schema for `node_pools.cri.kata`
+
+Read-Only:
+
+- `enabled` (Boolean) Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts.
+
+
 
 <a id="nestedatt--node_pools--taints"></a>
 ### Nested Schema for `node_pools.taints`
