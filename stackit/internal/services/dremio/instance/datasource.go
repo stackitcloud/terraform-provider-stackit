@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 )
@@ -218,6 +221,15 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: descriptions["endpoints_ui"],
 						Computed:    true,
 					},
+				},
+			},
+			"acl": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: descriptions["acl"],
+				Validators: []validator.List{
+					listvalidator.NoNullValues(),
+					listvalidator.ValueStringsAre(validate.CIDR()),
 				},
 			},
 			"authentication": schema.SingleNestedAttribute{
