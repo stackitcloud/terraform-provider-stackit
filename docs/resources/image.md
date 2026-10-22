@@ -14,12 +14,16 @@ Image resource schema. Must have a `region` specified in the provider configurat
 
 ```terraform
 resource "stackit_image" "example_image" {
-  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name            = "example-image"
-  disk_format     = "qcow2"
-  local_file_path = "./path/to/image.qcow2"
-  min_disk_size   = 10
-  min_ram         = 5
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name        = "example-image"
+  disk_format = "qcow2"
+  image_file = {
+    local = {
+      file_path = "./path/to/image.qcow2",
+    },
+  }
+  min_disk_size = 10
+  min_ram       = 5
 }
 ```
 
@@ -29,14 +33,15 @@ resource "stackit_image" "example_image" {
 ### Required
 
 - `disk_format` (String) The disk format of the image.
-- `local_file_path` (String) The filepath of the raw image file to be uploaded.
 - `name` (String) The name of the image.
 - `project_id` (String) STACKIT project ID to which the image is associated.
 
 ### Optional
 
 - `config` (Attributes) Properties to set hardware and scheduling settings for an image. (see [below for nested schema](#nestedatt--config))
+- `image_file` (Attributes) Configuration of an image file. (see [below for nested schema](#nestedatt--image_file))
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `local_file_path` (String, Deprecated) The filepath of the raw image file to be uploaded.
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
 - `min_ram` (Number) The minimum RAM of the image in MB.
 - `region` (String) The resource region. If not defined, the provider region is used.
@@ -69,6 +74,37 @@ Optional:
 - `virtio_scsi` (Boolean) Enables the use of VirtIO SCSI to provide block device access. By default instances use VirtIO Block.
 
 
+<a id="nestedatt--image_file"></a>
+### Nested Schema for `image_file`
+
+Optional:
+
+- `download` (Attributes) Configuration of an image file to be downloaded.
+
+~> This resource is part of the experimental feature iaas and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion. (see [below for nested schema](#nestedatt--image_file--download))
+- `local` (Attributes) Configuration for uploading an image from a local file path. (see [below for nested schema](#nestedatt--image_file--local))
+
+<a id="nestedatt--image_file--download"></a>
+### Nested Schema for `image_file.download`
+
+Required:
+
+- `url` (String) URL to download the image from via HTTP(S). Updating this URL forces the image to be re-downloaded (triggers replacement).
+
+
+<a id="nestedatt--image_file--local"></a>
+### Nested Schema for `image_file.local`
+
+Required:
+
+- `file_path` (String) Path to the local image file on the machine running Terraform. Updating this path triggers a resource replacement.
+
+Optional:
+
+- `disable_plan_validation` (Boolean) If set to `true`, disables the plan-time check that verifies the file exists on the local filesystem (defaults to `false`). Useful when running plans in remote environments where the file isn't available yet.
+
+
+
 <a id="nestedatt--checksum"></a>
 ### Nested Schema for `checksum`
 
@@ -85,11 +121,11 @@ In Terraform v1.5.0 and later, the [` + "`" + `import` + "`" + ` block](https://
 
 ```terraform
 # Only use the import statement, if you want to import an existing image
-# Must set a configuration value for the local_file_path attribute as the provider has marked it as required.
+# Must set a configuration value for the image_file attribute as the provider has marked it as required.
 # Since this attribute is not fetched in general from the API call, after adding it this would replace your image resource after an terraform apply.
 # In order to prevent this you need to add:
 #lifecycle {
-#    ignore_changes = [ local_file_path ]
+#    ignore_changes = [ image_file ]
 #  }
 import {
   to = stackit_image.import-example
