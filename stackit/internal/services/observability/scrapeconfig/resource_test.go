@@ -34,6 +34,8 @@ func TestMapFields(t *testing.T) {
 				SAML2:          types.ObjectNull(saml2Types),
 				BasicAuth:      types.ObjectNull(basicAuthTypes),
 				Targets:        types.ListNull(types.ObjectType{AttrTypes: targetTypes}),
+
+				MetricsRelabelConfigs: types.ListNull(types.ObjectType{AttrTypes: metricsRelabelConfigTypes}),
 			},
 			true,
 		},
@@ -102,6 +104,8 @@ func TestMapFields(t *testing.T) {
 						"labels": types.MapNull(types.StringType),
 					}),
 				}),
+
+				MetricsRelabelConfigs: types.ListNull(types.ObjectType{AttrTypes: metricsRelabelConfigTypes}),
 			},
 			isValid: true,
 		},
@@ -499,5 +503,113 @@ func TestToUpdatePayload(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMapMetricsRelabelConfigs(t *testing.T) {
+	model := &Model{}
+	err := mapMetricsRelabelConfigs(context.Background(), &observabilitySdk.Job{
+		MetricsRelabelConfigs: []observabilitySdk.MetricsRelabelConfig{
+			{
+				Action:       new(observabilitySdk.Action("drop")),
+				Regex:        new("go_.*"),
+				Replacement:  new("$1"),
+				Separator:    new(";"),
+				SourceLabels: []string{"__name__"},
+			},
+			{
+				Action:       new(observabilitySdk.Action("hashmod")),
+				Modulus:      new(int32(4)),
+				Regex:        new(".*"),
+				Replacement:  new("$1"),
+				Separator:    new(";"),
+				SourceLabels: []string{"instance"},
+				TargetLabel:  new("shard"),
+			},
+		},
+	}, model)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	expected := types.ListValueMust(types.ObjectType{AttrTypes: metricsRelabelConfigTypes}, []attr.Value{
+		types.ObjectValueMust(metricsRelabelConfigTypes, map[string]attr.Value{
+			"action":        types.StringValue("drop"),
+			"modulus":       types.Int32Null(),
+			"regex":         types.StringValue("go_.*"),
+			"replacement":   types.StringValue("$1"),
+			"separator":     types.StringValue(";"),
+			"source_labels": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("__name__")}),
+			"target_label":  types.StringNull(),
+		}),
+		types.ObjectValueMust(metricsRelabelConfigTypes, map[string]attr.Value{
+			"action":        types.StringValue("hashmod"),
+			"modulus":       types.Int32Value(4),
+			"regex":         types.StringValue(".*"),
+			"replacement":   types.StringValue("$1"),
+			"separator":     types.StringValue(";"),
+			"source_labels": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("instance")}),
+			"target_label":  types.StringValue("shard"),
+		}),
+	})
+	if diff := cmp.Diff(model.MetricsRelabelConfigs, expected); diff != "" {
+		t.Fatalf("Data does not match: %s", diff)
+	}
+
+	err = mapMetricsRelabelConfigs(context.Background(), &observabilitySdk.Job{}, model)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if !model.MetricsRelabelConfigs.IsNull() {
+		t.Fatalf("Expected null list, got %v", model.MetricsRelabelConfigs)
+	}
+}
+
+func TestMetricsRelabelConfigsPayload(t *testing.T) {
+	model := &Model{
+		Name:        types.StringValue("name"),
+		MetricsPath: types.StringValue("/metrics"),
+		MetricsRelabelConfigs: types.ListValueMust(types.ObjectType{AttrTypes: metricsRelabelConfigTypes}, []attr.Value{
+			// Unknown values are computed by the API and must not be sent
+			types.ObjectValueMust(metricsRelabelConfigTypes, map[string]attr.Value{
+				"action":        types.StringValue("hashmod"),
+				"modulus":       types.Int32Value(4),
+				"regex":         types.StringUnknown(),
+				"replacement":   types.StringUnknown(),
+				"separator":     types.StringUnknown(),
+				"source_labels": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("instance")}),
+				"target_label":  types.StringValue("shard"),
+			}),
+		}),
+	}
+	expectedCreate := []observabilitySdk.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{
+		{
+			Action:       new(observabilitySdk.CreateScrapeConfigPayloadMetricsRelabelConfigsInnerAction("hashmod")),
+			Modulus:      new(float32(4)),
+			SourceLabels: []string{"instance"},
+			TargetLabel:  new("shard"),
+		},
+	}
+	createPayload, err := toCreatePayload(context.Background(), model, &saml2Model{}, &basicAuthModel{}, nil)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if diff := cmp.Diff(createPayload.MetricsRelabelConfigs, expectedCreate); diff != "" {
+		t.Fatalf("Create payload does not match: %s", diff)
+	}
+
+	expectedUpdate := []observabilitySdk.UpdateScrapeConfigPayloadMetricsRelabelConfigsInner{
+		{
+			Action:       new(observabilitySdk.UpdateScrapeConfigPayloadMetricsRelabelConfigsInnerAction("hashmod")),
+			Modulus:      new(float32(4)),
+			SourceLabels: []string{"instance"},
+			TargetLabel:  new("shard"),
+		},
+	}
+	updatePayload, err := toUpdatePayload(context.Background(), model, &saml2Model{}, &basicAuthModel{}, nil)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if diff := cmp.Diff(updatePayload.MetricsRelabelConfigs, expectedUpdate); diff != "" {
+		t.Fatalf("Update payload does not match: %s", diff)
 	}
 }

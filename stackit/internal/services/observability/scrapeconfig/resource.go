@@ -64,7 +64,33 @@ type Model struct {
 	SAML2          types.Object `tfsdk:"saml2"`
 	BasicAuth      types.Object `tfsdk:"basic_auth"`
 	Targets        types.List   `tfsdk:"targets"`
+
+	MetricsRelabelConfigs types.List `tfsdk:"metrics_relabel_configs"`
 }
+
+// Struct corresponding to Model.MetricsRelabelConfigs[i]
+type metricsRelabelConfigModel struct {
+	Action       types.String `tfsdk:"action"`
+	Modulus      types.Int32  `tfsdk:"modulus"`
+	Regex        types.String `tfsdk:"regex"`
+	Replacement  types.String `tfsdk:"replacement"`
+	Separator    types.String `tfsdk:"separator"`
+	SourceLabels types.List   `tfsdk:"source_labels"`
+	TargetLabel  types.String `tfsdk:"target_label"`
+}
+
+// Types corresponding to metricsRelabelConfigModel
+var metricsRelabelConfigTypes = map[string]attr.Type{
+	"action":        types.StringType,
+	"modulus":       types.Int32Type,
+	"regex":         types.StringType,
+	"replacement":   types.StringType,
+	"separator":     types.StringType,
+	"source_labels": types.ListType{ElemType: types.StringType},
+	"target_label":  types.StringType,
+}
+
+var metricsRelabelConfigActions = []string{"replace", "keep", "drop", "hashmod", "labelmap", "labeldrop", "labelkeep"}
 
 // Struct corresponding to Model.SAML2
 type saml2Model struct {
@@ -258,6 +284,51 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 						Sensitive:   true,
 						Validators: []validator.String{
 							stringvalidator.LengthBetween(1, 200),
+						},
+					},
+				},
+			},
+			"metrics_relabel_configs": schema.ListNestedAttribute{
+				Description: "List of metric relabel configurations, applied to the scraped samples before they are stored.",
+				Optional:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"action": schema.StringAttribute{
+							Description: "Action to perform based on the regex matching. " + utils.FormatPossibleValues(metricsRelabelConfigActions...) + " If not set, the API uses `replace`.",
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.OneOf(metricsRelabelConfigActions...),
+							},
+						},
+						"modulus": schema.Int32Attribute{
+							Description: "Modulus to take of the hash of the source label values. Only used with the `hashmod` action.",
+							Optional:    true,
+						},
+						"regex": schema.StringAttribute{
+							Description: "Regular expression against which the extracted value is matched. If not set, the API uses `.*`.",
+							Optional:    true,
+							Computed:    true,
+						},
+						"replacement": schema.StringAttribute{
+							Description: "Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. If not set, the API uses `$1`.",
+							Optional:    true,
+							Computed:    true,
+						},
+						"separator": schema.StringAttribute{
+							Description: "Separator placed between concatenated source label values. If not set, the API uses `;`.",
+							Optional:    true,
+							Computed:    true,
+						},
+						"source_labels": schema.ListAttribute{
+							Description: "The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression.",
+							Optional:    true,
+							Computed:    true,
+							ElementType: types.StringType,
+						},
+						"target_label": schema.StringAttribute{
+							Description: "Label to which the resulting value is written in a `replace` action. Regex capture groups are available.",
+							Optional:    true,
 						},
 					},
 				},
@@ -605,7 +676,124 @@ func mapFields(ctx context.Context, sc *observabilitySdk.Job, model *Model) erro
 	if err != nil {
 		return fmt.Errorf("map targets: %w", err)
 	}
+	err = mapMetricsRelabelConfigs(ctx, sc, model)
+	if err != nil {
+		return fmt.Errorf("map metrics relabel configs: %w", err)
+	}
 	return nil
+}
+
+func mapMetricsRelabelConfigs(ctx context.Context, sc *observabilitySdk.Job, model *Model) error {
+	if len(sc.MetricsRelabelConfigs) == 0 {
+		model.MetricsRelabelConfigs = types.ListNull(types.ObjectType{AttrTypes: metricsRelabelConfigTypes})
+		return nil
+	}
+
+	configs := make([]attr.Value, 0, len(sc.MetricsRelabelConfigs))
+	for i := range sc.MetricsRelabelConfigs {
+		config := &sc.MetricsRelabelConfigs[i]
+
+		sourceLabels, diags := types.ListValueFrom(ctx, types.StringType, config.SourceLabels)
+		if diags.HasError() {
+			return fmt.Errorf("mapping source labels: %w", core.DiagsToError(diags))
+		}
+
+		var action *string
+		if config.Action != nil {
+			action = new(string(*config.Action))
+		}
+
+		configTF, diags := types.ObjectValue(metricsRelabelConfigTypes, map[string]attr.Value{
+			"action":        types.StringPointerValue(action),
+			"modulus":       types.Int32PointerValue(config.Modulus),
+			"regex":         types.StringPointerValue(config.Regex),
+			"replacement":   types.StringPointerValue(config.Replacement),
+			"separator":     types.StringPointerValue(config.Separator),
+			"source_labels": sourceLabels,
+			"target_label":  types.StringPointerValue(config.TargetLabel),
+		})
+		if diags.HasError() {
+			return fmt.Errorf("mapping metrics relabel config: %w", core.DiagsToError(diags))
+		}
+		configs = append(configs, configTF)
+	}
+
+	configsTF, diags := types.ListValue(types.ObjectType{AttrTypes: metricsRelabelConfigTypes}, configs)
+	if diags.HasError() {
+		return fmt.Errorf("mapping metrics relabel configs: %w", core.DiagsToError(diags))
+	}
+	model.MetricsRelabelConfigs = configsTF
+	return nil
+}
+
+func toMetricsRelabelConfigModels(ctx context.Context, model *Model) ([]metricsRelabelConfigModel, error) {
+	if utils.IsUndefined(model.MetricsRelabelConfigs) {
+		return nil, nil
+	}
+	var configs []metricsRelabelConfigModel
+	diags := model.MetricsRelabelConfigs.ElementsAs(ctx, &configs, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting metrics relabel configs: %w", core.DiagsToError(diags))
+	}
+	return configs, nil
+}
+
+func toCreateMetricsRelabelConfigsPayload(ctx context.Context, model *Model) ([]observabilitySdk.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, error) {
+	configs, err := toMetricsRelabelConfigModels(ctx, model)
+	if err != nil || configs == nil {
+		return nil, err
+	}
+	payload := make([]observabilitySdk.CreateScrapeConfigPayloadMetricsRelabelConfigsInner, 0, len(configs))
+	for i := range configs {
+		config := &configs[i]
+		sourceLabels, err := conversion.StringListToSlice(config.SourceLabels)
+		if err != nil {
+			return nil, fmt.Errorf("converting source labels: %w", err)
+		}
+		var modulus *float32
+		if v := conversion.Int32ValueToPointer(config.Modulus); v != nil {
+			modulus = new(float32(*v))
+		}
+		payload = append(payload, observabilitySdk.CreateScrapeConfigPayloadMetricsRelabelConfigsInner{
+			Action:       conversion.StringValueToEnumPointer[observabilitySdk.CreateScrapeConfigPayloadMetricsRelabelConfigsInnerAction](config.Action),
+			Modulus:      modulus,
+			Regex:        conversion.StringValueToPointer(config.Regex),
+			Replacement:  conversion.StringValueToPointer(config.Replacement),
+			Separator:    conversion.StringValueToPointer(config.Separator),
+			SourceLabels: sourceLabels,
+			TargetLabel:  conversion.StringValueToPointer(config.TargetLabel),
+		})
+	}
+	return payload, nil
+}
+
+func toUpdateMetricsRelabelConfigsPayload(ctx context.Context, model *Model) ([]observabilitySdk.UpdateScrapeConfigPayloadMetricsRelabelConfigsInner, error) {
+	configs, err := toMetricsRelabelConfigModels(ctx, model)
+	if err != nil || configs == nil {
+		return nil, err
+	}
+	payload := make([]observabilitySdk.UpdateScrapeConfigPayloadMetricsRelabelConfigsInner, 0, len(configs))
+	for i := range configs {
+		config := &configs[i]
+		sourceLabels, err := conversion.StringListToSlice(config.SourceLabels)
+		if err != nil {
+			return nil, fmt.Errorf("converting source labels: %w", err)
+		}
+		var modulus *float32
+		if v := conversion.Int32ValueToPointer(config.Modulus); v != nil {
+			modulus = new(float32(*v))
+		}
+		payload = append(payload, observabilitySdk.UpdateScrapeConfigPayloadMetricsRelabelConfigsInner{
+			Action:       conversion.StringValueToEnumPointer[observabilitySdk.UpdateScrapeConfigPayloadMetricsRelabelConfigsInnerAction](config.Action),
+			Modulus:      modulus,
+			Regex:        conversion.StringValueToPointer(config.Regex),
+			Replacement:  conversion.StringValueToPointer(config.Replacement),
+			Separator:    conversion.StringValueToPointer(config.Separator),
+			SourceLabels: sourceLabels,
+			TargetLabel:  conversion.StringValueToPointer(config.TargetLabel),
+		})
+	}
+	return payload, nil
 }
 
 func mapBasicAuth(sc *observabilitySdk.Job, model *Model) error {
@@ -732,6 +920,12 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
 
+	metricsRelabelConfigs, err := toCreateMetricsRelabelConfigsPayload(ctx, model)
+	if err != nil {
+		return nil, err
+	}
+	sc.MetricsRelabelConfigs = metricsRelabelConfigs
+
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]any)
 		if sc.Params != nil {
@@ -820,6 +1014,12 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		Scheme:      observabilitySdk.UpdateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
+
+	metricsRelabelConfigs, err := toUpdateMetricsRelabelConfigsPayload(ctx, model)
+	if err != nil {
+		return nil, err
+	}
+	sc.MetricsRelabelConfigs = metricsRelabelConfigs
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]any)

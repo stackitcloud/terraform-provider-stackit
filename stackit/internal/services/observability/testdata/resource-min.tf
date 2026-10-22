@@ -18,6 +18,7 @@ variable "logalertgroup_expression" {}
 variable "scrapeconfig_name" {}
 variable "scrapeconfig_metrics_path" {}
 variable "scrapeconfig_targets_url" {}
+variable "scrapeconfig_relabel_regex" {}
 
 
 resource "stackit_observability_alertgroup" "alertgroup" {
@@ -69,6 +70,18 @@ resource "stackit_observability_scrapeconfig" "scrapeconfig" {
   metrics_path = var.scrapeconfig_metrics_path
 
   targets = [{ urls = [var.scrapeconfig_targets_url] }]
+
+  metrics_relabel_configs = [
+    {
+      action        = "drop"
+      source_labels = ["__name__"]
+      regex         = var.scrapeconfig_relabel_regex
+    },
+    {
+      source_labels = ["job"]
+      target_label  = "source_job"
+    }
+  ]
 }
 
 
