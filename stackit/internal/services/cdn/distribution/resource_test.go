@@ -144,10 +144,14 @@ func TestToCreatePayload(t *testing.T) {
 		"push_url": types.StringValue(testLogSinkPushUrl),
 		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-			"type":     types.StringValue(string(testLogSinkOtlpCredentialsBearerType)), // bearer
-			"token":    types.StringValue(testLogSinkOtlpCredentialsToken),
-			"username": types.StringNull(),
-			"password": types.StringNull(),
+			"type":                types.StringValue(string(testLogSinkOtlpCredentialsBearerType)), // bearer
+			"token":               types.StringValue(testLogSinkOtlpCredentialsToken),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+			"username":            types.StringNull(),
+			"password":            types.StringNull(),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
 		}),
 	})
 	expectedLogSinkOtlpBearerConfig := cdnSdk.CreateDistributionPayloadLogSink{
@@ -168,10 +172,14 @@ func TestToCreatePayload(t *testing.T) {
 		"push_url": types.StringValue(testLogSinkPushUrl),
 		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-			"type":     types.StringValue(string(testLogSinkOtlpCredentialsBasicType)), // basic
-			"username": types.StringValue(testLogSinkCredentialsUsername),
-			"password": types.StringValue(testLogSinkCredentialsPassword),
-			"token":    types.StringNull(),
+			"type":                types.StringValue(string(testLogSinkOtlpCredentialsBasicType)), // basic
+			"username":            types.StringValue(testLogSinkCredentialsUsername),
+			"password":            types.StringValue(testLogSinkCredentialsPassword),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
+			"token":               types.StringNull(),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
 		}),
 	})
 	expectedLogSinkOtlpBasicConfig := cdnSdk.CreateDistributionPayloadLogSink{
@@ -193,10 +201,14 @@ func TestToCreatePayload(t *testing.T) {
 		"push_url": types.StringValue(testLogSinkPushUrl),
 		"type":     types.StringValue(string(testLogSinkLokiType)), // loki
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-			"username": types.StringValue(testLogSinkCredentialsUsername),
-			"password": types.StringValue(testLogSinkCredentialsPassword),
-			"type":     types.StringNull(),
-			"token":    types.StringNull(),
+			"username":            types.StringValue(testLogSinkCredentialsUsername),
+			"password":            types.StringValue(testLogSinkCredentialsPassword),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
+			"type":                types.StringNull(),
+			"token":               types.StringNull(),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
 		}),
 	})
 	expectedLogSinkLokiConfig := cdnSdk.CreateDistributionPayloadLogSink{
@@ -724,7 +736,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			res, err := toCreatePayload(context.Background(), tc.Input)
+			res, err := toCreatePayload(context.Background(), tc.Input, tc.Input)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
@@ -1320,20 +1332,28 @@ func TestMapFields(t *testing.T) {
 		"push_url": types.StringValue(testLogSinkPushUrlOld),
 		"type":     types.StringValue(string(testLogSinkOtlpType)),
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-			"type":     types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
-			"token":    types.StringValue("ey1234"),
-			"username": types.StringNull(),
-			"password": types.StringNull(),
+			"type":                types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+			"token":               types.StringValue("ey1234"),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+			"username":            types.StringNull(),
+			"password":            types.StringNull(),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
 		}),
 	})
 	expectedLogSinkConfigNew := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
 		"push_url": types.StringValue(testLogSinkPushUrl),
 		"type":     types.StringValue(string(testLogSinkOtlpType)),
 		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-			"type":     types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
-			"token":    types.StringValue("ey1234"),
-			"username": types.StringNull(),
-			"password": types.StringNull(),
+			"type":                types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+			"token":               types.StringValue("ey1234"),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+			"username":            types.StringNull(),
+			"password":            types.StringNull(),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
 		}),
 	})
 	inputLogSinkConfig := cdnSdk.ConfigLogSink{
@@ -1931,11 +1951,19 @@ func TestValidateCountryCode(t *testing.T) {
 }
 
 func testBuildCredentialsObject(credType, username, password, token attr.Value) types.Object {
+	return testBuildCredentialsObjectWithWo(credType, username, password, types.StringNull(), types.Int64Null(), token, types.StringNull(), types.Int64Null())
+}
+
+func testBuildCredentialsObjectWithWo(credType, username, password, passwordWo, passwordWoVersion, token, tokenWo, tokenWoVersion attr.Value) types.Object {
 	return types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
-		"type":     credType,
-		"username": username,
-		"password": password,
-		"token":    token,
+		"type":                credType,
+		"username":            username,
+		"password":            password,
+		"password_wo":         passwordWo,
+		"password_wo_version": passwordWoVersion,
+		"token":               token,
+		"token_wo":            tokenWo,
+		"token_wo_version":    tokenWoVersion,
 	})
 }
 
@@ -2282,7 +2310,7 @@ func TestToPatchLogSinkPayload(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := toPatchLogSinkPayload(context.Background(), tc.input)
+			result, err := toPatchLogSinkPayload(context.Background(), tc.input, types.ObjectNull(logSinkTypes), tc.input)
 
 			if tc.expectError {
 				if err == nil {
@@ -2466,4 +2494,348 @@ func TestMapLogSinkResource(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWriteOnlyLogSinkCredentials(t *testing.T) {
+	testPushURL := "https://logs.example.com/push"
+
+	t.Run("create_loki_with_password_wo", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(), // plain password not set
+				types.StringNull(), // WO stripped from plan
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("supersecret-password"), // WO in config
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		payload, err := toCreateLogSinkPayload(context.Background(), planSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if payload.LokiLogSinkCreate == nil {
+			t.Fatalf("expected LokiLogSinkCreate, got nil")
+		}
+		if payload.LokiLogSinkCreate.Credentials.Password != "supersecret-password" {
+			t.Fatalf("expected password %q, got %q", "supersecret-password", payload.LokiLogSinkCreate.Credentials.Password)
+		}
+	})
+
+	t.Run("create_otlp_basic_with_password_wo", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("otlp-password"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		payload, err := toCreateLogSinkPayload(context.Background(), planSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if payload.OtlpLogSinkCreate == nil || payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBasicCredentials, got nil")
+		}
+		if payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials.Password != "otlp-password" {
+			t.Fatalf("expected password %q, got %q", "otlp-password", payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials.Password)
+		}
+	})
+
+	t.Run("create_otlp_bearer_with_token_wo", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringValue("otlp-bearer-token"),
+				types.Int64Value(1),
+			),
+		)
+
+		payload, err := toCreateLogSinkPayload(context.Background(), planSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if payload.OtlpLogSinkCreate == nil || payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBearerCredentials, got nil")
+		}
+		if payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials.Token != "otlp-bearer-token" {
+			t.Fatalf("expected token %q, got %q", "otlp-bearer-token", payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials.Token)
+		}
+	})
+
+	t.Run("patch_loki_version_bumped_rotates_password", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(2), // version bumped to 2
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // old version 1
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("new-secret"),
+				types.Int64Value(2),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.LokiLogSinkPatch == nil || patch.LokiLogSinkPatch.Credentials == nil {
+			t.Fatalf("expected credentials rotated, got nil")
+		}
+		if patch.LokiLogSinkPatch.Credentials.Password != "new-secret" {
+			t.Fatalf("expected password %q, got %q", "new-secret", patch.LokiLogSinkPatch.Credentials.Password)
+		}
+	})
+
+	t.Run("patch_loki_no_version_bump_omits_credentials", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // unchanged version
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // same version
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("new-secret-ignored"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.LokiLogSinkPatch == nil {
+			t.Fatalf("expected LokiLogSinkPatch, got nil")
+		}
+		if patch.LokiLogSinkPatch.Credentials != nil {
+			t.Fatalf("expected credentials omitted, got %+v", patch.LokiLogSinkPatch.Credentials)
+		}
+	})
+
+	t.Run("patch_otlp_bearer_version_bumped_rotates_token", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(2),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringValue("rotated-token"),
+				types.Int64Value(2),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBearerCredentials rotated, got nil")
+		}
+		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token != "rotated-token" {
+			t.Fatalf("expected token %q, got %q", "rotated-token", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token)
+		}
+	})
+
+	t.Run("map_log_sink_preserves_wo_versions", func(t *testing.T) {
+		apiLogSink := &cdnSdk.ConfigLogSink{
+			LokiLogSink: &cdnSdk.LokiLogSink{
+				Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+				PushUrl: testPushURL,
+			},
+		}
+		oldLogSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(), // WO is never in state
+				types.Int64Value(42),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		result, err := mapLogSinkResource(context.Background(), apiLogSink, oldLogSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var logSink logSinkConfig
+		diags := result.As(context.Background(), &logSink, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			t.Fatalf("diags error: %v", diags)
+		}
+		var creds logSinkCredentialsConfig
+		diags = logSink.Credentials.As(context.Background(), &creds, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			t.Fatalf("diags error: %v", diags)
+		}
+
+		if creds.PasswordWoVersion.ValueInt64() != 42 {
+			t.Fatalf("expected password_wo_version 42, got %v", creds.PasswordWoVersion)
+		}
+		if !creds.PasswordWo.IsNull() {
+			t.Fatalf("expected password_wo to be null in state, got %v", creds.PasswordWo)
+		}
+	})
 }

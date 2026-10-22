@@ -62,6 +62,9 @@ var (
 
 	//go:embed testdata/resource-http-custom-domain.tf
 	resourceHttpCustomDomain string
+
+	//go:embed testdata/resource-http-log-sink-wo.tf
+	resourceHttpLogSinkWo string
 )
 
 var resourceHttpFull = resourceHttpBase + "\n" + resourceHttpCustomDomain
@@ -318,8 +321,12 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					"domains",
 					"config.log_sink.credentials.type",
 					"config.log_sink.credentials.token",
+					"config.log_sink.credentials.token_wo",
+					"config.log_sink.credentials.token_wo_version",
 					"config.log_sink.credentials.username",
 					"config.log_sink.credentials.password",
+					"config.log_sink.credentials.password_wo",
+					"config.log_sink.credentials.password_wo_version",
 				},
 			},
 			{
@@ -698,4 +705,52 @@ func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, er
 		time.Sleep(sleep)
 	}
 	return zero, fmt.Errorf("retry timed out, last error: %w", errOuter)
+}
+
+func TestAccCDNDistributionLogSinkWriteOnlyRotation(t *testing.T) {
+	woTestName := "acc-wo" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+
+	baseVars := config.Variables{
+		"project_id":          config.StringVariable(testutil.ProjectId),
+		"backend_http_type":   config.StringVariable("http"),
+		"backend_origin_url":  config.StringVariable("https://test-backend-1.cdn-dev.runs.onstackit.cloud"),
+		"regions":             config.ListVariable(config.StringVariable("EU")),
+		"logs_display_name":   config.StringVariable(woTestName),
+		"token_wo_version":    config.IntegerVariable(1),
+	}
+
+	bumpedVars := maps.Clone(baseVars)
+	bumpedVars["token_wo_version"] = config.IntegerVariable(2)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckCDNDistributionDestroy,
+		Steps: []resource.TestStep{
+			// Step 1: Create distribution with token_wo and token_wo_version = 1
+			{
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpLogSinkWo,
+				ConfigVariables: baseVars,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", "otlp"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.type", "bearer"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo_version", "1"),
+					// Write-only field must NEVER be stored in state
+					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo"),
+					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token"),
+				),
+			},
+			// Step 2: Bump token_wo_version to 2 (triggers update)
+			{
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpLogSinkWo,
+				ConfigVariables: bumpedVars,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo"),
+				),
+			},
+		},
+	})
 }

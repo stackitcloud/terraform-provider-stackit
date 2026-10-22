@@ -112,9 +112,12 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       type     = "otlp"
       credentials = {
         type = "bearer"
-        # Use the token generated e.g. by stackit_logs_access_token:
-        # token = stackit_logs_access_token.logs_token.access_token
-        token = "eyXXXXX......"
+        # Write-only arguments (token_wo + token_wo_version) are preferred over 'token'
+        # to ensure secrets never end up in state (requires Terraform 1.11.0+):
+        # token_wo         = stackit_logs_access_token.logs_token.access_token
+        # token_wo_version = 1
+        token_wo         = "eyXXXXX......"
+        token_wo_version = 1
       }
     }
   }
