@@ -99,6 +99,10 @@ resource "stackit_loadbalancer" "example" {
         interval_jitter     = "3s"
         timeout             = "3s"
         unhealthy_threshold = 10
+        http_health_checks = {
+          path      = "/healthz"
+          ok_status = ["200"]
+        }
       }
     }
   ]
@@ -335,11 +339,22 @@ Required:
 
 Optional:
 
+- `alt_port` (Number) Overrides the default port used for health check probes.
 - `healthy_threshold` (Number) Healthy threshold of the health checking.
+- `http_health_checks` (Attributes) Options for the HTTP health checking. (see [below for nested schema](#nestedatt--target_pools--active_health_check--http_health_checks))
 - `interval` (String) Interval duration of health checking in seconds.
 - `interval_jitter` (String) Interval duration threshold of the health checking in seconds.
 - `timeout` (String) Active health checking timeout duration in seconds.
 - `unhealthy_threshold` (Number) Unhealthy threshold of the health checking.
+
+<a id="nestedatt--target_pools--active_health_check--http_health_checks"></a>
+### Nested Schema for `target_pools.active_health_check.http_health_checks`
+
+Required:
+
+- `ok_status` (Set of String) List of HTTP status codes that indicate a healthy response.
+- `path` (String) Path to send the health check request to.
+
 
 
 <a id="nestedatt--target_pools--session_persistence"></a>
