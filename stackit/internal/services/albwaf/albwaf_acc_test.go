@@ -31,6 +31,9 @@ var (
 	//go:embed testdata/managed-rule-set.tf
 	managedRuleSetConfig string
 
+	//go:embed testdata/managed-rule-set-rule-modes.tf
+	managedRuleSetRuleModesConfig string
+
 	//go:embed testdata/resource-max.tf
 	wafMaxConfig string
 
@@ -460,6 +463,60 @@ func TestAccManagedRuleSet(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_managed_rule_set.managed_rule_set", "id"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testManagedRuleSetUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "type", testutil.ConvertConfigVariable(testManagedRuleSetUpdated()["type"])),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func testManagedRuleSetRuleModes(modes map[string]string) config.Variables {
+	vars := config.Variables{}
+	maps.Copy(vars, testManagedRuleSet)
+	values := map[string]config.Variable{}
+	for rule, mode := range modes {
+		values[rule] = config.StringVariable(mode)
+	}
+	vars["rule_modes"] = config.MapVariable(values)
+	return vars
+}
+
+// ruleModeInGroups checks the mode of a rule in the computed groups inventory.
+func ruleModeInGroups(group, rule, mode string) resource.TestCheckFunc {
+	return resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", fmt.Sprintf("groups.%s.rules.%s.mode", group, rule), mode)
+}
+
+func TestAccManagedRuleSetRuleModes(t *testing.T) {
+	cfg := fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), managedRuleSetRuleModesConfig)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation with rule modes
+			{
+				ConfigVariables: testManagedRuleSetRuleModes(map[string]string{"911100": "MODE_LOG_ONLY", "920450": "MODE_LOG_ONLY"}),
+				Config:          cfg,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.911100", "MODE_LOG_ONLY"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.920450", "MODE_LOG_ONLY"),
+					ruleModeInGroups("911", "911100", "MODE_LOG_ONLY"),
+					ruleModeInGroups("920", "920450", "MODE_LOG_ONLY"),
+				),
+			},
+			// Change in place: one rule removed (back to enabled), one changed
+			{
+				ConfigVariables: testManagedRuleSetRuleModes(map[string]string{"920450": "MODE_DISABLED"}),
+				Config:          cfg,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_alb_waf_managed_rule_set.managed_rule_set", plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.911100"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.920450", "MODE_DISABLED"),
+					ruleModeInGroups("911", "911100", "MODE_ENABLED"),
+					ruleModeInGroups("920", "920450", "MODE_DISABLED"),
 				),
 			},
 			// Deletion is done by the framework implicitly
