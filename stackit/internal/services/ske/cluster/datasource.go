@@ -174,9 +174,25 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 								},
 							},
 						},
-						"cri": schema.StringAttribute{
-							Description: "Specifies the container runtime.",
+						"cri": schema.SingleNestedAttribute{
+							Description: "Configures the container runtime.",
 							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"name": schema.StringAttribute{
+									Description: "Specifies the container runtime.",
+									Computed:    true,
+								},
+								"kata": schema.SingleNestedAttribute{
+									Description: "Configures Kata Containers workload isolation.",
+									Computed:    true,
+									Attributes: map[string]schema.Attribute{
+										"enabled": schema.BoolAttribute{
+											Description: "Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts.",
+											Computed:    true,
+										},
+									},
+								},
+							},
 						},
 						"availability_zones": schema.ListAttribute{
 							Description: "Specify a list of availability zones.",
