@@ -223,10 +223,8 @@ func TestMapFields(t *testing.T) {
 										),
 									},
 								),
-								"cri": types.ObjectValueMust(criTypes, map[string]attr.Value{
-									"name": types.StringValue("containerd"),
-									"kata": types.ObjectNull(kataTypes),
-								}),
+								"cri":  types.StringValue("containerd"),
+								"kata": types.BoolValue(false),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -615,12 +613,8 @@ func TestMapFields(t *testing.T) {
 								},
 							),
 							"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
-							"cri": types.ObjectValueMust(criTypes, map[string]attr.Value{
-								"name": types.StringValue("containerd"),
-								"kata": types.ObjectValueMust(kataTypes, map[string]attr.Value{
-									"enabled": types.BoolValue(false),
-								}),
-							}),
+							"cri":    types.StringValue("containerd"),
+							"kata":   types.BoolValue(true),
 							"availability_zones": types.ListValueMust(
 								types.StringType,
 								[]attr.Value{
@@ -756,12 +750,8 @@ func TestMapFields(t *testing.T) {
 									},
 								),
 								"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
-								"cri": types.ObjectValueMust(criTypes, map[string]attr.Value{
-									"name": types.StringValue("containerd"),
-									"kata": types.ObjectValueMust(kataTypes, map[string]attr.Value{
-										"enabled": types.BoolValue(true),
-									}),
-								}),
+								"cri":    types.StringValue("containerd"),
+								"kata":   types.BoolValue(true),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -868,58 +858,6 @@ func TestMapFields(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
-			}
-		})
-	}
-}
-
-func TestMapCRI(t *testing.T) {
-	plannedCRI := types.ObjectValueMust(criTypes, map[string]attr.Value{
-		"name": types.StringValue("containerd"),
-		"kata": types.ObjectValueMust(kataTypes, map[string]attr.Value{"enabled": types.BoolValue(true)}),
-	})
-	tests := []struct {
-		name     string
-		response *ske.CRI
-		planned  types.Object
-		want     types.Object
-	}{
-		{
-			name:     "api response is source of truth",
-			response: &ske.CRI{Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD), Kata: &ske.Kata{Enabled: true}},
-			planned:  types.ObjectNull(criTypes),
-			want: types.ObjectValueMust(criTypes, map[string]attr.Value{
-				"name": types.StringValue("containerd"),
-				"kata": types.ObjectValueMust(kataTypes, map[string]attr.Value{"enabled": types.BoolValue(true)}),
-			}),
-		},
-		{
-			name:     "keep planned kata when API omits kata", // keeps the default value in case the API omits the optional kata field
-			response: &ske.CRI{Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD)},
-			planned:  plannedCRI,
-			want:     plannedCRI,
-		},
-		{
-			name:     "retain planned cri when API omits cri",
-			response: nil,
-			planned:  plannedCRI,
-			want:     plannedCRI,
-		},
-		{
-			name:     "null when API and plan omit cri",
-			response: nil,
-			planned:  types.ObjectNull(criTypes),
-			want:     types.ObjectNull(criTypes),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			nodePool := map[string]attr.Value{"cri": types.ObjectNull(criTypes)}
-			if err := mapCRI(context.Background(), tt.response, nodePool, tt.planned); err != nil {
-				t.Fatalf("mapCRI() error = %v", err)
-			}
-			if diff := cmp.Diff(tt.want, nodePool["cri"]); diff != "" {
-				t.Fatalf("mapCRI() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
