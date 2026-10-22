@@ -26,6 +26,7 @@ var (
 
 func TestMapFields(t *testing.T) {
 	testTime := time.Now()
+
 	tests := []struct {
 		name     string
 		state    *Model
@@ -110,6 +111,7 @@ func TestMapFields(t *testing.T) {
 			if err := mapFields(ctx, tt.region, tt.input, tt.state); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -183,6 +185,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toCreatePayload() = %v, want %v", got, tt.want)
 			}
@@ -270,6 +273,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toUpdatePayload() = %v, want %v", got, tt.want)
 			}

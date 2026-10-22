@@ -217,6 +217,7 @@ func TestAccDremioInstanceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioInstanceResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
@@ -235,10 +236,12 @@ func TestAccDremioInstanceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioUserResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute userId")
@@ -429,6 +432,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioInstanceResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
@@ -448,10 +452,12 @@ func TestAccDremioInstanceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioUserResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute userId")
@@ -491,6 +497,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 
 func testAccDremioInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := dremioSdk.NewAPIClient(
 		testutil.NewConfigBuilder().BuildClientOptions(testutil.DremioCustomEndpoint, true)...)
 	if err != nil {
@@ -531,5 +538,6 @@ func testAccDremioInstanceDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

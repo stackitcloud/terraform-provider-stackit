@@ -24,6 +24,7 @@ func TestCreateWriteOnlyKeyPayload(t *testing.T) {
 	volumeId := uuid.NewString()
 	kekKeyId := uuid.NewString()
 	kekKeyringId := uuid.NewString()
+
 	const (
 		region              = "eu01"
 		availabilityZone    = "eu01-1"
@@ -33,6 +34,7 @@ func TestCreateWriteOnlyKeyPayload(t *testing.T) {
 		testKeyPayload      = "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4="
 		volumeStatusCreated = "AVAILABLE"
 	)
+
 	s := testutil.NewMockServer(t)
 	t.Cleanup(s.Server.Close)
 	tfConfig := fmt.Sprintf(`
@@ -69,6 +71,7 @@ resource "stackit_volume" "volume" {
 	}
 
 	var capturedKeyPayload *string
+
 	createCalled := false
 	createVolume := testutil.MockResponse{
 		Description: "create",
@@ -77,19 +80,23 @@ resource "stackit_volume" "volume" {
 			if req.URL.Path != expected {
 				t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 			}
+
 			createCalled = true
+
 			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				t.Errorf("failed to read create request body: %v", err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+
 			var payload iaas.CreateVolumePayload
 			if err := json.Unmarshal(body, &payload); err != nil {
 				t.Errorf("failed to unmarshal create request body: %v", err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+
 			if payload.EncryptionParameters != nil {
 				capturedKeyPayload = payload.EncryptionParameters.KeyPayload
 			}
@@ -126,9 +133,11 @@ resource "stackit_volume" "volume" {
 	if !createCalled {
 		t.Fatalf("Expected the create endpoint to be called")
 	}
+
 	if capturedKeyPayload == nil {
 		t.Fatalf("Expected key payload %q to be sent to the API, but none was sent", testKeyPayload)
 	}
+
 	if *capturedKeyPayload != testKeyPayload {
 		t.Fatalf("Wrong key payload sent to the API: expected %q, got %q", testKeyPayload, *capturedKeyPayload)
 	}

@@ -297,6 +297,7 @@ func mapFields(ctx context.Context, response *iaas.MachineTypeListResponse, mode
 	if response == nil {
 		return fmt.Errorf("machine type list response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("data source model is nil")
 	}
@@ -318,6 +319,7 @@ func mapFields(ctx context.Context, response *iaas.MachineTypeListResponse, mode
 			if ds.HasError() {
 				return fmt.Errorf("mapping extra specs for machine type %q: %w", item.Name, core.DiagsToError(ds))
 			}
+
 			extra = mapped
 		}
 

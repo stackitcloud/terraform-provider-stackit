@@ -169,6 +169,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -400,6 +401,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -423,6 +425,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	if instanceResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -450,10 +453,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance created")
 }
 
@@ -469,6 +474,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -476,12 +482,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -492,7 +500,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -508,6 +518,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance read")
 }
 
@@ -525,6 +536,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -542,11 +554,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	instanceId := state.InstanceId.ValueString()
+
 	instanceResp, err := r.client.UpdateDremioInstance(ctx, projectId, region, instanceId).UpdateDremioInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	if instanceResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -579,11 +593,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance updated")
 }
 
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model InstanceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -596,6 +612,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -614,6 +631,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Dremio instance", fmt.Sprintf("Calling API: %v", err))
 	}
 
@@ -635,6 +653,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing dremio instance",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -651,6 +670,7 @@ func mapFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse, mode
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -663,6 +683,7 @@ func mapFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse, mode
 	if model.Authentication == nil {
 		model.Authentication = new(AuthenticationModel)
 	}
+
 	err = mapAuthentication(instanceResp, model.Authentication)
 	if err != nil {
 		return fmt.Errorf("failed to map Authentication fields")
@@ -676,6 +697,7 @@ func mapModelFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse,
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -696,10 +718,12 @@ func mapModelFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse,
 		Catalog:     types.StringValue(instanceResp.Endpoints.Catalog),
 		Ui:          types.StringValue(instanceResp.Endpoints.Ui),
 	}
+
 	endpointsObj, diags := types.ObjectValueFrom(ctx, endpointsAttrTypes, endpoints)
 	if diags.HasError() {
 		return fmt.Errorf("failed to parse endpoints")
 	}
+
 	model.Endpoints = endpointsObj
 
 	return nil
@@ -709,6 +733,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if auth == nil {
 		return fmt.Errorf("auth input is nil")
 	}
@@ -732,6 +757,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 		if auth.OAuth == nil {
 			auth.OAuth = new(OAuthModel)
 		}
+
 		oauthResp := instanceResp.Authentication.Oauth
 		oauthModel := auth.OAuth
 
@@ -749,6 +775,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 					Value: types.StringValue(p.Value),
 				})
 			}
+
 			oauthModel.Parameters = params
 		}
 	}
@@ -796,12 +823,12 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 	// API only saves the block of the stated type. The other one is omitted.
 	// Keeping the block in TF leads to inconsistent state. Therefore we have
 	// make sure the type matches the existing block.
-
 	switch model.Authentication.Type.ValueString() {
 	case string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY):
 		if !(model.Authentication.OAuth == nil) || !(model.Authentication.AzureAD == nil) {
 			return nil, fmt.Errorf("can't state idp config if auth type is %q", dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)
 		}
+
 		return &dremioSdk.Authentication{
 			Azuread: nil,
 			Oauth:   nil,
@@ -811,6 +838,7 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 		if !(model.Authentication.AzureAD == nil) {
 			return nil, fmt.Errorf("can't state azure idp config if auth type is %q", dremioSdk.AUTHENTICATIONTYPE_OAUTH)
 		}
+
 		if model.Authentication.OAuth == nil {
 			return nil, fmt.Errorf("missing oauth idp config")
 		}
@@ -847,6 +875,7 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 		if !(model.Authentication.OAuth == nil) {
 			return nil, fmt.Errorf("can't state oauth idp config if auth type is %q", dremioSdk.AUTHENTICATIONTYPE_AZUREAD)
 		}
+
 		if model.Authentication.AzureAD == nil {
 			return nil, fmt.Errorf("missing azuread config")
 		}
@@ -857,6 +886,7 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueStringPointer(),
 			RedirectUrl:  model.Authentication.AzureAD.RedirectUrl.ValueStringPointer(),
 		}
+
 		return &dremioSdk.Authentication{
 			Azuread: azureAdPayload,
 			Oauth:   nil,

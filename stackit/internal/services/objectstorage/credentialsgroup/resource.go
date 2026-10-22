@@ -61,6 +61,7 @@ func (r *credentialsGroupResource) ModifyPlan(ctx context.Context, req resource.
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -167,6 +168,7 @@ func (r *credentialsGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 // Create creates the resource and sets the initial Terraform state.
 func (r *credentialsGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -207,6 +209,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", "Got empty credential group id id")
 		return
 	}
+
 	credentialsGroupId := got.CredentialsGroup.CredentialsGroupId
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -224,17 +227,20 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentialsGroup", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credentials group created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -244,12 +250,14 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	if credentialsGroupId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -277,6 +285,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credentials group read")
 }
 
@@ -289,6 +298,7 @@ func (r *credentialsGroupResource) Update(ctx context.Context, _ resource.Update
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -313,7 +323,9 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -331,6 +343,7 @@ func (r *credentialsGroupResource) ImportState(ctx context.Context, req resource
 			"Error importing credentialsGroup",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[credentials_group_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -346,16 +359,20 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	if credentialsGroupResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
 	err := mapCredentialsGroup(credentialsGroup, model, region)
 	if err != nil {
 		return err
 	}
+
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -373,6 +390,7 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 	model.CredentialsGroupId = types.StringValue(credentialsGroupId)
 	model.URN = types.StringValue(credentialsGroup.Urn)
 	model.Name = types.StringValue(credentialsGroup.DisplayName)
+
 	return nil
 }
 
@@ -392,6 +410,7 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return found, nil
 		}
+
 		return found, fmt.Errorf("getting credentials groups: %w", err)
 	}
 
@@ -403,11 +422,14 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 		if credentialsGroup.CredentialsGroupId != model.CredentialsGroupId.ValueString() && credentialsGroup.DisplayName != model.Name.ValueString() {
 			continue
 		}
+
 		found = true
+
 		err = mapCredentialsGroup(credentialsGroup, model, region)
 		if err != nil {
 			return found, err
 		}
+
 		break
 	}
 

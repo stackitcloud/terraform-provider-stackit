@@ -110,5 +110,6 @@ func getAccessToken(roundTripper http.RoundTripper) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error obtaining access token: %w", err)
 	}
+
 	return accessToken, nil
 }

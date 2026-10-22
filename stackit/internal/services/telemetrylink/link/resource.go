@@ -110,9 +110,11 @@ func (r *telemetryLinkResource) Configure(ctx context.Context, req resource.Conf
 
 func (r *telemetryLinkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -261,6 +263,7 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 
 func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var planModel Model
+
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -271,6 +274,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 	// plan and state models - for security measures. Write-only values should only be kept in the config
 	// model so that they never end up in the state (or plan).
 	var configModel Model
+
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -413,16 +417,19 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryLink created")
 }
 
 func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -439,8 +446,10 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "resource_id", resourceID)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var err error
-	var response *telemetrylink.TelemetryLinkResponse
+	var (
+		err      error
+		response *telemetrylink.TelemetryLinkResponse
+	)
 	switch resourceType {
 	case resourceTypeOrganization:
 		response, err = r.client.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
@@ -452,16 +461,21 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", model.ResourceType.ValueString()))
 		return
 	}
+
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, response, &model, region)
@@ -469,11 +483,13 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryLink read", map[string]interface{}{
 		"resource_type": resourceType,
 		"resource_id":   resourceID,
@@ -483,6 +499,7 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// the regular plan model one always uses in the update implementation
 	var planModel Model
+
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -492,6 +509,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 	// the state model - contains the "previous" values and is needed to compare the old write-only version field
 	// values to the new ones
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -502,6 +520,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 	// plan and state models - for security measures. Write-only values should be only kept in the config model
 	// so that they never end up in the state (or plan).
 	var configModel Model
+
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -603,6 +622,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryLink updated", map[string]interface{}{
 		"resource_type": resourceType,
 		"resource_id":   resourceID,
@@ -611,6 +631,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 
 func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -737,6 +758,7 @@ func toCreateOrUpdateOrganizationTelemetryLinkPayload(planModel, configModel *Mo
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
 	}
@@ -754,6 +776,7 @@ func toCreateOrUpdateFolderTelemetryLinkPayload(planModel, configModel *Model) (
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
 	}
@@ -771,6 +794,7 @@ func toCreateOrUpdateProjectTelemetryLinkPayload(planModel, configModel *Model) 
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
 	}
@@ -788,9 +812,11 @@ func toPartialUpdateOrganizationTelemetryLinkPayload(planModel, stateModel, conf
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
+
 	if stateModel == nil {
 		return nil, fmt.Errorf("missing state model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
 	}
@@ -810,9 +836,11 @@ func toPartialUpdateFolderTelemetryLinkPayload(planModel, stateModel, configMode
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
+
 	if stateModel == nil {
 		return nil, fmt.Errorf("missing state model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
 	}
@@ -830,9 +858,11 @@ func toPartialUpdateProjectTelemetryLinkPayload(planModel, stateModel, configMod
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
+
 	if stateModel == nil {
 		return nil, fmt.Errorf("missing state model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
 	}
@@ -850,6 +880,7 @@ func mapFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, mod
 	if link == nil {
 		return fmt.Errorf("link is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}

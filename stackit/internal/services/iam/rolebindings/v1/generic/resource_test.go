@@ -12,6 +12,7 @@ import (
 
 func Test_mapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	resourceId := uuid.New().String()
 
 	type args struct {
@@ -19,6 +20,7 @@ func Test_mapFields(t *testing.T) {
 		model  *Model
 		region string
 	}
+
 	tests := []struct {
 		name      string
 		args      args

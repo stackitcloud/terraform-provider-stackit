@@ -182,7 +182,9 @@ func (r *folderResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 // Create creates the resource and sets the initial Terraform state.
 func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	tflog.Info(ctx, "creating folder")
+
 	var model ResourceModel
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -246,6 +248,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 // Read refreshes the Terraform state with the latest data.
 func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -260,6 +263,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	folderName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 	ctx = tflog.SetField(ctx, "container_id", containerId)
@@ -271,7 +275,9 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading folder", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -289,6 +295,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager folder read")
 }
 
@@ -296,6 +303,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var planModel ResourceModel
+
 	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -304,6 +312,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	// Retrieve values from state
 	var stateModel ResourceModel
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -348,6 +357,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager folder updated")
 }
 
@@ -355,6 +365,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -374,12 +385,14 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
 			"Error deleting folder. Deletion may fail because associated projects remain hidden for up to 7 days after user deletion due to technical requirements.",
 			fmt.Sprintf("Calling API: %v", err),
 		)
+
 		return
 	}
 
@@ -397,6 +410,7 @@ func (r *folderResource) ImportState(ctx context.Context, req resource.ImportSta
 			"Error importing folder",
 			fmt.Sprintf("Expected import identifier with format: [container_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -468,6 +482,7 @@ func mapFolderFields(
 		diags.Append(state.SetAttribute(ctx, path.Root("labels"), model.Labels)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("creation_time"), model.CreationTime)...)
 		diags.Append(state.SetAttribute(ctx, path.Root("update_time"), model.UpdateTime)...)
+
 		if diags.HasError() {
 			return fmt.Errorf("update terraform state: %w", core.DiagsToError(diags))
 		}
@@ -480,6 +495,7 @@ func toMembersPayload(model *ResourceModel) ([]resourcemanager.Member, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if model.OwnerEmail.IsNull() {
 		return nil, fmt.Errorf("owner_email is null")
 	}

@@ -76,6 +76,7 @@ func (r *resourcePoolDataSource) Metadata(_ context.Context, req datasource.Meta
 // Read implements datasource.DataSource.
 func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model dataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -87,6 +88,7 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -108,7 +110,9 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -126,6 +130,7 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS resource pool read")
 }
 
@@ -226,6 +231,7 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.R
 	if resourcePool == nil {
 		return fmt.Errorf("resource pool empty in response")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -234,6 +240,7 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.R
 	if resourcePool.Id == nil {
 		return fmt.Errorf("resource pool id not present")
 	}
+
 	model.ResourcePoolId = types.StringPointerValue(resourcePool.Id)
 	model.Region = types.StringValue(region)
 	model.SnapshotsAreVisible = types.BoolPointerValue(resourcePool.SnapshotsAreVisible)
@@ -245,6 +252,7 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.R
 
 	if resourcePool.IpAcl != nil {
 		var diags diag.Diagnostics
+
 		model.IpAcl, diags = types.ListValueFrom(ctx, types.StringType, resourcePool.IpAcl)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map ip acls: %w", core.DiagsToError(diags))
@@ -281,6 +289,7 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.R
 	if err != nil {
 		return err
 	}
+
 	model.Labels = labels
 
 	return nil

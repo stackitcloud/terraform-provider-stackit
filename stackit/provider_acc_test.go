@@ -40,6 +40,7 @@ func getHomeEnvVariableName() string {
 	case "plan9":
 		env = "home"
 	}
+
 	return env
 }
 
@@ -58,10 +59,12 @@ func createTemporaryHome(createValidCredentialsFile bool, t *testing.T) string {
 	}
 
 	filePath := path.Join(stackitFolder, "credentials.json")
+
 	file, err := os.Create(filePath)
 	if err != nil {
 		t.Fatalf("Failed to create credentials file: %v", err)
 	}
+
 	defer func() {
 		if err := file.Close(); err != nil {
 			t.Fatalf("Error while closing the file: %v", err)
@@ -73,6 +76,7 @@ func createTemporaryHome(createValidCredentialsFile bool, t *testing.T) string {
 	if createValidCredentialsFile {
 		token = testutil.GetTestProjectServiceAccountToken("")
 	}
+
 	content := fmt.Sprintf(`
 		{
     		"STACKIT_SERVICE_ACCOUNT_TOKEN": "%s"
@@ -98,6 +102,7 @@ func cleanupTemporaryHome(tempHomePath string, t *testing.T) {
 	if err := os.RemoveAll(tempHomePath); err != nil {
 		t.Fatalf("Error cleaning up temporary folder: %v", err)
 	}
+
 	originalHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("Failed to restore home directory back to normal: %v", err)
@@ -114,6 +119,7 @@ func getServiceAccountToken() (string, error) {
 	if !set || token == "" {
 		return "", fmt.Errorf("Token not set, please set TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN to a valid token to perform tests")
 	}
+
 	return token, nil
 }
 
@@ -133,8 +139,10 @@ func TestAccEnvVarTokenValid(t *testing.T) {
 
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", token)
+
 	tempHomeFolder := createTemporaryHome(false, t)
 	defer cleanupTemporaryHome(tempHomeFolder, t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -150,8 +158,10 @@ func TestAccEnvVarTokenValid(t *testing.T) {
 func TestAccEnvVarTokenInvalid(t *testing.T) {
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "foo")
+
 	tempHomeFolder := createTemporaryHome(false, t)
 	defer cleanupTemporaryHome(tempHomeFolder, t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -168,8 +178,10 @@ func TestAccEnvVarTokenInvalid(t *testing.T) {
 func TestAccCredentialsFileValid(t *testing.T) {
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "")
+
 	tempHomeFolder := createTemporaryHome(true, t)
 	defer cleanupTemporaryHome(tempHomeFolder, t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -185,8 +197,10 @@ func TestAccCredentialsFileValid(t *testing.T) {
 func TestAccCredentialsFileInvalid(t *testing.T) {
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "")
+
 	tempHomeFolder := createTemporaryHome(false, t)
 	defer cleanupTemporaryHome(tempHomeFolder, t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -216,8 +230,10 @@ func TestAccProviderConfigureValidValues(t *testing.T) {
 
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", token)
+
 	tempHomeFolder := createTemporaryHome(true, t)
 	defer cleanupTemporaryHome(tempHomeFolder, t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -245,8 +261,10 @@ func TestAccProviderConfigureAnInvalidValue(t *testing.T) {
 
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", token)
+
 	tempHomeFolder := createTemporaryHome(true, t)
 	defer cleanupTemporaryHome(tempHomeFolder, t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{

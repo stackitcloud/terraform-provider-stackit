@@ -145,6 +145,7 @@ func TestMapFields(t *testing.T) {
 			if (err == nil) != tt.valid {
 				t.Fatalf("mapFields() error = %v, valid = %t", err, tt.valid)
 			}
+
 			if tt.valid {
 				if diff := cmp.Diff(tt.expected, tt.model); diff != "" {
 					t.Fatalf("mapFields() mismatch (-want +got):\n%s", diff)

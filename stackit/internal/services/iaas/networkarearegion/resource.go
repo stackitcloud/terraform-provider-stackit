@@ -88,6 +88,7 @@ func (r *networkAreaRegionResource) ModifyPlan(ctx context.Context, req resource
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -305,6 +306,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area region created")
 }
 
@@ -317,12 +319,14 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 	}
 
 	organizationId := model.OrganizationId.ValueString()
+
 	networkAreaId := model.NetworkAreaId.ValueString()
 	if networkAreaId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
@@ -337,7 +341,9 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -355,6 +361,7 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area region read")
 }
 
@@ -421,6 +428,7 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "network area region updated")
 }
 
@@ -455,7 +463,9 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -480,6 +490,7 @@ func (r *networkAreaRegionResource) ImportState(ctx context.Context, req resourc
 			"Error importing network area region",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id],[region]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -497,6 +508,7 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 	if networkAreaRegion == nil {
 		return fmt.Errorf("network are region input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -526,6 +538,7 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 		model.Ipv4.DefaultNameservers = types.ListNull(types.StringType)
 	} else {
 		respDefaultNameservers := networkAreaRegion.Ipv4.DefaultNameservers
+
 		modelDefaultNameservers, err := utils.ListValueToStringSlice(model.Ipv4.DefaultNameservers)
 		if err != nil {
 			return fmt.Errorf("get current network area default nameservers from model: %w", err)
@@ -593,6 +606,7 @@ func toDefaultNameserversPayload(_ context.Context, model *Model) ([]string, err
 		if !ok {
 			return nil, fmt.Errorf("type assertion failed")
 		}
+
 		modelDefaultNameservers = append(modelDefaultNameservers, nameserverString.ValueString())
 	}
 
@@ -693,6 +707,7 @@ func updateIpv4NetworkRanges(ctx context.Context, organizationId, networkAreaId 
 		if _, ok := networkRangesState[prefix]; !ok {
 			networkRangesState[prefix] = &networkRangeState{}
 		}
+
 		networkRangesState[prefix].isCreated = true
 		networkRangesState[prefix].id = *networkRange.Id
 	}

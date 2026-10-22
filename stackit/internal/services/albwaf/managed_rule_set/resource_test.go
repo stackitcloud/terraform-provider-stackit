@@ -102,6 +102,7 @@ func TestMapFields(t *testing.T) {
 			if err := mapFields(ctx, tt.input, tt.state, tt.region); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)

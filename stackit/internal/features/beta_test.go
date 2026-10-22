@@ -150,6 +150,7 @@ func TestBetaResourcesEnabled(t *testing.T) {
 			if tt.envSet {
 				t.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", tt.envValue)
 			}
+
 			diags := diag.Diagnostics{}
 
 			result := BetaResourcesEnabled(context.Background(), tt.data, &diags)
@@ -160,6 +161,7 @@ func TestBetaResourcesEnabled(t *testing.T) {
 			if tt.expectWarn && diags.WarningsCount() == 0 {
 				t.Fatalf("Expected warning, got none")
 			}
+
 			if !tt.expectWarn && diags.WarningsCount() > 0 {
 				t.Fatalf("Expected no warning, got %d", diags.WarningsCount())
 			}
@@ -194,6 +196,7 @@ func TestCheckBetaResourcesEnabled(t *testing.T) {
 			} else {
 				envValue = "false"
 			}
+
 			t.Setenv("STACKIT_TF_ENABLE_BETA_RESOURCES", envValue)
 
 			diags := diag.Diagnostics{}
@@ -202,6 +205,7 @@ func TestCheckBetaResourcesEnabled(t *testing.T) {
 			if tt.expectError && diags.ErrorsCount() == 0 {
 				t.Fatalf("Expected error, got none")
 			}
+
 			if !tt.expectError && diags.ErrorsCount() > 0 {
 				t.Fatalf("Expected no error, got %d", diags.ErrorsCount())
 			}
@@ -209,6 +213,7 @@ func TestCheckBetaResourcesEnabled(t *testing.T) {
 			if tt.expectWarn && diags.WarningsCount() == 0 {
 				t.Fatalf("Expected warning, got none")
 			}
+
 			if !tt.expectWarn && diags.WarningsCount() > 0 {
 				t.Fatalf("Expected no warning, got %d", diags.WarningsCount())
 			}

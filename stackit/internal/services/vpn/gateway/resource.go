@@ -114,6 +114,7 @@ func NewGatewayResource() resource.Resource {
 
 func (r *gatewayResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -300,9 +301,11 @@ func (r *gatewayResource) ValidateConfig(ctx context.Context, req resource.Valid
 
 func (r *gatewayResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -333,6 +336,7 @@ func (r *gatewayResource) ImportState(ctx context.Context, req resource.ImportSt
 			"Error importing VPN gateway",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[gateway_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -346,6 +350,7 @@ func (r *gatewayResource) ImportState(ctx context.Context, req resource.ImportSt
 
 func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -377,6 +382,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", "Got empty gateway id")
 		return
 	}
+
 	gatewayId := *createResp.Id
 
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -405,11 +411,13 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN gateway created")
 }
 
 func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -432,7 +440,9 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN gateway", err.Error())
+
 		return
 	}
 
@@ -449,11 +459,13 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN gateway read")
 }
 
 func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -507,11 +519,13 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN gateway updated")
 }
 
 func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -564,15 +578,18 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 		if !tfutils.IsUndefined(model.Bgp.LocalAsn) {
 			bgpConfig.LocalAsn = model.Bgp.LocalAsn.ValueInt64()
 		}
+
 		if !tfutils.IsUndefined(model.Bgp.OverrideAdvertisedRoutes) {
 			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
 			if err != nil {
 				return nil, err
 			}
+
 			if len(routes) > 0 {
 				bgpConfig.OverrideAdvertisedRoutes = routes
 			}
 		}
+
 		payload.Bgp = bgpConfig
 	}
 
@@ -581,6 +598,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 		if err != nil {
 			return nil, err
 		}
+
 		payload.NetworkConfig = &networkConfig
 	}
 
@@ -588,6 +606,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 	if err != nil {
 		return nil, err
 	}
+
 	payload.Labels = &labels
 
 	return payload, nil
@@ -613,15 +632,18 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 		if !tfutils.IsUndefined(model.Bgp.LocalAsn) {
 			bgpConfig.LocalAsn = model.Bgp.LocalAsn.ValueInt64()
 		}
+
 		if !tfutils.IsUndefined(model.Bgp.OverrideAdvertisedRoutes) {
 			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
 			if err != nil {
 				return nil, err
 			}
+
 			if len(routes) > 0 {
 				bgpConfig.OverrideAdvertisedRoutes = routes
 			}
 		}
+
 		payload.Bgp = bgpConfig
 	}
 
@@ -630,6 +652,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 		if err != nil {
 			return nil, err
 		}
+
 		payload.NetworkConfig = &networkConfig
 	}
 
@@ -637,6 +660,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 	if err != nil {
 		return nil, err
 	}
+
 	payload.Labels = &labels
 
 	return payload, nil
@@ -644,10 +668,12 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 
 func getNetworkConfigPayload(ctx context.Context, model *Model) (vpn.NetworkConfig, error) {
 	var networkConfigModel NetworkConfigModel
+
 	diags := model.NetworkConfig.As(ctx, &networkConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return vpn.NetworkConfig{}, core.DiagsToError(diags)
 	}
+
 	networkConfig := vpn.NetworkConfig{}
 
 	if !tfutils.IsUndefined(networkConfigModel.PredefinedNetworkPrefix) {
@@ -665,6 +691,7 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	if gateway == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -698,6 +725,7 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 		if diags.HasError() {
 			return fmt.Errorf("mapping BGP routes: %w", core.DiagsToError(diags))
 		}
+
 		bgpModel.OverrideAdvertisedRoutes = listVal
 
 		model.Bgp = bgpModel
@@ -720,6 +748,7 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 		if diags.HasError() {
 			return fmt.Errorf("mapping network config: %w", core.DiagsToError(diags))
 		}
+
 		model.NetworkConfig = networkConfigObject
 	}
 
@@ -727,6 +756,7 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	if err != nil {
 		return fmt.Errorf("mapping labels: %w", err)
 	}
+
 	model.Labels = labels
 
 	return nil

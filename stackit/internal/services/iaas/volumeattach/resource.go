@@ -66,6 +66,7 @@ func (r *volumeAttachResource) ModifyPlan(ctx context.Context, req resource.Modi
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -91,6 +92,7 @@ func (r *volumeAttachResource) ModifyPlan(ctx context.Context, req resource.Modi
 // Configure adds the provider configured client to the resource.
 func (r *volumeAttachResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -166,6 +168,7 @@ func (r *volumeAttachResource) Schema(_ context.Context, _ resource.SchemaReques
 func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -188,6 +191,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	payload := iaas.AddVolumeToServerPayload{
 		DeleteOnTermination: new(false),
 	}
+
 	_, err := r.client.AddVolumeToServer(ctx, projectId, region, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Calling API: %v", err))
@@ -211,6 +215,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
 		return
 	}
+
 	_, err = wait.ProjectRequestWaitHandler(ctx, r.client, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("volume attachment waiting: %v", err))
@@ -226,12 +231,14 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume attachment created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -256,7 +263,9 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume attachment", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -272,6 +281,7 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume attachment read")
 }
 
@@ -284,6 +294,7 @@ func (r *volumeAttachResource) Update(_ context.Context, _ resource.UpdateReques
 func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -308,7 +319,9 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -319,6 +332,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
 		return
 	}
+
 	_, err = wait.ProjectRequestWaitHandler(ctx, r.client, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("volume removal waiting: %v", err))
@@ -338,6 +352,7 @@ func (r *volumeAttachResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing volume attachment",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id],[volume_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

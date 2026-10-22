@@ -126,6 +126,7 @@ func (d *telemetryRouterAccessTokenDataSource) Schema(_ context.Context, _ datas
 
 func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -157,8 +158,10 @@ func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req dat
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, accessTokenResponse, &model, region)
@@ -166,11 +169,13 @@ func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req dat
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter access token read", map[string]interface{}{
 		"access_token_id": accessTokenID,
 	})
@@ -180,6 +185,7 @@ func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAcce
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -196,10 +202,12 @@ func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAcce
 	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.InstanceID.ValueString(), accessTokenID)
 	model.AccessTokenID = types.StringValue(accessTokenID)
 	model.Region = types.StringValue(region)
+
 	model.CreatorID = types.StringValue(accessToken.CreatorId)
 	if accessToken.Description != nil && *accessToken.Description != "" {
 		model.Description = types.StringPointerValue(accessToken.Description)
 	}
+
 	model.DisplayName = types.StringValue(accessToken.DisplayName)
 	model.Status = types.StringValue(string(accessToken.Status))
 

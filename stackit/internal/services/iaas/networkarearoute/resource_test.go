@@ -17,6 +17,7 @@ func TestMapFields(t *testing.T) {
 		input  *iaas.Route
 		region string
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -92,9 +93,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
@@ -158,9 +161,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -201,9 +206,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
@@ -218,6 +225,7 @@ func TestToNextHopPayload(t *testing.T) {
 	type args struct {
 		model *ModelV1
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -327,6 +335,7 @@ func TestToNextHopPayload(t *testing.T) {
 				t.Errorf("toNextHopPayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toNextHopPayload() got = %v, want %v", got, tt.want)
 			}
@@ -338,6 +347,7 @@ func TestToDestinationPayload(t *testing.T) {
 	type args struct {
 		model *ModelV1
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -415,6 +425,7 @@ func TestToDestinationPayload(t *testing.T) {
 				t.Errorf("toDestinationPayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toDestinationPayload() got = %v, want %v", got, tt.want)
 			}
@@ -426,6 +437,7 @@ func TestMapRouteNextHop(t *testing.T) {
 	type args struct {
 		routeResp *iaas.Route
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -504,6 +516,7 @@ func TestMapRouteNextHop(t *testing.T) {
 				t.Errorf("mapRouteNextHop() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mapRouteNextHop() got = %v, want %v", got, tt.want)
 			}
@@ -515,6 +528,7 @@ func TestMapRouteDestination(t *testing.T) {
 	type args struct {
 		routeResp *iaas.Route
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -563,6 +577,7 @@ func TestMapRouteDestination(t *testing.T) {
 				t.Errorf("mapRouteDestination() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mapRouteDestination() got = %v, want %v", got, tt.want)
 			}

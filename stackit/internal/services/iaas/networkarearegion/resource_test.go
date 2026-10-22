@@ -41,6 +41,7 @@ func Test_mapFields(t *testing.T) {
 		model             *Model
 		region            string
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -164,6 +165,7 @@ func Test_mapFields(t *testing.T) {
 			if err := mapFields(ctx, tt.args.networkAreaRegion, tt.args.model, tt.args.region); (err != nil) != tt.wantErr {
 				t.Errorf("mapFields() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			diff := cmp.Diff(tt.args.model, tt.want)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -176,6 +178,7 @@ func Test_toCreatePayload(t *testing.T) {
 	type args struct {
 		model *Model
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -245,6 +248,7 @@ func Test_toCreatePayload(t *testing.T) {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			diff := cmp.Diff(got, tt.want)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -257,6 +261,7 @@ func Test_toUpdatePayload(t *testing.T) {
 	type args struct {
 		model *Model
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -306,6 +311,7 @@ func Test_toUpdatePayload(t *testing.T) {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			diff := cmp.Diff(got, tt.want)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -319,6 +325,7 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 		networkAreaRangesList []iaas.NetworkRange
 		model                 *Model
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -439,6 +446,7 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 			if err := mapIpv4NetworkRanges(context.Background(), tt.args.networkAreaRangesList, tt.args.model); (err != nil) != tt.wantErr {
 				t.Errorf("mapIpv4NetworkRanges() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			diff := cmp.Diff(tt.args.model, tt.want)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
@@ -468,6 +476,7 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			},
 		},
 	}
+
 	getAllNetworkRangesRespBytes, err := json.Marshal(getAllNetworkRangesResp)
 	if err != nil {
 		t.Fatalf("Failed to marshal get all network ranges response: %v", err)
@@ -479,6 +488,7 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 	type args struct {
 		networkRanges []networkRangeModel
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -796,12 +806,15 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			// Handler for getting all network ranges
 			getAllNetworkRangesHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
+
 				if tt.getAllNetworkRangesFails {
 					w.WriteHeader(http.StatusInternalServerError)
+
 					_, err := w.Write(failureRespBytes)
 					if err != nil {
 						t.Errorf("Get all network ranges handler: failed to write bad response: %v", err)
 					}
+
 					return
 				}
 
@@ -814,16 +827,20 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			// Handler for creating network range
 			createNetworkRangeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				decoder := json.NewDecoder(r.Body)
+
 				var payload iaas.CreateNetworkAreaRangePayload
+
 				err := decoder.Decode(&payload)
 				if err != nil {
 					t.Errorf("Create network range handler: failed to parse payload")
 					return
 				}
+
 				if payload.Ipv4 == nil {
 					t.Errorf("Create network range handler: nil Ipv4")
 					return
 				}
+
 				ipv4 := payload.Ipv4
 
 				for _, networkRange := range ipv4 {
@@ -832,13 +849,17 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 						t.Errorf("Create network range handler: attempted to create range '%v' that already exists", payload.Ipv4)
 						return
 					}
+
 					w.Header().Set("Content-Type", "application/json")
+
 					if tt.createNetworkRangesFails {
 						w.WriteHeader(http.StatusInternalServerError)
+
 						_, err := w.Write(failureRespBytes)
 						if err != nil {
 							t.Errorf("Create network ranges handler: failed to write bad response: %v", err)
 						}
+
 						return
 					}
 
@@ -850,15 +871,18 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 							},
 						},
 					}
+
 					respBytes, err := json.Marshal(resp)
 					if err != nil {
 						t.Errorf("Create network range handler: failed to marshal response: %v", err)
 						return
 					}
+
 					_, err = w.Write(respBytes)
 					if err != nil {
 						t.Errorf("Create network range handler: failed to write response: %v", err)
 					}
+
 					networkRangesStates[prefix] = true
 				}
 			})
@@ -866,6 +890,7 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			// Handler for deleting Network range
 			deleteNetworkRangeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				vars := mux.Vars(r)
+
 				networkRangeId, ok := vars["networkRangeId"]
 				if !ok {
 					t.Errorf("Delete network range handler: no range ID")
@@ -878,23 +903,28 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 						prefix = rangeItem.Prefix
 					}
 				}
+
 				prefixExists, prefixWasCreated := networkRangesStates[prefix]
 				if !prefixWasCreated {
 					t.Errorf("Delete network range handler: attempted to delete range '%v' that wasn't created", prefix)
 					return
 				}
+
 				if prefixWasCreated && !prefixExists {
 					t.Errorf("Delete network range handler: attempted to delete range '%v' that was already deleted", prefix)
 					return
 				}
 
 				w.Header().Set("Content-Type", "application/json")
+
 				if tt.deleteNetworkRangesFails {
 					w.WriteHeader(http.StatusInternalServerError)
+
 					_, err := w.Write(failureRespBytes)
 					if err != nil {
 						t.Errorf("Delete network range handler: failed to write bad response: %v", err)
 					}
+
 					return
 				}
 
@@ -902,6 +932,7 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 				if err != nil {
 					t.Errorf("Delete network range handler: failed to write response: %v", err)
 				}
+
 				networkRangesStates[prefix] = false
 			})
 
@@ -916,8 +947,10 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 				}
 			})
 			router.HandleFunc("/v2/organizations/{organizationId}/network-areas/{areaId}/regions/{region}/network-ranges/{networkRangeId}", deleteNetworkRangeHandler)
+
 			mockedServer := httptest.NewServer(router)
 			defer mockedServer.Close()
+
 			client, err := iaas.NewAPIClient(
 				config.WithEndpoint(mockedServer.URL),
 				config.WithoutAuthentication(),
@@ -931,9 +964,11 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(networkRangesStates, tt.expectedNetworkRangesStates)
 				if diff != "" {
@@ -948,6 +983,7 @@ func Test_toDefaultNameserversPayload(t *testing.T) {
 	type args struct {
 		model *Model
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -988,6 +1024,7 @@ func Test_toDefaultNameserversPayload(t *testing.T) {
 				t.Errorf("toDefaultNameserversPayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toDefaultNameserversPayload() got = %v, want %v", got, tt.want)
 			}
@@ -999,6 +1036,7 @@ func Test_toNetworkRangesPayload(t *testing.T) {
 	type args struct {
 		model *Model
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -1069,6 +1107,7 @@ func Test_toNetworkRangesPayload(t *testing.T) {
 				t.Errorf("toNetworkRangesPayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			diff := cmp.Diff(got, tt.want)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)

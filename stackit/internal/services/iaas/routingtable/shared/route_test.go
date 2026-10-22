@@ -28,6 +28,7 @@ func Test_MapRouteNextHop(t *testing.T) {
 	type args struct {
 		routeResp *iaas.Route
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -123,6 +124,7 @@ func Test_MapRouteDestination(t *testing.T) {
 	type args struct {
 		routeResp *iaas.Route
 	}
+
 	tests := []struct {
 		name     string
 		args     args
@@ -193,6 +195,7 @@ func TestMapRouteModel(t *testing.T) {
 		model  *RouteModel
 		region string
 	}
+
 	tests := []struct {
 		name          string
 		args          args

@@ -49,6 +49,7 @@ func lookupVolumeRecoveryPointManagementTemplateID(t *testing.T) string {
 	}
 
 	t.Helper()
+
 	ctx := context.Background()
 
 	client, err := automation.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AutomationCustomEndpoint, false)...)
@@ -66,11 +67,14 @@ func lookupVolumeRecoveryPointManagementTemplateID(t *testing.T) string {
 		if err != nil {
 			t.Fatalf("getting volume template %q: %v", tpl.Id, err)
 		}
+
 		if templateResp.Input != nil && templateResp.Input.Kind == automation.VOLUMETEMPLATEAUTOMATIONINPUTKIND_VOLUME_RECOVERY_POINT_MANAGEMENT {
 			return tpl.Id
 		}
 	}
+
 	t.Fatal("no volume automation template of kind VolumeRecoveryPointManagement found")
+
 	return ""
 }
 
@@ -89,6 +93,7 @@ func testConfigVarsMin(templateID string) config.Variables {
 			"kind": "indefinitely",
 		},
 	}
+
 	inputJson, err := json.Marshal(inputMap)
 	if err != nil {
 		return nil
@@ -116,6 +121,7 @@ func testConfigVarsMax(templateID string) config.Variables {
 			"value": 4,
 		},
 	}
+
 	inputJson, err := json.Marshal(inputMap)
 	if err != nil {
 		return nil
@@ -150,6 +156,7 @@ func configVarsMaxUpdated(base config.Variables) config.Variables {
 			"kind": "indefinitely",
 		},
 	}
+
 	inputJson, err := json.Marshal(inputMap)
 	if err != nil {
 		return nil
@@ -159,6 +166,7 @@ func configVarsMaxUpdated(base config.Variables) config.Variables {
 	tempConfig["description"] = config.StringVariable("tf-acc-test description updated")
 	tempConfig["retention_count"] = config.IntegerVariable(5)
 	tempConfig["input"] = config.StringVariable(string(inputJson))
+
 	return tempConfig
 }
 
@@ -233,10 +241,12 @@ func TestAccVolumeAutomationMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume_automation.test")
 					}
+
 					automationId, ok := r.Primary.Attributes["automation_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute automation_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, automationId), nil
 				},
 				ImportState:       true,
@@ -314,10 +324,12 @@ func TestAccVolumeAutomationMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume_automation.test")
 					}
+
 					automationId, ok := r.Primary.Attributes["automation_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute automation_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, automationId), nil
 				},
 				ImportState:       true,
@@ -355,6 +367,7 @@ func TestAccVolumeAutomationMaxResource(t *testing.T) {
 
 func testAccCheckVolumeAutomationDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := automation.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AutomationCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating automation client: %w", err)
@@ -365,14 +378,17 @@ func testAccCheckVolumeAutomationDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_volume_automation" {
 			continue
 		}
+
 		projectId := rs.Primary.Attributes["project_id"]
 		if projectId == "" {
 			continue
 		}
+
 		region := rs.Primary.Attributes["region"]
 		if region == "" {
 			continue
 		}
+
 		automationId := rs.Primary.Attributes["automation_id"]
 		if automationId == "" {
 			continue
@@ -383,10 +399,13 @@ func testAccCheckVolumeAutomationDestroy(s *terraform.State) error {
 			errs = append(errs, fmt.Errorf("volume automation %s still exists", automationId))
 			continue
 		}
+
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			continue
 		}
+
 		errs = append(errs, fmt.Errorf("checking volume automation %s destruction: %w", automationId, err))
 	}
+
 	return errors.Join(errs...)
 }

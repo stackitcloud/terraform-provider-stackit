@@ -394,6 +394,7 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -404,6 +405,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+
 	instanceResp, err := d.client.GetInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		utils.LogError(
@@ -417,6 +419,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 

@@ -58,6 +58,7 @@ func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 // Configure adds the provider configured client to the data source.
 func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -137,6 +138,7 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 // Read refreshes the Terraform state with the latest data.
 func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -174,6 +176,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -199,6 +202,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex user read")
 }
 
@@ -206,9 +210,11 @@ func mapDataSourceFields(userResp *postgresflex.GetUserResponse, instanceResp *p
 	if userResp == nil {
 		return fmt.Errorf("user response is nil")
 	}
+
 	if instanceResp == nil {
 		return fmt.Errorf("instance response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -219,6 +225,7 @@ func mapDataSourceFields(userResp *postgresflex.GetUserResponse, instanceResp *p
 	} else {
 		userId = strconv.FormatInt(userResp.Id, 10)
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
@@ -232,14 +239,18 @@ func mapDataSourceFields(userResp *postgresflex.GetUserResponse, instanceResp *p
 		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
+
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map roles: %w", core.DiagsToError(diags))
 		}
+
 		model.Roles = rolesSet
 	}
+
 	model.Host = types.StringValue(instanceResp.ConnectionInfo.Write.Host)
 	model.Port = types.Int32Value(instanceResp.ConnectionInfo.Write.Port)
 	model.Region = types.StringValue(region)
+
 	return nil
 }

@@ -169,12 +169,14 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	region := f.providerData.GetRegionWithOverride(model.Region)
 	model.Region = types.StringValue(region)
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
@@ -186,15 +188,18 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	ctx = core.InitProviderContext(ctx)
 
 	const pageSize int64 = 100
+
 	flavorsResp, err := f.client.ListFlavors(ctx, projectId, region).Size(pageSize).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", fmt.Sprintf("Calling ListFlavors: %v", err))
 		return
 	}
+
 	if flavorsResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", "ListFlavors returned an empty response")
 		return
 	}
+
 	if flavorsResp.Pagination.TotalRows > pageSize {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics,
 			"Truncated results",
@@ -213,6 +218,7 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex flavors read")
 }
 
@@ -220,6 +226,7 @@ func mapFields(resp *postgresflex.ListFlavorsResponse, m *model) error {
 	if resp == nil {
 		return fmt.Errorf("nil response")
 	}
+
 	if m == nil {
 		return fmt.Errorf("nil model")
 	}
@@ -254,7 +261,9 @@ func mapFields(resp *postgresflex.ListFlavorsResponse, m *model) error {
 				MaxThroughInMB: types.Int32Value(respStorageClass.MaxThroughInMb),
 			})
 		}
+
 		m.Flavors = append(m.Flavors, modelFlavor)
 	}
+
 	return nil
 }

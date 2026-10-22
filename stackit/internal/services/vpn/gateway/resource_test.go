@@ -22,6 +22,7 @@ func TestMapFields(t *testing.T) {
 		state Model
 		input *vpn.GatewayResponse
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -272,9 +273,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.expected, tt.args.state); diff != "" {
 					t.Fatalf("Data mismatch (-want +got):\n%s", diff)
@@ -364,9 +367,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.expected, payload)
 				if diff != "" {
@@ -486,9 +491,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.expected, payload)
 				if diff != "" {

@@ -48,6 +48,7 @@ var gatewayMinVarsUpdated = func() config.Variables {
 	maps.Copy(updated, gatewayMinVars)
 	updated["display_name"] = config.StringVariable("vpn-gw-acc-test-updated-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
 	updated["plan_id"] = config.StringVariable("p500")
+
 	return updated
 }()
 
@@ -78,6 +79,7 @@ var gatewayMaxVarsUpdated = func() config.Variables {
 	updated["local_asn"] = config.IntegerVariable(4294967294)
 	updated["label_value"] = config.StringVariable("production")
 	updated["override_advertised_routes"] = config.ListVariable(config.StringVariable("10.10.0.0/16"), config.StringVariable("192.168.167.0/24"), config.StringVariable("172.16.10.0/24"))
+
 	return updated
 }()
 
@@ -87,6 +89,7 @@ var gatewayMaxVarsUpdated2 = func() config.Variables {
 	updated["override_advertised_routes"] = config.ListVariable()
 	updated["label_key"] = config.StringVariable("")
 	updated["label_value"] = config.StringVariable("")
+
 	return updated
 }()
 
@@ -98,6 +101,7 @@ var connectionMinVars = func() config.Variables {
 	vars["tunnel1_psk"] = config.StringVariable("Super.Secret_$hared3Key_1")
 	vars["tunnel2_remote_address"] = config.StringVariable("203.0.113.2")
 	vars["tunnel2_psk"] = config.StringVariable("Super.Secret_$hared3Key_2")
+
 	return vars
 }()
 
@@ -126,6 +130,7 @@ var connectionMaxVars = func() config.Variables {
 	vars["tunnel1_remote_peering"] = config.StringVariable("10.10.10.1")
 	vars["tunnel2_local_peering"] = config.StringVariable("192.168.0.2")
 	vars["tunnel2_remote_peering"] = config.StringVariable("10.10.10.2")
+
 	return vars
 }()
 
@@ -136,6 +141,7 @@ var connectionMaxVarsUpdated = func() config.Variables {
 	updated["connection_display_name"] = config.StringVariable("vpn-conn-updated-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
 	updated["tunnel1_bgp_remote_asn"] = config.IntegerVariable(65003)
 	updated["tunnel2_bgp_remote_asn"] = config.IntegerVariable(65004)
+
 	return updated
 }()
 
@@ -148,6 +154,7 @@ var connectionMaxVarsPskRotated = func() config.Variables {
 	rotated["tunnel1_psk_version"] = config.IntegerVariable(2)
 	rotated["tunnel2_psk"] = config.StringVariable("Super.Secret_Rotated_$hared3Key_2!")
 	rotated["tunnel2_psk_version"] = config.IntegerVariable(2)
+
 	return rotated
 }()
 
@@ -255,10 +262,12 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_vpn_gateway.gateway")
 					}
+
 					gatewayId, ok := r.Primary.Attributes["gateway_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute gateway_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s",
 						testutil.ProjectId,
 						testutil.Region,
@@ -411,18 +420,22 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_vpn_gateway.gateway")
 					}
+
 					gatewayId, ok := r.Primary.Attributes["gateway_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute gateway_id")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						region = testutil.Region
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, region, gatewayId), nil
 				},
 				ImportState:       true,
@@ -591,14 +604,17 @@ func TestAccVpnConnectionResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_vpn_connection.connection")
 					}
+
 					connectionId, ok := r.Primary.Attributes["connection_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute connection_id")
 					}
+
 					gatewayId, ok := r.Primary.Attributes["gateway_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute gateway_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s",
 						testutil.ProjectId,
 						testutil.Region,
@@ -865,22 +881,27 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_vpn_connection.connection")
 					}
+
 					connectionId, ok := r.Primary.Attributes["connection_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute connection_id")
 					}
+
 					gatewayId, ok := r.Primary.Attributes["gateway_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute gateway_id")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						region = testutil.Region
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s",
 						projectId,
 						region,
@@ -898,6 +919,7 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 
 func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := vpn.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.VpnCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -926,9 +948,11 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 		default:
 			continue
 		}
+
 		if gatewayId == "" {
 			continue
 		}
+
 		if !slices.Contains(gatewayIdsToDestroy, gatewayId) {
 			gatewayIdsToDestroy = append(gatewayIdsToDestroy, gatewayId)
 		}
@@ -952,10 +976,12 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("listing connections for gateway %s during CheckDestroy: %w", *gateway.Id, err)
 		}
+
 		for _, conn := range connectionsResp.Connections {
 			if conn.Id == nil {
 				continue
 			}
+
 			err := client.DefaultAPI.DeleteGatewayConnection(ctx, testutil.ProjectId, testutil.Region, *gateway.Id, *conn.Id).Execute()
 			if err != nil {
 				if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
@@ -973,5 +999,6 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying gateway %s during CheckDestroy: %w", *gateway.Id, err)
 		}
 	}
+
 	return nil
 }

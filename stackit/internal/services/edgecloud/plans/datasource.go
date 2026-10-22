@@ -124,6 +124,7 @@ func (d *plansDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 // Read fetches the list of Edge Cloud plans and populates the data source.
 func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var state DataSourceModel
+
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -149,6 +150,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 				http.StatusNotFound: fmt.Sprintf("Project %q not found", projectId),
 			},
 		)
+
 		return
 	}
 
@@ -169,6 +171,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 			if resp.Diagnostics.HasError() {
 				return
 			}
+
 			plansList = append(plansList, planObjectValue)
 		}
 	}
@@ -180,6 +183,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	state.Plans = planListValue
 
 	diags = resp.State.Set(ctx, &state)
@@ -187,6 +191,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "read all Edge Cloud plans")
 }
 

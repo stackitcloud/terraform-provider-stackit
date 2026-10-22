@@ -18,8 +18,10 @@ func TestCreateTimeout(t *testing.T) {
 	// only tests create timeout, read/update/delete would need a successful create beforehand. We could do this, but
 	// these tests would be slow and flaky
 	projectID := uuid.NewString()
+
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
+
 	providerConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "eu01"

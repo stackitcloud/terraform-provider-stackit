@@ -36,6 +36,7 @@ func TestMapFields(t *testing.T) {
 		input  *iaas.Server
 		region string
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -191,9 +192,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
@@ -335,9 +338,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -378,9 +383,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -429,14 +436,17 @@ func newAPIMock(settings *mockSettings, counter *mockCounter) iaas.DefaultAPI {
 func Test_serverResource_updateServerStatus(t *testing.T) {
 	projectId := basetypes.NewStringValue("projectId")
 	serverId := basetypes.NewStringValue("serverId")
+
 	type fields struct {
 		mockSettings *mockSettings
 	}
+
 	type args struct {
 		currentState *string
 		model        Model
 		region       string
 	}
+
 	type want struct {
 		err              bool
 		status           types.String
@@ -445,6 +455,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		startCount       int
 		deallocatedCount int
 	}
+
 	tests := []struct {
 		name   string
 		fields fields
@@ -486,6 +497,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 						} else {
 							state = wait.ServerInactiveStatus
 						}
+
 						return &iaas.Server{
 							Id:     new(serverId.ValueString()),
 							Status: &state,
@@ -522,6 +534,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 						default:
 							state = wait.ServerDeallocatedStatus
 						}
+
 						return &iaas.Server{
 							Id:     new(serverId.ValueString()),
 							Status: &state,
@@ -631,6 +644,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			if (err != nil) != tt.want.err {
 				t.Errorf("inconsistent error, want %v and got %v", tt.want.err, err)
 			}
+
 			if expected, actual := tt.want.status, tt.args.model.DesiredStatus; expected != actual {
 				t.Errorf("wanted status %s but got %s", expected, actual)
 			}
@@ -638,12 +652,15 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 			if expected, actual := tt.want.getServerCount, counter.getServerCalled; expected != actual {
 				t.Errorf("wrong number of get server calls: Expected %d but got %d", expected, actual)
 			}
+
 			if expected, actual := tt.want.startCount, counter.startServerCalled; expected != actual {
 				t.Errorf("wrong number of start server calls: Expected %d but got %d", expected, actual)
 			}
+
 			if expected, actual := tt.want.stopCount, counter.stopServerCalled; expected != actual {
 				t.Errorf("wrong number of stop server calls: Expected %d but got %d", expected, actual)
 			}
+
 			if expected, actual := tt.want.deallocatedCount, counter.deallocateServerCalled; expected != actual {
 				t.Errorf("wrong number of deallocate server calls: Expected %d but got %d", expected, actual)
 			}

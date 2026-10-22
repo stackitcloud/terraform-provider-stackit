@@ -194,6 +194,7 @@ func TestAccDnsMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_zone.recozonerd_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
@@ -212,10 +213,12 @@ func TestAccDnsMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_record_set.record_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
 					}
+
 					recordSetId, ok := r.Primary.Attributes["record_set_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute record_set_id")
@@ -415,6 +418,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_zone.record_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
@@ -433,10 +437,12 @@ func TestAccDnsMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_dns_record_set.record_set")
 					}
+
 					zoneId, ok := r.Primary.Attributes["zone_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute zone_id")
 					}
+
 					recordSetId, ok := r.Primary.Attributes["record_set_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute record_set_id")
@@ -501,6 +507,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 
 func testAccCheckDnsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := dns.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.DnsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -529,11 +536,13 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: %w", zones[i].Id, err)
 			}
+
 			_, err = wait.DeleteZoneWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying zone %s during CheckDestroy: waiting for deletion %w", zones[i].Id, err)
 			}
 		}
 	}
+
 	return nil
 }

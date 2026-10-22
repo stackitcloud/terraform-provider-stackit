@@ -100,6 +100,7 @@ func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
 				}
 			}
 		}
+
 		resp.UseStateForUnknown = true
 	}
 }

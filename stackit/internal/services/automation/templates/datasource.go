@@ -130,6 +130,7 @@ func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	model.Region = types.StringValue(region)
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
@@ -141,12 +142,13 @@ func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = core.InitProviderContext(ctx)
 
 	templatesReq := d.client.ListVolumeTemplates(ctx, projectId, region)
-	templates, err := paginate.All(templatesReq)
 
+	templates, err := paginate.All(templatesReq)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading templates", fmt.Sprintf("Calling ListVolumeTemplates: %v", err))
 		return
 	}
+
 	if templates == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading templates", "ListVolumeTemplates returned an empty response")
 		return
@@ -163,6 +165,7 @@ func (d *templatesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Automation templates read")
 }
 
@@ -190,5 +193,6 @@ func mapFields(templates []automation.Template, m *model) error {
 			})
 		}
 	}
+
 	return nil
 }

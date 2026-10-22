@@ -22,7 +22,9 @@ func (v assertionsValidator) ValidateList(ctx context.Context, req validator.Lis
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
+
 	var assertions []AssertionModel
+
 	diags := req.ConfigValue.ElementsAs(ctx, &assertions, false)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

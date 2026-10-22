@@ -22,10 +22,12 @@ func expectPanic(t *testing.T, wantSubstring string, fn func()) {
 		if r == nil {
 			t.Fatalf("expected a panic containing %q, got no panic", wantSubstring)
 		}
+
 		if msg := fmt.Sprint(r); !strings.Contains(msg, wantSubstring) {
 			t.Fatalf("expected a panic containing %q, got %q", wantSubstring, msg)
 		}
 	}()
+
 	fn()
 }
 
@@ -51,11 +53,13 @@ func newTestState(resourceName string, attributes map[string]string) *terraform.
 
 func TestUsingOpenTofu(t *testing.T) {
 	t.Setenv("TF_ACC_TERRAFORM_PATH", "/usr/local/bin/tofu")
+
 	if !UsingOpenTofu() {
 		t.Error("UsingOpenTofu() = false, want true")
 	}
 
 	t.Setenv("TF_ACC_TERRAFORM_PATH", "/usr/local/bin/terraform")
+
 	if UsingOpenTofu() {
 		t.Error("UsingOpenTofu() = true, want false")
 	}
@@ -117,6 +121,7 @@ func TestResolveVariablePath(t *testing.T) {
 
 	t.Run("int segment indexes into a list", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("a"), config.StringVariable("b"))
+
 		got := resolveVariablePath("test", v, 1)
 		if want := `"b"`; string(got) != want {
 			t.Errorf("resolveVariablePath() = %s, want %s", got, want)
@@ -127,6 +132,7 @@ func TestResolveVariablePath(t *testing.T) {
 		v := config.ObjectVariable(map[string]config.Variable{
 			"mode": config.StringVariable("ENABLED"),
 		})
+
 		got := resolveVariablePath("test", v, "mode")
 		if want := `"ENABLED"`; string(got) != want {
 			t.Errorf("resolveVariablePath() = %s, want %s", got, want)
@@ -140,6 +146,7 @@ func TestResolveVariablePath(t *testing.T) {
 				config.ObjectVariable(map[string]config.Variable{"order": config.IntegerVariable(2)}),
 			),
 		})
+
 		got := resolveVariablePath("test", v, "rules", 1, "order")
 		if want := "2"; string(got) != want {
 			t.Errorf("resolveVariablePath() = %s, want %s", got, want)
@@ -243,6 +250,7 @@ func TestCheckListAttr(t *testing.T) {
 	t.Run("matches a scalar list exactly", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("1.2.3.4"), config.StringVariable("5.6.7.8"))
 		check := CheckListAttr(resourceName, "ip_acl", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"ip_acl.#": "2",
 			"ip_acl.0": "1.2.3.4",
@@ -255,6 +263,7 @@ func TestCheckListAttr(t *testing.T) {
 
 	t.Run("empty list", func(t *testing.T) {
 		check := CheckListAttr(resourceName, "ip_acl", config.ListVariable())
+
 		state := newTestState(resourceName, map[string]string{
 			"ip_acl.#": "0",
 		})
@@ -268,6 +277,7 @@ func TestCheckListAttr(t *testing.T) {
 			"allowed_http_methods": config.ListVariable(config.StringVariable("GET")),
 		})
 		check := CheckListAttr(resourceName, "config.waf.allowed_http_methods", v, "allowed_http_methods")
+
 		state := newTestState(resourceName, map[string]string{
 			"config.waf.allowed_http_methods.#": "1",
 			"config.waf.allowed_http_methods.0": "GET",
@@ -280,6 +290,7 @@ func TestCheckListAttr(t *testing.T) {
 	t.Run("fails when the actual element count does not match", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("a"), config.StringVariable("b"))
 		check := CheckListAttr(resourceName, "ip_acl", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"ip_acl.#": "1",
 			"ip_acl.0": "a",
@@ -292,6 +303,7 @@ func TestCheckListAttr(t *testing.T) {
 	t.Run("fails when an element value does not match", func(t *testing.T) {
 		v := config.ListVariable(config.StringVariable("a"), config.StringVariable("b"))
 		check := CheckListAttr(resourceName, "ip_acl", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"ip_acl.#": "2",
 			"ip_acl.0": "a",
@@ -315,6 +327,7 @@ func TestCheckListAttr(t *testing.T) {
 			}),
 		)
 		check := CheckListAttr(resourceName, "rules", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"rules.#":             "2",
 			"rules.0.description": "first",
@@ -332,6 +345,7 @@ func TestCheckListAttr(t *testing.T) {
 			config.ObjectVariable(map[string]config.Variable{"order": config.IntegerVariable(1)}),
 		)
 		check := CheckListAttr(resourceName, "rules", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"rules.#":       "1",
 			"rules.0.order": "WRONG",
@@ -353,6 +367,7 @@ func TestCheckListAttr(t *testing.T) {
 			}),
 		)
 		check := CheckListAttr(resourceName, "rules", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"rules.#":                "1",
 			"rules.0.name":           "rule1",
@@ -375,6 +390,7 @@ func TestCheckListAttr(t *testing.T) {
 			}),
 		)
 		check := CheckListAttr(resourceName, "rules", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"rules.#":           "1",
 			"rules.0.name":      "rule1",
@@ -409,6 +425,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			"paranoia_level": config.StringVariable("L2"),
 		})
 		check := CheckObjectAttr(resourceName, "config.waf", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"config.waf.mode":           "ENABLED",
 			"config.waf.type":           "FREE",
@@ -421,6 +438,7 @@ func TestCheckObjectAttr(t *testing.T) {
 
 	t.Run("empty object", func(t *testing.T) {
 		check := CheckObjectAttr(resourceName, "config.waf", config.ObjectVariable(map[string]config.Variable{}))
+
 		state := newTestState(resourceName, map[string]string{})
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -435,6 +453,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			}),
 		)
 		check := CheckObjectAttr(resourceName, "rules.0", v, 0)
+
 		state := newTestState(resourceName, map[string]string{
 			"rules.0.description": "first",
 			"rules.0.order":       "1",
@@ -450,6 +469,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			"allowed_http_methods": config.ListVariable(config.StringVariable("GET"), config.StringVariable("POST")),
 		})
 		check := CheckObjectAttr(resourceName, "config.waf", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"config.waf.mode":                   "ENABLED",
 			"config.waf.allowed_http_methods.#": "2",
@@ -469,6 +489,7 @@ func TestCheckObjectAttr(t *testing.T) {
 			"disabled_rule_ids": config.ListVariable(),
 		})
 		check := CheckObjectAttr(resourceName, "config.waf", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"config.waf.mode":                "ENABLED",
 			"config.waf.disabled_rule_ids.#": "0",
@@ -481,6 +502,7 @@ func TestCheckObjectAttr(t *testing.T) {
 	t.Run("fails when a field value does not match", func(t *testing.T) {
 		v := config.ObjectVariable(map[string]config.Variable{"mode": config.StringVariable("ENABLED")})
 		check := CheckObjectAttr(resourceName, "config.waf", v)
+
 		state := newTestState(resourceName, map[string]string{
 			"config.waf.mode": "WRONG",
 		})
@@ -505,6 +527,7 @@ func TestCheckObjectAttr(t *testing.T) {
 	t.Run("top-level nil object variable defaults to empty object", func(t *testing.T) {
 		// Falls deine Implementierung null zu {} umwandelt:
 		check := CheckObjectAttr(resourceName, "config.waf", config.ObjectVariable(nil))
+
 		state := newTestState(resourceName, map[string]string{})
 		if err := check(state); err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -514,6 +537,7 @@ func TestCheckObjectAttr(t *testing.T) {
 
 func TestConfigBuilderProviderConfig(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		builder *ConfigBuilder
@@ -586,6 +610,7 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			got := tt.builder.BuildProviderConfig()
 			if d := cmp.Diff(got, tt.want); d != "" {
 				t.Errorf("ConfigBuilder.BuildProviderConfig() = diff: %s", d)
@@ -602,7 +627,9 @@ func TestConfigBuilderProviderConfigEnvVar(t *testing.T) {
 			t.Fatalf("unset env: %v", err)
 		}
 	}()
+
 	got := NewConfigBuilder().BuildProviderConfig()
+
 	want := `provider "stackit" {
     default_region = "eu01"
     enable_beta_resources = false
@@ -659,7 +686,9 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			opts := tt.builder.BuildClientOptions(CdnCustomEndpoint, false)
+
 			got := sdkConf.Configuration{}
 			for _, opt := range opts {
 				err := opt(&got)
@@ -667,6 +696,7 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 					t.Fatalf("Config option returned error: %v", err)
 				}
 			}
+
 			if d := cmp.Diff(got, tt.want, cmpopts.IgnoreUnexported(sdkConf.Configuration{})); d != "" {
 				t.Errorf("ConfigBuilder.BuildClientOptions() = diff: %s", d)
 			}
@@ -682,7 +712,9 @@ func TestConfigBuilderClientOptionsEnvVar(t *testing.T) {
 			t.Fatalf("unset env: %v", err)
 		}
 	}()
+
 	opts := NewConfigBuilder().BuildClientOptions(CdnCustomEndpoint, false)
+
 	got := sdkConf.Configuration{}
 	for _, opt := range opts {
 		err := opt(&got)
@@ -690,6 +722,7 @@ func TestConfigBuilderClientOptionsEnvVar(t *testing.T) {
 			t.Fatalf("Config option returned error: %v", err)
 		}
 	}
+
 	want := sdkConf.Configuration{
 		Servers: sdkConf.ServerConfigurations{
 			{

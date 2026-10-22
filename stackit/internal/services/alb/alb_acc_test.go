@@ -131,6 +131,7 @@ func configVarsMinUpdated() config.Variables {
 	tempConfig["listener_port"] = config.StringVariable("1234")
 	tempConfig["host"] = config.StringVariable("www.example.com")
 	tempConfig["target_pool_port"] = config.StringVariable("5431")
+
 	return tempConfig
 }
 
@@ -170,6 +171,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["ahc_healthy_threshold"] = config.StringVariable("5")
 	tempConfig["ahc_alt_port"] = config.StringVariable("8081")
 	tempConfig["acl"] = config.StringVariable("10.11.10.8/24")
+
 	return tempConfig
 }
 
@@ -300,14 +302,17 @@ func TestAccALBResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_application_load_balancer.loadbalancer")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:       true,
@@ -533,14 +538,17 @@ func TestAccALBResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_application_load_balancer.loadbalancer")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:       true,
@@ -635,6 +643,7 @@ func TestAccALBResourceMax(t *testing.T) {
 
 func testAccCheckALBDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := albSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ALBCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -644,6 +653,7 @@ func testAccCheckALBDestroy(s *terraform.State) error {
 	if testutil.Region != "" {
 		region = testutil.Region
 	}
+
 	loadBalancersToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_application_load_balancer" {
@@ -669,6 +679,7 @@ func testAccCheckALBDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("destroying load balancer %s during CheckDestroy: %w", loadBalancersToDestroy[i], err)
 		}
+
 		_, err = wait.DeleteLoadbalancerWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, region, loadBalancersToDestroy[i]).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying load balancer %s during CheckDestroy: waiting for deletion %w", loadBalancersToDestroy[i], err)
@@ -679,10 +690,12 @@ func testAccCheckALBDestroy(s *terraform.State) error {
 	if err != nil {
 		return fmt.Errorf("getting loadBalancersResp after destroy: %w", err)
 	}
+
 	for i := range loadBalancersResp.LoadBalancers {
 		if utils.Contains(loadBalancersToDestroy, *loadBalancersResp.LoadBalancers[i].Name) {
 			return fmt.Errorf("load balancer %s has not been destroyed: %w", *loadBalancersResp.LoadBalancers[i].Name, err)
 		}
 	}
+
 	return nil
 }

@@ -98,6 +98,7 @@ func (r *scfOrganizationResource) ModifyPlan(ctx context.Context, req resource.M
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -221,8 +222,10 @@ func (s *scfOrganizationResource) Schema(_ context.Context, _ resource.SchemaReq
 func (s *scfOrganizationResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
+
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -238,6 +241,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "org_name", orgName)
 	ctx = tflog.SetField(ctx, "region", region)
+
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Creating API payload: %v\n", err))
@@ -273,6 +277,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to apply quota: %v", err))
 			return
 		}
+
 		model.QuotaId = types.StringValue(applyOrgQuota.QuotaId)
 	}
 
@@ -304,9 +309,11 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	// Set the state with fully populated data.
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Scf organization created")
 }
 
@@ -314,8 +321,10 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 func (s *scfOrganizationResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -324,6 +333,7 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
+
 	orgId := model.OrgId.ValueString()
 	if orgId == "" {
 		// Resource not yet created; ID is unknown.
@@ -339,12 +349,15 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -366,8 +379,10 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 func (s *scfOrganizationResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -402,6 +417,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error updating organization", fmt.Sprintf("Processing API payload: %v", err))
 			return
 		}
+
 		org = updatedOrg
 
 		ctx = core.LogResponse(ctx)
@@ -417,6 +433,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error applying organization quota", fmt.Sprintf("Processing API payload: %v", err))
 			return
 		}
+
 		org.QuotaId = applyOrgQuota.QuotaId
 	}
 
@@ -428,9 +445,11 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "organization updated")
 }
 
@@ -438,8 +457,10 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
+
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -463,7 +484,9 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -488,6 +511,7 @@ func (s *scfOrganizationResource) ImportState(ctx context.Context, request resou
 			"Error importing scf organization",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[org_id]  Got: %q", request.ID),
 		)
+
 		return
 	}
 
@@ -508,6 +532,7 @@ func mapFields(response *scf.Organization, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -524,6 +549,7 @@ func mapFields(response *scf.Organization, model *Model) error {
 	model.QuotaId = types.StringValue(response.QuotaId)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }
 
@@ -539,5 +565,6 @@ func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, error) {
 	if !model.PlatformId.IsNull() && !model.PlatformId.IsUnknown() {
 		payload.PlatformId = model.PlatformId.ValueStringPointer()
 	}
+
 	return payload, nil
 }

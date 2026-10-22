@@ -17,6 +17,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		input   *iaas.MachineType
 		region  string
 	}
+
 	tests := []struct {
 		name        string
 		args        args

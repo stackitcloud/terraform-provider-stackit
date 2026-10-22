@@ -126,8 +126,10 @@ func (s *scfOrganizationDataSource) Schema(_ context.Context, _ datasource.Schem
 func (s *scfOrganizationDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -158,6 +160,7 @@ func (s *scfOrganizationDataSource) Read(ctx context.Context, request datasource
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 

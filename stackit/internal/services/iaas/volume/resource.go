@@ -111,6 +111,7 @@ func (r *volumeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -146,6 +147,7 @@ func (r *volumeResource) ConfigValidators(_ context.Context) []resource.ConfigVa
 // Configure adds the provider configured client to the resource.
 func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -403,17 +405,21 @@ func (v volumeResizeModifier) MarkdownDescription(ctx context.Context) string {
 
 // PlanModifyInt64 implements planmodifier.Int64.
 func (v volumeResizeModifier) PlanModifyInt64(ctx context.Context, req planmodifier.Int64Request, resp *planmodifier.Int64Response) { // nolint:gocritic // function signature required by Terraform
-	var planSize types.Int64
-	var currentSize types.Int64
+	var (
+		planSize    types.Int64
+		currentSize types.Int64
+	)
 
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("size"), &planSize)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("size"), &currentSize)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	if planSize.ValueInt64() < currentSize.ValueInt64() {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error changing volume size", "A volume cannot be made smaller in order to prevent data loss.")
 	}
@@ -423,6 +429,7 @@ func (v volumeResizeModifier) PlanModifyInt64(ctx context.Context, req planmodif
 func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -433,6 +440,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	// plan and state models - for security measures. Write-only values should be only kept in the config model
 	// so that they never end up in the state (or plan).
 	var configModel Model
+
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -476,6 +484,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", "Got empty volume id")
 		return
 	}
+
 	volumeId := *volume.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -505,12 +514,14 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -519,6 +530,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	volumeId := model.VolumeId.ValueString()
 	if volumeId == "" {
 		// Resource not yet created; ID is unknown.
@@ -539,7 +551,9 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -557,6 +571,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "volume read")
 }
 
@@ -564,6 +579,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -581,6 +597,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -612,6 +629,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			resizePayload := iaas.ResizeVolumePayload{
 				Size: *modelSize,
 			}
+
 			err = r.client.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(resizePayload).Execute()
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Resizing the volume, calling API: %v", err))
@@ -620,16 +638,19 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			updatedVolume.Size = modelSize
 		}
 	}
+
 	err = mapFields(ctx, updatedVolume, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "volume updated")
 }
 
@@ -637,6 +658,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -661,7 +683,9 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -686,6 +710,7 @@ func (r *volumeResource) ImportState(ctx context.Context, req resource.ImportSta
 			"Error importing volume",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[volume_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -702,6 +727,7 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 	if volumeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -723,8 +749,10 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 		return err
 	}
 
-	var sourceValues map[string]attr.Value
-	var sourceObject basetypes.ObjectValue
+	var (
+		sourceValues map[string]attr.Value
+		sourceObject basetypes.ObjectValue
+	)
 	if volumeResp.Source == nil {
 		sourceObject = types.ObjectNull(sourceTypes)
 	} else {
@@ -732,7 +760,9 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 			"type": types.StringValue(volumeResp.Source.Type),
 			"id":   types.StringValue(volumeResp.Source.Id),
 		}
+
 		var diags diag.Diagnostics
+
 		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
@@ -747,6 +777,7 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 	if name := volumeResp.Name; name != nil && *name == "" {
 		model.Name = types.StringNull()
 	}
+
 	model.Labels = labels
 	model.PerformanceClass = types.StringPointerValue(volumeResp.PerformanceClass)
 	model.ServerId = types.StringPointerValue(volumeResp.ServerId)
@@ -763,6 +794,7 @@ func toCreatePayload(ctx context.Context, model, configModel *Model, source *sou
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if configModel == nil {
 		return nil, fmt.Errorf("nil config model")
 	}

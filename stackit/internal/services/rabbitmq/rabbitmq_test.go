@@ -16,6 +16,7 @@ import (
 func TestRabbitMQInstanceSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
+
 	const (
 		name     = "instance-name"
 		planName = "plan-name"
@@ -23,8 +24,10 @@ func TestRabbitMQInstanceSavesIDsOnError(t *testing.T) {
 		version  = "version"
 		region   = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	rabbitmq_custom_endpoint = "%s"
@@ -83,6 +86,7 @@ resource "stackit_rabbitmq_instance" "instance" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -104,6 +108,7 @@ func TestRabbitMQCredentialsSavesIDsOnError(t *testing.T) {
 		credentialId = uuid.NewString()
 		region       = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
 	t.Cleanup(s.Server.Close)
 	tfConfig := fmt.Sprintf(`
@@ -147,6 +152,7 @@ resource "stackit_rabbitmq_credential" "credential" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},

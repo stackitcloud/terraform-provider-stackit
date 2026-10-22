@@ -126,8 +126,10 @@ func (w *wrappingKeyDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 
 func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -157,6 +159,7 @@ func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.Rea
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -167,10 +170,13 @@ func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.Rea
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading wrapping key", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Wrapping key read")
 }

@@ -79,6 +79,7 @@ var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	updatedConfig["transformation"] = config.StringVariable("TRANSFORMATION_UTF8_TO_UNICODE")
 	updatedConfig["variable_type"] = config.StringVariable("VARIABLE_ARGS_POST")
 	updatedConfig["variable_value"] = config.StringVariable("foo")
+
 	return updatedConfig
 }
 
@@ -114,6 +115,7 @@ var testConfigVarsMaxUpdated = func() config.Variables {
 	updatedConfig["rule_set_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["rule_set_name"])))
 	updatedConfig["custom_rule_group_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["custom_rule_group_name"])))
 	updatedConfig["waf_configuration_label"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_label"])))
+
 	return updatedConfig
 }
 
@@ -208,10 +210,12 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_custom_rule_group.custom_rule_group")
 					}
+
 					policyId, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -339,10 +343,12 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_custom_rule_group.custom_rule_group")
 					}
+
 					policyId, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -436,10 +442,12 @@ func TestAccManagedRuleSet(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_managed_rule_set.managed_rule_set")
 					}
+
 					policyId, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -515,10 +523,12 @@ func TestAccWafConfigurationMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_configuration.waf_instance")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -617,10 +627,12 @@ func TestAccWafConfigurationMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_configuration.waf_instance")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -666,6 +678,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAlbWafManagedRuleSetDestroy,
 		testAlbWafWafConfigurationDestroy,
 	}
+
 	var errs []error
 
 	for _, f := range checkFunctions {
@@ -676,11 +689,13 @@ func testAccCheckDestroy(s *terraform.State) error {
 			}
 		}()
 	}
+
 	return errors.Join(errs...)
 }
 
 func testAlbWafCustomRuleGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
@@ -711,11 +726,13 @@ func testAlbWafCustomRuleGroupDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
@@ -746,11 +763,13 @@ func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAlbWafWafConfigurationDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
@@ -781,5 +800,6 @@ func testAlbWafWafConfigurationDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

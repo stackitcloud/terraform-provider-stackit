@@ -104,6 +104,7 @@ type ClientFactory interface {
 
 func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error) {
 	var g errgroup.Group
+
 	cc := &ClientCollection{}
 
 	// initialize clients in parallel
@@ -641,6 +642,7 @@ func (f *DefaultClientFactory) newDremioV1BetaClient() (dremio.DefaultAPI, error
 	if f.CustomEndpoints.DremioCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(f.CustomEndpoints.DremioCustomEndpoint))
 	}
+
 	apiClient, err := dremio.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("configuring DremioV1Beta client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
@@ -741,13 +743,16 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 
-	var resp *http.Response
-	var err error
+	var (
+		resp *http.Response
+		err  error
+	)
 
 	for attempt := 0; attempt <= t.MaxRetries; attempt++ {
 		reqClone := req.Clone(req.Context())
 		if getBody != nil {
 			var bodyErr error
+
 			reqClone.Body, bodyErr = getBody()
 			if bodyErr != nil {
 				return nil, bodyErr

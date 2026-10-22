@@ -129,6 +129,7 @@ func (d *volumeAutomationDataSource) Schema(_ context.Context, _ datasource.Sche
 // Read refreshes the Terraform state with the latest data.
 func (d *volumeAutomationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -158,6 +159,7 @@ func (d *volumeAutomationDataSource) Read(ctx context.Context, req datasource.Re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -174,5 +176,6 @@ func (d *volumeAutomationDataSource) Read(ctx context.Context, req datasource.Re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume automation read.")
 }

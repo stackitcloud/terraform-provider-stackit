@@ -115,6 +115,7 @@ func (d *routingTablesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 // Read refreshes the Terraform state with the latest data.
 func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModelTables
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -143,6 +144,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -153,11 +155,13 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table read")
 }
 
@@ -165,9 +169,11 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaas.Routing
 	if routingTables == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	if routingTables.Items == nil {
 		return fmt.Errorf("items input is nil")
 	}
@@ -180,6 +186,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaas.Routing
 	itemsList := []attr.Value{}
 	for i, routingTable := range routingTables.Items {
 		var routingTableModel shared.RoutingTableReadModel
+
 		err := shared.MapRoutingTableReadModel(ctx, &routingTable, &routingTableModel)
 		if err != nil {
 			return fmt.Errorf("mapping routes: %w", err)
@@ -201,6 +208,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaas.Routing
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
+
 		itemsList = append(itemsList, routingTableTF)
 	}
 
@@ -208,6 +216,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaas.Routing
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Items = itemsListTF
 	model.Region = types.StringValue(region)
 

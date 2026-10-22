@@ -194,6 +194,7 @@ func NewConfigBuilder() *ConfigBuilder {
 	for _, endpoint := range allCustomEndpoints {
 		b.endpoints[endpoint.providerName] = os.Getenv(endpoint.envVarName)
 	}
+
 	return b
 }
 
@@ -243,7 +244,9 @@ func (b *ConfigBuilder) BuildProviderConfig() string {
 		return "[\"" + strings.Join(s, "\", \"") + "\"]"
 	}
 	parsed := template.Must(template.New("providerConfig").Funcs(funcs).Parse(tmpl))
+
 	var bs bytes.Buffer
+
 	setEndpoints := make(map[string]string)
 	for k, v := range b.endpoints {
 		if v != "" {
@@ -264,10 +267,12 @@ func (b *ConfigBuilder) BuildProviderConfig() string {
 		b.experiments,
 		b.serviceAccountToken,
 	}
+
 	err := parsed.Execute(&bs, data)
 	if err != nil {
 		panic(err)
 	}
+
 	return bs.String()
 }
 
@@ -276,17 +281,21 @@ func (b *ConfigBuilder) BuildClientOptions(service customEndpointConfig, setRegi
 	if b.serviceAccountToken != "" {
 		opts = append(opts, sdkConf.WithToken(b.serviceAccountToken))
 	}
+
 	endpoint := b.endpoints[service.providerName]
 	if endpoint != "" {
 		opts = append(opts, sdkConf.WithEndpoint(endpoint))
 	}
+
 	tokenEndPoint := b.endpoints[TokenCustomEndpoint.providerName]
 	if tokenEndPoint != "" {
 		opts = append(opts, sdkConf.WithTokenEndpoint(tokenEndPoint))
 	}
+
 	if setRegion && b.region != "" {
 		opts = append(opts, sdkConf.WithRegion(b.region))
 	}
+
 	return opts
 }
 
@@ -299,6 +308,7 @@ func ResourceNameWithDateTime(name string) string {
 
 func GetTestProjectServiceAccountToken(path string) string {
 	var err error
+
 	token, tokenSet := os.LookupEnv("TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN")
 	if !tokenSet || token == "" {
 		token, err = readTestTokenFromCredentialsFile(path)
@@ -306,6 +316,7 @@ func GetTestProjectServiceAccountToken(path string) string {
 			return ""
 		}
 	}
+
 	return token
 }
 
@@ -314,10 +325,12 @@ func readTestTokenFromCredentialsFile(path string) (string, error) {
 		customPath, customPathSet := os.LookupEnv("STACKIT_CREDENTIALS_PATH")
 		if !customPathSet || customPath == "" {
 			path = credentialsFilePath
+
 			home, err := os.UserHomeDir()
 			if err != nil {
 				return "", fmt.Errorf("getting home directory: %w", err)
 			}
+
 			path = filepath.Join(home, path)
 		} else {
 			path = customPath
@@ -332,10 +345,12 @@ func readTestTokenFromCredentialsFile(path string) (string, error) {
 	var credentials struct {
 		TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN string `json:"TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN"`
 	}
+
 	err = json.Unmarshal(credentialsRaw, &credentials)
 	if err != nil {
 		return "", fmt.Errorf("unmarshalling credentials: %w", err)
 	}
+
 	return credentials.TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_TOKEN, nil
 }
 
@@ -344,6 +359,7 @@ func getenv(key, defaultValue string) string {
 	if val == "" {
 		return defaultValue
 	}
+
 	return val
 }
 
@@ -376,6 +392,7 @@ func resolveVariablePath(caller string, variable config.Variable, path ...any) j
 	if err != nil {
 		panic(fmt.Sprintf("%s: failed to marshal variable: %s", caller, err))
 	}
+
 	raw := json.RawMessage(tmpByteArray)
 
 	for _, segment := range path {
@@ -385,19 +402,23 @@ func resolveVariablePath(caller string, variable config.Variable, path ...any) j
 			if err := json.Unmarshal(raw, &list); err != nil {
 				panic(fmt.Sprintf("%s: cannot apply index %d, value is not a list: %s (%s)", caller, key, string(raw), err))
 			}
+
 			if key < 0 || key >= len(list) {
 				panic(fmt.Sprintf("%s: index %d out of range (len %d): %s", caller, key, len(list), string(raw)))
 			}
+
 			raw = list[key]
 		case string:
 			var obj map[string]json.RawMessage
 			if err := json.Unmarshal(raw, &obj); err != nil {
 				panic(fmt.Sprintf("%s: cannot apply key %q, value is not an object: %s (%s)", caller, key, string(raw), err))
 			}
+
 			value, ok := obj[key]
 			if !ok {
 				panic(fmt.Sprintf("%s: key %q not found in: %s", caller, key, string(raw)))
 			}
+
 			raw = value
 		default:
 			panic(fmt.Sprintf("%s: unsupported path segment type %T, must be int or string", caller, segment))
@@ -452,12 +473,14 @@ func buildAttrChecks(caller, resourceName, path string, raw json.RawMessage) []r
 		if err := json.Unmarshal(trimmed, &items); err != nil {
 			panic(fmt.Sprintf("%s: %q: cannot parse list: %s (%s)", caller, path, err, string(trimmed)))
 		}
+
 		checks := []resource.TestCheckFunc{
 			resource.TestCheckResourceAttr(resourceName, path+".#", strconv.Itoa(len(items))),
 		}
 		for i, item := range items {
 			checks = append(checks, buildAttrChecks(caller, resourceName, fmt.Sprintf("%s.%d", path, i), item)...)
 		}
+
 		return checks
 	}
 
@@ -466,15 +489,19 @@ func buildAttrChecks(caller, resourceName, path string, raw json.RawMessage) []r
 		if err := json.Unmarshal(trimmed, &obj); err != nil {
 			panic(fmt.Sprintf("%s: %q: cannot parse object: %s (%s)", caller, path, err, string(trimmed)))
 		}
+
 		keys := make([]string, 0, len(obj))
 		for k := range obj {
 			keys = append(keys, k)
 		}
+
 		sort.Strings(keys)
+
 		checks := make([]resource.TestCheckFunc, 0, len(obj))
 		for _, k := range keys {
 			checks = append(checks, buildAttrChecks(caller, resourceName, path+"."+k, obj[k])...)
 		}
+
 		return checks
 	}
 
@@ -494,6 +521,7 @@ func CheckListAttr(resourceName, attrPrefix string, variable config.Variable, pa
 		// An empty config.ListVariable() marshals to JSON null, not [].
 		trimmed = json.RawMessage("[]")
 	}
+
 	if !bytes.HasPrefix(trimmed, []byte("[")) {
 		panic(fmt.Sprintf("CheckListAttr: resolved value is not a list: %s", string(raw)))
 	}
@@ -512,6 +540,7 @@ func CheckObjectAttr(resourceName, attrPrefix string, variable config.Variable, 
 		// An empty config.ObjectVariable(nil) marshals to JSON null, not {}.
 		trimmed = json.RawMessage("{}")
 	}
+
 	if !bytes.HasPrefix(trimmed, []byte("{")) {
 		panic(fmt.Sprintf("CheckObjectAttr: resolved value is not an object: %s", string(raw)))
 	}

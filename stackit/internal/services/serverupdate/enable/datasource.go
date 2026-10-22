@@ -110,6 +110,7 @@ func (d *serverUpdateEnableDataSource) Schema(_ context.Context, _ datasource.Sc
 // Read refreshes the Terraform state with the latest data.
 func (d *serverUpdateEnableDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -139,6 +140,7 @@ func (d *serverUpdateEnableDataSource) Read(ctx context.Context, req datasource.
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -157,6 +159,7 @@ func (d *serverUpdateEnableDataSource) Read(ctx context.Context, req datasource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server update enable read")
 }
 
@@ -164,6 +167,7 @@ func mapDataFields(serviceResp *serverupdate.GetUpdateServiceResponse, model *Da
 	if serviceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

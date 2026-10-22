@@ -97,6 +97,7 @@ func (r *volumeAutomationResource) ModifyPlan(ctx context.Context, req resource.
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -233,6 +234,7 @@ func (r *volumeAutomationResource) Schema(_ context.Context, _ resource.SchemaRe
 // Create creates the resource and sets the initial Terraform state.
 func (r *volumeAutomationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -267,17 +269,20 @@ func (r *volumeAutomationResource) Create(ctx context.Context, req resource.Crea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume automation", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume automation created.")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -300,7 +305,9 @@ func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume automation", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -317,12 +324,14 @@ func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume automation read.")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *volumeAutomationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var plan Model
+
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -330,6 +339,7 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	}
 
 	var state Model
+
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -382,17 +392,20 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume automation", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Volume automation updated.")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *volumeAutomationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -414,7 +427,9 @@ func (r *volumeAutomationResource) Delete(ctx context.Context, req resource.Dele
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume automation", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -432,6 +447,7 @@ func (r *volumeAutomationResource) ImportState(ctx context.Context, req resource
 			"Error importing volume automation",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[automation_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -449,6 +465,7 @@ func mapFields(_ context.Context, apiResp *automation.VolumeAutomation, model *M
 	if apiResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -467,8 +484,10 @@ func mapFields(_ context.Context, apiResp *automation.VolumeAutomation, model *M
 		if err != nil {
 			return fmt.Errorf("error marshaling input field: %w", err)
 		}
+
 		inputString = new(string(inputJson))
 	}
+
 	model.Input = jsontypes.NewNormalizedPointerValue(inputString)
 
 	model.Triggers = mapTriggers(apiResp.Triggers)
@@ -480,11 +499,13 @@ func mapTriggers(triggers automation.NullableAutomationTriggers) *triggersModel 
 	if triggers.Get() == nil {
 		return nil
 	}
+
 	if triggers.Get().Schedule.Get() == nil {
 		return &triggersModel{
 			Schedule: nil,
 		}
 	}
+
 	return &triggersModel{
 		Schedule: &scheduleTriggerModel{
 			Rrule: types.StringValue(triggers.Get().Schedule.Get().Rrule),
@@ -541,6 +562,7 @@ func toInputPayload(modelInput jsontypes.Normalized) (*automation.NullableVolume
 	if err != nil {
 		return nil, fmt.Errorf("unmarshaling input payload: %w", err)
 	}
+
 	return inputPayload, nil
 }
 
@@ -548,6 +570,7 @@ func toTriggersPayload(model *Model) *automation.NullableAutomationTriggers {
 	if model == nil || model.Triggers == nil {
 		return automation.NewNullableAutomationTriggers(nil)
 	}
+
 	if model.Triggers.Schedule == nil || utils.IsUndefined(model.Triggers.Schedule.Rrule) {
 		return automation.NewNullableAutomationTriggers(&automation.AutomationTriggers{
 			Schedule: *automation.NewNullableAutomationScheduleTrigger(nil),

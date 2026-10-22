@@ -101,6 +101,7 @@ func mapDatasourceFields(ctx context.Context, instanceResp *dremioSdk.DremioResp
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -113,6 +114,7 @@ func mapDatasourceFields(ctx context.Context, instanceResp *dremioSdk.DremioResp
 	if model.Authentication == nil {
 		model.Authentication = new(AuthenticationDatasourceModel)
 	}
+
 	err = mapDatasourceAuthentication(instanceResp, model.Authentication)
 	if err != nil {
 		return fmt.Errorf("failed to map Authentication fields")
@@ -125,6 +127,7 @@ func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *A
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if auth == nil {
 		return fmt.Errorf("auth input is nil")
 	}
@@ -148,6 +151,7 @@ func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *A
 		if auth.OAuth == nil {
 			auth.OAuth = new(OAuthDatasourceModel)
 		}
+
 		oauthResp := instanceResp.Authentication.Oauth
 		oauthModel := auth.OAuth
 
@@ -165,6 +169,7 @@ func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *A
 					Value: types.StringValue(p.Value),
 				})
 			}
+
 			oauthModel.Parameters = params
 		}
 	}
@@ -337,6 +342,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -353,5 +359,6 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance read")
 }

@@ -63,6 +63,7 @@ func (r *serviceAccountAttachResource) ModifyPlan(ctx context.Context, req resou
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -158,6 +159,7 @@ func (r *serviceAccountAttachResource) Schema(_ context.Context, _ resource.Sche
 func (r *serviceAccountAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -193,12 +195,14 @@ func (r *serviceAccountAttachResource) Create(ctx context.Context, req resource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Service account attachment created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -223,7 +227,9 @@ func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.Re
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account attachment", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -249,7 +255,9 @@ func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.Re
 			if resp.Diagnostics.HasError() {
 				return
 			}
+
 			tflog.Info(ctx, "Service account attachment read")
+
 			return
 		}
 	}
@@ -267,6 +275,7 @@ func (r *serviceAccountAttachResource) Update(_ context.Context, _ resource.Upda
 func (r *serviceAccountAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -291,7 +300,9 @@ func (r *serviceAccountAttachResource) Delete(ctx context.Context, req resource.
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing service account from server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -310,6 +321,7 @@ func (r *serviceAccountAttachResource) ImportState(ctx context.Context, req reso
 			"Error importing service_account attachment",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id],[service_account_email]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

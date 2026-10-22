@@ -10,9 +10,13 @@ import (
 )
 
 func Test_mapFields(t *testing.T) {
-	const projectId = "eu01"
-	const testRegion = "eu01"
+	const (
+		projectId  = "eu01"
+		testRegion = "eu01"
+	)
+
 	id := fmt.Sprintf("%s,%s", projectId, testRegion)
+
 	tests := []struct {
 		name     string
 		response sfsLockResponse
@@ -59,13 +63,16 @@ func Test_mapFields(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
 			}
+
 			err := mapFields(tt.response, model, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expected)
 				if diff != "" {

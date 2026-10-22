@@ -166,6 +166,7 @@ func (r *customRuleGroupDataSource) Schema(_ context.Context, _ datasource.Schem
 
 func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -189,7 +190,9 @@ func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.Rea
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Custom Rule Group", err.Error())
+
 		return
 	}
 
@@ -206,5 +209,6 @@ func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Custom Rule Group read")
 }

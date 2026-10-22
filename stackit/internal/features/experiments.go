@@ -40,6 +40,7 @@ func CheckExperimentEnabled(ctx context.Context, data *core.ProviderData, experi
 	if CheckExperimentEnabledWithoutError(ctx, data, experiment, resourceName, resourceType, diags) {
 		return
 	}
+
 	errTitle := fmt.Sprintf("%s is part of the experimental feature %s, which is currently disabled by default", resourceName, experiment)
 	errContent := fmt.Sprintf(`Enable the %s experimental feature by adding it into your provider block.`, experiment)
 	tflog.Error(ctx, fmt.Sprintf("%s | %s", errTitle, errContent))
@@ -53,6 +54,7 @@ func CheckExperimentEnabledWithoutError(ctx context.Context, data *core.Provider
 		diags.AddError(errTitle, errContent)
 		return false
 	}
+
 	experimentActive := slices.ContainsFunc(data.Experiments, func(e string) bool {
 		return strings.EqualFold(e, experiment)
 	})
@@ -62,8 +64,10 @@ func CheckExperimentEnabledWithoutError(ctx context.Context, data *core.Provider
 		warnContent := fmt.Sprintf("This %s is part of the experimental feature %s and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.", resourceType, experiment)
 		tflog.Warn(ctx, fmt.Sprintf("%s | %s", warnTitle, warnContent))
 		diags.AddWarning(warnTitle, warnContent)
+
 		return true
 	}
+
 	return false
 }
 

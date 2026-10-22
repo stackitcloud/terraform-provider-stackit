@@ -16,6 +16,7 @@ func TestMapDatasourceFields(t *testing.T) {
 	now := time.Now()
 	testTime := types.StringValue(now.Format(time.RFC3339))
 	testTimePlus1h := types.StringValue(now.Add(1 * time.Hour).Format(time.RFC3339))
+
 	tests := []struct {
 		name     string
 		state    *dataSourceModel
@@ -112,6 +113,7 @@ func TestMapDatasourceFields(t *testing.T) {
 			if err := mapDataSourceFields(ctx, tt.region, tt.input, tt.state); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)

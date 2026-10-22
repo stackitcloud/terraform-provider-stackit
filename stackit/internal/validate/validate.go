@@ -53,6 +53,7 @@ func (v *Validator) ValidateString(ctx context.Context, req validator.StringRequ
 	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
 		return
 	}
+
 	v.validate(ctx, req, resp)
 }
 
@@ -99,6 +100,7 @@ func IP(allowZeroAddress bool) *Validator {
 		description: description,
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			ip := net.ParseIP(req.ConfigValue.ValueString())
+
 			invalidZeroAddress := !allowZeroAddress && (net.IPv4zero.Equal(ip) || net.IPv6zero.Equal(ip))
 			if ip == nil || invalidZeroAddress {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
@@ -113,11 +115,13 @@ func IP(allowZeroAddress bool) *Validator {
 
 func RecordSet() *Validator {
 	const typePath = "type"
+
 	return &Validator{
 		description: "value must be a valid record set",
 		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			recordType := basetypes.StringValue{}
 			req.Config.GetAttribute(ctx, path.Root(typePath), &recordType)
+
 			switch recordType.ValueString() {
 			case "A":
 				ip := net.ParseIP(req.ConfigValue.ValueString())
@@ -200,6 +204,7 @@ func MinorVersionNumber() *Validator {
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 			exp := MajorMinorVersionRegex
 			r := regexp.MustCompile(exp)
+
 			version := req.ConfigValue.ValueString()
 			if !r.MatchString(version) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
@@ -249,6 +254,7 @@ func RFC3339SecondsOnly() *Validator {
 					description,
 					req.ConfigValue.ValueString(),
 				))
+
 				return
 			}
 
@@ -357,14 +363,17 @@ func ValidNoTrailingNewline() *Validator {
 			if val == "" {
 				return
 			}
+
 			if len(val) >= 2 && val[len(val)-2:] == "\r\n" {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
 					val,
 				))
+
 				return
 			}
+
 			if val[len(val)-1] == '\n' {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
@@ -383,10 +392,12 @@ func ValidNoTrailingNewline() *Validator {
 // - "exaMPle123": invalid
 func IsLowercased() *Validator {
 	description := `All letters in the value must be lowercase as defined by gos unicode.IsLower(rune).`
+
 	return &Validator{
 		description: description,
 		validate: func(_ context.Context, request validator.StringRequest, response *validator.StringResponse) {
 			val := request.ConfigValue.ValueString()
+
 			lowercased := strings.ToLower(val)
 			if val != lowercased {
 				response.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
@@ -394,6 +405,7 @@ func IsLowercased() *Validator {
 					description,
 					val,
 				))
+
 				return
 			}
 		},
@@ -416,6 +428,7 @@ func OnlyAllowedIfBoolEquals(target path.Expression, value *bool) *Validator {
 
 			for _, targetPath := range matchedPaths {
 				var targetBool types.Bool
+
 				diags := req.Config.GetAttribute(ctx, targetPath, &targetBool)
 				resp.Diagnostics.Append(diags...)
 
@@ -444,6 +457,7 @@ func OnlyAllowedIfBoolEquals(target path.Expression, value *bool) *Validator {
 // - "example ": invalid, trailing whitespace
 func NoLeadingOrTrailingWhitespace() *Validator {
 	description := "Value must not have leading or trailing whitespace, as defined by gos unicode.IsSpace(rune)."
+
 	return &Validator{
 		description: description,
 		validate: func(_ context.Context, request validator.StringRequest, response *validator.StringResponse) {
@@ -451,6 +465,7 @@ func NoLeadingOrTrailingWhitespace() *Validator {
 			if val == "" {
 				return
 			}
+
 			if unicode.IsSpace(rune(val[0])) || unicode.IsSpace(rune(val[len(val)-1])) {
 				response.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					request.Path,

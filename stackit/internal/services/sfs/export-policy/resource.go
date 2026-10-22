@@ -86,6 +86,7 @@ func (r *exportPolicyResource) ModifyPlan(ctx context.Context, req resource.Modi
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -245,11 +246,13 @@ func (r *exportPolicyResource) Schema(_ context.Context, _ resource.SchemaReques
 func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // defined by terraform api
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -313,24 +316,29 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS export policy created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // defined by terraform api
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
+
 	exportPolicyId := model.ExportPolicyId.ValueString()
 	if exportPolicyId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
@@ -348,7 +356,9 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
+
 		return
 	}
 
@@ -374,11 +384,13 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // defined by terraform api
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
 	region := model.Region.ValueString()
@@ -438,11 +450,13 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // defined by terraform api
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
 	region := model.Region.ValueString()
@@ -460,7 +474,9 @@ func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRe
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting export policy", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -479,6 +495,7 @@ func (r *exportPolicyResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing export policy",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[policy_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -495,6 +512,7 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 	if resp == nil || resp.ShareExportPolicy == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -512,6 +530,7 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 	if err != nil {
 		return err
 	}
+
 	model.Labels = labels
 
 	// iterate over Rules from response
@@ -521,6 +540,7 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 			var ipAcl basetypes.ListValue
 			if rule.IpAcl != nil {
 				var diags diag.Diagnostics
+
 				ipAcl, diags = types.ListValueFrom(ctx, types.StringType, rule.IpAcl)
 				if diags.HasError() {
 					return fmt.Errorf("failed to map ip acls: %w", core.DiagsToError(diags))
@@ -571,6 +591,7 @@ func toCreatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if rules == nil {
 		return nil, fmt.Errorf("nil rules")
 	}
@@ -588,6 +609,7 @@ func toCreatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 		if err != nil {
 			return nil, fmt.Errorf("conversion of rule failed")
 		}
+
 		tempRule := sfs.CreateShareExportPolicyRequestRule{
 			Description: *sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
 			IpAcl:       convertedList,
@@ -617,6 +639,7 @@ func toUpdatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if rules == nil {
 		return nil, fmt.Errorf("nil rules")
 	}
@@ -634,6 +657,7 @@ func toUpdatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 		if err != nil {
 			return nil, fmt.Errorf("conversion of rule failed")
 		}
+
 		tempRule := sfs.UpdateShareExportPolicyBodyRule{
 			Description: *sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
 			IpAcl:       convertedList,
@@ -652,5 +676,6 @@ func toUpdatePayload(ctx context.Context, model *Model, rules []rulesModel) (*sf
 		Rules:  tempRules,
 		Labels: &labels,
 	}
+
 	return result, nil
 }

@@ -90,11 +90,13 @@ func (d *defaultRetentionDataSource) Metadata(_ context.Context, req datasource.
 
 func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic
 	var model model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -113,7 +115,9 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading default-retention", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -131,5 +135,6 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage default-retention read")
 }

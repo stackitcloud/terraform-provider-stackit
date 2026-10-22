@@ -81,6 +81,7 @@ func NewManagedRuleSetResource() resource.Resource {
 
 func (r *managedRuleSetResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -209,9 +210,11 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 
 func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -231,6 +234,7 @@ func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.Mo
 	if !req.State.Raw.IsNull() {
 		var stateModel Model
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+
 		if !resp.Diagnostics.HasError() {
 			utils.WarnIfNameChanges(stateModel.Name, planModel.Name, "Managed Rule Set", &resp.Diagnostics)
 		}
@@ -250,6 +254,7 @@ func (r *managedRuleSetResource) ImportState(ctx context.Context, req resource.I
 			"Error importing ALB WAF Managed Rule Set",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[name]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -263,6 +268,7 @@ func (r *managedRuleSetResource) ImportState(ctx context.Context, req resource.I
 
 func (r *managedRuleSetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -311,6 +317,7 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Managed Rule Set created")
 }
 
@@ -320,6 +327,7 @@ func (r *managedRuleSetResource) Update(ctx context.Context, _ resource.UpdateRe
 
 func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -342,7 +350,9 @@ func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequ
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Managed Rule Set", err.Error())
+
 		return
 	}
 
@@ -359,11 +369,13 @@ func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Managed Rule Set read")
 }
 
 func (r *managedRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -407,6 +419,7 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 	if managedRuleSet == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -443,6 +456,7 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 					}
 				}
 			}
+
 			groupTF.Rules, diags = types.MapValue(types.ObjectType{AttrTypes: ruleType}, ruleMap)
 			if diags.HasError() {
 				return fmt.Errorf("mapping rules: %w", core.DiagsToError(diags))
@@ -454,6 +468,7 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 			}
 		}
 	}
+
 	model.Groups, diags = types.MapValue(
 		types.ObjectType{AttrTypes: ruleGroupType},
 		groupsMap,

@@ -29,6 +29,7 @@ func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceMod
 	for _, mod := range mods {
 		mod(model)
 	}
+
 	return model
 }
 
@@ -91,13 +92,16 @@ func TestMapDataSourceFields(t *testing.T) {
 				Region:     tt.expected.Region,
 				InstanceID: tt.expected.InstanceID,
 			}
+
 			err := mapDataSourceFields(context.Background(), tt.input, state)
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(tt.expected, state)
 				if diff != "" {

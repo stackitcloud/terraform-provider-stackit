@@ -236,14 +236,17 @@ func TestAccSKEMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_ske_cluster.cluster")
 					}
+
 					_, ok = r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -488,14 +491,17 @@ func TestAccSKEMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_ske_cluster.cluster")
 					}
+
 					_, ok = r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
 				},
 				ImportState:       true,
@@ -615,6 +621,7 @@ func TestAccProviderOption(t *testing.T) {
 
 func testAccCheckSKEDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := ske.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SKECustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -625,6 +632,7 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_ske_cluster" {
 			continue
 		}
+
 		clusterName := rs.Primary.Attributes["name"]
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
@@ -639,17 +647,20 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		if items[i].Name == nil {
 			continue
 		}
+
 		if utils.Contains(clustersToDestroy, *items[i].Name) {
 			_, err := client.DefaultAPI.DeleteCluster(ctx, testutil.ProjectId, testutil.Region, *items[i].Name).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: %w", *items[i].Name, err)
 			}
+
 			_, err = wait.DeleteClusterWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -705,6 +716,7 @@ func (s *SkeProviderOptions) getMachineVersionAt(position int) string {
 					if count == position {
 						return *v.Version
 					}
+
 					count++
 				}
 			}
@@ -731,6 +743,7 @@ func (s *SkeProviderOptions) getK8sVersionAt(position int) string {
 			if count == position {
 				return *v.Version
 			}
+
 			count++
 		}
 	}

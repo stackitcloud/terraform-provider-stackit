@@ -29,6 +29,7 @@ func fixtureDataSourceTunnelModel(mods ...func(m *DataSourceTunnelModel)) *DataS
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -61,6 +62,7 @@ func fixtureDataSourceModel(mods ...func(m *DataSourceModel)) DataSourceModel {
 	for _, mod := range mods {
 		mod(&resp)
 	}
+
 	return resp
 }
 
@@ -221,9 +223,11 @@ func TestMapDataSourceFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(&tt.expected, state); diff != "" {
 					t.Fatalf("Data mismatch (-want +got):\n%s", diff)

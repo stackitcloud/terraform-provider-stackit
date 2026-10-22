@@ -128,6 +128,7 @@ func (r *vpcDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -152,8 +153,10 @@ func (r *vpcDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
@@ -168,5 +171,6 @@ func (r *vpcDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC read")
 }

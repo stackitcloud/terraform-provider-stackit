@@ -384,6 +384,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 // Read refreshes the Terraform state with the latest data.
 func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -412,6 +413,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -430,5 +432,6 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Load balancer read")
 }

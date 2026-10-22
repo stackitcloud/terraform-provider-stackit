@@ -51,6 +51,7 @@ func TestParseNameFromEmail(t *testing.T) {
 				if err != nil {
 					t.Errorf("did not expect an error for email: %s, but got: %v", tc.email, err)
 				}
+
 				if name != tc.expected {
 					t.Errorf("expected name: %s, got: %s for email: %s", tc.expected, name, tc.email)
 				}

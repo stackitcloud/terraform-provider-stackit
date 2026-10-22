@@ -129,6 +129,7 @@ func (r *staticRouteDatasource) Schema(ctx context.Context, _ datasource.SchemaR
 
 func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -140,6 +141,7 @@ func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -164,6 +166,7 @@ func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadReq
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
+
 		return
 	}
 
@@ -180,5 +183,6 @@ func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC static route read")
 }

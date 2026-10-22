@@ -221,10 +221,13 @@ func (r *staticRouteResource) Schema(ctx context.Context, _ resource.SchemaReque
 
 func (r *staticRouteResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // signature required by TF
 	timeouts.Attributes(ctx, timeouts.Opts{Read: true})
+
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -249,6 +252,7 @@ func (r *staticRouteResource) ModifyPlan(ctx context.Context, req resource.Modif
 
 func (r *staticRouteResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -260,6 +264,7 @@ func (r *staticRouteResource) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -296,11 +301,13 @@ func (r *staticRouteResource) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC routing table static route created")
 }
 
 func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -312,6 +319,7 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -341,7 +349,9 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading vpc static route", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -359,11 +369,13 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC static route read")
 }
 
 func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -375,6 +387,7 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -393,6 +406,7 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -419,17 +433,20 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating static route", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC static route updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *staticRouteResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -441,6 +458,7 @@ func (r *staticRouteResource) Delete(ctx context.Context, req resource.DeleteReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -464,7 +482,9 @@ func (r *staticRouteResource) Delete(ctx context.Context, req resource.DeleteReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting vpc static route", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -482,6 +502,7 @@ func (r *staticRouteResource) ImportState(ctx context.Context, req resource.Impo
 			"Error importing vpc static route",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[vpc_id],[region],[routing_table_id],[route_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -500,6 +521,7 @@ func mapFields(ctx context.Context, route *iaas.Route, model *SharedModel, regio
 	if route == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -540,6 +562,7 @@ func mapFields(ctx context.Context, route *iaas.Route, model *SharedModel, regio
 	model.Region = types.StringValue(region)
 	model.RouteId = types.StringValue(routeId)
 	model.Labels = labels
+
 	return nil
 }
 
@@ -630,6 +653,7 @@ func toUpdatePayload(ctx context.Context, model *SharedModel, currentLabels type
 	}
 
 	result.Labels = labels
+
 	return result, nil
 }
 
@@ -640,6 +664,7 @@ func toRouteDestination(ctx context.Context, destinationTF types.Object) (iaas.A
 	}
 
 	model := Destination{}
+
 	diags := destinationTF.As(ctx, &model, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return result, core.DiagsToError(diags)
@@ -653,6 +678,7 @@ func toRouteDestination(ctx context.Context, destinationTF types.Object) (iaas.A
 	default:
 		return result, fmt.Errorf("unsupported destination type: %s", model.Type.ValueString())
 	}
+
 	return result, nil
 }
 
@@ -663,6 +689,7 @@ func toRouteNextHop(ctx context.Context, nextHopTF types.Object) (iaas.AddVPCSta
 	}
 
 	model := Nexthop{}
+
 	diags := nextHopTF.As(ctx, &model, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return result, core.DiagsToError(diags)
@@ -680,5 +707,6 @@ func toRouteNextHop(ctx context.Context, nextHopTF types.Object) (iaas.AddVPCSta
 	default:
 		return result, fmt.Errorf("unsupported nexthop type: %s", model.Type.ValueString())
 	}
+
 	return result, nil
 }

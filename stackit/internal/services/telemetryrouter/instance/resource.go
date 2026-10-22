@@ -128,9 +128,11 @@ func (r *telemetryRouterInstanceResource) Configure(ctx context.Context, req res
 
 func (r *telemetryRouterInstanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -277,6 +279,7 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 
 func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -331,16 +334,19 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter instance created")
 }
 
 func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -366,14 +372,18 @@ func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource
 	instanceResponse, err := r.client.GetTelemetryRouter(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, instanceResponse, &model, region)
@@ -381,11 +391,13 @@ func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter instance", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter Instance read", map[string]any{
 		"instance_id": instanceID,
 	})
@@ -393,6 +405,7 @@ func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource
 
 func (r *telemetryRouterInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -440,6 +453,7 @@ func (r *telemetryRouterInstanceResource) Update(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter Instance updated", map[string]any{
 		"instance_id": instanceID,
 	})
@@ -447,6 +461,7 @@ func (r *telemetryRouterInstanceResource) Update(ctx context.Context, req resour
 
 func (r *telemetryRouterInstanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -486,6 +501,7 @@ func (r *telemetryRouterInstanceResource) ImportState(ctx context.Context, req r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryRouter Instance", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`", req.ID))
 		return
 	}
+
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
 		"region":      idParts[1],
@@ -509,6 +525,7 @@ func toCreatePayload(ctx context.Context, diags diag.Diagnostics, model *Model) 
 	if err != nil {
 		return nil, err
 	}
+
 	payload.Filter = configFilter
 
 	return payload, nil
@@ -518,12 +535,14 @@ func toConfigFilter(ctx context.Context, diags diag.Diagnostics, model *Model) (
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
 		var fltr filter
 		diags.Append(model.Filter.As(ctx, &fltr, basetypes.ObjectAsOptions{})...)
+
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting filter object: %v", diags.Errors())
 		}
 
 		var attributes []attribute
 		diags.Append(fltr.Attributes.ElementsAs(ctx, &attributes, false)...)
+
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting attributes list: %v", diags.Errors())
 		}
@@ -531,8 +550,10 @@ func toConfigFilter(ctx context.Context, diags diag.Diagnostics, model *Model) (
 		configFilterAttributes := make([]telemetryrouter.ConfigFilterAttributes, 0, len(attributes))
 		for _, item := range attributes {
 			var values []string
+
 			valuesDiags := item.Values.ElementsAs(ctx, &values, false)
 			diags.Append(valuesDiags...)
+
 			if !valuesDiags.HasError() {
 				configFilterAttributes = append(configFilterAttributes, telemetryrouter.ConfigFilterAttributes{
 					Key:     item.Key.ValueString(),
@@ -542,6 +563,7 @@ func toConfigFilter(ctx context.Context, diags diag.Diagnostics, model *Model) (
 				})
 			}
 		}
+
 		if len(configFilterAttributes) > 0 {
 			return telemetryrouter.NewConfigFilter(
 				configFilterAttributes,
@@ -556,9 +578,11 @@ func mapFields(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 	if instance == nil {
 		return fmt.Errorf("instance is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
+
 	var instanceID string
 	if model.InstanceID.ValueString() != "" {
 		instanceID = model.InstanceID.ValueString()
@@ -596,6 +620,7 @@ func mapFilter(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 		if diags.HasError() {
 			return fmt.Errorf("mapping filter values: %w", core.DiagsToError(diags))
 		}
+
 		attrModel, diags := types.ObjectValueFrom(ctx, attributeTypes, attribute{
 			Key:     types.StringValue(currentAttr.Key),
 			Level:   types.StringValue(string(currentAttr.Level)),
@@ -605,11 +630,14 @@ func mapFilter(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 		if diags.HasError() {
 			return fmt.Errorf("mapping filter attributes: %w", core.DiagsToError(diags))
 		}
+
 		attrList = append(attrList, attrModel)
 	}
 
-	var attrConfigs basetypes.ListValue
-	var diags diag.Diagnostics
+	var (
+		attrConfigs basetypes.ListValue
+		diags       diag.Diagnostics
+	)
 	if len(attrList) == 0 {
 		attrConfigs = types.ListNull(types.ObjectType{AttrTypes: attributeTypes})
 	} else {
@@ -625,6 +653,7 @@ func mapFilter(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 	if diags.HasError() {
 		return fmt.Errorf("mapping filter: %w", core.DiagsToError(diags))
 	}
+
 	model.Filter = filterValue
 
 	return nil
@@ -644,6 +673,7 @@ func toUpdatePayload(ctx context.Context, diags diag.Diagnostics, model *Model) 
 	if err != nil {
 		return nil, err
 	}
+
 	payload.Filter = configFilter
 
 	return payload, nil

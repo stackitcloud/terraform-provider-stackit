@@ -116,10 +116,12 @@ func TestAccEdgeCloudInstanceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_edgecloud_instance.test_instance")
 					}
+
 					instanceID, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceID), nil
 				},
 				ImportState:       true,
@@ -248,10 +250,12 @@ func TestAccEdgeCloudMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_edgecloud_instance.test_instance")
 					}
+
 					instanceID, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceID), nil
 				},
 				ImportState:       true,
@@ -335,6 +339,7 @@ func TestAccEdgeCloudKubeconfigToken_validation(t *testing.T) {
 // testAccCheckEdgeCloudInstanceDestroy verifies that test resources are properly destroyed
 func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := edge.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.EdgeCloudCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -344,10 +349,12 @@ func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_edgecloud_instance" {
 			continue
 		}
+
 		idParts := strings.Split(rs.Primary.ID, core.Separator)
 		if len(idParts) != 3 {
 			return fmt.Errorf("invalid resource ID format: %s", rs.Primary.ID)
 		}
+
 		projectId, region, instanceId := idParts[0], idParts[1], idParts[2]
 
 		_, err := client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
@@ -357,17 +364,20 @@ func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 
 		// If the error is a 404, the resource was successfully deleted
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if !ok || oapiErr.StatusCode != http.StatusNotFound {
 			err := client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", instanceId, err)
 			}
+
 			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("waiting for instance deletion %s during CheckDestroy: %w", instanceId, err)
 			}
 		}
 	}
+
 	return nil
 }

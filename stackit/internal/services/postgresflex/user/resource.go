@@ -79,6 +79,7 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -109,6 +110,7 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 // Configure adds the provider configured client to the resource.
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -230,6 +232,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 // Create creates the resource and sets the initial Terraform state.
 func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -274,6 +277,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 			http.StatusLocked,
 		},
 	}
+
 	userResp, err := utils.RetryRequest(ctx, r.client.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
@@ -322,12 +326,14 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex user created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -338,12 +344,14 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+
 	userIdStr := model.UserId.ValueString()
 	if userIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -363,7 +371,9 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -389,6 +399,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex user read")
 }
 
@@ -396,6 +407,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -422,6 +434,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -457,6 +470,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			http.StatusLocked,
 		},
 	}
+
 	err = utils.RetryRequestWithoutResponse(ctx, r.client.PartialUpdateUser(ctx, projectId, region, instanceId, userId).PartialUpdateUserPayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
@@ -491,6 +505,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex user updated")
 }
 
@@ -498,6 +513,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -535,13 +551,16 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 			http.StatusLocked,
 		},
 	}
+
 	err = utils.RetryRequestWithoutResponse(ctx, r.client.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, config)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -552,6 +571,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex user deleted")
 }
 
@@ -564,6 +584,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 			"Error importing user",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -582,12 +603,15 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, getUserResp *pos
 	if userResp == nil {
 		return fmt.Errorf("create response is nil")
 	}
+
 	if getUserResp == nil {
 		return fmt.Errorf("get response is nil")
 	}
+
 	if instanceResp == nil {
 		return fmt.Errorf("instance response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -607,16 +631,20 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, getUserResp *pos
 		for _, role := range getUserResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
+
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map roles: %w", core.DiagsToError(diags))
 		}
+
 		model.Roles = rolesSet
 	}
+
 	model.Host = types.StringValue(instanceResp.ConnectionInfo.Write.Host)
 	model.Port = types.Int32Value(instanceResp.ConnectionInfo.Write.Port)
 	model.Uri = types.StringValue(fmt.Sprintf("postgresql://%s:%s@%s:%d/stackit", userResp.Name, userResp.Password, instanceResp.ConnectionInfo.Write.Host, instanceResp.ConnectionInfo.Write.Port))
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -624,9 +652,11 @@ func mapFields(userResp *postgresflex.GetUserResponse, instanceResp *postgresfle
 	if userResp == nil {
 		return fmt.Errorf("user response is nil")
 	}
+
 	if instanceResp == nil {
 		return fmt.Errorf("instance response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -637,6 +667,7 @@ func mapFields(userResp *postgresflex.GetUserResponse, instanceResp *postgresfle
 	} else {
 		userId = strconv.FormatInt(userResp.Id, 10)
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
@@ -650,15 +681,19 @@ func mapFields(userResp *postgresflex.GetUserResponse, instanceResp *postgresfle
 		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
+
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map roles: %w", core.DiagsToError(diags))
 		}
+
 		model.Roles = rolesSet
 	}
+
 	model.Host = types.StringValue(instanceResp.ConnectionInfo.Write.Host)
 	model.Port = types.Int32Value(instanceResp.ConnectionInfo.Write.Port)
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -666,6 +701,7 @@ func toCreatePayload(model *Model, roles []string) (*postgresflex.CreateUserPayl
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if roles == nil {
 		return nil, fmt.Errorf("nil roles")
 	}
@@ -680,6 +716,7 @@ func toUpdatePayload(model *Model, roles []string) (*postgresflex.PartialUpdateU
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if roles == nil {
 		return nil, fmt.Errorf("nil roles")
 	}

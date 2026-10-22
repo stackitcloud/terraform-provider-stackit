@@ -87,6 +87,7 @@ func configVarsMaxUpdated() config.Variables {
 	updatedConfig["parameters_graphite"] = config.StringVariable("graphite.stackit.cloud:2003")
 	updatedConfig["parameters_sgw_acl"] = config.StringVariable("192.168.1.0/24")
 	updatedConfig["parameters_syslog"] = config.StringVariable("test.log:514")
+
 	return updatedConfig
 }
 
@@ -164,14 +165,17 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_instance.instance")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
@@ -186,18 +190,22 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_credential.credential")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -337,14 +345,17 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_instance.instance")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
@@ -359,18 +370,22 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_credential.credential")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
@@ -417,6 +432,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 func testAccCheckLogMeDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := logmeSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -442,12 +458,14 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 		if instances[i].InstanceId == nil {
 			continue
 		}
+
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
 				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
+
 				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
@@ -455,6 +473,7 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -468,5 +487,6 @@ func checkInstanceDeleteSuccess(i *logmeSdk.Instance) bool {
 			return false
 		}
 	}
+
 	return true
 }

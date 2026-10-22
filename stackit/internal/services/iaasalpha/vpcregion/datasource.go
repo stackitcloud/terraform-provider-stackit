@@ -106,6 +106,7 @@ func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -124,7 +125,9 @@ func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadReque
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPC region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -140,5 +143,6 @@ func (v *vpcRegionDatasource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC region read")
 }

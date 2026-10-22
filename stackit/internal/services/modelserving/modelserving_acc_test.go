@@ -93,6 +93,7 @@ func TestAccModelServingTokenResource(t *testing.T) {
 
 func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := modelserving.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ModelServingCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -109,6 +110,7 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		if len(idParts) != 3 {
 			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
 		}
+
 		if idParts[2] != "" {
 			tokensToDestroy = append(tokensToDestroy, idParts[2])
 		}
@@ -135,11 +137,13 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying token %s during CheckDestroy: %w", items[i].Name, err)
 			}
+
 			_, err = wait.DeleteModelServingWaitHandler(ctx, client.DefaultAPI, testutil.Region, testutil.ProjectId, items[i].Id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying token %s during CheckDestroy: waiting for deletion %w", items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }

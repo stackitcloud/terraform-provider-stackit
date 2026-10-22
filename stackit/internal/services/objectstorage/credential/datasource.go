@@ -109,6 +109,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -140,6 +141,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -168,6 +170,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credential read")
 }
 
@@ -175,6 +178,7 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 	if credentialResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -197,6 +201,7 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 		if err != nil {
 			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires.Get(), err)
 		}
+
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
 
@@ -206,6 +211,7 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 	model.CredentialId = types.StringValue(credentialId)
 	model.Name = types.StringValue(credentialResp.DisplayName)
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -217,5 +223,6 @@ func findCredential(credentialsGroupResp objectstorage.ListAccessKeysResponse, c
 		}
 		return &credential
 	}
+
 	return nil
 }

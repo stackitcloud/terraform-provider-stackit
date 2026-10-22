@@ -185,6 +185,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -215,6 +216,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 		if planModel.BackupSchedule.IsNull() || planModel.BackupSchedule.IsUnknown() {
 			planModel.BackupSchedule = types.StringValue("0 0 * * *")
 		}
+
 		resp.Diagnostics.AddAttributeWarning(path.Root("backup_schedule"),
 			"backup_schedule will be required in future", "backup_schedule will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to '0 0 * * *' during deprecation period.")
 	}
@@ -227,6 +229,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 				"size":  types.Int64Value(40),
 			})
 		}
+
 		resp.Diagnostics.AddAttributeWarning(path.Root("storage"),
 			"storage will be required in future", "storage will be a required field after February 2027. Set values to prevent breaking changes. Fallback to class 'premium-perf12-stackit' with a size of 40 gigabytes during deprecation period.")
 	} else {
@@ -235,6 +238,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		var storagePlan = &storageModel{}
 		resp.Diagnostics.Append(configModel.Storage.As(ctx, storagePlan, basetypes.ObjectAsOptions{})...)
 		if resp.Diagnostics.HasError() {
@@ -246,6 +250,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			if storagePlan.Class.IsNull() || storagePlan.Class.ValueString() == "" {
 				storagePlan.Class = types.StringValue("premium-perf12-stackit")
 			}
+
 			resp.Diagnostics.AddAttributeWarning(path.Root("storage.class"),
 				"storage.class will be required in future", "storage.class will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 'premium-perf12-stackit' during deprecation period.")
 		}
@@ -255,11 +260,13 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			if storagePlan.Size.IsNull() {
 				storagePlan.Size = types.Int64Value(40)
 			}
+
 			resp.Diagnostics.AddAttributeWarning(path.Root("storage.size"),
 				"storage.size will be required in future", "storage.size will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 40 gigabytes during deprecation period.")
 		}
 
 		var diags diag.Diagnostics
+
 		planModel.Storage, diags = types.ObjectValue(storageTypes, map[string]attr.Value{
 			"class": storagePlan.Class,
 			"size":  storagePlan.Size,
@@ -272,6 +279,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 		if planModel.Version.IsNull() || planModel.Version.IsUnknown() {
 			planModel.Version = types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022))
 		}
+
 		resp.Diagnostics.AddAttributeWarning(path.Root("version"),
 			"version will be required in future", "version will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to '2022' during deprecation period.")
 	}
@@ -291,6 +299,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			return
 		}
 	}
+
 	var optionsPlan = &optionsModel{}
 	if !(configModel.Options.IsNull() || configModel.Options.IsUnknown()) {
 		resp.Diagnostics.Append(configModel.Options.As(ctx, optionsPlan, basetypes.ObjectAsOptions{})...)
@@ -298,10 +307,12 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			return
 		}
 	}
+
 	if (optionsConfig.RetentionDays.IsNull() || optionsConfig.RetentionDays.IsUnknown()) && (configModel.RetentionDays.IsNull() || configModel.RetentionDays.IsUnknown()) {
 		if (optionsPlan.RetentionDays.IsNull() || optionsPlan.RetentionDays.IsUnknown()) && (planModel.RetentionDays.IsNull() || planModel.RetentionDays.IsUnknown()) {
 			planModel.RetentionDays = types.Int32Value(30)
 		}
+
 		resp.Diagnostics.AddAttributeWarning(path.Root("retention_days"),
 			"retention_days will be required in future", "retention_days will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 30 days during deprecation period.")
 	}
@@ -642,6 +653,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -681,12 +693,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
+
 	var storage = &storageModel{}
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -779,6 +793,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -788,12 +803,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -806,7 +823,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", err.Error())
+
 		return
 	}
 
@@ -847,6 +866,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SQLServer Flex instance read")
 }
 
@@ -854,6 +874,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -878,6 +899,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 	}
+
 	var flavor = &flavorModel{}
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
@@ -885,12 +907,14 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
+
 	var storage = &storageModel{}
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -945,11 +969,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SQLServer Flex instance updated")
 }
 
@@ -957,6 +983,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -979,7 +1006,9 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -990,6 +1019,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "SQLServer Flex instance deleted")
 }
 
@@ -1003,6 +1033,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -1018,6 +1049,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -1031,12 +1063,15 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		return fmt.Errorf("instance id not present")
 	}
 
-	var aclList basetypes.ListValue
-	var diags diag.Diagnostics
+	var (
+		aclList basetypes.ListValue
+		diags   diag.Diagnostics
+	)
 	if resp.Network.Acl == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
 		respACL := resp.Network.Acl
+
 		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err
@@ -1056,6 +1091,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"instance_address": types.StringPointerValue(resp.Network.InstanceAddress),
 		"router_address":   types.StringPointerValue(resp.Network.RouterAddress),
 	}
+
 	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
 		return fmt.Errorf("mapping network: %w", core.DiagsToError(diags))
@@ -1067,6 +1103,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"cpu":         flavor.CPU,
 		"ram":         flavor.RAM,
 	}
+
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
@@ -1076,6 +1113,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"class": types.StringPointerValue(resp.Storage.Class),
 		"size":  types.Int64PointerValue(resp.Storage.Size),
 	}
+
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
@@ -1085,12 +1123,14 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		"edition":        types.StringValue(string(resp.Edition)),
 		"retention_days": types.Int32Value(resp.RetentionDays),
 	}
+
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
 	}
 
 	var encryptionValues map[string]attr.Value
+
 	encryptionObject := types.ObjectNull(encryptionTypes)
 	if resp.Encryption != nil {
 		encryptionValues = map[string]attr.Value{
@@ -1099,6 +1139,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 			"kek_key_version": types.StringValue(resp.Encryption.KekKeyVersion),
 			"service_account": types.StringValue(resp.Encryption.ServiceAccount),
 		}
+
 		encryptionObject, diags = types.ObjectValue(encryptionTypes, encryptionValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating encryption: %w", core.DiagsToError(diags))
@@ -1128,6 +1169,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	model.Edition = types.StringValue(string(resp.Edition))
 	model.Network = networkObject
 	model.Encryption = encryptionObject
+
 	return nil
 }
 
@@ -1153,10 +1195,12 @@ func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, fl
 		networkPayload.Acl = acl
 	} else if network != nil && !(network.Acl.IsNull() || network.Acl.IsUnknown()) {
 		var err error
+
 		networkPayload.Acl, err = conversion.StringListToSlice(network.Acl)
 		if err != nil {
 			return nil, err
 		}
+
 		if !(network.AccessScope.IsNull() || network.AccessScope.IsUnknown()) {
 			networkPayload.AccessScope = (*sqlserverflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
 		}
@@ -1177,9 +1221,11 @@ func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, fl
 
 	// Storage
 	storagePayload := sqlserverflex.StorageCreate{}
+
 	if storage == nil {
 		return nil, fmt.Errorf("storage configuration is missing")
 	}
+
 	storagePayload.Class = storage.Class.ValueString()
 	storagePayload.Size = storage.Size.ValueInt64()
 
@@ -1211,11 +1257,13 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	networkPayload := &sqlserverflex.PartialUpdateInstancePayloadNetwork{}
 	if acl != nil {
 		networkPayload.Acl = acl
 	} else if network != nil && !(network.Acl.IsNull() || network.Acl.IsUnknown()) {
 		var err error
+
 		networkPayload.Acl, err = conversion.StringListToSlice(network.Acl)
 		if err != nil {
 			return nil, err
@@ -1240,9 +1288,11 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	storagePayload := &sqlserverflex.StorageUpdate{}
+
 	if storage == nil || storage.Size.IsNull() {
 		return nil, fmt.Errorf("storage configuration is missing")
 	}
+
 	storagePayload.Size = storage.Size.ValueInt64Pointer()
 
 	// Retention days
@@ -1274,38 +1324,49 @@ type sqlserverflexClient interface {
 // Deprecated: getAllFlavors is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getAllFlavors(ctx context.Context, client sqlserverflexClient, projectId, region string) ([]sqlserverflex.ListFlavors, error) {
 	var result []sqlserverflex.ListFlavors
+
 	req := client.ListFlavors(ctx, projectId, region).Size(100)
+
 	resp, err := client.ListFlavorsExecute(req)
 	if err != nil {
 		return nil, fmt.Errorf("error listing flavors: %w", err)
 	}
+
 	if resp == nil {
 		return nil, fmt.Errorf("nil response received when listing flavors")
 	}
+
 	if resp.Flavors != nil {
 		result = append(result, resp.Flavors...)
 	}
 
 	currentPage := resp.Pagination.Page
+
 	totalPages := resp.Pagination.TotalPages
 	for currentPage < totalPages {
 		nextPage := currentPage + 1
+
 		resp, err = client.ListFlavorsExecute(req.Page(nextPage))
 		if err != nil {
 			return nil, fmt.Errorf("error listing flavors: %w", err)
 		}
+
 		if resp == nil {
 			return nil, fmt.Errorf("nil response received when listing flavors on page %d", nextPage)
 		}
+
 		if resp.Flavors != nil {
 			result = append(result, resp.Flavors...)
 		}
+
 		if resp.Pagination.Page <= currentPage {
 			break // Prevent infinite loop if page number does not advance
 		}
+
 		currentPage = resp.Pagination.Page
 		totalPages = resp.Pagination.TotalPages
 	}
+
 	return result, nil
 }
 
@@ -1314,13 +1375,16 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
+
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
+
 	cpu := conversion.Int64ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
+
 	ram := conversion.Int64ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
@@ -1328,26 +1392,32 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
+
 	res, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {
 		return fmt.Errorf("listing sqlserverflex flavors: %w", err)
 	}
 
 	avl := ""
+
 	if res == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
+
 	for _, f := range res {
 		if f.Id == "" || f.Cpu == 0 || f.Memory == 0 {
 			continue
 		}
+
 		if f.Cpu == *cpu && f.Memory == *ram {
 			flavor.Id = types.StringValue(f.Id)
 			flavor.Description = types.StringValue(f.Description)
 			break
 		}
+
 		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, f.Cpu, f.Memory)
 	}
+
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
 	}
@@ -1361,10 +1431,12 @@ func getFlavor(ctx context.Context, client sqlserverflexClient, projectId, regio
 	if err != nil {
 		return nil, fmt.Errorf("failed to list flavors: %w", err)
 	}
+
 	for _, flavor := range flavorsResp {
 		if flavor.Id == flavorId {
 			return &flavor, nil
 		}
 	}
+
 	return nil, fmt.Errorf("flavor with ID %q not found in project %q", flavorId, projectId)
 }

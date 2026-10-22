@@ -186,6 +186,7 @@ func (g *gitResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -245,6 +246,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Git Instance created")
 }
 
@@ -252,6 +254,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -262,6 +265,7 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
+
 	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
@@ -273,12 +277,15 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	gitInstanceResp, err := g.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading git instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -311,6 +318,7 @@ func (g *gitResource) Update(ctx context.Context, _ resource.UpdateRequest, resp
 func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -331,7 +339,9 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting git instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -358,6 +368,7 @@ func (g *gitResource) ImportState(ctx context.Context, req resource.ImportStateR
 			"Error importing git instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 	// Set the project ID and instance ID attributes in the state.
@@ -373,11 +384,13 @@ func mapFields(ctx context.Context, resp *git.Instance, model *Model) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	aclList := types.ListNull(types.StringType)
+
 	var diags diag.Diagnostics
 	if len(resp.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, resp.Acl)
@@ -419,8 +432,10 @@ func toCreatePayload(ctx context.Context, model *Model) (git.CreateInstancePaylo
 
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		var acl []string
+
 		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
 		diags.Append(aclDiags...)
+
 		if !aclDiags.HasError() {
 			payload.Acl = acl
 		}

@@ -160,11 +160,13 @@ func (d *securityGroupRuleDataSource) Schema(_ context.Context, _ datasource.Sch
 // Read refreshes the Terraform state with the latest data.
 func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
@@ -190,6 +192,7 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -200,10 +203,12 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "security group rule read")
 }

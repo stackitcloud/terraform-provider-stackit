@@ -62,6 +62,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["use_kms_key"] = config.BoolVariable(false)
 	tempConfig["acls"] = config.ListVariable(config.StringVariable("10.100.0.0/24"), config.StringVariable("10.100.2.0/24"))
 	tempConfig["user_description"] = config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
+
 	return tempConfig
 }
 
@@ -147,10 +148,12 @@ func TestAccSecretsManagerMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_secretsmanager_instance.instance")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -165,10 +168,12 @@ func TestAccSecretsManagerMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_secretsmanager_user.user")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute user_id")
@@ -334,10 +339,12 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_secretsmanager_instance.instance")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -352,10 +359,12 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_secretsmanager_instance.instance_with_key")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
 				},
 				ImportState:       true,
@@ -370,10 +379,12 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_secretsmanager_user.user")
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute user_id")

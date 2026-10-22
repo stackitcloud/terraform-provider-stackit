@@ -279,6 +279,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_objectstorage_credentials_group.credentials_group")
 					}
+
 					credentialsGroupId, ok := r.Primary.Attributes["credentials_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credentials_group_id")
@@ -297,14 +298,17 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_objectstorage_credential.credential")
 					}
+
 					credentialsGroupId, ok := r.Primary.Attributes["credentials_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credentials_group_id")
 					}
+
 					credentialId, ok := r.Primary.Attributes["credential_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, credentialsGroupId, credentialId), nil
 				},
 				ImportState:             true,
@@ -318,6 +322,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 
 func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -346,6 +351,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
 			}
+
 			_, err = wait.DeleteBucketWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
@@ -378,5 +384,6 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

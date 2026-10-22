@@ -259,6 +259,7 @@ func toRequest(ctx context.Context, client iaas.DefaultAPI, model *DataSourceMod
 	request := client.ListImages(ctx, model.ProjectID.ValueString(), providerData.GetRegionWithOverride(model.Region)).All(true)
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() {
 		var filter filterModel
+
 		diags := model.Filter.As(ctx, &filter, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return iaas.ApiListImagesRequest{}, fmt.Errorf("converting filter: %w", core.DiagsToError(diags))
@@ -285,6 +286,7 @@ func (d *imagesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -304,6 +306,7 @@ func (d *imagesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading images", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	if err = mapFields(ctx, apiResponse, &model, region); err != nil {
@@ -323,6 +326,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 	if response == nil {
 		return fmt.Errorf("image list response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("data source model is nil")
 	}
@@ -333,6 +337,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 			return fmt.Errorf("image at index %d has no ID", i)
 		}
 	}
+
 	slices.SortFunc(items, func(a, b iaas.Image) int { return strings.Compare(*a.Id, *b.Id) })
 
 	values := make([]imageModel, 0, len(items))
@@ -341,6 +346,7 @@ func mapFields(ctx context.Context, response *iaas.ImageListResponse, model *Dat
 		if err != nil {
 			return fmt.Errorf("mapping image at index %d (ID %q): %w", i, *items[i].Id, err)
 		}
+
 		values = append(values, item)
 	}
 
@@ -360,6 +366,7 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 	if image == nil {
 		return imageModel{}, fmt.Errorf("image is nil")
 	}
+
 	if image.Id == nil || *image.Id == "" {
 		return imageModel{}, fmt.Errorf("image ID is missing")
 	}
@@ -379,6 +386,7 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 	if err != nil {
 		return m, fmt.Errorf("mapping labels: %w", err)
 	}
+
 	m.Labels = labels
 
 	if image.Config == nil {
@@ -400,10 +408,12 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 			VideoModel:             types.StringPointerValue(c.VideoModel.Get()),
 			VirtioScsi:             types.BoolPointerValue(c.VirtioScsi),
 		}
+
 		obj, ds := types.ObjectValueFrom(ctx, configAttrTypes, config)
 		if ds.HasError() {
 			return m, fmt.Errorf("mapping config: %w", core.DiagsToError(ds))
 		}
+
 		m.Config = obj
 	}
 
@@ -414,10 +424,12 @@ func mapImage(ctx context.Context, image *iaas.Image) (imageModel, error) {
 			Algorithm: types.StringValue(image.Checksum.Algorithm),
 			Digest:    types.StringValue(image.Checksum.Digest),
 		}
+
 		obj, ds := types.ObjectValueFrom(ctx, checksumAttrTypes, cs)
 		if ds.HasError() {
 			return m, fmt.Errorf("mapping checksum: %w", core.DiagsToError(ds))
 		}
+
 		m.Checksum = obj
 	}
 

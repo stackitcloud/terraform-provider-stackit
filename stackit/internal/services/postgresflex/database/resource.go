@@ -64,6 +64,7 @@ func (r *databaseResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -94,6 +95,7 @@ func (r *databaseResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Configure adds the provider configured client to the resource.
 func (r *databaseResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -186,6 +188,7 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 // Create creates the resource and sets the initial Terraform state.
 func (r *databaseResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -221,6 +224,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 			http.StatusLocked,
 		},
 	}
+
 	databaseResp, err := utils.RetryRequest(ctx, r.client.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Calling API: %v", err))
@@ -233,6 +237,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", "API didn't return response. A database might have been created")
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "database_id", databaseResp.Id)
 
 	database, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseResp.Id).Execute()
@@ -253,12 +258,14 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex database created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -269,12 +276,14 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+
 	databaseIdStr := model.DatabaseId.ValueString()
 	if databaseIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -294,7 +303,9 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -313,12 +324,14 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex database read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *databaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -363,6 +376,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 			http.StatusLocked,
 		},
 	}
+
 	err = utils.RetryRequestWithoutResponse(ctx, r.client.PartialUpdateDatabase(ctx, projectId, region, instanceId, databaseId).PartialUpdateDatabasePayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Calling API: %v", err))
@@ -389,6 +403,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex database updated")
 }
 
@@ -396,6 +411,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -433,13 +449,16 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 			http.StatusLocked,
 		},
 	}
+
 	err = utils.RetryRequestWithoutResponse(ctx, r.client.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute, config)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -457,6 +476,7 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing database",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[database_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -477,6 +497,7 @@ func mapFields(databaseResp *postgresflex.GetDatabaseResponse, model *Model, reg
 	if databaseResp == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -487,6 +508,7 @@ func mapFields(databaseResp *postgresflex.GetDatabaseResponse, model *Model, reg
 	} else {
 		databaseId = strconv.FormatInt(databaseResp.Id, 10)
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), databaseId,
 	)
@@ -494,6 +516,7 @@ func mapFields(databaseResp *postgresflex.GetDatabaseResponse, model *Model, reg
 	model.Name = types.StringValue(databaseResp.Name)
 	model.Region = types.StringValue(region)
 	model.Owner = types.StringValue(databaseResp.Owner)
+
 	return nil
 }
 

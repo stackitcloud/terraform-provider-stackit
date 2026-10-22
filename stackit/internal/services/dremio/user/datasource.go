@@ -146,6 +146,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -162,5 +163,6 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio user read")
 }

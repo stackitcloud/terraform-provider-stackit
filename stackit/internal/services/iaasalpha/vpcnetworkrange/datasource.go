@@ -155,12 +155,14 @@ func (r *vpcNetworkRangeDatasource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	vpcId := model.VpcId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	networkRangeId := model.NetworkRangeId.ValueString()
 	if networkRangeId == "" {
 		// Resource not yet created; ID is unknown.
@@ -188,6 +190,7 @@ func (r *vpcNetworkRangeDatasource) Read(ctx context.Context, req datasource.Rea
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -205,5 +208,6 @@ func (r *vpcNetworkRangeDatasource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Network range read")
 }

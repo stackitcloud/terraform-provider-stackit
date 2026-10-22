@@ -183,6 +183,7 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area created")
 }
 
@@ -195,6 +196,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	organizationId := model.OrganizationId.ValueString()
+
 	networkAreaId := model.NetworkAreaId.ValueString()
 	if networkAreaId == "" {
 		// Resource not yet created; ID is unknown.
@@ -214,7 +216,9 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -232,6 +236,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area read")
 }
 
@@ -284,6 +289,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area updated")
 }
 
@@ -291,6 +297,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -312,7 +319,9 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
+
 		return
 	}
 
@@ -324,7 +333,9 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API to list configured regions: %v", err))
+
 		return
 	}
 
@@ -336,7 +347,9 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
 				continue
 			}
+
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))
+
 			return
 		}
 
@@ -355,7 +368,9 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -374,6 +389,7 @@ func (r *networkAreaResource) ImportState(ctx context.Context, req resource.Impo
 			"Error importing network area",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -391,6 +407,7 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, model *Mo
 	if networkAreaResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

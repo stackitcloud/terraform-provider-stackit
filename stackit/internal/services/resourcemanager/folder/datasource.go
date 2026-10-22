@@ -136,6 +136,7 @@ func (d *folderDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 // Read refreshes the Terraform state with the latest data.
 func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -160,6 +161,7 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -176,5 +178,6 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager folder read")
 }

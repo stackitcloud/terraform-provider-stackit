@@ -146,6 +146,7 @@ func (d *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 // Read refreshes the Terraform state with the latest data.
 func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -176,6 +177,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -194,6 +196,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "OpenSearch credential read")
 }
 
@@ -201,12 +204,15 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *opensearch.Creden
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if credentialsResp.Raw == nil {
 		return fmt.Errorf("response credentials raw is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	credentials := credentialsResp.Raw.Credentials
 
 	var credentialId string
@@ -227,6 +233,7 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *opensearch.Creden
 	}
 
 	model.CredentialId = types.StringValue(credentialId)
+
 	model.Hosts = types.ListNull(types.StringType)
 	if credentials.Hosts != nil {
 		respHosts := credentials.Hosts
@@ -239,11 +246,13 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *opensearch.Creden
 
 		model.Hosts = hostsTF
 	}
+
 	model.Host = types.StringValue(credentials.Host)
 	model.Password = types.StringValue(credentials.Password)
 	model.Port = types.Int32PointerValue(credentials.Port)
 	model.Scheme = types.StringPointerValue(credentials.Scheme)
 	model.Uri = types.StringPointerValue(credentials.Uri)
 	model.Username = types.StringValue(credentials.Username)
+
 	return nil
 }

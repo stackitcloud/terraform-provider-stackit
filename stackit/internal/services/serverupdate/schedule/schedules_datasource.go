@@ -133,6 +133,7 @@ type schedulesDatasourceItemModel struct {
 // Read refreshes the Terraform state with the latest data.
 func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model schedulesDataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -160,6 +161,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -178,6 +180,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server update schedules read")
 }
 
@@ -185,11 +188,13 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.G
 	if schedules == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	tflog.Debug(ctx, "response", map[string]any{"schedules": schedules})
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
@@ -206,5 +211,6 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.G
 		}
 		model.Items = append(model.Items, scheduleState)
 	}
+
 	return nil
 }

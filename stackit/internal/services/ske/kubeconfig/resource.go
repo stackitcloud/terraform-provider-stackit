@@ -207,11 +207,13 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 		// Planned to create a kubeconfig
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Planned to create kubeconfig", "Once this resource is created, you will no longer be able to use the deprecated credentials endpoints and the kube_config field on the cluster resource will be empty for this cluster. For more info check How to Rotate SKE Credentials (https://docs.stackit.cloud/products/runtime/kubernetes-engine/how-tos/rotate-ske-credentials)")
 	}
+
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -237,6 +239,7 @@ func (r *kubeconfigResource) ModifyPlan(ctx context.Context, req resource.Modify
 // Create creates the resource and sets the initial Terraform state.
 func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -273,6 +276,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SKE kubeconfig created")
 }
 
@@ -284,6 +288,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -304,6 +309,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
@@ -316,6 +322,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
@@ -326,6 +333,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
+
 		return
 	}
 
@@ -384,6 +392,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 	if err != nil {
 		return fmt.Errorf("processing API payload: %w", err)
 	}
+
 	return nil
 }
 
@@ -398,6 +407,7 @@ func (r *kubeconfigResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -421,6 +431,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	if kubeconfigResp == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -438,6 +449,7 @@ func mapFields(kubeconfigResp *ske.Kubeconfig, model *Model, creationTime time.T
 	// set creation time
 	model.CreationTime = types.StringValue(creationTime.Format(time.RFC3339))
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -447,6 +459,7 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	}
 
 	expiration := conversion.Int64ValueToPointer(model.Expiration)
+
 	var expirationStringPtr *string
 	if expiration != nil {
 		expirationStringPtr = new(strconv.FormatInt(*expiration, 10))
@@ -464,17 +477,21 @@ func checkHasExpired(model *Model, currentTime time.Time) (bool, error) {
 		if expiresAt.IsUnknown() {
 			return true, nil
 		}
+
 		expiresAt, err := time.Parse(time.RFC3339, expiresAt.ValueString())
 		if err != nil {
 			return false, fmt.Errorf("converting expiresAt field to timestamp: %w", err)
 		}
+
 		if !model.RefreshBefore.IsNull() {
 			expiresAt = expiresAt.Add(-time.Duration(model.RefreshBefore.ValueInt64()) * time.Second)
 		}
+
 		if expiresAt.Before(currentTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
@@ -484,15 +501,18 @@ func checkCredentialsRotation(cluster *ske.Cluster, model *Model) (bool, error) 
 	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
 		return false, nil
 	}
+
 	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
+
 	if cluster.Status.CredentialsRotation.LastCompletionTime != nil {
 		if creationTime.Before(*cluster.Status.CredentialsRotation.LastCompletionTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }
 
@@ -502,14 +522,17 @@ func checkClusterRecreation(cluster *ske.Cluster, model *Model) (bool, error) {
 	if creationTimeValue.IsNull() || creationTimeValue.IsUnknown() {
 		return false, nil
 	}
+
 	creationTime, err := time.Parse(time.RFC3339, creationTimeValue.ValueString())
 	if err != nil {
 		return false, fmt.Errorf("converting creationTime field to timestamp: %w", err)
 	}
+
 	if cluster.Status.CreationTime != nil {
 		if creationTime.Before(*cluster.Status.CreationTime) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }

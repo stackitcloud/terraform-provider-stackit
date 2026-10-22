@@ -147,8 +147,10 @@ func TestMapFolderFields(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Error converting to terraform string map: %v", err)
 				}
+
 				tt.expected.Labels = convertedLabels
 			}
+
 			var containerParentId = types.StringNull()
 			if tt.uuidContainerParentId {
 				containerParentId = types.StringValue(testUUID)
@@ -166,9 +168,11 @@ func TestMapFolderFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(model, &tt.expected)
 				if diff != "" {
@@ -246,16 +250,20 @@ func TestToCreatePayload(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Error converting to terraform string map: %v", err)
 					}
+
 					tt.input.Labels = convertedLabels
 				}
 			}
+
 			output, err := toCreatePayload(context.Background(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -408,6 +416,7 @@ func TestToMembersPayload(t *testing.T) {
 	type args struct {
 		model *ResourceModel
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -451,6 +460,7 @@ func TestToMembersPayload(t *testing.T) {
 				t.Errorf("toMembersPayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toMembersPayload() got = %v, want %v", got, tt.want)
 			}

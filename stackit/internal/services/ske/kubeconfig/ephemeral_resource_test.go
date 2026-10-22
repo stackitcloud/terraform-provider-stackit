@@ -17,6 +17,7 @@ func TestGetKubeconfig(t *testing.T) {
 		region      = "eu01"
 		kubeconfig  = "mock-kubeconfig"
 	)
+
 	expirationTime := time.Now().Add(time.Hour).Truncate(time.Second)
 
 	tests := []struct {

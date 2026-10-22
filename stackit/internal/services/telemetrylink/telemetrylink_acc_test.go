@@ -63,6 +63,7 @@ func testConfigVarsMaxUpdated() config.Variables {
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryLink Updated")
 	newVars["enabled"] = config.BoolVariable(true)
 	newVars["access_token_wo_version"] = config.IntegerVariable(1)
+
 	return newVars
 }
 
@@ -145,10 +146,12 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink.link")
 					}
+
 					resourceType, ok := rs.Primary.Attributes["resource_type"]
 					if !ok {
 						return "", fmt.Errorf("resource_type not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", resourceType, testutil.ProjectId, testutil.Region), nil
 				},
 				ImportState:             true,
@@ -257,10 +260,12 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink.link")
 					}
+
 					resourceType, ok := rs.Primary.Attributes["resource_type"]
 					if !ok {
 						return "", fmt.Errorf("resource_type not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", resourceType, testutil.ProjectId, testutil.Region), nil
 				},
 				ImportState:             true,
@@ -326,15 +331,19 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := telemetrylink.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.TelemetryLinkCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -351,6 +360,7 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_telemetrylink" {
 			continue
 		}
+
 		parts := strings.Split(rs.Primary.ID, core.Separator)
 		linksToDestroy = append(linksToDestroy, link{
 			resourceType: parts[0],
@@ -372,9 +382,12 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 						continue
 					}
 				}
+
 				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+
 				continue
 			}
+
 			_, err = telemetrylinkWait.DeleteOrganizationTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "folder":
 			err = client.DefaultAPI.DeleteFolderTelemetryLink(ctx, l.resourceId, l.region).Execute()
@@ -385,9 +398,12 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 						continue
 					}
 				}
+
 				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+
 				continue
 			}
+
 			_, err = telemetrylinkWait.DeleteFolderTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "project":
 			err = client.DefaultAPI.DeleteProjectTelemetryLink(ctx, l.resourceId, l.region).Execute()
@@ -398,14 +414,19 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 						continue
 					}
 				}
+
 				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+
 				continue
 			}
+
 			_, err = telemetrylinkWait.DeleteProjectTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
 		}
 	}
+
 	return errors.Join(errs...)
 }

@@ -558,6 +558,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// Retrieve provider data and configuration
 	var providerConfig providerModel
+
 	diags := req.Config.Get(ctx, &providerConfig)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -566,8 +567,11 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Configure SDK client
 	sdkConfig := &config.Configuration{}
-	var providerData core.ProviderData
-	var customEndpointConfig core.CustomEndpointConfig
+
+	var (
+		providerData         core.ProviderData
+		customEndpointConfig core.CustomEndpointConfig
+	)
 
 	// Helper function to set a string field if it's known and not null
 	setStringField := func(v basetypes.StringValue, setter func(string)) {
@@ -583,6 +587,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up bool value: %v", diags.Errors()))
 			}
+
 			setter(val.ValueBool())
 		}
 	}
@@ -644,10 +649,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
+
 		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
 		}
+
 		providerData.Experiments = experimentValues
 	}
 
@@ -681,6 +688,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Workload Identity Federation via provided OIDC Token
 	oidc_token := ""
 	setStringField(providerConfig.WifFederatedToken, func(v string) { oidc_token = v })
+
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token != "" {
 		sdkConfig.WorkloadIdentityFederation = true
 		sdkConfig.ServiceAccountFederatedTokenFunc = func(context.Context) (string, error) {
@@ -691,6 +699,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Workload Identity Federation via OIDC Token from file
 	oidc_token_path := ""
 	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { oidc_token_path = v })
+
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token_path != "" {
 		sdkConfig.WorkloadIdentityFederation = true
 		sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.ReadJWTFromFileSystem(oidc_token_path)
@@ -701,6 +710,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
 		oidcReqURL := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
+
 		oidcReqToken := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestGHOIDCToken(oidcReqURL, oidcReqToken)

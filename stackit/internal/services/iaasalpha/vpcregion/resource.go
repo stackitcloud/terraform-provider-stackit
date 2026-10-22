@@ -132,23 +132,28 @@ func (v *vpcRegion) ModifyPlan(ctx context.Context, request resource.ModifyPlanR
 	if request.Config.Raw.IsNull() {
 		return
 	}
+
 	response.Diagnostics.Append(request.Config.Get(ctx, &configModel)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
 
 	var planModel Model
 	response.Diagnostics.Append(request.Plan.Get(ctx, &planModel)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, v.providerData.GetRegion(), response)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
 
 	response.Diagnostics.Append(response.Plan.Set(ctx, planModel)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -157,6 +162,7 @@ func (v *vpcRegion) ModifyPlan(ctx context.Context, request resource.ModifyPlanR
 func (v *vpcRegion) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // signature required by TF
 	var model Model
 	response.Diagnostics.Append(request.Plan.Get(ctx, &model)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -164,9 +170,11 @@ func (v *vpcRegion) Create(ctx context.Context, request resource.CreateRequest, 
 	waiterTimeout := wait.CreateVPCRegionWaitHandler(ctx, v.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -210,25 +218,31 @@ func (v *vpcRegion) Create(ctx context.Context, request resource.CreateRequest, 
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating VPC region", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, model)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Region created")
 }
 
 func (v *vpcRegion) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // signature required by TF
 	var model Model
 	response.Diagnostics.Append(request.State.Get(ctx, &model)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
 
 	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -247,7 +261,9 @@ func (v *vpcRegion) Read(ctx context.Context, request resource.ReadRequest, resp
 			response.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading VPC region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -260,9 +276,11 @@ func (v *vpcRegion) Read(ctx context.Context, request resource.ReadRequest, resp
 	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, model)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Region read")
 }
 
@@ -270,15 +288,18 @@ func (v *vpcRegion) Update(ctx context.Context, request resource.UpdateRequest, 
 	var model, state Model
 	response.Diagnostics.Append(request.Plan.Get(ctx, &model)...)
 	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
 
 	updateTimeout, diags := model.Timeouts.Update(ctx, core.DefaultOperationTimeout)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -313,15 +334,18 @@ func (v *vpcRegion) Update(ctx context.Context, request resource.UpdateRequest, 
 
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Region updated")
 }
 
 func (v *vpcRegion) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // signature required by TF
 	var model Model
 	response.Diagnostics.Append(request.State.Get(ctx, &model)...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -329,9 +353,11 @@ func (v *vpcRegion) Delete(ctx context.Context, request resource.DeleteRequest, 
 	waiterTimeout := wait.DeleteVPCRegionWaitHandler(ctx, v.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -350,7 +376,9 @@ func (v *vpcRegion) Delete(ctx context.Context, request resource.DeleteRequest, 
 			response.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting VPC region", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -373,6 +401,7 @@ func (v *vpcRegion) ImportState(ctx context.Context, request resource.ImportStat
 			"Error importing vpc",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[vpc_id],[region]  Got: %q", request.ID),
 		)
+
 		return
 	}
 
@@ -411,6 +440,7 @@ func mapFields(_ context.Context, regionalVPC *iaas.RegionalVPC, model *SharedMo
 	if regionalVPC == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

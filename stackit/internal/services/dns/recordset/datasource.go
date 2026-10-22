@@ -134,6 +134,7 @@ func (d *recordSetDataSource) Schema(ctx context.Context, _ datasource.SchemaReq
 // Read refreshes the Terraform state with the latest data.
 func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -145,6 +146,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -156,6 +158,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
+
 	recordSetResp, err := d.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		utils.LogError(
@@ -169,6 +172,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -185,10 +189,12 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "DNS record set read")
 }

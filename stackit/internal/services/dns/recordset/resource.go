@@ -201,6 +201,7 @@ func (r *recordSetResource) Schema(ctx context.Context, _ resource.SchemaRequest
 func (r *recordSetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -213,6 +214,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -266,12 +268,14 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "DNS record set created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -283,6 +287,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -290,12 +295,14 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
+
 	recordSetId := model.RecordSetId.ValueString()
 	if recordSetId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
@@ -307,9 +314,12 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	if recordSetResp != nil && recordSetResp.Rrset.State == dns.RECORDSETSTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
@@ -330,6 +340,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "DNS record set read")
 }
 
@@ -337,6 +348,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -349,6 +361,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -387,11 +400,13 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "DNS record set updated")
 }
 
@@ -399,6 +414,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -411,6 +427,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -430,7 +447,9 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -441,6 +460,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "DNS record set deleted")
 }
 
@@ -453,6 +473,7 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 			"Error importing record set",
 			fmt.Sprintf("Expected import identifier with format [project_id],[zone_id],[record_set_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -468,9 +489,11 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 	if recordSetResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	recordSet := recordSetResp.Rrset
 
 	var recordSetId string
@@ -505,20 +528,24 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 
 		model.Records = recordsTF
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), model.ZoneId.ValueString(), recordSetId,
 	)
 	model.RecordSetId = types.StringValue(recordSet.Id)
 	model.Active = types.BoolPointerValue(recordSet.Active)
 	model.Comment = types.StringPointerValue(recordSet.Comment)
+
 	model.Error = types.StringPointerValue(recordSet.Error)
 	if model.Name.IsNull() || model.Name.IsUnknown() {
 		model.Name = types.StringValue(recordSet.Name)
 	}
+
 	model.FQDN = types.StringValue(recordSet.Name)
 	model.State = types.StringValue(string(recordSet.State))
 	model.TTL = types.Int32Value(recordSet.Ttl)
 	model.Type = types.StringValue(string(recordSet.Type))
+
 	return nil
 }
 
@@ -533,6 +560,7 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 		if !ok {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
+
 		records = append(records, dns.RecordPayload{
 			Content: recordString.ValueString(),
 		})
@@ -558,6 +586,7 @@ func toUpdatePayload(model *Model) (*dns.PartialUpdateRecordSetPayload, error) {
 		if !ok {
 			return nil, fmt.Errorf("expected record at index %d to be of type %T, got %T", i, types.String{}, record)
 		}
+
 		records = append(records, dns.RecordPayload{
 			Content: recordString.ValueString(),
 		})

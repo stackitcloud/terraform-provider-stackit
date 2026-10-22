@@ -211,6 +211,7 @@ func (d *imageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 // Read refreshes the Terraform state with the latest data.
 func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -240,6 +241,7 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -257,6 +259,7 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "image read")
 }
 
@@ -264,6 +267,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -281,8 +285,11 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Region = types.StringValue(region)
 
 	// Map config
-	var configModel = &configModel{}
-	var configObject basetypes.ObjectValue
+	var (
+		configModel  = &configModel{}
+		configObject basetypes.ObjectValue
+	)
+
 	diags := diag.Diagnostics{}
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
@@ -317,13 +324,16 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		configObject = types.ObjectNull(configTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating config: %w", core.DiagsToError(diags))
 	}
 
 	// Map checksum
-	var checksumModel = &checksumModel{}
-	var checksumObject basetypes.ObjectValue
+	var (
+		checksumModel  = &checksumModel{}
+		checksumObject basetypes.ObjectValue
+	)
 	if imageResp.Checksum != nil {
 		checksumModel.Algorithm = types.StringValue(imageResp.Checksum.Algorithm)
 		checksumModel.Digest = types.StringValue(imageResp.Checksum.Digest)
@@ -334,6 +344,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	} else {
 		checksumObject = types.ObjectNull(checksumTypes)
 	}
+
 	if diags.HasError() {
 		return fmt.Errorf("creating checksum: %w", core.DiagsToError(diags))
 	}
@@ -354,5 +365,6 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	model.Labels = labels
 	model.Config = configObject
 	model.Checksum = checksumObject
+
 	return nil
 }

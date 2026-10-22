@@ -132,6 +132,7 @@ func (d *machineImagesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 // Read refreshes the Terraform state with the latest data.
 func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -163,6 +164,7 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -186,6 +188,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 	if optionsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -204,6 +207,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 							criList = append(criList, types.StringValue(string(*cri.Name)))
 						}
 					}
+
 					criVal, diags := types.ListValueFrom(ctx, types.StringType, criList)
 					if diags.HasError() {
 						return core.DiagsToError(diags)
@@ -224,6 +228,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 					if diags.HasError() {
 						return core.DiagsToError(diags)
 					}
+
 					versionsList = append(versionsList, versionObj)
 				}
 			}
@@ -240,6 +245,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			miList = append(miList, imgObj)
 		}
 	}
@@ -248,6 +254,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.MachineImages = mis
 
 	return nil

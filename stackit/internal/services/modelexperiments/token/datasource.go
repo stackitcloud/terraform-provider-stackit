@@ -144,8 +144,10 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	if getInstanceTokenResp == nil {
@@ -164,6 +166,7 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "AI Model Experiments instance token read")
 }
 

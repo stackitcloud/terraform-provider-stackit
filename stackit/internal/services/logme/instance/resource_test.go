@@ -217,13 +217,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
+
 			err := mapFields(tt.input, state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -300,19 +303,23 @@ func TestToCreatePayload(t *testing.T) {
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
 					parameters = &parametersModel{}
+
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())
 					}
 				}
 			}
+
 			output, err := toCreatePayload(tt.input, parameters)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -383,19 +390,23 @@ func TestToUpdatePayload(t *testing.T) {
 			if tt.input != nil {
 				if !(tt.input.Parameters.IsNull() || tt.input.Parameters.IsUnknown()) {
 					parameters = &parametersModel{}
+
 					diags := tt.input.Parameters.As(context.Background(), parameters, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting parameters: %v", diags.Errors())
 					}
 				}
 			}
+
 			output, err := toUpdatePayload(tt.input, parameters)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {

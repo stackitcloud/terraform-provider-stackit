@@ -63,6 +63,7 @@ func (r *networkInterfaceAttachResource) ModifyPlan(ctx context.Context, req res
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -162,6 +163,7 @@ func (r *networkInterfaceAttachResource) Schema(_ context.Context, _ resource.Sc
 func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -197,12 +199,14 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network interface attachment created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -226,7 +230,9 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface attachment", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -253,6 +259,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 		}
 
 		tflog.Info(ctx, "Network interface attachment read")
+
 		return
 	}
 
@@ -269,6 +276,7 @@ func (r *networkInterfaceAttachResource) Update(_ context.Context, _ resource.Up
 func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,7 +301,9 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing network interface from server", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -312,6 +322,7 @@ func (r *networkInterfaceAttachResource) ImportState(ctx context.Context, req re
 			"Error importing network_interface attachment",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id],[network_interface_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

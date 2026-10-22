@@ -163,11 +163,13 @@ func (d *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 // Read refreshes the Terraform state with the latest data.
 func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DatasourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	volumeId := model.VolumeId.ValueString()
@@ -191,6 +193,7 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -201,11 +204,13 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "volume read")
 }
 
@@ -213,6 +218,7 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 	if volumeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -234,8 +240,10 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 		return err
 	}
 
-	var sourceValues map[string]attr.Value
-	var sourceObject basetypes.ObjectValue
+	var (
+		sourceValues map[string]attr.Value
+		sourceObject basetypes.ObjectValue
+	)
 	if volumeResp.Source == nil {
 		sourceObject = types.ObjectNull(sourceTypes)
 	} else {
@@ -243,7 +251,9 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 			"type": types.StringValue(volumeResp.Source.Type),
 			"id":   types.StringValue(volumeResp.Source.Id),
 		}
+
 		var diags diag.Diagnostics
+
 		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
@@ -258,6 +268,7 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 	if name := volumeResp.Name; name != nil && *name == "" {
 		model.Name = types.StringNull()
 	}
+
 	model.Labels = labels
 	model.PerformanceClass = types.StringPointerValue(volumeResp.PerformanceClass)
 	model.ServerId = types.StringPointerValue(volumeResp.ServerId)

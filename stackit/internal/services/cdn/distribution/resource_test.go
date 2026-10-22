@@ -17,15 +17,19 @@ func createTestConfig(vals map[string]attr.Value) types.Object {
 	if _, ok := vals["blocked_ips"]; !ok {
 		vals["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{})
 	}
+
 	if _, ok := vals["default_cache_duration"]; !ok {
 		vals["default_cache_duration"] = types.StringNull()
 	}
+
 	if _, ok := vals["monthly_limit_bytes"]; !ok {
 		vals["monthly_limit_bytes"] = types.Int64Null()
 	}
+
 	if _, ok := vals["cache_config"]; !ok {
 		vals["cache_config"] = types.ObjectNull(cacheConfigTypes)
 	}
+
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -52,6 +56,7 @@ func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
 	for _, mod := range mods {
 		mod(vals)
 	}
+
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -124,6 +129,7 @@ func TestToCreatePayload(t *testing.T) {
 	if !ok {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
+
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 
 	config := createTestConfig(map[string]attr.Value{
@@ -210,8 +216,10 @@ func TestToCreatePayload(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
+
 	tests := map[string]struct {
 		Input    *Model
 		Expected *cdnSdk.CreateDistributionPayload
@@ -626,9 +634,11 @@ func TestToCreatePayload(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				// set generated ID before diffing
 				tc.Expected.IntentId = res.IntentId
@@ -692,6 +702,7 @@ func TestToPatchPayload(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -847,9 +858,11 @@ func TestToPatchPayload(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to patch payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				tc.Expected.IntentId = res.IntentId
 
@@ -982,6 +995,7 @@ func TestConvertConfig(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -1321,9 +1335,11 @@ func TestConvertConfig(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(
 					res, tc.Expected,
@@ -1378,6 +1394,7 @@ func TestMapFields(t *testing.T) {
 	if !ok {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
+
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 	populatedWafSet := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("rule1"),
@@ -1523,6 +1540,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 	distributionFixture := func(mods ...func(*cdnSdk.Distribution)) *cdnSdk.Distribution {
@@ -1566,6 +1584,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(distribution)
 		}
+
 		return distribution
 	}
 	// define old state with the secrets
@@ -1593,6 +1612,7 @@ func TestMapFields(t *testing.T) {
 		"strip_response_cookies": types.BoolUnknown(),
 		"forward_host_header":    types.BoolUnknown(),
 	})
+
 	tests := map[string]struct {
 		Input        *cdnSdk.Distribution
 		Expected     *Model
@@ -2009,9 +2029,11 @@ func TestMapFields(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(model, tc.Expected)
 				if diff != "" {
@@ -2112,6 +2134,7 @@ func TestValidateCountryCode(t *testing.T) {
 				} else if err.Error() != tc.expectedError {
 					t.Errorf("for input '%s', expected error '%s', but got '%s'", tc.inputCountry, tc.expectedError, err.Error())
 				}
+
 				if gotOutput != "" {
 					t.Errorf("expected empty string on error, but got '%s'", gotOutput)
 				}
@@ -2119,6 +2142,7 @@ func TestValidateCountryCode(t *testing.T) {
 				if err != nil {
 					t.Errorf("did not expect an error for input '%s', but got: %v", tc.inputCountry, err)
 				}
+
 				if gotOutput != tc.wantOutput {
 					t.Errorf("for input '%s', expected output '%s', but got '%s'", tc.inputCountry, tc.wantOutput, gotOutput)
 				}

@@ -14,6 +14,7 @@ func SimplifyCronString(cron string) string {
 		if simplified == "" {
 			simplified = "0"
 		}
+
 		return simplified
 	})
 

@@ -88,6 +88,7 @@ func (r *keyResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -235,6 +236,7 @@ func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 
 func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -295,11 +297,13 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Key created")
 }
 
 func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -311,6 +315,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	keyId := model.KeyId.ValueString()
 	if keyId == "" {
 		// Resource not yet created; ID is unknown.
@@ -330,7 +335,9 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -341,11 +348,13 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading key", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Key read")
 }
 
@@ -356,6 +365,7 @@ func (r *keyResource) Update(ctx context.Context, _ resource.UpdateRequest, resp
 
 func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -375,7 +385,9 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting key", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -395,6 +407,7 @@ func (r *keyResource) ImportState(ctx context.Context, req resource.ImportStateR
 			"Error importing key",
 			fmt.Sprintf("Exptected import identifier with format: [project_id],[region],[keyring_id],[key_id], got :%q", req.ID),
 		)
+
 		return
 	}
 
@@ -412,6 +425,7 @@ func mapFields(key *kms.Key, model *Model, region string) error {
 	if key == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

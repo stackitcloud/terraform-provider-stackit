@@ -106,11 +106,13 @@ func (d *networkAreaDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 // Read refreshes the Terraform state with the latest data.
 func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 
@@ -132,6 +134,7 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -148,5 +151,6 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area read")
 }
