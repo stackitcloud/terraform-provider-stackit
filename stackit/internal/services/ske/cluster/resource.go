@@ -117,7 +117,8 @@ type nodePool struct {
 	VolumeSize            types.Int32  `tfsdk:"volume_size"`
 	Labels                types.Map    `tfsdk:"labels"`
 	Taints                types.List   `tfsdk:"taints"`
-	CRI                   types.Object `tfsdk:"cri"`
+	CRI                   types.String `tfsdk:"cri"`
+	Kata                  types.Bool   `tfsdk:"kata"`
 	AvailabilityZones     types.List   `tfsdk:"availability_zones"`
 	AllowSystemComponents types.Bool   `tfsdk:"allow_system_components"`
 }
@@ -138,7 +139,8 @@ var nodePoolTypes = map[string]attr.Type{
 	"volume_size":             basetypes.Int32Type{},
 	"labels":                  basetypes.MapType{ElemType: types.StringType},
 	"taints":                  basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
-	"cri":                     basetypes.ObjectType{AttrTypes: criTypes},
+	"cri":                     basetypes.StringType{},
+	"kata":                    basetypes.BoolType{},
 	"availability_zones":      basetypes.ListType{ElemType: types.StringType},
 	"allow_system_components": basetypes.BoolType{},
 }
@@ -155,28 +157,6 @@ var taintTypes = map[string]attr.Type{
 	"effect": basetypes.StringType{},
 	"key":    basetypes.StringType{},
 	"value":  basetypes.StringType{},
-}
-
-// Struct corresponding to nodePool.CRI
-type cri struct {
-	Name types.String `tfsdk:"name"`
-	Kata types.Object `tfsdk:"kata"`
-}
-
-// Types corresponding to cri
-var criTypes = map[string]attr.Type{
-	"name": basetypes.StringType{},
-	"kata": basetypes.ObjectType{AttrTypes: kataTypes},
-}
-
-// Struct corresponding to nodePool.CRI.Kata
-type kata struct {
-	Enabled types.Bool `tfsdk:"enabled"`
-}
-
-// Types corresponding to kata
-var kataTypes = map[string]attr.Type{
-	"enabled": basetypes.BoolType{},
 }
 
 // Struct corresponding to Model.maintenance
@@ -460,10 +440,6 @@ var descriptions = map[string]string{
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	extensionApplicationLoadbalancerDefault := types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{"enabled": types.BoolValue(false)})
-	criDefault := types.ObjectValueMust(criTypes, map[string]attr.Value{
-		"name": types.StringValue(DefaultCRI),
-		"kata": types.ObjectValueMust(kataTypes, map[string]attr.Value{"enabled": types.BoolValue(false)}),
-	})
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"]),
 		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
@@ -658,35 +634,17 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								},
 							},
 						},
-						"cri": schema.SingleNestedAttribute{
-							Description: "Configures the container runtime.",
+						"cri": schema.StringAttribute{
+							Description: "Specifies the container runtime. Defaults to `containerd`",
 							Optional:    true,
 							Computed:    true,
-							Default:     objectdefault.StaticValue(criDefault),
-							Attributes: map[string]schema.Attribute{
-								"name": schema.StringAttribute{
-									Description: "Specifies the container runtime. Defaults to `containerd`",
-									Optional:    true,
-									Computed:    true,
-									Default:     stringdefault.StaticString(DefaultCRI),
-								},
-								"kata": schema.SingleNestedAttribute{
-									Description: "Configures Kata Containers workload isolation.",
-									Optional:    true,
-									Computed:    true,
-									Default: objectdefault.StaticValue(types.ObjectValueMust(kataTypes, map[string]attr.Value{
-										"enabled": types.BoolValue(false),
-									})),
-									Attributes: map[string]schema.Attribute{
-										"enabled": schema.BoolAttribute{
-											Description: "Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts. Otherwise the request will be rejected. Defaults to `false`.",
-											Optional:    true,
-											Computed:    true,
-											Default:     booldefault.StaticBool(false),
-										},
-									},
-								},
-							},
+							Default:     stringdefault.StaticString(DefaultCRI),
+						},
+						"kata": schema.BoolAttribute{
+							Description: "Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts. Otherwise the request will be rejected. Defaults to `false`.",
+							Optional:    true,
+							Computed:    true,
+							Default:     booldefault.StaticBool(false),
 						},
 					},
 				},
@@ -1266,9 +1224,11 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 			zs = append(zs, s)
 		}
 
-		cn, err := toCRIPayload(ctx, nodePool.CRI)
-		if err != nil {
-			return nil, nil, fmt.Errorf("creating CRI API payload for node_pool %q: %w", name, err)
+		cn := &ske.CRI{
+			Name: (*ske.NameOfTheCriLibrary)(conversion.StringValueToPointer(nodePool.CRI)),
+			Kata: &ske.Kata{
+				Enabled: nodePool.Kata.ValueBool(),
+			},
 		}
 
 		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
@@ -1325,35 +1285,6 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 	}
 
 	return cnps, deprecatedVersionsUsed, nil
-}
-
-func toCRIPayload(ctx context.Context, criModel types.Object) (*ske.CRI, error) {
-	if utils.IsUndefined(criModel) {
-		return nil, nil
-	}
-
-	cri := cri{}
-	diags := criModel.As(ctx, &cri, basetypes.ObjectAsOptions{})
-	if diags.HasError() {
-		return nil, fmt.Errorf("converting cri object: %v", diags.Errors())
-	}
-
-	var skeKata *ske.Kata
-	if !utils.IsUndefined(cri.Kata) {
-		kata := kata{}
-		diags = cri.Kata.As(ctx, &kata, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting cri.kata object: %v", diags.Errors())
-		}
-		skeKata = &ske.Kata{
-			Enabled: kata.Enabled.ValueBool(),
-		}
-	}
-
-	return &ske.CRI{
-		Name: (*ske.NameOfTheCriLibrary)(conversion.StringValueToPointer(cri.Name)),
-		Kata: skeKata,
-	}, nil
 }
 
 // verifySystemComponentsInNodePools checks if at least one node pool has the allow_system_components attribute set to true.
@@ -1770,7 +1701,8 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 			"volume_type":             types.StringPointerValue(nodePoolResp.Volume.Type),
 			"volume_size":             types.Int32Value(nodePoolResp.Volume.Size),
 			"labels":                  types.MapNull(types.StringType),
-			"cri":                     types.ObjectNull(criTypes),
+			"cri":                     types.StringPointerValue((*string)(nodePoolResp.Cri.Name)),
+			"kata":                    mapKata(nodePoolResp.Cri),
 			"availability_zones":      types.ListNull(types.StringType),
 			"allow_system_components": types.BoolPointerValue(nodePoolResp.AllowSystemComponents),
 		}
@@ -1782,11 +1714,6 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 		err := mapTaints(nodePoolResp.Taints, nodePool, taintsInModel)
 		if err != nil {
 			return fmt.Errorf("mapping index %d, field taints: %w", i, err)
-		}
-
-		err = mapCRI(ctx, nodePoolResp.Cri, nodePool, criInModel(i, modelNodePools))
-		if err != nil {
-			return fmt.Errorf("mapping index %d, field cri: %w", i, err)
 		}
 
 		if nodePoolResp.Labels != nil {
@@ -1823,51 +1750,11 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 	return nil
 }
 
-func criInModel(i int, modelNodePools []nodePool) types.Object {
-	if i < len(modelNodePools) && !utils.IsUndefined(modelNodePools[i].CRI) {
-		return modelNodePools[i].CRI
+func mapKata(criResp *ske.CRI) types.Bool {
+	if criResp != nil && criResp.Kata != nil {
+		return types.BoolValue(criResp.Kata.Enabled)
 	}
-	return types.ObjectNull(criTypes)
-}
-
-func mapCRI(ctx context.Context, criResp *ske.CRI, nodePool map[string]attr.Value, modelCRI types.Object) error {
-	// The API response is the source of truth for the CRI configuration.
-	if criResp != nil {
-		kataValue := types.ObjectNull(kataTypes)
-		if criResp.Kata != nil {
-			var diags diag.Diagnostics
-			kataValue, diags = types.ObjectValue(kataTypes, map[string]attr.Value{
-				"enabled": types.BoolValue(criResp.Kata.Enabled),
-			})
-			if diags.HasError() {
-				return fmt.Errorf("create kata object: %w", core.DiagsToError(diags))
-			}
-		} else if !utils.IsUndefined(modelCRI) {
-			modelCRIObj := cri{}
-			diags := modelCRI.As(ctx, &modelCRIObj, basetypes.ObjectAsOptions{})
-			if diags.HasError() {
-				return fmt.Errorf("converting cri object: %v", diags.Errors())
-			}
-			kataValue = modelCRIObj.Kata
-		}
-
-		criValue, diags := types.ObjectValue(criTypes, map[string]attr.Value{
-			"name": types.StringPointerValue((*string)(criResp.Name)),
-			"kata": kataValue,
-		})
-		if diags.HasError() {
-			return fmt.Errorf("create cri object: %w", core.DiagsToError(diags))
-		}
-		nodePool["cri"] = criValue
-		return nil
-	}
-
-	// The API did not return a cri block. If one was planned (e.g. via the schema
-	// default), keep it so apply does not produce an inconsistent result.
-	if !utils.IsUndefined(modelCRI) {
-		nodePool["cri"] = modelCRI
-	}
-	return nil
+	return types.BoolValue(false)
 }
 
 func mapTaints(t []ske.Taint, nodePool map[string]attr.Value, existInModel bool) error {

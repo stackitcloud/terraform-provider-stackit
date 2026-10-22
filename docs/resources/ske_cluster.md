@@ -31,12 +31,7 @@ resource "stackit_ske_cluster" "example" {
       availability_zones = ["eu01-3"]
       volume_type        = "storage_premium_perf6"
       volume_size        = "48"
-      cri = {
-        name = "containerd"
-        kata = {
-          enabled = false
-        }
-      }
+      kata               = false
     }
   ]
   network = {
@@ -95,7 +90,8 @@ Required:
 Optional:
 
 - `allow_system_components` (Boolean) Allow system components to run on this node pool.
-- `cri` (Attributes) Configures the container runtime. (see [below for nested schema](#nestedatt--node_pools--cri))
+- `cri` (String) Specifies the container runtime. Defaults to `containerd`
+- `kata` (Boolean) Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts. Otherwise the request will be rejected. Defaults to `false`.
 - `labels` (Map of String) Labels to add to each node.
 - `max_surge` (Number) Maximum number of additional VMs that are created during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.
 - `max_unavailable` (Number) Maximum number of VMs that that can be unavailable during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.
@@ -109,23 +105,6 @@ Optional:
 Read-Only:
 
 - `os_version_used` (String) Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/).
-
-<a id="nestedatt--node_pools--cri"></a>
-### Nested Schema for `node_pools.cri`
-
-Optional:
-
-- `kata` (Attributes) Configures Kata Containers workload isolation. (see [below for nested schema](#nestedatt--node_pools--cri--kata))
-- `name` (String) Specifies the container runtime. Defaults to `containerd`
-
-<a id="nestedatt--node_pools--cri--kata"></a>
-### Nested Schema for `node_pools.cri.kata`
-
-Optional:
-
-- `enabled` (Boolean) Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts. Otherwise the request will be rejected. Defaults to `false`.
-
-
 
 <a id="nestedatt--node_pools--taints"></a>
 ### Nested Schema for `node_pools.taints`
