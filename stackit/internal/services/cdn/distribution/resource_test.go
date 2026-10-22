@@ -2000,7 +2000,7 @@ func TestValidateLogSinkConfig(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "skip_when_push_url_unknown",
+			name: "validates_even_when_push_url_unknown",
 			logSink: testBuildLogSinkObject(
 				types.StringValue("otlp"),
 				types.StringUnknown(),
@@ -2301,6 +2301,168 @@ func TestToPatchLogSinkPayload(t *testing.T) {
 			diff := cmp.Diff(tc.expected, result, cmpopts.EquateEmpty())
 			if diff != "" {
 				t.Fatalf("Patch payload not as expected: %s", diff)
+			}
+		})
+	}
+}
+
+func TestMapLogSinkResource(t *testing.T) {
+	testPushURL := "https://logs.example.com/push"
+
+	testCases := []struct {
+		name        string
+		apiLogSink  *cdnSdk.ConfigLogSink
+		oldLogSink  types.Object
+		expected    types.Object
+		expectError bool
+	}{
+		{
+			name:        "api_nil_returns_null",
+			apiLogSink:  nil,
+			oldLogSink:  types.ObjectNull(logSinkTypes),
+			expected:    types.ObjectNull(logSinkTypes),
+			expectError: false,
+		},
+		{
+			name: "no_drift_loki_preserves_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				LokiLogSink: &cdnSdk.LokiLogSink{
+					Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://old.example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "no_drift_otlp_basic_preserves_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				OtlpLogSink: &cdnSdk.OtlpLogSink{
+					Type:    cdnSdk.OTLPLOGSINKTYPE_OTLP,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://old.example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "no_drift_otlp_bearer_preserves_token",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				OtlpLogSink: &cdnSdk.OtlpLogSink{
+					Type:    cdnSdk.OTLPLOGSINKTYPE_OTLP,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://old.example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("oldtoken")),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("oldtoken")),
+			),
+			expectError: false,
+		},
+		{
+			name: "drift_loki_to_otlp_clears_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				OtlpLogSink: &cdnSdk.OtlpLogSink{
+					Type:    cdnSdk.OTLPLOGSINKTYPE_OTLP,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://loki.example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("lokiuser"), types.StringValue("lokipass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "drift_otlp_basic_to_loki_clears_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				LokiLogSink: &cdnSdk.LokiLogSink{
+					Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://otlp.example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("otlpuser"), types.StringValue("otlppass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "drift_otlp_bearer_to_loki_clears_token",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				LokiLogSink: &cdnSdk.LokiLogSink{
+					Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://otlp.example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("otlptoken")),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := mapLogSinkResource(context.Background(), tc.apiLogSink, tc.oldLogSink)
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("expected error, got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			diff := cmp.Diff(tc.expected, result)
+			if diff != "" {
+				t.Fatalf("mapped log_sink not as expected: %s", diff)
 			}
 		})
 	}

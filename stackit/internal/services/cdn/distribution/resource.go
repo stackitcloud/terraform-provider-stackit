@@ -110,7 +110,7 @@ var schemaDescriptions = map[string]string{
 	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
 	"config_strip_response_cookies":                "Enable this to prevent origin-level cookies from being forwarded to the end user.",
 	"config_forward_host_header":                   "Enable this allows the 'Host' header to be passed through to the origin.",
-	"config_log_sink":                              "Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations.",
+	"config_log_sink":                              "Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations. If the sink type is changed outside of Terraform, previously stored credentials are cleared on refresh and must be re-applied via `terraform apply`.",
 	"config_log_sink_type":                         "The log sink protocol",
 	"config_log_sink_push_url":                     "The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).",
 	"config_log_sink_credentials":                  "Authentication credentials the CDN uses when pushing logs. Loki requires `username` and `password`. OTLP requires `type` to be set to `basic` (with `username` and `password`) or `bearer` (with `token`).",
@@ -906,7 +906,6 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 	// interpolated references). The validation will re-run with concrete
 	// values before apply.
 	if logSink.Type.IsUnknown() ||
-		logSink.PushUrl.IsUnknown() ||
 		creds.Type.IsUnknown() ||
 		creds.Token.IsUnknown() ||
 		creds.Username.IsUnknown() ||
@@ -2286,7 +2285,11 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 // mapLogSinkResource maps the API log_sink response into a Terraform object
 // suitable for the resource schema. Credentials are preserved from the prior
-// Terraform state (`oldLogSink`) because the API never returns raw secrets.
+// Terraform state (`oldLogSink`) only when the sink type has not changed,
+// because the API never returns raw secrets. If the sink type was changed
+// out-of-band (e.g. Loki <-> OTLP), credentials from the old sink type do not
+// apply to the new one and are cleared so Terraform can re-apply the configured
+// credentials on the next apply.
 //
 // Returns a null object when the API response has no log_sink configured.
 func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, oldLogSink types.Object) (types.Object, error) {
@@ -2294,15 +2297,17 @@ func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, o
 		return types.ObjectNull(logSinkTypes), nil
 	}
 
-	// Extract the prior credentials so we can preserve secrets that the API
-	// does not return.
+	// Extract the prior credentials and sink type so we can preserve secrets that
+	// the API does not return, provided the sink type hasn't changed.
 	var oldCreds logSinkCredentialsConfig
+	var oldType types.String
 	if !utils.IsUndefined(oldLogSink) {
 		var oldLogSinkModel logSinkConfig
 		diags := oldLogSink.As(ctx, &oldLogSinkModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return types.ObjectNull(logSinkTypes), core.DiagsToError(diags)
 		}
+		oldType = oldLogSinkModel.Type
 		if !utils.IsUndefined(oldLogSinkModel.Credentials) {
 			diags = oldLogSinkModel.Credentials.As(ctx, &oldCreds, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
@@ -2323,30 +2328,39 @@ func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, o
 	case apiLogSink.LokiLogSink != nil:
 		typeVal = types.StringValue(string(apiLogSink.LokiLogSink.Type))
 		pushUrlVal = types.StringValue(apiLogSink.LokiLogSink.PushUrl)
-		// Loki only supports basic auth (username/password). Preserve both
-		// secrets from the prior state.
-		if !oldCreds.Username.IsNull() {
-			credsAttrs["username"] = oldCreds.Username
-		}
-		if !oldCreds.Password.IsNull() {
-			credsAttrs["password"] = oldCreds.Password
+		// Loki only supports basic auth (username/password). Only preserve
+		// secrets if the prior state was also Loki; if the sink type was changed
+		// out-of-band, the old credentials do not apply.
+		if !oldType.IsNull() && !oldType.IsUnknown() &&
+			oldType.ValueString() == string(cdnSdk.LOKILOGSINKTYPE_LOKI) {
+			if !oldCreds.Username.IsNull() {
+				credsAttrs["username"] = oldCreds.Username
+			}
+			if !oldCreds.Password.IsNull() {
+				credsAttrs["password"] = oldCreds.Password
+			}
 		}
 	case apiLogSink.OtlpLogSink != nil:
 		typeVal = types.StringValue(string(apiLogSink.OtlpLogSink.Type))
 		pushUrlVal = types.StringValue(apiLogSink.OtlpLogSink.PushUrl)
-		// OTLP supports both basic and bearer credentials. Restore whichever
-		// the user previously configured.
-		if !oldCreds.Type.IsNull() {
-			credsAttrs["type"] = oldCreds.Type
-		}
-		if !oldCreds.Username.IsNull() {
-			credsAttrs["username"] = oldCreds.Username
-		}
-		if !oldCreds.Password.IsNull() {
-			credsAttrs["password"] = oldCreds.Password
-		}
-		if !oldCreds.Token.IsNull() {
-			credsAttrs["token"] = oldCreds.Token
+		// OTLP supports both basic and bearer credentials. Only restore
+		// whichever credentials the user previously configured if the prior
+		// state was also OTLP; if the sink type was changed out-of-band, the
+		// old credentials do not apply.
+		if !oldType.IsNull() && !oldType.IsUnknown() &&
+			oldType.ValueString() == string(cdnSdk.OTLPLOGSINKTYPE_OTLP) {
+			if !oldCreds.Type.IsNull() {
+				credsAttrs["type"] = oldCreds.Type
+			}
+			if !oldCreds.Username.IsNull() {
+				credsAttrs["username"] = oldCreds.Username
+			}
+			if !oldCreds.Password.IsNull() {
+				credsAttrs["password"] = oldCreds.Password
+			}
+			if !oldCreds.Token.IsNull() {
+				credsAttrs["token"] = oldCreds.Token
+			}
 		}
 	default:
 		return types.ObjectNull(logSinkTypes), nil
