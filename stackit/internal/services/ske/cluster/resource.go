@@ -2435,7 +2435,7 @@ func latestMatchingVersion(availableVersions []VersionWithState, versionMin, cur
 			}
 			available = append(available, availableVersion.GetVersion())
 		}
-		return nil, false, false, fmt.Errorf("provided version is not one of the available versions, available versions are: %s", strings.Join(available, ","))
+		return nil, false, false, fmt.Errorf("provided version is not one of the available versions, available versions are: %s", strings.Join(available, ", "))
 	}
 
 	selectedVersion := selected.GetVersion()
