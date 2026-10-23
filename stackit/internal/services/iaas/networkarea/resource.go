@@ -52,7 +52,7 @@ func NewNetworkAreaResource() resource.Resource {
 	return &networkAreaResource{}
 }
 
-// networkResource is the resource implementation.
+// networkAreaResource is the resource implementation.
 type networkAreaResource struct {
 	client                iaas.DefaultAPI
 	resourceManagerClient resourcemanager.DefaultAPI
