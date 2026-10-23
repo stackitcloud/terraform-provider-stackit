@@ -146,6 +146,8 @@ import (
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
 	valkeyCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/credential"
 	valkeyInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/instance"
+	vpnBgpFilter "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/bgp_filter"
+	vpnBgpFilterRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/bgp_filter_rule"
 	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
 	vpnGatewayStatus "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway_status"
@@ -866,6 +868,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
 		valkeyCredential.NewCredentialDataSource,
 		valkeyInstance.NewInstanceDataSource,
+		vpnBgpFilter.NewVPNBGPFilterDataSource,
+		vpnBgpFilterRule.NewVPNBGPFilterRuleDataSource,
 		vpnConnection.NewVPNConnectionDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
@@ -964,6 +968,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryLink.NewTelemetryLinkResource,
 		valkeyInstance.NewInstanceResource,
 		valkeyCredential.NewCredentialResource,
+		vpnBgpFilter.NewVPNBGPFilterResource,
+		vpnBgpFilterRule.NewVPNBGPFilterRuleResource,
 		vpnConnection.NewVpnConnectionResource,
 		vpnGateway.NewGatewayResource,
 		iaasAffinityGroup.NewAffinityGroupResource,

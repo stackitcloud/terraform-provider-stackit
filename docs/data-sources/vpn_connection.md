@@ -58,6 +58,7 @@ Read-Only:
 
 Read-Only:
 
+- `inbound_filter_id` (String) UUID of the `stackit_vpn_bgp_filter` applied for inbound route filtering on this tunnel's BGP peering session, if any.
 - `remote_asn` (Number) Remote AS number.
 
 
@@ -111,6 +112,7 @@ Read-Only:
 
 Read-Only:
 
+- `inbound_filter_id` (String) UUID of the `stackit_vpn_bgp_filter` applied for inbound route filtering on this tunnel's BGP peering session, if any.
 - `remote_asn` (Number) Remote AS number.
 
 
