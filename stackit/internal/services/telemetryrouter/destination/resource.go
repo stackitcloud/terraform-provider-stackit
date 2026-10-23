@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,7 +27,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/utils"
+
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -195,7 +196,7 @@ var accessKeyTypes = map[string]attr.Type{
 }
 
 type telemetryRouterDestinationResource struct {
-	client       *telemetryrouter.APIClient
+	client       telemetryrouter.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -204,17 +205,14 @@ func NewTelemetryRouterDestinationResource() resource.Resource {
 }
 
 func (r *telemetryRouterDestinationResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	r.providerData = providerData
+	r.client = clients.TelemetryRouterV1Client
+
 	tflog.Info(ctx, "TelemetryRouter client configured")
 }
 
@@ -293,6 +291,13 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
+						"The display name must start with an alphanumeric character and can contain only letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"config": schema.SingleNestedAttribute{
 				Description: schemaDescriptions["config"],
@@ -420,6 +425,13 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(1024),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9 \-]*)?$`),
+						"The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"creation_time": schema.StringAttribute{
 				Description: schemaDescriptions["creation_time"],
@@ -430,8 +442,9 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 				Computed:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: schemaDescriptions["status"],
-				Computed:    true,
+				Description:        schemaDescriptions["status"],
+				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
+				Computed:           true,
 			},
 		},
 	}
@@ -538,7 +551,7 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	createResp, err := r.client.DefaultAPI.CreateDestination(ctx, projectId, region, instanceId).CreateDestinationPayload(*payload).Execute()
+	createResp, err := r.client.CreateDestination(ctx, projectId, region, instanceId).CreateDestinationPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -563,7 +576,7 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 		return
 	}
 
-	waitResp, err := wait.CreateDestinationWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
+	waitResp, err := wait.CreateDestinationWaitHandler(ctx, r.client, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
 		return
@@ -608,7 +621,7 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "destination_id", destinationID)
 
-	instanceResponse, err := r.client.DefaultAPI.GetDestination(ctx, projectID, region, instanceID, destinationID).Execute()
+	instanceResponse, err := r.client.GetDestination(ctx, projectID, region, instanceID, destinationID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -663,7 +676,7 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 		return
 	}
 
-	updateResp, err := r.client.DefaultAPI.UpdateDestination(ctx, projectID, region, instanceID, destinationID).UpdateDestinationPayload(*payload).Execute()
+	updateResp, err := r.client.UpdateDestination(ctx, projectID, region, instanceID, destinationID).UpdateDestinationPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -671,7 +684,7 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, updateResp.Id).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateDestinationWaitHandler(ctx, r.client, projectID, region, instanceID, updateResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
 		return
@@ -714,7 +727,7 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "destination_id", destinationID)
 
-	err := r.client.DefaultAPI.DeleteDestination(ctx, projectID, region, instanceID, destinationID).Execute()
+	err := r.client.DeleteDestination(ctx, projectID, region, instanceID, destinationID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -722,7 +735,7 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, destinationID).WaitWithContext(ctx)
+	_, err = wait.DeleteDestinationWaitHandler(ctx, r.client, projectID, region, instanceID, destinationID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become deleted: %v", err))
 		return

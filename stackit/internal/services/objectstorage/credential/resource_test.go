@@ -15,22 +15,6 @@ import (
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
-type mockSettings struct {
-	returnError bool
-}
-
-func newAPIMock(settings *mockSettings) objectstorage.DefaultAPI {
-	return &objectstorage.DefaultAPIServiceMock{
-		EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
-			if settings.returnError {
-				return nil, fmt.Errorf("create project failed")
-			}
-
-			return &objectstorage.ProjectStatus{}, nil
-		}),
-	}
-}
-
 func TestMapFields(t *testing.T) {
 	now := time.Now()
 	const testRegion = "eu01"
@@ -160,71 +144,6 @@ func TestMapFields(t *testing.T) {
 	}
 }
 
-func TestEnableProject(t *testing.T) {
-	const testRegion = "eu01"
-	id := fmt.Sprintf("%s,%s,%s", "pid", testRegion, "cgid,cid")
-	tests := []struct {
-		description string
-		expected    Model
-		enableFails bool
-		isValid     bool
-	}{
-		{
-			"default_values",
-			Model{
-				Id:                  types.StringValue(id),
-				ProjectId:           types.StringValue("pid"),
-				CredentialsGroupId:  types.StringValue("cgid"),
-				CredentialId:        types.StringValue("cid"),
-				Name:                types.StringNull(),
-				AccessKey:           types.StringNull(),
-				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: types.StringNull(),
-				RotateWhenChanged:   types.MapNull(types.StringType),
-			},
-			false,
-			true,
-		},
-		{
-			"error_response",
-			Model{
-				Id:                  types.StringValue(id),
-				ProjectId:           types.StringValue("pid"),
-				CredentialsGroupId:  types.StringValue("cgid"),
-				CredentialId:        types.StringValue("cid"),
-				Name:                types.StringNull(),
-				AccessKey:           types.StringNull(),
-				SecretAccessKey:     types.StringNull(),
-				ExpirationTimestamp: types.StringNull(),
-				RotateWhenChanged:   types.MapNull(types.StringType),
-			},
-			true,
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			client := newAPIMock(&mockSettings{
-				returnError: tt.enableFails,
-			})
-
-			model := &Model{
-				ProjectId:          tt.expected.ProjectId,
-				CredentialsGroupId: tt.expected.CredentialsGroupId,
-				CredentialId:       tt.expected.CredentialId,
-				RotateWhenChanged:  types.MapNull(types.StringType),
-			}
-			err := enableProject(context.Background(), model, "eu01", client)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
-		})
-	}
-}
-
 func TestReadCredentials(t *testing.T) {
 	now := time.Now()
 	const testRegion = "eu01"
@@ -249,7 +168,7 @@ func TestReadCredentials(t *testing.T) {
 					},
 					{
 						KeyId:   "cid",
-						Expires: now.Format(time.RFC3339Nano),
+						Expires: *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -276,17 +195,17 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "foo-cid",
 						DisplayName: "foo-name",
-						Expires:     now.Add(time.Hour).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Hour).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "bar-cid",
 						DisplayName: "bar-name",
-						Expires:     now.Add(time.Minute).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Minute).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "cid",
 						DisplayName: "name",
-						Expires:     now.Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -313,17 +232,17 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "foo-cid",
 						DisplayName: "foo-name",
-						Expires:     now.Add(time.Hour).Format(time.RFC3339Nano),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Hour).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "bar-cid",
 						DisplayName: "bar-name",
-						Expires:     now.Add(time.Minute).Format(time.RFC3339Nano),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Minute).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "cid",
 						DisplayName: "name",
-						Expires:     now.Format(time.RFC3339Nano),
+						Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -371,12 +290,12 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "foo-cid",
 						DisplayName: "foo-name",
-						Expires:     now.Add(time.Hour).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Hour).Format(time.RFC3339Nano))),
 					},
 					{
 						KeyId:       "bar-cid",
 						DisplayName: "bar-name",
-						Expires:     now.Add(time.Minute).Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Add(time.Minute).Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -395,7 +314,7 @@ func TestReadCredentials(t *testing.T) {
 					{
 						KeyId:       "cid",
 						DisplayName: "name",
-						Expires:     now.Format(time.RFC3339),
+						Expires:     *objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 					},
 				},
 			},
@@ -446,7 +365,7 @@ func TestReadCredentials(t *testing.T) {
 				CredentialId:       tt.expectedModel.CredentialId,
 				RotateWhenChanged:  types.MapNull(types.StringType),
 			}
-			found, err := readCredentials(context.Background(), model, "eu01", client)
+			found, err := readCredentials(context.Background(), model, "eu01", client.DefaultAPI)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

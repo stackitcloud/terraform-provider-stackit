@@ -42,38 +42,32 @@ var (
 	_ resource.ResourceWithModifyPlan  = &networkResource{}
 )
 
-const (
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	ipv4BehaviorChangeTitle = "Behavior of not configured `ipv4_nameservers` has changed"
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	ipv4BehaviorChangeDescription = "When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.\n" +
-		"To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.\n" +
-		"In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged."
-)
-
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	NetworkId        types.String `tfsdk:"network_id"`
-	Name             types.String `tfsdk:"name"`
-	IPv4Gateway      types.String `tfsdk:"ipv4_gateway"`
-	IPv4Nameservers  types.List   `tfsdk:"ipv4_nameservers"`
-	IPv4Prefix       types.String `tfsdk:"ipv4_prefix"`
-	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
-	IPv4Prefixes     types.List   `tfsdk:"ipv4_prefixes"`
-	IPv6Gateway      types.String `tfsdk:"ipv6_gateway"`
-	IPv6Nameservers  types.List   `tfsdk:"ipv6_nameservers"`
-	IPv6Prefix       types.String `tfsdk:"ipv6_prefix"`
-	IPv6PrefixLength types.Int64  `tfsdk:"ipv6_prefix_length"`
-	IPv6Prefixes     types.List   `tfsdk:"ipv6_prefixes"`
-	PublicIP         types.String `tfsdk:"public_ip"`
-	Labels           types.Map    `tfsdk:"labels"`
-	Routed           types.Bool   `tfsdk:"routed"`
-	NoIPv4Gateway    types.Bool   `tfsdk:"no_ipv4_gateway"`
-	NoIPv6Gateway    types.Bool   `tfsdk:"no_ipv6_gateway"`
-	Region           types.String `tfsdk:"region"`
-	RoutingTableID   types.String `tfsdk:"routing_table_id"`
-	DHCP             types.Bool   `tfsdk:"dhcp"`
+	Id                    types.String `tfsdk:"id"` // needed by TF
+	ProjectId             types.String `tfsdk:"project_id"`
+	NetworkId             types.String `tfsdk:"network_id"`
+	Name                  types.String `tfsdk:"name"`
+	IPv4Gateway           types.String `tfsdk:"ipv4_gateway"`
+	IPv4Nameservers       types.List   `tfsdk:"ipv4_nameservers"`
+	IPv4Prefix            types.String `tfsdk:"ipv4_prefix"`
+	IPv4PrefixLength      types.Int64  `tfsdk:"ipv4_prefix_length"`
+	IPv4Prefixes          types.List   `tfsdk:"ipv4_prefixes"`
+	IPv4VpcNetworkRangeId types.String `tfsdk:"ipv4_vpc_network_range_id"`
+	IPv6Gateway           types.String `tfsdk:"ipv6_gateway"`
+	IPv6Nameservers       types.List   `tfsdk:"ipv6_nameservers"`
+	IPv6Prefix            types.String `tfsdk:"ipv6_prefix"`
+	IPv6PrefixLength      types.Int64  `tfsdk:"ipv6_prefix_length"`
+	IPv6Prefixes          types.List   `tfsdk:"ipv6_prefixes"`
+	IPv6VpcNetworkRangeId types.String `tfsdk:"ipv6_vpc_network_range_id"`
+	PublicIP              types.String `tfsdk:"public_ip"`
+	Labels                types.Map    `tfsdk:"labels"`
+	Routed                types.Bool   `tfsdk:"routed"`
+	NoIPv4Gateway         types.Bool   `tfsdk:"no_ipv4_gateway"`
+	NoIPv6Gateway         types.Bool   `tfsdk:"no_ipv6_gateway"`
+	Region                types.String `tfsdk:"region"`
+	RoutingTableID        types.String `tfsdk:"routing_table_id"`
+	DHCP                  types.Bool   `tfsdk:"dhcp"`
+	VPCID                 types.String `tfsdk:"vpc_id"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -83,7 +77,7 @@ func NewNetworkResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -94,17 +88,14 @@ func (r *networkResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *networkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -125,12 +116,6 @@ func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	// Warning should only be shown during the plan of the creation. This can be detected by checking if the ID is set.
-	if utils.IsUndefined(planModel.Id) && utils.IsUndefined(planModel.IPv4Nameservers) {
-		addIPv4Warning(&resp.Diagnostics)
 	}
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
@@ -191,7 +176,8 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 		!model.IPv4PrefixLength.IsNull() ||
 		!model.IPv4Gateway.IsNull() ||
 		!model.NoIPv4Gateway.IsNull() ||
-		!model.IPv4Nameservers.IsNull()
+		!model.IPv4Nameservers.IsNull() ||
+		!model.IPv4VpcNetworkRangeId.IsNull()
 
 	if ipv4IsActive {
 		if model.IPv4Prefix.IsNull() && model.IPv4PrefixLength.IsNull() {
@@ -205,7 +191,8 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 		!model.IPv6PrefixLength.IsNull() ||
 		!model.IPv6Gateway.IsNull() ||
 		!model.NoIPv6Gateway.IsNull() ||
-		!model.IPv6Nameservers.IsNull()
+		!model.IPv6Nameservers.IsNull() ||
+		!model.IPv6VpcNetworkRangeId.IsNull()
 
 	if ipv6IsActive {
 		if model.IPv6Prefix.IsNull() && model.IPv6PrefixLength.IsNull() {
@@ -218,9 +205,8 @@ func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) 
 // Schema defines the schema for the resource.
 func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network resource schema. Must have a `region` specified in the provider configuration."
-	descriptionNote := fmt.Sprintf("~> %s. %s", ipv4BehaviorChangeTitle, ipv4BehaviorChangeDescription)
 	resp.Schema = schema.Schema{
-		MarkdownDescription: fmt.Sprintf("%s\n%s", description, descriptionNote),
+		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -308,6 +294,17 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					listplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"ipv4_vpc_network_range_id": schema.StringAttribute{
+				Description: "The IPv4 VPC network range ID.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
 			"no_ipv6_gateway": schema.BoolAttribute{
 				Description: "If set to `true`, the network doesn't have a gateway.",
 				Optional:    true,
@@ -351,6 +348,17 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"ipv6_vpc_network_range_id": schema.StringAttribute{
+				Description: "The IPv6 VPC network range ID.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
 				},
 			},
 			"public_ip": schema.StringAttribute{
@@ -404,6 +412,19 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"vpc_id": schema.StringAttribute{
+				Description: "The ID of the VPC the network is associated with.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+					stringvalidator.AlsoRequires(path.Root("ipv4_vpc_network_range_id").Expression()),
+				},
+			},
 		},
 	}
 }
@@ -425,12 +446,6 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-	// When IPv4Nameserver is not set, print warning that the behavior of ipv4_nameservers has changed
-	if utils.IsUndefined(model.IPv4Nameservers) {
-		addIPv4Warning(&resp.Diagnostics)
-	}
-
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
@@ -440,7 +455,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new network
 
-	network, err := r.client.DefaultAPI.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
+	network, err := r.client.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -459,7 +474,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	network, err = wait.CreateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
@@ -503,7 +518,7 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	networkResp, err := r.client.DefaultAPI.GetNetwork(ctx, projectId, region, networkId).Execute()
+	networkResp, err := r.client.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -565,19 +580,20 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
-
 	// Update existing network
-	err = r.client.DefaultAPI.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
+	err = r.client.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+
+	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
@@ -609,8 +625,10 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Delete existing network
-	err := r.client.DefaultAPI.DeleteNetwork(ctx, projectId, region, networkId).Execute()
+	err := r.client.DeleteNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -620,7 +638,10 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
+
+	ctx = core.LogResponse(ctx)
+
+	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))
 		return
@@ -729,6 +750,11 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 		model.PublicIP = types.StringPointerValue(networkResp.Ipv4.PublicIp)
 	}
 
+	model.IPv4VpcNetworkRangeId = types.StringNull()
+	if networkResp.Ipv4 != nil && networkResp.Ipv4.VpcNetworkRangeId != nil {
+		model.IPv4VpcNetworkRangeId = types.StringPointerValue(networkResp.Ipv4.VpcNetworkRangeId)
+	}
+
 	// IPv6
 
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Nameservers == nil {
@@ -780,6 +806,11 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.Gateway.Get())
 	}
 
+	model.IPv6VpcNetworkRangeId = types.StringNull()
+	if networkResp.Ipv6 != nil && networkResp.Ipv6.VpcNetworkRangeId != nil {
+		model.IPv6VpcNetworkRangeId = types.StringPointerValue(networkResp.Ipv6.VpcNetworkRangeId)
+	}
+
 	model.RoutingTableID = types.StringPointerValue(networkResp.RoutingTableId)
 	model.NetworkId = types.StringValue(networkId)
 	model.Name = types.StringValue(networkResp.Name)
@@ -787,6 +818,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringValue(region)
 	model.DHCP = types.BoolPointerValue(networkResp.Dhcp)
+	model.VPCID = types.StringPointerValue(networkResp.VpcId)
 
 	return nil
 }
@@ -815,7 +847,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	if !utils.IsUndefined(model.IPv6PrefixLength) {
 		ipv6Body = &iaas.CreateNetworkIPv6{
 			CreateNetworkIPv6WithPrefixLength: &iaas.CreateNetworkIPv6WithPrefixLength{
-				PrefixLength: model.IPv6PrefixLength.ValueInt64(),
+				PrefixLength:      model.IPv6PrefixLength.ValueInt64(),
+				VpcNetworkRangeId: conversion.StringValueToPointer(model.IPv6VpcNetworkRangeId),
 			},
 		}
 
@@ -835,8 +868,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 
 		ipv6Body = &iaas.CreateNetworkIPv6{
 			CreateNetworkIPv6WithPrefix: &iaas.CreateNetworkIPv6WithPrefix{
-				Gateway: gateway,
-				Prefix:  model.IPv6Prefix.ValueString(),
+				Gateway:           gateway,
+				Prefix:            model.IPv6Prefix.ValueString(),
+				VpcNetworkRangeId: conversion.StringValueToPointer(model.IPv6VpcNetworkRangeId),
 			},
 		}
 
@@ -865,7 +899,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	if !utils.IsUndefined(model.IPv4PrefixLength) {
 		ipv4Body = &iaas.CreateNetworkIPv4{
 			CreateNetworkIPv4WithPrefixLength: &iaas.CreateNetworkIPv4WithPrefixLength{
-				PrefixLength: model.IPv4PrefixLength.ValueInt64(),
+				PrefixLength:      model.IPv4PrefixLength.ValueInt64(),
+				VpcNetworkRangeId: conversion.StringValueToPointer(model.IPv4VpcNetworkRangeId),
 			},
 		}
 		if modelIPv4Nameservers != nil {
@@ -881,8 +916,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 
 		ipv4Body = &iaas.CreateNetworkIPv4{
 			CreateNetworkIPv4WithPrefix: &iaas.CreateNetworkIPv4WithPrefix{
-				Prefix:  model.IPv4Prefix.ValueString(),
-				Gateway: gateway,
+				Prefix:            model.IPv4Prefix.ValueString(),
+				Gateway:           gateway,
+				VpcNetworkRangeId: conversion.StringValueToPointer(model.IPv4VpcNetworkRangeId),
 			},
 		}
 		if modelIPv4Nameservers != nil {
@@ -903,6 +939,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		Ipv6:           ipv6Body,
 		RoutingTableId: conversion.StringValueToPointer(model.RoutingTableID),
 		Dhcp:           conversion.BoolValueToPointer(model.DHCP),
+		VpcId:          conversion.StringValueToPointer(model.VPCID),
 	}
 
 	return &payload, nil
@@ -987,11 +1024,4 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 
 func (m *Model) isIPv4UpdateConfigSet() bool {
 	return !utils.IsUndefined(m.IPv4Nameservers) || m.NoIPv4Gateway.ValueBool() || !utils.IsUndefined(m.IPv4Gateway)
-}
-
-// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
-func addIPv4Warning(diags *diag.Diagnostics) {
-	diags.AddAttributeWarning(path.Root("ipv4_nameservers"),
-		ipv4BehaviorChangeTitle,
-		ipv4BehaviorChangeDescription)
 }

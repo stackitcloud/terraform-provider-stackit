@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -17,7 +15,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -32,7 +30,7 @@ func NewDatabaseDataSource() datasource.DataSource {
 
 // databaseDataSource is the data source implementation.
 type databaseDataSource struct {
-	client       *postgresflex.APIClient
+	client       postgresflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,16 +42,14 @@ func (r *databaseDataSource) Metadata(_ context.Context, req datasource.Metadata
 // Configure adds the provider configured client to the data source.
 func (r *databaseDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.PostgresflexV3Client
+
 	tflog.Info(ctx, "Postgres Flex database client configured")
 }
 
@@ -130,21 +126,28 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	databaseId := model.DatabaseId.ValueString()
+	databaseIdStr := model.DatabaseId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
+	// In v2 the ID was a string. This was changed in the v3 API.
+	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Parsing database ID: %v", err))
+		return
+	}
+
+	databaseResp, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading database",
-			fmt.Sprintf("Database with ID %q or instance with ID %q does not exist in project %q.", databaseId, instanceId, projectId),
+			fmt.Sprintf("Database with ID %d or instance with ID %q does not exist in project %q.", databaseId, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -153,7 +156,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - sdk call is hidden in getDatabase()
 
 	// Map response body to schema and populate Computed attribute values
 	err = mapFields(databaseResp, &model, region)

@@ -50,7 +50,7 @@ resource "stackit_authorization_service_account_role_assignment" "sa" {
 ### Required
 
 - `resource_id` (String) Service-account Resource to assign the role to.
-- `role` (String) Role to be assigned. Available roles can be queried using stackit-cli: `stackit curl https://authorization.api.stackit.cloud/v2/permissions`
+- `role` (String) Role to be assigned. Available roles can be queried using stackit-cli: `stackit curl https://authorization.api.stackit.cloud/v2/{resourceType}/{resourceId}/roles`
 - `subject` (String) Identifier of user, service account or client. Usually email address or name in case of clients. All letters must be lowercased.
 
 ### Read-Only

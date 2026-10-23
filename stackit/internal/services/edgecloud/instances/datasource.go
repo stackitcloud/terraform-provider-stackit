@@ -14,10 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	edgeutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -54,28 +52,25 @@ func NewInstancesDataSource() datasource.DataSource {
 
 // instancesDataSource is the data source implementation.
 type instancesDataSource struct {
-	client       *edge.APIClient
+	client       edge.DefaultAPI
 	providerData core.ProviderData
 }
 
 // Configure sets up the API client for the Edge Cloud instance data source.
 func (d *instancesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	d.providerData = providerData
+	d.client = clients.EdgeV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_edgecloud_instances", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := edgeutils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
 	tflog.Info(ctx, "edge cloud client configured")
 }
 
@@ -167,7 +162,7 @@ func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Fetch all instances for the project and region
-	instancesResp, err := d.client.DefaultAPI.ListInstances(ctx, projectId, region).Execute()
+	instancesResp, err := d.client.ListInstances(ctx, projectId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

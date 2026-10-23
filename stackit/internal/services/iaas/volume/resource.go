@@ -94,7 +94,7 @@ func NewVolumeResource() resource.Resource {
 
 // volumeResource is the resource implementation.
 type volumeResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -146,16 +146,14 @@ func (r *volumeResource) ConfigValidators(_ context.Context) []resource.ConfigVa
 // Configure adds the provider configured client to the resource.
 func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -206,10 +204,8 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"server_id": schema.StringAttribute{
 				Description: "The server ID of the server to which the volume is attached to.",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				// UseStateForUnknown should never be set here. This value can change during updates and cause an error.
+				Computed: true,
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -433,6 +429,16 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	// The config model - this has to be used because Terraform doesn't include write-only field values in the
+	// plan and state models - for security measures. Write-only values should be only kept in the config model
+	// so that they never end up in the state (or plan).
+	var configModel Model
+	diags = req.Config.Get(ctx, &configModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -450,7 +456,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model, source)
+	payload, err := toCreatePayload(ctx, &model, &configModel, source)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -458,7 +464,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new volume
 
-	volume, err := r.client.DefaultAPI.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
+	volume, err := r.client.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -481,7 +487,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, volumeId).WaitWithContext(ctx)
+	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("volume creation waiting: %v", err))
 		return
@@ -526,7 +532,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	volumeResp, err := r.client.DefaultAPI.GetVolume(ctx, projectId, region, volumeId).Execute()
+	volumeResp, err := r.client.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -588,7 +594,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	// Update existing volume
-	updatedVolume, err := r.client.DefaultAPI.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
+	updatedVolume, err := r.client.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -606,7 +612,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			resizePayload := iaas.ResizeVolumePayload{
 				Size: *modelSize,
 			}
-			err = r.client.DefaultAPI.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(resizePayload).Execute()
+			err = r.client.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(resizePayload).Execute()
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Resizing the volume, calling API: %v", err))
 			}
@@ -648,7 +654,7 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Delete existing volume
-	err := r.client.DefaultAPI.DeleteVolume(ctx, projectId, region, volumeId).Execute()
+	err := r.client.DeleteVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -661,7 +667,7 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, volumeId).WaitWithContext(ctx)
+	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("volume deletion waiting: %v", err))
 		return
@@ -753,9 +759,12 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*iaas.CreateVolumePayload, error) {
+func toCreatePayload(ctx context.Context, model, configModel *Model, source *sourceModel) (*iaas.CreateVolumePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
+	}
+	if configModel == nil {
+		return nil, fmt.Errorf("nil config model")
 	}
 
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
@@ -782,12 +791,19 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		Source:           sourcePayload,
 	}
 
-	if model.EncryptionParameters != nil {
+	if model.EncryptionParameters != nil && configModel.EncryptionParameters != nil {
+		// Terraform keeps the write-only field values in the config model - and they shouldn't leave this config model
+		// to make sure they don't end up being stored in the state. In the plan model the write-only field values are just
+		// empty. That's why write-only field values must be read from the config model. Everything else comes from the
+		// plan model.
 		var keyPayload *string
-		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnly) {
-			keyPayload = conversion.StringValueToPointer(model.EncryptionParameters.KeyPayloadBase64WriteOnly)
-		} else if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
+		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
+			// handle the legacy fallback logic
 			keyPayload = conversion.StringValueToPointer(model.EncryptionParameters.KeyPayloadBase64)
+		} else if !utils.IsUndefined(configModel.EncryptionParameters.KeyPayloadBase64WriteOnly) &&
+			!utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnlyVersion) {
+			// the user is using the write-only field
+			keyPayload = conversion.StringValueToPointer(configModel.EncryptionParameters.KeyPayloadBase64WriteOnly)
 		}
 
 		payload.EncryptionParameters = &iaas.VolumeEncryptionParameter{

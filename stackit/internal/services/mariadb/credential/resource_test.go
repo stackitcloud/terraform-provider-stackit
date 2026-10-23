@@ -2,13 +2,16 @@ package mariadb
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v2api"
 )
+
+const testRegion = "eu02"
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -30,7 +33,7 @@ func TestMapFields(t *testing.T) {
 				Raw: &mariadb.RawCredentials{},
 			},
 			Model{
-				Id:                types.StringValue("pid,iid,cid"),
+				Id:                types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId:      types.StringValue("cid"),
 				InstanceId:        types.StringValue("iid"),
 				ProjectId:         types.StringValue("pid"),
@@ -42,6 +45,7 @@ func TestMapFields(t *testing.T) {
 				Uri:               types.StringNull(),
 				Username:          types.StringValue(""),
 				RotateWhenChanged: types.MapNull(types.StringType),
+				Region:            types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -70,7 +74,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -85,6 +89,7 @@ func TestMapFields(t *testing.T) {
 				Uri:               types.StringValue("uri"),
 				Username:          types.StringValue("username"),
 				RotateWhenChanged: types.MapNull(types.StringType),
+				Region:            types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -119,7 +124,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -135,6 +140,7 @@ func TestMapFields(t *testing.T) {
 				Uri:               types.StringValue("uri"),
 				Username:          types.StringValue("username"),
 				RotateWhenChanged: types.MapNull(types.StringType),
+				Region:            types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -160,7 +166,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                types.StringValue("pid,iid,cid"),
+				Id:                types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId:      types.StringValue("cid"),
 				InstanceId:        types.StringValue("iid"),
 				ProjectId:         types.StringValue("pid"),
@@ -172,6 +178,7 @@ func TestMapFields(t *testing.T) {
 				Uri:               types.StringNull(),
 				Username:          types.StringValue(""),
 				RotateWhenChanged: types.MapNull(types.StringType),
+				Region:            types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -213,7 +220,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state)
+			err := mapFields(context.Background(), tt.input, &tt.state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

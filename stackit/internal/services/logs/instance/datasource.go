@@ -15,9 +15,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -30,7 +28,7 @@ func NewLogsInstanceDataSource() datasource.DataSource {
 }
 
 type logsInstanceDataSource struct {
-	client       *logs.APIClient
+	client       logs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -39,17 +37,14 @@ func (d *logsInstanceDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 func (d *logsInstanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	d.providerData = providerData
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.LogsV1Client
+
 	tflog.Info(ctx, "Logs client configured")
 }
 
@@ -150,7 +145,7 @@ func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 
-	instanceResponse, err := d.client.DefaultAPI.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
+	instanceResponse, err := d.client.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

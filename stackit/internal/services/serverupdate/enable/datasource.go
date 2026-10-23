@@ -12,9 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	serverUpdateUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -39,7 +38,7 @@ func NewServerUpdateEnableDataSource() datasource.DataSource {
 
 // serverUpdateEnableDataSource is the data source implementation.
 type serverUpdateEnableDataSource struct {
-	client       *serverupdate.APIClient
+	client       serverupdate.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -50,17 +49,14 @@ func (d *serverUpdateEnableDataSource) Metadata(_ context.Context, req datasourc
 
 // Configure adds the provider configured client to the data source.
 func (d *serverUpdateEnableDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serverUpdateUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.ServerUpdateV2Client
+
 	tflog.Info(ctx, "Server update client client configured")
 }
 
@@ -130,7 +126,7 @@ func (d *serverUpdateEnableDataSource) Read(ctx context.Context, req datasource.
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	serviceResp, err := d.client.DefaultAPI.GetServiceResource(ctx, projectId, serverId, region).Execute()
+	serviceResp, err := d.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -175,6 +175,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `alb_custom_endpoint` (String) Custom endpoint for the Application Load Balancer service
 - `alb_waf_custom_endpoint` (String) Custom endpoint for the Application Load Balancer Web Application Firewall service
 - `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
+- `automation_custom_endpoint` (String) Custom endpoint for the Automation service
 - `cdn_custom_endpoint` (String) Custom endpoint for the CDN service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
@@ -182,7 +183,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `dremio_custom_endpoint` (String) Custom endpoint for the Dremio service
 - `edgecloud_custom_endpoint` (String) Custom endpoint for the Edge Cloud service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
-- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc, ske
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `intake_custom_endpoint` (String) Custom endpoint for the Intake service
@@ -191,6 +192,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `logs_custom_endpoint` (String) Custom endpoint for the Logs service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
+- `modelexperiments_custom_endpoint` (String) Custom endpoint for the AI Model Experiments service
 - `modelserving_custom_endpoint` (String) Custom endpoint for the AI Model Serving service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service
@@ -203,7 +205,6 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `private_key_path` (String) Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
 - `rabbitmq_custom_endpoint` (String) Custom endpoint for the RabbitMQ service
 - `redis_custom_endpoint` (String) Custom endpoint for the Redis service
-- `region` (String, Deprecated) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
 - `scf_custom_endpoint` (String) Custom endpoint for the Cloud Foundry (SCF) service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
@@ -216,6 +217,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_token` (String, Deprecated) Token used for authentication. If set, the token flow will be used to authenticate all operations.
+- `service_connection_id` (String) The ID of the Azure DevOps pipeline service connection. For use when authenticating as a Service Account using OpenID Connect.
 - `service_enablement_custom_endpoint` (String) Custom endpoint for the Service Enablement API
 - `sfs_custom_endpoint` (String) Custom endpoint for the Stackit Filestorage API
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
@@ -224,4 +226,5 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `telemetryrouter_custom_endpoint` (String) Custom endpoint for the Telemetry Router service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
 - `use_oidc` (Boolean) Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
+- `valkey_custom_endpoint` (String) Custom endpoint for the Key Value Store service
 - `vpn_custom_endpoint` (String) Custom endpoint for the VPN service

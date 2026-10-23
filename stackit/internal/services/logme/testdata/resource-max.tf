@@ -20,13 +20,10 @@ variable "params_max_disk_threshold" {}
 variable "params_metrics_frequency" {}
 variable "params_metrics_prefix" {}
 variable "params_monitoring_instance_id" {}
-variable "params_opensearch_tls_cipher1" {}
-variable "params_opensearch_tls_cipher2" {}
-variable "params_opensearch_tls_protocol1" {}
-variable "params_opensearch_tls_protocol2" {}
+variable "params_opensearch_tls_ciphers" {}
+variable "params_opensearch_tls_protocols" {}
 variable "params_sgw_acl" {}
-variable "params_syslog1" {}
-variable "params_syslog2" {}
+variable "params_syslog" {}
 
 resource "stackit_logme_instance" "instance" {
   project_id = var.project_id
@@ -52,10 +49,10 @@ resource "stackit_logme_instance" "instance" {
     max_disk_threshold       = var.params_max_disk_threshold
     metrics_frequency        = var.params_metrics_frequency
     metrics_prefix           = var.params_metrics_prefix
-    opensearch_tls_ciphers   = [var.params_opensearch_tls_cipher1, var.params_opensearch_tls_cipher2]
-    opensearch_tls_protocols = [var.params_opensearch_tls_protocol1, var.params_opensearch_tls_protocol2]
+    opensearch_tls_ciphers   = var.params_opensearch_tls_ciphers
+    opensearch_tls_protocols = var.params_opensearch_tls_protocols
     sgw_acl                  = var.params_sgw_acl
-    syslog                   = [var.params_syslog1, var.params_syslog2]
+    syslog                   = var.params_syslog
 
   }
 }

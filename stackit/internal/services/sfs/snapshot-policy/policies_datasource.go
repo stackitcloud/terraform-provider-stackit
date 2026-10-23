@@ -12,11 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -42,7 +39,7 @@ func NewSnapshotPoliciesDataSource() datasource.DataSource {
 }
 
 type policiesDataSource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -52,21 +49,14 @@ func (r *policiesDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 func (r *policiesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_snapshot_policies", core.Datasource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured.")
 }
 
@@ -74,7 +64,7 @@ func (r *policiesDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	description := "SFS snapshot policies datasource schema"
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
+		MarkdownDescription: description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source ID. It is structured as \"`project_id`\".",
@@ -201,7 +191,7 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	listRequest := r.client.DefaultAPI.ListSnapshotPolicies(ctx, projectId)
+	listRequest := r.client.ListSnapshotPolicies(ctx, projectId)
 	if !utils.IsUndefined(model.Immutable) {
 		switch model.Immutable.ValueString() {
 		case ImmutableFilterImmutableOnly:

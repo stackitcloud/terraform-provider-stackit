@@ -37,6 +37,7 @@ resource "stackit_opensearch_instance" "example" {
 ### Optional
 
 - `parameters` (Attributes) Configuration parameters. Please note that removing a previously configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, explicitly set a new value for it. (see [below for nested schema](#nestedatt--parameters))
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
@@ -44,7 +45,7 @@ resource "stackit_opensearch_instance" "example" {
 - `cf_organization_guid` (String)
 - `cf_space_guid` (String)
 - `dashboard_url` (String)
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `image_url` (String)
 - `instance_id` (String) ID of the OpenSearch instance.
 - `plan_id` (String) The selected plan ID.

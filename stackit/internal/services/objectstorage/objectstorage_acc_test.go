@@ -143,10 +143,8 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 							}
 
 							data "stackit_objectstorage_default_retention" "retention" {
-  							bucket_name = stackit_objectstorage_bucket.bucket_object_lock.name
-  							project_id  = var.project_id
-  							days        = var.retention_days
-  							mode        = var.retention_mode
+							bucket_name = stackit_objectstorage_bucket.bucket_object_lock.name
+							project_id  = var.project_id
 							}
 					`,
 					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,

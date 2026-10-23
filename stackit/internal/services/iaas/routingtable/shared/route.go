@@ -161,16 +161,16 @@ func MapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
 	nextHopMap := map[string]attr.Value{}
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
 	case *iaas.NexthopIPv4:
-		nextHopMap["type"] = types.StringValue(i.Type)
+		nextHopMap["type"] = types.StringValue(string(i.Type))
 		nextHopMap["value"] = types.StringValue(i.Value)
 	case *iaas.NexthopIPv6:
-		nextHopMap["type"] = types.StringValue(i.Type)
+		nextHopMap["type"] = types.StringValue(string(i.Type))
 		nextHopMap["value"] = types.StringValue(i.Value)
 	case *iaas.NexthopBlackhole:
-		nextHopMap["type"] = types.StringValue(i.Type)
+		nextHopMap["type"] = types.StringValue(string(i.Type))
 		nextHopMap["value"] = types.StringNull()
 	case *iaas.NexthopInternet:
-		nextHopMap["type"] = types.StringValue(i.Type)
+		nextHopMap["type"] = types.StringValue(string(i.Type))
 		nextHopMap["value"] = types.StringNull()
 	default:
 		return types.ObjectNull(RouteNextHopTypes), fmt.Errorf("unexpected Nexthop type: %T", i)
@@ -188,10 +188,10 @@ func MapRouteDestination(routeResp *iaas.Route) (types.Object, error) {
 	destinationMap := map[string]attr.Value{}
 	switch i := routeResp.Destination.GetActualInstance().(type) {
 	case *iaas.DestinationCIDRv4:
-		destinationMap["type"] = types.StringValue(i.Type)
+		destinationMap["type"] = types.StringValue(string(i.Type))
 		destinationMap["value"] = types.StringValue(i.Value)
 	case *iaas.DestinationCIDRv6:
-		destinationMap["type"] = types.StringValue(i.Type)
+		destinationMap["type"] = types.StringValue(string(i.Type))
 		destinationMap["value"] = types.StringValue(i.Value)
 	default:
 		return types.ObjectNull(RouteDestinationTypes), fmt.Errorf("unexpected Destionation type: %T", i)

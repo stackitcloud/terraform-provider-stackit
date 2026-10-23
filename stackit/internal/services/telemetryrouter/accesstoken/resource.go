@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -24,7 +26,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/utils"
+
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -70,7 +72,7 @@ type Model struct {
 }
 
 type telemetryRouterAccessTokenResource struct {
-	client       *telemetryrouter.APIClient
+	client       telemetryrouter.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -80,15 +82,14 @@ func NewTelemetryRouterAccessTokenResource() resource.Resource {
 
 func (r *telemetryRouterAccessTokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.TelemetryRouterV1Client
+
 	tflog.Info(ctx, "TelemetryRouter client configured")
 }
 
@@ -172,6 +173,13 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
+						"The display name must start with an alphanumeric character and can contain only letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
@@ -185,6 +193,13 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(1024),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9 \-]*)?$`),
+						"The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"ttl": schema.Int32Attribute{
 				Description: schemaDescriptions["ttl"],
@@ -210,8 +225,9 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 				Computed:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: schemaDescriptions["status"],
-				Computed:    true,
+				Description:        schemaDescriptions["status"],
+				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
+				Computed:           true,
 			},
 		},
 	}
@@ -240,7 +256,7 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateAccessToken(ctx, projectId, region, instanceId).CreateAccessTokenPayload(*payload).Execute()
+	createResp, err := r.client.CreateAccessToken(ctx, projectId, region, instanceId).CreateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -265,7 +281,7 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 		return
 	}
 
-	waitResp, err := wait.CreateAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
+	waitResp, err := wait.CreateAccessTokenWaitHandler(ctx, r.client, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
 		return
@@ -317,7 +333,7 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenID)
 
-	accessTokenResponse, err := r.client.DefaultAPI.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
+	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -371,7 +387,7 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 		return
 	}
 
-	accessTokenResponse, err := r.client.DefaultAPI.UpdateAccessToken(ctx, projectID, region, instanceID, accessTokenID).UpdateAccessTokenPayload(*payload).Execute()
+	accessTokenResponse, err := r.client.UpdateAccessToken(ctx, projectID, region, instanceID, accessTokenID).UpdateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -379,7 +395,7 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.UpdateAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenResponse.Id).WaitWithContext(ctx)
+	_, err = wait.UpdateAccessTokenWaitHandler(ctx, r.client, projectID, region, instanceID, accessTokenResponse.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
 		return
@@ -421,7 +437,7 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenID)
 
-	err := r.client.DefaultAPI.DeleteAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
+	err := r.client.DeleteAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -429,7 +445,7 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenID).WaitWithContext(ctx)
+	_, err = wait.DeleteAccessTokenWaitHandler(ctx, r.client, projectID, region, instanceID, accessTokenID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become deleted: %v", err))
 		return

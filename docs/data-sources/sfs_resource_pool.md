@@ -4,14 +4,11 @@ page_title: "stackit_sfs_resource_pool Data Source - stackit"
 subcategory: ""
 description: |-
   Resource-pool datasource schema. Must have a region specified in the provider configuration.
-  ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_sfs_resource_pool (Data Source)
 
 Resource-pool datasource schema. Must have a `region` specified in the provider configuration.
-
-~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -33,6 +30,7 @@ data "stackit_sfs_resource_pool" "resourcepool" {
 ### Optional
 
 - `region` (String) The resource region. Read-only attribute that reflects the provider region.
+- `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 
 ### Read-Only
 
@@ -47,6 +45,14 @@ data "stackit_sfs_resource_pool" "resourcepool" {
 - `size_reducible_at` (String) Time when the size can be reduced again.
 - `snapshot_policy` (Attributes) Name of the snapshot policy. (see [below for nested schema](#nestedatt--snapshot_policy))
 - `snapshots_are_visible` (Boolean) If set to true, snapshots are visible and accessible to users. (default: false)
+
+<a id="nestedatt--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+
 
 <a id="nestedatt--snapshot_policy"></a>
 ### Nested Schema for `snapshot_policy`

@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -75,7 +74,7 @@ func NewTokenResource() resource.Resource {
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client       *edgeCloud.APIClient
+	client       edgeCloud.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -86,21 +85,19 @@ func (r *tokenResource) Metadata(_ context.Context, req resource.MetadataRequest
 
 // Configure adds the provider configured client to the resource.
 func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.EdgeV1Client
+
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_edgecloud_token", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := edgeCloudUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "Edge Cloud token client configured")
 }
 
@@ -300,12 +297,15 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "token_id", tokenUUID)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// Note: The token itself must not be created via an endpoint. There's only a GET endpoint for the token.
+	// But the instance needs to be ready, that's why wait handlers are used here.
+
 	var tokenResp *edgeCloud.Token
 	var err error
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
+		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return
@@ -314,7 +314,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
+		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return
@@ -355,6 +355,13 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if expired, err := edgeCloudUtils.CheckExpiration(model.ExpiresAt, types.Int64Null(), time.Now()); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading token", fmt.Sprintf("Checking expiration: %v", err))
+		return
+	} else if expired {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	if !model.InstanceId.IsNull() {

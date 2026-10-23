@@ -4,8 +4,9 @@ resource "stackit_cdn_custom_domain" "custom_domain" {
   distribution_id = stackit_cdn_distribution.distribution.distribution_id
   name            = "${stackit_dns_record_set.dns_record.name}.${stackit_dns_zone.dns_zone.dns_name}"
   certificate = {
-    certificate = var.certificate
-    private_key = var.private_key
+    certificate    = var.certificate
+    private_key    = var.private_key
+    skip_dns_check = true
   }
 }
 

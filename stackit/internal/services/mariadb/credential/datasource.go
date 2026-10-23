@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	mariadbUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -18,12 +15,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &credentialDataSource{}
+	_ datasource.DataSource              = &credentialDataSource{}
+	_ datasource.DataSourceWithConfigure = &credentialDataSource{}
 )
 
 type DataSourceModel struct {
@@ -38,6 +36,7 @@ type DataSourceModel struct {
 	Port         types.Int32  `tfsdk:"port"`
 	Uri          types.String `tfsdk:"uri"`
 	Username     types.String `tfsdk:"username"`
+	Region       types.String `tfsdk:"region"`
 }
 
 // NewCredentialDataSource is a helper function to simplify the provider implementation.
@@ -47,37 +46,37 @@ func NewCredentialDataSource() datasource.DataSource {
 
 // credentialDataSource is the data source implementation.
 type credentialDataSource struct {
-	client *mariadb.APIClient
+	client       mariadb.DefaultAPI
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
-func (r *credentialDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *credentialDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_mariadb_credential"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+func (d *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mariadbUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	d.providerData = providerData
+	d.client = clients.MariadbV2Client
+
 	tflog.Info(ctx, "mariadb credential client configured")
 }
 
 // Schema defines the schema for the data source.
-func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
 		"main":          "MariaDB credential data source schema. Must have a `region` specified in the provider configuration.",
-		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
+		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the MariaDB instance.",
 		"project_id":    "STACKIT project ID to which the instance is associated.",
+		"region":        "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -135,12 +134,18 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"username": schema.StringAttribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -151,13 +156,15 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	recordSetResp, err := d.client.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -176,7 +183,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapDataSourceFields(ctx, recordSetResp, &model)
+	err = mapDataSourceFields(ctx, recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -191,7 +198,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	tflog.Info(ctx, "mariadb credential read")
 }
 
-func mapDataSourceFields(ctx context.Context, credentialsResp *mariadb.CredentialsResponse, model *DataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, credentialsResp *mariadb.CredentialsResponse, model *DataSourceModel, region string) error {
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -214,9 +221,11 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *mariadb.Credentia
 
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
+		region,
 		model.InstanceId.ValueString(),
 		credentialId,
 	)
+	model.Region = types.StringValue(region)
 
 	modelHosts, err := utils.ListValueToStringSlice(model.Hosts)
 	if err != nil {

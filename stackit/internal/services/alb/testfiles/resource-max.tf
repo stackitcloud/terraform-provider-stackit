@@ -2,7 +2,7 @@
 variable "image_id" {
   description = "A valid Image ID available in the project for the target server"
   type        = string
-  default     = "939249d1-6f48-4ab7-929b-95170728311a"
+  default     = "d2ef238d-7d1e-4b84-82cc-6f38a5d0c3de"
 }
 variable "availability_zone" {
   description = "The availability zone"
@@ -37,6 +37,7 @@ variable "labels_key_1" {}
 variable "labels_value_1" {}
 variable "labels_key_2" {}
 variable "labels_value_2" {}
+variable "ahc_alt_port" {}
 variable "ahc_interval" {}
 variable "ahc_interval_jitter" {}
 variable "ahc_timeout" {}
@@ -53,15 +54,8 @@ variable "host_1" {}
 variable "target_pool_name_1" {}
 variable "target_pool_port_1" {}
 variable "web_socket" {}
-variable "query_parameters_name_1" {}
-variable "query_parameters_exact_match_1" {}
-variable "query_parameters_name_2" {}
-variable "query_parameters_exact_match_2" {}
-variable "headers_name_1" {}
-variable "headers_exact_match_1" {}
-variable "headers_name_2" {}
-variable "headers_exact_match_2" {}
-variable "headers_name_3" {}
+variable "query_parameters" {}
+variable "headers" {}
 variable "path_prefix_1" {}
 variable "path_prefix_2" {}
 variable "target_pool_name_2" {}
@@ -93,7 +87,7 @@ resource "stackit_network" "listener_network" {
   project_id       = var.project_id
   name             = var.network_name_listener
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "10.11.10.0/24"
+  ipv4_prefix      = "10.2.2.0/24"
   routed           = "true"
 }
 
@@ -101,7 +95,7 @@ resource "stackit_network" "target_network" {
   project_id       = var.project_id
   name             = var.network_name_targets
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "10.11.11.0/24"
+  ipv4_prefix      = "10.2.3.0/24"
   routed           = "true"
 }
 
@@ -167,6 +161,7 @@ resource "stackit_application_load_balancer" "loadbalancer" {
     {
       name = var.target_pool_name_1
       active_health_check = {
+        alt_port            = var.ahc_alt_port
         interval            = var.ahc_interval
         interval_jitter     = var.ahc_interval_jitter
         timeout             = var.ahc_timeout
@@ -225,24 +220,10 @@ resource "stackit_application_load_balancer" "loadbalancer" {
       hosts = [{
         host = var.host_1
         rules = [{
-          target_pool = var.target_pool_name_1
-          web_socket  = var.web_socket
-          query_parameters = [{
-            name        = var.query_parameters_name_1
-            exact_match = var.query_parameters_exact_match_1
-            }, {
-            name        = var.query_parameters_name_2
-            exact_match = var.query_parameters_exact_match_2
-          }]
-          headers = [{
-            name        = var.headers_name_1
-            exact_match = var.headers_exact_match_1
-            }, {
-            name        = var.headers_name_2
-            exact_match = var.headers_exact_match_2
-            }, {
-            name = var.headers_name_3
-          }]
+          target_pool      = var.target_pool_name_1
+          web_socket       = var.web_socket
+          query_parameters = var.query_parameters
+          headers          = var.headers
           path = {
             prefix = var.path_prefix_1
           }

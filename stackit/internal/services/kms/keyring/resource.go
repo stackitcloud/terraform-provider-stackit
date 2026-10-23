@@ -22,7 +22,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -52,7 +52,7 @@ func NewKeyRingResource() resource.Resource {
 }
 
 type keyRingResource struct {
-	client       *kms.APIClient
+	client       kms.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -61,16 +61,13 @@ func (r *keyRingResource) Metadata(_ context.Context, request resource.MetadataR
 }
 
 func (r *keyRingResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = kmsUtils.ConfigureClient(ctx, &r.providerData, &response.Diagnostics)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.KmsV1Client
 
 	tflog.Info(ctx, "KMS client configured")
 }
@@ -192,7 +189,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	createResponse, err := r.client.DefaultAPI.CreateKeyRing(ctx, projectId, region).CreateKeyRingPayload(*payload).Execute()
+	createResponse, err := r.client.CreateKeyRing(ctx, projectId, region).CreateKeyRingPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -213,7 +210,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		"keyring_id": keyRingId,
 	})
 
-	waitResp, err := wait.CreateKeyRingWaitHandler(ctx, r.client.DefaultAPI, projectId, region, keyRingId).SetSleepBeforeWait(5 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateKeyRingWaitHandler(ctx, r.client, projectId, region, keyRingId).SetSleepBeforeWait(5 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Key Ring creation waiting: %v", err))
 		return
@@ -256,7 +253,7 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	keyRingResponse, err := r.client.DefaultAPI.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
+	keyRingResponse, err := r.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

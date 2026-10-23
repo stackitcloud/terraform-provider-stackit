@@ -1,0 +1,336 @@
+package custom_rule_group
+
+import (
+	"context"
+	_ "embed"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
+)
+
+var (
+	testProjectId = types.StringValue(uuid.NewString())
+	testRegion    = types.StringValue("eu01")
+	testName      = types.StringValue("test-custom-rule-group")
+	testId        = types.StringValue(testProjectId.ValueString() + "," + testRegion.ValueString() + "," + testName.ValueString())
+)
+
+func TestToCreatePayload(t *testing.T) {
+	tests := []struct {
+		name     string
+		model    *Model
+		expected *albWaf.CreateCustomRuleGroupPayload
+		isValid  bool
+	}{
+		{
+			name: "default",
+			model: &Model{
+				Name:      testName,
+				Id:        testId,
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
+					types.ObjectValueMust(ruleType, map[string]attr.Value{
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
+							"action":   types.StringValue("some-action"),
+							"log":      types.BoolValue(true),
+							"log_msg":  types.StringValue("Log: something happened"),
+							"severity": types.StringNull(),
+						}),
+						"conditions": types.ListValueMust(types.ObjectType{AttrTypes: conditionType}, []attr.Value{
+							types.ObjectValueMust(conditionType, map[string]attr.Value{
+								"operator": types.ObjectValueMust(operatorType, map[string]attr.Value{
+									"type":  types.StringValue("operator-type"),
+									"value": types.StringValue("operator-value"),
+								}),
+								"transformations": types.ListValueMust(types.StringType, []attr.Value{
+									types.StringValue("foo"),
+									types.StringValue("bar"),
+								}),
+								"variable": types.ObjectValueMust(variableType, map[string]attr.Value{
+									"type":  types.StringValue("variable-type"),
+									"value": types.StringValue("variable-value"),
+								}),
+							}),
+						}),
+						"description": types.StringValue("foo-bar"),
+						"id":          types.Int32Null(),
+					}),
+				}),
+			},
+			expected: &albWaf.CreateCustomRuleGroupPayload{
+				Name: testName.ValueString(),
+				Rules: []albWaf.CreateCustomRule{
+					{
+						Behavior: albWaf.Behavior{
+							Action: albWaf.Action("some-action"),
+							Log:    new(true),
+							LogMsg: new("Log: something happened"),
+						},
+						Conditions: []albWaf.Condition{
+							{
+								Operator: albWaf.ConditionOperator{
+									Type:  albWaf.Operator("operator-type"),
+									Value: new("operator-value"),
+								},
+								Transformations: []albWaf.Transformation{
+									"foo",
+									"bar",
+								},
+								Variable: albWaf.ConditionVariable{
+									Type:  albWaf.Variable("variable-type"),
+									Value: new("variable-value"),
+								},
+							},
+						},
+						Description: new("foo-bar"),
+					},
+				},
+			},
+			isValid: true,
+		},
+		{
+			name: "null values",
+			model: &Model{
+				Name:      testName,
+				Id:        testId,
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
+					types.ObjectValueMust(ruleType, map[string]attr.Value{
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
+							"action":   types.StringNull(),
+							"log":      types.BoolNull(),
+							"log_msg":  types.StringNull(),
+							"severity": types.StringNull(),
+						}),
+						"conditions": types.ListValueMust(types.ObjectType{AttrTypes: conditionType}, []attr.Value{
+							types.ObjectValueMust(conditionType, map[string]attr.Value{
+								"operator": types.ObjectValueMust(operatorType, map[string]attr.Value{
+									"type":  types.StringNull(),
+									"value": types.StringNull(),
+								}),
+								"transformations": types.ListValueMust(types.StringType, []attr.Value{}),
+								"variable": types.ObjectValueMust(variableType, map[string]attr.Value{
+									"type":  types.StringNull(),
+									"value": types.StringNull(),
+								}),
+							}),
+						}),
+						"description": types.StringNull(),
+						"id":          types.Int32Null(),
+					}),
+				}),
+			},
+			expected: &albWaf.CreateCustomRuleGroupPayload{
+				Name: testName.ValueString(),
+				Rules: []albWaf.CreateCustomRule{
+					{
+						Behavior: albWaf.Behavior{},
+						Conditions: []albWaf.Condition{
+							{
+								Operator:        albWaf.ConditionOperator{},
+								Transformations: []albWaf.Transformation{},
+								Variable:        albWaf.ConditionVariable{},
+							},
+						},
+					},
+				},
+			},
+			isValid: true,
+		},
+		{
+			name: "no rules",
+			model: &Model{
+				Name:      testName,
+				Id:        testId,
+				ProjectId: testProjectId,
+				Region:    testRegion,
+			},
+			expected: &albWaf.CreateCustomRuleGroupPayload{
+				Name:  testName.ValueString(),
+				Rules: []albWaf.CreateCustomRule{},
+			},
+			isValid: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := toCreatePayload(context.Background(), tt.model)
+			if (err != nil) == tt.isValid {
+				t.Errorf("toCreatePayload() error = %v, isValid %v", err, tt.isValid)
+				return
+			}
+
+			if tt.isValid {
+				if diff := cmp.Diff(got, tt.expected); diff != "" {
+					t.Errorf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestMapFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		state    *Model
+		region   string
+		input    *albWaf.GetCustomRuleGroupResponse
+		expected *Model
+		isValid  bool
+	}{
+		{
+			name: "default",
+			state: &Model{
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Name:      testName,
+				Id:        testId,
+				Rules:     types.ListNull(types.ObjectType{AttrTypes: ruleType}),
+			},
+			region: testRegion.ValueString(),
+			input: &albWaf.GetCustomRuleGroupResponse{
+				Name: testName.ValueString(),
+				Rules: []albWaf.GetCustomRule{
+					{
+						Behavior: albWaf.GetBehavior{
+							Action:   albWaf.Action("some-action"),
+							Log:      true,
+							LogMsg:   new("Log: something happened"),
+							Severity: albWaf.Severity("critical"),
+						},
+						Conditions: []albWaf.Condition{
+							{
+								Operator: albWaf.ConditionOperator{
+									Type:  albWaf.Operator("operator-type"),
+									Value: new("operator-value"),
+								},
+								Transformations: []albWaf.Transformation{
+									"foo",
+									"bar",
+								},
+								Variable: albWaf.ConditionVariable{
+									Type:  albWaf.Variable("variable-type"),
+									Value: new("variable-value"),
+								},
+							},
+						},
+						Description: new("foo-bar"),
+						Id:          int32(42),
+					},
+				},
+			},
+			expected: &Model{
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Name:      testName,
+				Id:        testId,
+				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
+					types.ObjectValueMust(ruleType, map[string]attr.Value{
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
+							"action":   types.StringValue("some-action"),
+							"log":      types.BoolValue(true),
+							"log_msg":  types.StringValue("Log: something happened"),
+							"severity": types.StringValue("critical"),
+						}),
+						"conditions": types.ListValueMust(types.ObjectType{AttrTypes: conditionType}, []attr.Value{
+							types.ObjectValueMust(conditionType, map[string]attr.Value{
+								"operator": types.ObjectValueMust(operatorType, map[string]attr.Value{
+									"type":  types.StringValue("operator-type"),
+									"value": types.StringValue("operator-value"),
+								}),
+								"transformations": types.ListValueMust(types.StringType, []attr.Value{
+									types.StringValue("foo"),
+									types.StringValue("bar"),
+								}),
+								"variable": types.ObjectValueMust(variableType, map[string]attr.Value{
+									"type":  types.StringValue("variable-type"),
+									"value": types.StringValue("variable-value"),
+								}),
+							}),
+						}),
+						"description": types.StringValue("foo-bar"),
+						"id":          types.Int32Value(42),
+					}),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			name: "empty rule",
+			state: &Model{
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Name:      testName,
+				Id:        testId,
+				Rules:     types.ListNull(types.ObjectType{AttrTypes: ruleType}),
+			},
+			region: testRegion.ValueString(),
+			input: &albWaf.GetCustomRuleGroupResponse{
+				Name: testName.ValueString(),
+				Rules: []albWaf.GetCustomRule{
+					{},
+				},
+			},
+			expected: &Model{
+				Name:      testName,
+				Id:        testId,
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
+					types.ObjectValueMust(ruleType, map[string]attr.Value{
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
+							"action":   types.StringValue(""),
+							"log":      types.BoolValue(false),
+							"log_msg":  types.StringNull(),
+							"severity": types.StringValue(""),
+						}),
+						"conditions":  types.ListValueMust(types.ObjectType{AttrTypes: conditionType}, []attr.Value{}),
+						"description": types.StringNull(),
+						"id":          types.Int32Value(0),
+					}),
+				}),
+			},
+			isValid: true,
+		},
+		{
+			name: "no rules",
+			state: &Model{
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Name:      testName,
+				Id:        testId,
+			},
+			region: testRegion.ValueString(),
+			input: &albWaf.GetCustomRuleGroupResponse{
+				Name: testName.ValueString(),
+			},
+			expected: &Model{
+				Name:      testName,
+				Id:        testId,
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				Rules:     types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{}),
+			},
+			isValid: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			if err := mapFields(ctx, tt.input, tt.state, tt.region); (err == nil) != tt.isValid {
+				t.Errorf("unexpected error")
+			}
+			if tt.isValid {
+				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}

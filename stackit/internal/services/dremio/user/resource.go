@@ -17,18 +17,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
+	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 
-	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
-
-	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait"
+	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi/wait"
 )
 
 var (
@@ -66,7 +63,7 @@ type UserModel struct {
 }
 
 var descriptions = map[string]string{
-	"main":        "Manages a STACKIT Dremio instances user.",
+	"main":        "Manages a STACKIT Dremio instances user. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 	"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
 	"project_id":  "STACKIT Project ID to which the resource is associated.",
 	"instance_id": "The Dremio instance ID.",
@@ -81,7 +78,7 @@ var descriptions = map[string]string{
 }
 
 type userResource struct {
-	client       *dremioSdk.APIClient
+	client       dremioSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -122,8 +119,12 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 }
 
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Dremio", &resp.Diagnostics) {
 		return
 	}
 
@@ -132,11 +133,8 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	apiClient := dremioUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.DremioV1BetaClient
+
 	tflog.Info(ctx, "Dremio user client configured")
 }
 
@@ -243,7 +241,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	waiterTimeout := dremioWaiter.CreateDremioUserWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := dremioWaiter.CreateDremioUserWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -269,7 +267,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Create new Dremio user
-	userResp, err := r.client.DefaultAPI.CreateDremioUser(ctx, projectId, region, instanceId).CreateDremioUserPayload(*payload).Execute()
+	userResp, err := r.client.CreateDremioUser(ctx, projectId, region, instanceId).CreateDremioUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -290,7 +288,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	_, err = dremioWaiter.CreateDremioUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
+	_, err = dremioWaiter.CreateDremioUserWaitHandler(ctx, r.client, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio user", fmt.Sprintf("Dremio user creation waiting: %v", err))
 		return
@@ -339,7 +337,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	userResp, err := r.client.DefaultAPI.GetDremioUser(ctx, projectId, region, instanceId, userId).Execute()
+	userResp, err := r.client.GetDremioUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -376,7 +374,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	waiterTimeout := dremioWaiter.DeleteDremioUserWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := dremioWaiter.DeleteDremioUserWaitHandler(ctx, r.client, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -396,7 +394,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	err := r.client.DefaultAPI.DeleteDremioUser(ctx, projectId, region, instanceId, userId).Execute()
+	err := r.client.DeleteDremioUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -407,7 +405,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = dremioWaiter.DeleteDremioUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userId).WaitWithContext(ctx)
+	_, err = dremioWaiter.DeleteDremioUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Dremio user", fmt.Sprintf("Dremio user deletion waiting: %v", err))
 		return

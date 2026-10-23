@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -37,7 +34,7 @@ func NewProjectDataSource() datasource.DataSource {
 
 // projectDataSource is the data source implementation.
 type projectDataSource struct {
-	client *resourcemanager.APIClient
+	client resourcemanager.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -46,16 +43,13 @@ func (d *projectDataSource) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *projectDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.ResourceManagerClient
+
 	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
@@ -168,7 +162,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		identifierType = "Project"
 	}
 
-	projectResp, err := d.client.DefaultAPI.GetProject(ctx, identifier).Execute()
+	projectResp, err := d.client.GetProject(ctx, identifier).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

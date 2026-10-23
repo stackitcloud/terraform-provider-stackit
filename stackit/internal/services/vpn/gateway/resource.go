@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
@@ -27,11 +29,14 @@ import (
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+)
+
+const (
+	updateGatewayAttempts   = 6
+	updateGatewayRetryDelay = 10 * time.Second
 )
 
 var (
@@ -54,6 +59,16 @@ type BGPGatewayConfigModel struct {
 	OverrideAdvertisedRoutes types.List  `tfsdk:"override_advertised_routes"`
 }
 
+type NetworkConfigModel struct {
+	PredefinedNetworkPrefix types.String `tfsdk:"predefined_network_prefix"`
+	RoutingTableId          types.String `tfsdk:"routing_table_id"`
+}
+
+var networkConfigTypes = map[string]attr.Type{
+	"predefined_network_prefix": basetypes.StringType{},
+	"routing_table_id":          basetypes.StringType{},
+}
+
 type Model struct {
 	Id                types.String            `tfsdk:"id"` // needed by TF
 	GatewayId         types.String            `tfsdk:"gateway_id"`
@@ -64,6 +79,7 @@ type Model struct {
 	RoutingType       types.String            `tfsdk:"routing_type"`
 	AvailabilityZones *AvailabilityZonesModel `tfsdk:"availability_zones"`
 	Bgp               *BGPGatewayConfigModel  `tfsdk:"bgp"`
+	NetworkConfig     types.Object            `tfsdk:"network_config"`
 	Labels            types.Map               `tfsdk:"labels"`
 }
 
@@ -81,11 +97,14 @@ var schemaDescriptions = map[string]string{
 	"bgp":                            fmt.Sprintf("BGP configuration. Only applicable when routing_type is %s.", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
 	"bgp_local_asn":                  "Local ASN for BGP (private ASN range, 64512-4294967294).",
 	"bgp_override_advertised_routes": "List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.",
-	"labels":                         "Map of custom labels (key-value string pairs).",
+	"network_config":                 "Network configuration for the VPN gateway.",
+	"network_config_predefined_network_prefix": "The IPv4 network prefix (CIDR notation) allocated for the VPN gateway. Must have a prefix length of /28 or larger. Cannot be changed after the gateway is created.",
+	"network_config_routing_table_id":          "Custom routing table ID for the VPN gateway. If omitted, a default routing table is assigned.",
+	"labels":                                   "Map of custom labels (key-value string pairs).",
 }
 
 type gatewayResource struct {
-	client       *vpn.APIClient
+	client       vpn.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -95,16 +114,14 @@ func NewGatewayResource() resource.Resource {
 
 func (r *gatewayResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.VpnV1Client
+
 	tflog.Info(ctx, "VPN client configured")
 }
 
@@ -215,6 +232,33 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					},
 				},
 			},
+			"network_config": schema.SingleNestedAttribute{
+				Description: schemaDescriptions["network_config"],
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"predefined_network_prefix": schema.StringAttribute{
+						Description: schemaDescriptions["network_config_predefined_network_prefix"],
+						Optional:    true,
+						Validators: []validator.String{
+							validate.CIDR(),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"routing_table_id": schema.StringAttribute{
+						Description: schemaDescriptions["network_config_routing_table_id"],
+						Optional:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
+				},
+			},
 			"labels": schema.MapAttribute{
 				Description: schemaDescriptions["labels"],
 				Optional:    true,
@@ -321,7 +365,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateGateway(ctx, projectId, region).CreateGatewayPayload(*payload).Execute()
+	createResp, err := r.client.CreateGateway(ctx, projectId, region).CreateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -344,7 +388,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, region, gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Gateway creation waiting: %v", err))
 		return
@@ -381,7 +425,7 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	gatewayResp, err := r.client.DefaultAPI.GetGateway(ctx, projectId, region, gatewayId).Execute()
+	gatewayResp, err := r.client.GetGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -431,7 +475,14 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	_, err = r.client.DefaultAPI.UpdateGateway(ctx, projectId, region, gatewayId).UpdateGatewayPayload(*payload).Execute()
+	// the backend may respond with 409s during the update (happens in acc test consistently). Error message states to retry at a later time so we use the retry utils here
+	retryConfig := tfutils.RetryConfig{
+		Attempts:         updateGatewayAttempts,
+		Delay:            updateGatewayRetryDelay,
+		RetryStatusCodes: []int{http.StatusConflict},
+	}
+
+	_, err = tfutils.RetryRequest(ctx, r.client.UpdateGateway(ctx, projectId, region, gatewayId).UpdateGatewayPayload(*payload).Execute, retryConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", err.Error())
 		return
@@ -439,7 +490,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, region, gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", fmt.Sprintf("Gateway update waiting: %v", err))
 		return
@@ -476,7 +527,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.DeleteGateway(ctx, projectId, region, gatewayId).Execute()
+	err := r.client.DeleteGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -484,7 +535,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, region, gatewayId).WaitWithContext(ctx)
+	_, err = wait.DeleteGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Gateway deletion waiting: %v", err))
 		return
@@ -523,6 +574,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 			}
 		}
 		payload.Bgp = bgpConfig
+	}
+
+	if !tfutils.IsUndefined(model.NetworkConfig) {
+		networkConfig, err := getNetworkConfigPayload(ctx, model)
+		if err != nil {
+			return nil, err
+		}
+		payload.NetworkConfig = &networkConfig
 	}
 
 	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
@@ -566,6 +625,14 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 		payload.Bgp = bgpConfig
 	}
 
+	if !tfutils.IsUndefined(model.NetworkConfig) {
+		networkConfig, err := getNetworkConfigPayload(ctx, model)
+		if err != nil {
+			return nil, err
+		}
+		payload.NetworkConfig = &networkConfig
+	}
+
 	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
 		return nil, err
@@ -573,6 +640,25 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 	payload.Labels = &labels
 
 	return payload, nil
+}
+
+func getNetworkConfigPayload(ctx context.Context, model *Model) (vpn.NetworkConfig, error) {
+	var networkConfigModel NetworkConfigModel
+	diags := model.NetworkConfig.As(ctx, &networkConfigModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return vpn.NetworkConfig{}, core.DiagsToError(diags)
+	}
+	networkConfig := vpn.NetworkConfig{}
+
+	if !tfutils.IsUndefined(networkConfigModel.PredefinedNetworkPrefix) {
+		networkConfig.PredefinedNetworkPrefix = networkConfigModel.PredefinedNetworkPrefix.ValueStringPointer()
+	}
+
+	if !tfutils.IsUndefined(networkConfigModel.RoutingTableId) {
+		networkConfig.RoutingTableId = networkConfigModel.RoutingTableId.ValueStringPointer()
+	}
+
+	return networkConfig, nil
 }
 
 func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, region string) error {
@@ -615,6 +701,26 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 		bgpModel.OverrideAdvertisedRoutes = listVal
 
 		model.Bgp = bgpModel
+	}
+
+	if gateway.NetworkConfig == nil {
+		model.NetworkConfig = types.ObjectNull(networkConfigTypes)
+	} else if tfutils.IsUndefined(model.NetworkConfig) && gateway.NetworkConfig.PredefinedNetworkPrefix == nil && gateway.NetworkConfig.RoutingTableId == nil {
+		// If the current model is Null and the API returns an empty Object, it should not be replaced to prevent a state drift
+		model.NetworkConfig = types.ObjectNull(networkConfigTypes)
+	} else {
+		predefinedNetworkPrefix := types.StringPointerValue(gateway.NetworkConfig.PredefinedNetworkPrefix)
+
+		routingTableId := types.StringPointerValue(gateway.NetworkConfig.RoutingTableId)
+
+		networkConfigObject, diags := types.ObjectValue(networkConfigTypes, map[string]attr.Value{
+			"predefined_network_prefix": predefinedNetworkPrefix,
+			"routing_table_id":          routingTableId,
+		})
+		if diags.HasError() {
+			return fmt.Errorf("mapping network config: %w", core.DiagsToError(diags))
+		}
+		model.NetworkConfig = networkConfigObject
 	}
 
 	labels, err := tfutils.MapLabels(ctx, gateway.Labels, model.Labels)

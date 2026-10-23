@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
@@ -24,9 +21,13 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
 	alb "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/applicationloadbalancer"
 	cert "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/certificate"
+	albWafCustomRuleGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/custom_rule_group"
 	albWafManagedRuleSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/managed_rule_set"
+	albWaf "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/waf_configuration"
 	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
+	automationTemplates "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/templates"
+	automationVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/volume"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
@@ -41,15 +42,18 @@ import (
 	gitInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/instance"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
 	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
+	iaasImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/images"
 	iaasImageV2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/imagev2"
 	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
 	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
+	iaasMachineTypes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetypes"
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
 	iaasNetworkAreaRegion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearegion"
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
 	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
 	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
+	iaasNetworks "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networks"
 	iaasProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/project"
 	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
 	iaasPublicIpAssociate "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipassociate"
@@ -82,6 +86,8 @@ import (
 	logsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
+	modelExperimentsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
+	modelExperimentsToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
 	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
@@ -98,6 +104,7 @@ import (
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
+	postgresFlexFlavors "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/flavors"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
 	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
@@ -129,12 +136,16 @@ import (
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeKubernetesVersion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/kubernetesversions"
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
+	sqlServerFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/database"
+	sqlServerFlexFlavors "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/flavors"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
+	valkeyCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/credential"
+	valkeyInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/instance"
 	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
 	vpnGatewayStatus "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway_status"
@@ -150,13 +161,25 @@ var (
 // Provider is the provider implementation.
 type Provider struct {
 	version string
+
+	clientFactory core.ClientFactory
 }
 
 // New is a helper function to simplify provider server and testing implementation.
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
 		return &Provider{
-			version: version,
+			version:       version,
+			clientFactory: nil, // nil means the default client factory will be used later
+		}
+	}
+}
+
+func NewTestProvider(version string, clientFactory core.ClientFactory) func() provider.Provider {
+	return func() provider.Provider {
+		return &Provider{
+			version:       version,
+			clientFactory: clientFactory,
 		}
 	}
 }
@@ -178,13 +201,12 @@ type providerModel struct {
 	WifFederatedToken     types.String `tfsdk:"service_account_federated_token"`
 	UseOIDC               types.Bool   `tfsdk:"use_oidc"`
 
-	// Deprecated: Use DefaultRegion instead
-	Region        types.String `tfsdk:"region"`
 	DefaultRegion types.String `tfsdk:"default_region"`
 
 	// Custom endpoints
 	ALBCustomEndpoint               types.String `tfsdk:"alb_custom_endpoint"`
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
+	AutomationCustomEndpoint        types.String `tfsdk:"automation_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	ALBCertificatesCustomEndpoint   types.String `tfsdk:"alb_certificates_custom_endpoint"`
 	AlbWafCustomEndpoint            types.String `tfsdk:"alb_waf_custom_endpoint"`
@@ -200,6 +222,7 @@ type providerModel struct {
 	LogsCustomEndpoint              types.String `tfsdk:"logs_custom_endpoint"`
 	MariaDBCustomEndpoint           types.String `tfsdk:"mariadb_custom_endpoint"`
 	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
+	ModelExperimentsCustomEndpoint  types.String `tfsdk:"modelexperiments_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	ObjectStorageCustomEndpoint     types.String `tfsdk:"objectstorage_custom_endpoint"`
 	ObservabilityCustomEndpoint     types.String `tfsdk:"observability_custom_endpoint"`
@@ -220,8 +243,10 @@ type providerModel struct {
 	TelemetryLinkCustomEndpoint     types.String `tfsdk:"telemetrylink_custom_endpoint"`
 	TelemetryRouterCustomEndpoint   types.String `tfsdk:"telemetryrouter_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	ValkeyCustomEndpoint            types.String `tfsdk:"valkey_custom_endpoint"`
 	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
+	ServiceConnectionID             types.String `tfsdk:"service_connection_id"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
 	EnableBetaResources types.Bool `tfsdk:"enable_beta_resources"`
@@ -241,13 +266,14 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
 		"service_account_federated_token":      "The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.",
 		"use_oidc":                             "Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
+		"service_connection_id":                "The ID of the Azure DevOps pipeline service connection. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
-		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"alb_certificates_custom_endpoint":     "Custom endpoint for the Application Load Balancer TLS Certificate service",
 		"alb_waf_custom_endpoint":              "Custom endpoint for the Application Load Balancer Web Application Firewall service",
 		"alb_custom_endpoint":                  "Custom endpoint for the Application Load Balancer service",
+		"automation_custom_endpoint":           "Custom endpoint for the Automation service",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
 		"dremio_custom_endpoint":               "Custom endpoint for the Dremio service",
@@ -258,6 +284,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"kms_custom_endpoint":                  "Custom endpoint for the KMS service",
 		"mongodbflex_custom_endpoint":          "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":         "Custom endpoint for the AI Model Serving service",
+		"modelexperiments_custom_endpoint":     "Custom endpoint for the AI Model Experiments service",
 		"loadbalancer_custom_endpoint":         "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":                "Custom endpoint for the LogMe service",
 		"logs_custom_endpoint":                 "Custom endpoint for the Logs service",
@@ -282,6 +309,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"telemetrylink_custom_endpoint":        "Custom endpoint for the Telemetry Link service",
 		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"valkey_custom_endpoint":               "Custom endpoint for the Key Value Store service",
 		"vpn_custom_endpoint":                  "Custom endpoint for the VPN service",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
@@ -332,6 +360,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["use_oidc"],
 			},
+			"service_connection_id": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_connection_id"],
+			},
 			"oidc_request_token": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["oidc_request_token"],
@@ -340,20 +372,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["oidc_request_url"],
 			},
-			"region": schema.StringAttribute{
-				Optional:           true,
-				Description:        descriptions["region"],
-				DeprecationMessage: "This attribute is deprecated. Use 'default_region' instead",
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("default_region")),
-				},
-			},
 			"default_region": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["default_region"],
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("region")),
-				},
 			},
 			"enable_beta_resources": schema.BoolAttribute{
 				Optional:    true,
@@ -380,6 +401,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"alb_waf_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["alb_waf_custom_endpoint"],
+			},
+			"automation_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["automation_custom_endpoint"],
 			},
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -420,6 +445,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"modelserving_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["modelserving_custom_endpoint"],
+			},
+			"modelexperiments_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["modelexperiments_custom_endpoint"],
 			},
 			"authorization_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -509,6 +538,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["telemetrylink_custom_endpoint"],
 			},
+			"valkey_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["valkey_custom_endpoint"],
+			},
 			"vpn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["vpn_custom_endpoint"],
@@ -534,6 +567,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Configure SDK client
 	sdkConfig := &config.Configuration{}
 	var providerData core.ProviderData
+	var customEndpointConfig core.CustomEndpointConfig
 
 	// Helper function to set a string field if it's known and not null
 	setStringField := func(v basetypes.StringValue, setter func(string)) {
@@ -565,46 +599,48 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { sdkConfig.TokenCustomUrl = v })
 
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
-	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
-	setStringField(providerConfig.ALBCertificatesCustomEndpoint, func(v string) { providerData.ALBCertificatesCustomEndpoint = v })
-	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
-	setStringField(providerConfig.AlbWafCustomEndpoint, func(v string) { providerData.AlbWafCustomEndpoint = v })
-	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
-	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
-	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
-	setStringField(providerConfig.DremioCustomEndpoint, func(v string) { providerData.DremioCustomEndpoint = v })
-	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { providerData.EdgeCloudCustomEndpoint = v })
-	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
-	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
-	setStringField(providerConfig.IntakeCustomEndpoint, func(v string) { providerData.IntakeCustomEndpoint = v })
-	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
-	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
-	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
-	setStringField(providerConfig.LogsCustomEndpoint, func(v string) { providerData.LogsCustomEndpoint = v })
-	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { providerData.MariaDBCustomEndpoint = v })
-	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
-	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
-	setStringField(providerConfig.ObjectStorageCustomEndpoint, func(v string) { providerData.ObjectStorageCustomEndpoint = v })
-	setStringField(providerConfig.ObservabilityCustomEndpoint, func(v string) { providerData.ObservabilityCustomEndpoint = v })
-	setStringField(providerConfig.OpenSearchCustomEndpoint, func(v string) { providerData.OpenSearchCustomEndpoint = v })
-	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { providerData.PostgresFlexCustomEndpoint = v })
-	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { providerData.RabbitMQCustomEndpoint = v })
-	setStringField(providerConfig.RedisCustomEndpoint, func(v string) { providerData.RedisCustomEndpoint = v })
-	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { providerData.ResourceManagerCustomEndpoint = v })
-	setStringField(providerConfig.ScfCustomEndpoint, func(v string) { providerData.ScfCustomEndpoint = v })
-	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { providerData.SecretsManagerCustomEndpoint = v })
-	setStringField(providerConfig.ServerBackupCustomEndpoint, func(v string) { providerData.ServerBackupCustomEndpoint = v })
-	setStringField(providerConfig.ServerUpdateCustomEndpoint, func(v string) { providerData.ServerUpdateCustomEndpoint = v })
-	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { providerData.ServiceAccountCustomEndpoint = v })
-	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { providerData.ServiceEnablementCustomEndpoint = v })
-	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { providerData.SfsCustomEndpoint = v })
-	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
-	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
-	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
-	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
-	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
+	setStringField(providerConfig.ALBCertificatesCustomEndpoint, func(v string) { customEndpointConfig.ALBCertificatesCustomEndpoint = v })
+	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { customEndpointConfig.ALBCustomEndpoint = v })
+	setStringField(providerConfig.AlbWafCustomEndpoint, func(v string) { customEndpointConfig.AlbWafCustomEndpoint = v })
+	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { customEndpointConfig.AuthorizationCustomEndpoint = v })
+	setStringField(providerConfig.AutomationCustomEndpoint, func(v string) { customEndpointConfig.AutomationCustomEndpoint = v })
+	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { customEndpointConfig.CdnCustomEndpoint = v })
+	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { customEndpointConfig.DnsCustomEndpoint = v })
+	setStringField(providerConfig.DremioCustomEndpoint, func(v string) { customEndpointConfig.DremioCustomEndpoint = v })
+	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { customEndpointConfig.EdgeCloudCustomEndpoint = v })
+	setStringField(providerConfig.GitCustomEndpoint, func(v string) { customEndpointConfig.GitCustomEndpoint = v })
+	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { customEndpointConfig.IaaSCustomEndpoint = v })
+	setStringField(providerConfig.IntakeCustomEndpoint, func(v string) { customEndpointConfig.IntakeCustomEndpoint = v })
+	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { customEndpointConfig.KMSCustomEndpoint = v })
+	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { customEndpointConfig.LoadBalancerCustomEndpoint = v })
+	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { customEndpointConfig.LogMeCustomEndpoint = v })
+	setStringField(providerConfig.LogsCustomEndpoint, func(v string) { customEndpointConfig.LogsCustomEndpoint = v })
+	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { customEndpointConfig.MariaDBCustomEndpoint = v })
+	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { customEndpointConfig.ModelServingCustomEndpoint = v })
+	setStringField(providerConfig.ModelExperimentsCustomEndpoint, func(v string) { customEndpointConfig.ModelExperimentsCustomEndpoint = v })
+	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { customEndpointConfig.MongoDBFlexCustomEndpoint = v })
+	setStringField(providerConfig.ObjectStorageCustomEndpoint, func(v string) { customEndpointConfig.ObjectStorageCustomEndpoint = v })
+	setStringField(providerConfig.ObservabilityCustomEndpoint, func(v string) { customEndpointConfig.ObservabilityCustomEndpoint = v })
+	setStringField(providerConfig.OpenSearchCustomEndpoint, func(v string) { customEndpointConfig.OpenSearchCustomEndpoint = v })
+	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { customEndpointConfig.PostgresFlexCustomEndpoint = v })
+	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { customEndpointConfig.RabbitMQCustomEndpoint = v })
+	setStringField(providerConfig.RedisCustomEndpoint, func(v string) { customEndpointConfig.RedisCustomEndpoint = v })
+	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { customEndpointConfig.ResourceManagerCustomEndpoint = v })
+	setStringField(providerConfig.ScfCustomEndpoint, func(v string) { customEndpointConfig.ScfCustomEndpoint = v })
+	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { customEndpointConfig.SecretsManagerCustomEndpoint = v })
+	setStringField(providerConfig.ServerBackupCustomEndpoint, func(v string) { customEndpointConfig.ServerBackupCustomEndpoint = v })
+	setStringField(providerConfig.ServerUpdateCustomEndpoint, func(v string) { customEndpointConfig.ServerUpdateCustomEndpoint = v })
+	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { customEndpointConfig.ServiceAccountCustomEndpoint = v })
+	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { customEndpointConfig.ServiceEnablementCustomEndpoint = v })
+	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { customEndpointConfig.SfsCustomEndpoint = v })
+	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { customEndpointConfig.SKECustomEndpoint = v })
+	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { customEndpointConfig.SQLServerFlexCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { customEndpointConfig.TelemetryRouterCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { customEndpointConfig.TelemetryLinkCustomEndpoint = v })
+	setStringField(providerConfig.ValkeyCustomEndpoint, func(v string) { customEndpointConfig.ValkeyCustomEndpoint = v })
+	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { customEndpointConfig.VpnCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
@@ -613,6 +649,33 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
 		}
 		providerData.Experiments = experimentValues
+	}
+
+	// when a client factory was injected for mocking - stop right here
+	if p.clientFactory != nil {
+		providerDataInternal, err := core.NewProviderDataInternal(providerData, p.clientFactory)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up provider data: %v", err))
+			return
+		}
+
+		resp.DataSourceData = providerDataInternal
+		resp.ResourceData = providerDataInternal
+
+		mockRoundTripper, err := sdkauth.NoAuth()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up round tripper for ephemeral provider data: %v", err))
+			return
+		}
+
+		ephemeralProviderDataInternal, err := core.NewEphemeralProviderDataInternal(providerData, p.clientFactory, mockRoundTripper)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up ephemeral provider data: %v", err))
+		}
+
+		resp.EphemeralResourceData = ephemeralProviderDataInternal
+
+		return
 	}
 
 	// Workload Identity Federation via provided OIDC Token
@@ -647,9 +710,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		// https://learn.microsoft.com/es-es/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
 		oidcReqURL = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "SYSTEM_OIDCREQUESTURI", "")
 		oidcReqToken = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "SYSTEM_ACCESSTOKEN", "")
-		// This can be set to the ID of the service connection to restrict the token exchange to that connection, not supported by default to avoid additional configuration
-		// for users that don't need it, can be added as an additional provider config parameter in the future if there is demand
-		serviceConnectionID := ""
+		// This can be set to the ID of the service connection to restrict the token exchange to that connection.
+		serviceConnectionID := utils.GetEnvStringOrDefault(providerConfig.ServiceConnectionID, "STACKIT_SERVICE_CONNECTION_ID", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestAzureDevOpsOIDCToken(oidcReqURL, oidcReqToken, serviceConnectionID)
 		}
@@ -663,125 +725,150 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Make round tripper and custom endpoints available during DataSource and Resource
 	// type Configure methods.
-	providerData.RoundTripper = roundTripper
+	clientFactory := core.DefaultClientFactory{
+		RoundTripper:          roundTripper,
+		UserAgent:             fmt.Sprintf("stackit-terraform-provider/%s", p.version),
+		CustomEndpoints:       customEndpointConfig,
+		ProviderDefaultRegion: providerData.GetRegion(),
+	}
 
-	providerData.Version = p.version
+	providerDataInternal, err := core.NewProviderDataInternal(providerData, &clientFactory)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up provider data: %v", err))
+	}
 
-	resp.DataSourceData = providerData
-	resp.ResourceData = providerData
+	resp.DataSourceData = providerDataInternal
+	resp.ResourceData = providerDataInternal
 
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
-	var ephemeralProviderData core.EphemeralProviderData
-	ephemeralProviderData.ProviderData = providerData
-	resp.EphemeralResourceData = ephemeralProviderData
+	ephemeralProviderDataInternal, err := core.NewEphemeralProviderDataInternal(providerData, &clientFactory, roundTripper)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up ephemeral provider data: %v", err))
+	}
+
+	resp.EphemeralResourceData = ephemeralProviderDataInternal
 }
 
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	dataSources := []func() datasource.DataSource{
 		alb.NewApplicationLoadBalancerDataSource,
+		albWaf.NewWafConfigurationDatasource,
+		albWafCustomRuleGroup.NewCustomRuleGroupDataSource,
 		albWafManagedRuleSet.NewManagedRuleSetDataSource,
 		alertGroup.NewAlertGroupDataSource,
+		automationTemplates.NewAutomationTemplatesDataSource,
+		automationVolume.NewVolumeAutomationDataSource,
 		cdn.NewDistributionDataSource,
-		cert.NewCertificatesDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
-		dnsZone.NewZoneDataSource,
+		cert.NewCertificatesDataSource,
+		compliancelock.NewComplianceLockDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		dnsZone.NewZoneDataSource,
 		dremioInstance.NewInstanceDataSource,
 		dremioUser.NewUserDataSource,
 		edgeCloudInstances.NewInstancesDataSource,
 		edgeCloudPlans.NewPlansDataSource,
+		exportpolicy.NewExportPolicyDataSource,
 		gitInstance.NewGitDataSource,
+		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasAlphaVpc.NewVPCDatasource,
-		iaasAlphaVpcRoutingTable.NewVpcRoutingTableDatasource,
 		iaasAlphaVpcNetworkRange.NewVpcNetworkRangeDatasource,
 		iaasAlphaVpcRegion.NewVPCRegionDatasource,
+		iaasAlphaVpcRoutingTable.NewVpcRoutingTableDatasource,
 		iaasAlphaVpcStaticRoute.NewStaticRouteDatasource,
-		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasImage.NewImageDataSource,
 		iaasImageV2.NewImageV2DataSource,
+		iaasImages.NewImagesDataSource,
+		iaasKeyPair.NewKeyPairDataSource,
+		iaasMachineTypes.NewMachineTypesDataSource,
 		iaasNetwork.NewNetworkDataSource,
 		iaasNetworkArea.NewNetworkAreaDataSource,
 		iaasNetworkAreaRegion.NewNetworkAreaRegionDataSource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
 		iaasNetworkInterface.NewNetworkInterfaceDataSource,
-		iaasVolume.NewVolumeDataSource,
+		iaasNetworks.NewNetworksDataSource,
 		iaasProject.NewProjectDataSource,
 		iaasPublicIp.NewPublicIpDataSource,
 		iaasPublicIpRanges.NewPublicIpRangesDataSource,
-		iaasKeyPair.NewKeyPairDataSource,
-		iaasServer.NewServerDataSource,
-		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasRoutingTable.NewRoutingTableDataSource,
 		iaasRoutingTableRoute.NewRoutingTableRouteDataSource,
-		iaasRoutingTables.NewRoutingTablesDataSource,
 		iaasRoutingTableRoutes.NewRoutingTableRoutesDataSource,
+		iaasRoutingTables.NewRoutingTablesDataSource,
+		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		iaasServer.NewServerDataSource,
+		iaasVolume.NewVolumeDataSource,
 		intakeRunner.NewRunnerDataSource,
 		kmsKey.NewKeyDataSource,
 		kmsKeyRing.NewKeyRingDataSource,
 		kmsWrappingKey.NewWrappingKeyDataSource,
 		loadBalancer.NewLoadBalancerDataSource,
-		logMeInstance.NewInstanceDataSource,
-		logMeCredential.NewCredentialDataSource,
-		logsInstance.NewLogsInstanceDataSource,
-		logsAccessToken.NewLogsAccessTokenDataSource,
 		logAlertGroup.NewLogAlertGroupDataSource,
+		logMeCredential.NewCredentialDataSource,
+		logMeInstance.NewInstanceDataSource,
+		logsAccessToken.NewLogsAccessTokenDataSource,
+		logsInstance.NewLogsInstanceDataSource,
 		machineType.NewMachineTypeDataSource,
-		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
+		mariaDBInstance.NewInstanceDataSource,
+		modelExperimentsInstance.NewInstanceDataSource,
+		modelExperimentsToken.NewInstanceTokenDataSource,
 		mongoDBFlexInstance.NewInstanceDataSource,
 		mongoDBFlexUser.NewUserDataSource,
-		objectStorageBucket.NewBucketDataSource,
-		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
 		objecStorageCredential.NewCredentialDataSource,
+		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
+		objectStorageBucket.NewBucketDataSource,
 		objectstorageDefaultRetention.NewDefaultRetentionDataSource,
 		observabilityInstance.NewInstanceDataSource,
 		observabilityScrapeConfig.NewScrapeConfigDataSource,
-		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
+		openSearchInstance.NewInstanceDataSource,
 		postgresFlexDatabase.NewDatabaseDataSource,
+		postgresFlexFlavors.NewFlavorsDataSource,
 		postgresFlexInstance.NewInstanceDataSource,
 		postgresFlexUser.NewUserDataSource,
-		rabbitMQInstance.NewInstanceDataSource,
+		projectLock.NewProjectLockDatasource,
 		rabbitMQCredential.NewCredentialDataSource,
-		redisInstance.NewInstanceDataSource,
+		rabbitMQInstance.NewInstanceDataSource,
 		redisCredential.NewCredentialDataSource,
+		redisInstance.NewInstanceDataSource,
+		resourceManagerFolder.NewFolderDataSource,
 		resourceManagerProject.NewProjectDataSource,
+		resourcepool.NewResourcePoolDataSource,
 		scfOrganization.NewScfOrganizationDataSource,
 		scfOrganizationmanager.NewScfOrganizationManagerDataSource,
 		scfPlatform.NewScfPlatformDataSource,
-		resourceManagerFolder.NewFolderDataSource,
 		secretsManagerInstance.NewInstanceDataSource,
 		secretsManagerUser.NewUserDataSource,
-		sqlServerFlexInstance.NewInstanceDataSource,
-		sqlServerFlexUser.NewUserDataSource,
+		serverBackupEnable.NewServerBackupEnableDataSource,
 		serverBackupSchedule.NewScheduleDataSource,
 		serverBackupSchedule.NewSchedulesDataSource,
+		serverUpdateEnable.NewServerUpdateEnableDataSource,
 		serverUpdateSchedule.NewScheduleDataSource,
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
 		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderDataSource,
 		serviceAccounts.NewServiceAccountsDataSource,
+		share.NewShareDataSource,
 		skeCluster.NewClusterDataSource,
 		skeKubernetesVersion.NewKubernetesVersionsDataSource,
 		skeMachineImages.NewKubernetesMachineImageVersionDataSource,
-		resourcepool.NewResourcePoolDataSource,
-		share.NewShareDataSource,
-		exportpolicy.NewExportPolicyDataSource,
-		snapshots.NewResourcePoolSnapshotDataSource,
 		snapshotPolicy.NewSnapshotPoliciesDataSource,
-		projectLock.NewProjectLockDatasource,
-		compliancelock.NewComplianceLockDataSource,
-		serverBackupEnable.NewServerBackupEnableDataSource,
-		serverUpdateEnable.NewServerUpdateEnableDataSource,
-		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenDataSource,
-		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
-		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
+		snapshots.NewResourcePoolSnapshotDataSource,
+		sqlServerFlexDatabase.NewDatabaseDataSource,
+		sqlServerFlexFlavors.NewFlavorsDataSource,
+		sqlServerFlexInstance.NewInstanceDataSource,
+		sqlServerFlexUser.NewUserDataSource,
 		telemetryLink.NewTelemetryLinkDataSource,
+		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenDataSource,
+		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
+		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
+		valkeyCredential.NewCredentialDataSource,
+		valkeyInstance.NewInstanceDataSource,
+		vpnConnection.NewVPNConnectionDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
-		vpnConnection.NewVPNConnectionDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -793,8 +880,11 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		alb.NewApplicationLoadBalancerResource,
+		albWafCustomRuleGroup.NewCustomRuleGroupResource,
+		albWaf.NewWafConfigurationResource,
 		albWafManagedRuleSet.NewManagedRuleSetResource,
 		alertGroup.NewAlertGroupResource,
+		automationVolume.NewVolumeAutomationResource,
 		cdn.NewDistributionResource,
 		cert.NewCertificatesResource,
 		cdnCustomDomain.NewCustomDomainResource,
@@ -811,25 +901,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasAlphaVpcNetworkRange.NewVpcNetworkRangeResource,
 		iaasAlphaVpcRegion.NewVPCRegion,
 		iaasAlphaVpcStaticRoute.NewStaticRouteResource,
-		iaasAffinityGroup.NewAffinityGroupResource,
-		iaasImage.NewImageResource,
-		iaasNetwork.NewNetworkResource,
-		iaasNetworkArea.NewNetworkAreaResource,
-		iaasNetworkAreaRegion.NewNetworkAreaRegionResource,
-		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
-		iaasNetworkInterface.NewNetworkInterfaceResource,
-		iaasVolume.NewVolumeResource,
-		iaasPublicIp.NewPublicIpResource,
-		iaasKeyPair.NewKeyPairResource,
-		iaasVolumeAttach.NewVolumeAttachResource,
-		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
-		iaasServiceAccountAttach.NewServiceAccountAttachResource,
-		iaasPublicIpAssociate.NewPublicIpAssociateResource,
-		iaasServer.NewServerResource,
-		iaasSecurityGroup.NewSecurityGroupResource,
-		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
-		iaasRoutingTable.NewRoutingTableResource,
-		iaasRoutingTableRoute.NewRoutingTableRouteResource,
 		intakeRunner.NewRunnerResource,
 		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
@@ -844,6 +915,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
 		modelServingToken.NewTokenResource,
+		modelExperimentsInstance.NewInstanceResourceEmpty,
+		modelExperimentsToken.NewInstanceTokenResourceEmpty,
 		mongoDBFlexInstance.NewInstanceResource,
 		mongoDBFlexUser.NewUserResource,
 		objectStorageBucket.NewBucketResource,
@@ -868,6 +941,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		resourceManagerFolder.NewFolderResource,
 		secretsManagerInstance.NewInstanceResource,
 		secretsManagerUser.NewUserResource,
+		sqlServerFlexDatabase.NewDatabaseResource,
 		sqlServerFlexInstance.NewInstanceResource,
 		sqlServerFlexUser.NewUserResource,
 		serverBackupSchedule.NewScheduleResource,
@@ -888,8 +962,29 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryRouterInstance.NewTelemetryRouterInstanceResource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
 		telemetryLink.NewTelemetryLinkResource,
+		valkeyInstance.NewInstanceResource,
+		valkeyCredential.NewCredentialResource,
 		vpnConnection.NewVpnConnectionResource,
 		vpnGateway.NewGatewayResource,
+		iaasAffinityGroup.NewAffinityGroupResource,
+		iaasImage.NewImageResource,
+		iaasNetwork.NewNetworkResource,
+		iaasNetworkArea.NewNetworkAreaResource,
+		iaasNetworkAreaRegion.NewNetworkAreaRegionResource,
+		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
+		iaasNetworkInterface.NewNetworkInterfaceResource,
+		iaasPublicIp.NewPublicIpResource,
+		iaasKeyPair.NewKeyPairResource,
+		iaasVolumeAttach.NewVolumeAttachResource,
+		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
+		iaasServiceAccountAttach.NewServiceAccountAttachResource,
+		iaasPublicIpAssociate.NewPublicIpAssociateResource,
+		iaasServer.NewServerResource,
+		iaasSecurityGroup.NewSecurityGroupResource,
+		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
+		iaasRoutingTable.NewRoutingTableResource,
+		iaasRoutingTableRoute.NewRoutingTableRouteResource,
+		iaasVolume.NewVolumeResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
@@ -902,5 +997,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
 		access_token.NewAccessTokenEphemeralResource,
+		skeKubeconfig.NewKubeconfigEphemeralResource,
 	}
 }

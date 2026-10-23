@@ -41,3 +41,6 @@ stackit/internal/services/iaas/test-512k.img
 # Test coverage reports
 coverage.out
 coverage.html
+
+# Custom golangci-lint binary needed for custom linters
+custom-gcl

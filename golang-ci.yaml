@@ -9,6 +9,13 @@ run:
 linters:
   # https://golangci-lint.run/usage/linters/
   enable:
+    - tfacl # custom local linter
+    - tfctxinit # custom local linter
+    - tflogresponse # custom local linter
+    - tfwriteid # custom local linter
+    - tfmodifyplan # custom local linter
+    - tfstateremove # custom local linter
+    - tfclientcollection # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -25,6 +32,28 @@ linters:
     - noctx # false positive: finds errors with http.NewRequest that dont make sense
     - unparam # false positives
   settings:
+    custom:
+      tfacl:
+        type: module
+        description: "A custom local linter"
+      tfctxinit:
+        type: module
+        description: "A custom local linter"
+      tflogresponse:
+        type: module
+        description: "A custom local linter"
+      tfwriteid:
+        type: module
+        description: "A custom local linter"
+      tfmodifyplan:
+        type: module
+        description: "A custom local linter"
+      tfstateremove:
+        type: module
+        description: "A custom local linter, checking that response.State.RemoveResource(ctx) is called in every Read method"
+      tfclientcollection:
+        type: module
+        description: "A custom local linter"
     depguard:
       rules:
         main:
@@ -91,6 +120,16 @@ linters:
       - third_party$
       - builtin$
       - examples$
+    rules:
+      - path: stackit/internal/core/
+        linters:
+          - tfclientcollection
+      - path: stackit/internal/services/iam/rolebindings/v1/generic/
+        linters:
+          - tfclientcollection
+      - path: stackit/internal/services/iam/rolebindings/v1/services/
+        linters:
+          - tfclientcollection
 formatters:
   settings:
     goimports:

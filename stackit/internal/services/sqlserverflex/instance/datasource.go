@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -34,7 +31,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client       *sqlserverflex.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -45,17 +42,14 @@ func (r *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SqlServerFlexV3Client
+
 	tflog.Info(ctx, "SQLServer Flex instance client configured")
 }
 
@@ -114,9 +108,10 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"acl": schema.ListAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Computed:    true,
+				Description:        descriptions["acl"],
+				DeprecationMessage: "acl is deprecated and will be removed after February 2027. Use instead `network.acl`.",
+				ElementType:        types.StringType,
+				Computed:           true,
 			},
 			"backup_schedule": schema.StringAttribute{
 				Description: descriptions["backup_schedule"],
@@ -145,7 +140,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Computed: true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -210,14 +206,17 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"options": schema.SingleNestedAttribute{
-				Description: descriptions["options"],
-				Computed:    true,
+				Description:        descriptions["options"],
+				DeprecationMessage: "option is deprecated and will be removed after February 2027.",
+				Computed:           true,
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
-						Computed: true,
+						Computed:           true,
+						DeprecationMessage: "edition is deprecated and will be removed after February 2027.",
 					},
 					"retention_days": schema.Int32Attribute{
-						Computed: true,
+						Computed:           true,
+						DeprecationMessage: "retention_days is deprecated and will be removed after February 2027. Use instead `retention_days` from root.",
 					},
 				},
 			},
@@ -251,7 +250,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -278,16 +277,17 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
-	flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
+	flavor := &flavorModel{}
+	flavorResp, err := getFlavor(ctx, r.client, projectId, region, instanceResp.FlavorId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
-		return
-	}
-	flavor := &flavorModel{
-		Id:          types.StringValue(flavorResp.Id),
-		Description: types.StringValue(flavorResp.Description),
-		CPU:         types.Int64Value(flavorResp.Cpu),
-		RAM:         types.Int64Value(flavorResp.Memory),
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
+	} else if flavorResp != nil {
+		flavor = &flavorModel{
+			Id:          types.StringValue(flavorResp.Id),
+			Description: types.StringValue(flavorResp.Description),
+			CPU:         types.Int64Value(flavorResp.Cpu),
+			RAM:         types.Int64Value(flavorResp.Memory),
+		}
 	}
 
 	err = mapFields(ctx, instanceResp, &model, flavor, region)

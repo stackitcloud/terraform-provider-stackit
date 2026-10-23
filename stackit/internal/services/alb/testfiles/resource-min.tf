@@ -2,7 +2,7 @@
 variable "image_id" {
   description = "A valid Image ID available in the project for the target server"
   type        = string
-  default     = "939249d1-6f48-4ab7-929b-95170728311a"
+  default     = "d2ef238d-7d1e-4b84-82cc-6f38a5d0c3de"
 }
 variable "availability_zone" {
   description = "The availability zone"
@@ -40,7 +40,7 @@ resource "stackit_network" "network" {
   project_id       = var.project_id
   name             = var.network_name
   ipv4_nameservers = ["1.1.1.1"]
-  ipv4_prefix      = "192.168.3.0/25"
+  ipv4_prefix      = "10.0.0.0/25"
   routed           = "true"
 }
 

@@ -6,8 +6,6 @@ import (
 
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -29,11 +27,12 @@ var (
 )
 
 var certificateDataSourceTypes = map[string]attr.Type{
-	"version": types.Int32Type,
+	"version":        types.Int32Type,
+	"skip_dns_check": types.BoolType,
 }
 
 type customDomainDataSource struct {
-	client *cdnSdk.APIClient
+	client cdnSdk.DefaultAPI
 }
 
 func NewCustomDomainDataSource() datasource.DataSource {
@@ -51,7 +50,7 @@ type customDomainDataSourceModel struct {
 }
 
 func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -61,11 +60,8 @@ func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.CdnV1Client
+
 	tflog.Info(ctx, "CDN client configured")
 }
 
@@ -112,6 +108,10 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Description: certificateSchemaDescriptions["version"],
 						Computed:    true,
 					},
+					"skip_dns_check": schema.BoolAttribute{
+						Description: certificateSchemaDescriptions["skip_dns_check"],
+						Computed:    true,
+					},
 				},
 			},
 		},
@@ -135,7 +135,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	customDomainResp, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
+	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -191,14 +191,16 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 	if normalizedCert.Type == "managed" {
 		model.Certificate = types.ObjectNull(certificateDataSourceTypes)
 	} else {
-		// For custom certificates, we only care about the version.
+		// For custom certificates, we only care about the version and skip_dns_check.
 		version := types.Int32Null()
 		if normalizedCert.Version != nil {
 			version = types.Int32Value(*normalizedCert.Version)
 		}
+		skipDnsCheck := types.BoolPointerValue(normalizedCert.SkipDnsCheck)
 
 		certificateObj, diags := types.ObjectValue(certificateDataSourceTypes, map[string]attr.Value{
-			"version": version,
+			"version":        version,
+			"skip_dns_check": skipDnsCheck,
 		})
 		if diags.HasError() {
 			return fmt.Errorf("failed to map certificate: %w", core.DiagsToError(diags))

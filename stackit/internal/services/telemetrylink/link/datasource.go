@@ -14,9 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/utils"
+
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -39,10 +38,11 @@ type DataSourceModel struct {
 	TelemetryRouterID types.String `tfsdk:"telemetry_router_id"`
 	CreateTime        types.String `tfsdk:"create_time"`
 	Status            types.String `tfsdk:"status"`
+	Enabled           types.Bool   `tfsdk:"enabled"`
 }
 
 type telemetryLinkDataSource struct {
-	client       *telemetrylink.APIClient
+	client       telemetrylink.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -51,17 +51,14 @@ func (d *telemetryLinkDataSource) Metadata(_ context.Context, req datasource.Met
 }
 
 func (d *telemetryLinkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	d.providerData = providerData
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.TelemetryLinkV1Client
+
 	tflog.Info(ctx, "TelemetryLink client configured")
 }
 
@@ -111,7 +108,12 @@ func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Computed:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: schemaDescriptions["status"],
+				Description:        schemaDescriptions["status"],
+				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
+				Computed:           true,
+			},
+			"enabled": schema.BoolAttribute{
+				Description: schemaDescriptions["enabled"],
 				Computed:    true,
 			},
 		},
@@ -140,11 +142,11 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 	var err error
 	switch resourceType {
 	case resourceTypeOrganization:
-		response, err = d.client.DefaultAPI.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
+		response, err = d.client.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
 	case resourceTypeFolder:
-		response, err = d.client.DefaultAPI.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
+		response, err = d.client.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
 	case resourceTypeProject:
-		response, err = d.client.DefaultAPI.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
+		response, err = d.client.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
 	default:
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
 		return
@@ -196,6 +198,7 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)
 	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
 	model.Status = types.StringValue(string(link.Status))
+	model.Enabled = types.BoolValue(link.Enabled)
 
 	return nil
 }

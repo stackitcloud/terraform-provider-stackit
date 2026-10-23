@@ -5,103 +5,79 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
 	tests := []struct {
 		description string
-		input       *postgresflex.InstanceDatabase
+		input       *postgresflex.GetDatabaseResponse
 		region      string
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"default_values",
-			&postgresflex.InstanceDatabase{
-				Id: new("uid"),
+			description: "default_values",
+			input: &postgresflex.GetDatabaseResponse{
+				Id: 123,
 			},
-			testRegion,
-			Model{
-				Id:         types.StringValue("pid,region,iid,uid"),
-				DatabaseId: types.StringValue("uid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				Name:       types.StringNull(),
-				Owner:      types.StringNull(),
-				Region:     types.StringValue(testRegion),
-			},
-			true,
-		},
-		{
-			"simple_values",
-			&postgresflex.InstanceDatabase{
-				Id:   new("uid"),
-				Name: new("dbname"),
-				Options: map[string]any{
-					"owner": "username",
-				},
-			},
-			testRegion,
-			Model{
-				Id:         types.StringValue("pid,region,iid,uid"),
-				DatabaseId: types.StringValue("uid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				Name:       types.StringValue("dbname"),
-				Owner:      types.StringValue("username"),
-				Region:     types.StringValue(testRegion),
-			},
-			true,
-		},
-		{
-			"null_fields_and_int_conversions",
-			&postgresflex.InstanceDatabase{
-				Id:   new("uid"),
-				Name: new(""),
-				Options: map[string]any{
-					"owner": "",
-				},
-			},
-			testRegion,
-			Model{
-				Id:         types.StringValue("pid,region,iid,uid"),
-				DatabaseId: types.StringValue("uid"),
+			region: testRegion,
+			expected: Model{
+				Id:         types.StringValue("pid,region,iid,123"),
+				DatabaseId: types.StringValue("123"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringValue(""),
 				Owner:      types.StringValue(""),
 				Region:     types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_response",
-			nil,
-			testRegion,
-			Model{},
-			false,
-		},
-		{
-			"empty_response",
-			&postgresflex.InstanceDatabase{},
-			testRegion,
-			Model{},
-			false,
-		},
-		{
-			"no_resource_id",
-			&postgresflex.InstanceDatabase{
-				Id:   new(""),
-				Name: new("dbname"),
-				Options: map[string]any{
-					"owner": "username",
-				},
+			description: "simple_values",
+			input: &postgresflex.GetDatabaseResponse{
+				Id:    123,
+				Name:  "dbname",
+				Owner: "username",
 			},
-			testRegion,
-			Model{},
-			false,
+			region: testRegion,
+			expected: Model{
+				Id:         types.StringValue("pid,region,iid,123"),
+				DatabaseId: types.StringValue("123"),
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Name:       types.StringValue("dbname"),
+				Owner:      types.StringValue("username"),
+				Region:     types.StringValue(testRegion),
+			},
+			isValid: true,
+		},
+		{
+			description: "null_fields_and_int_conversions",
+			input: &postgresflex.GetDatabaseResponse{
+				Id:    123,
+				Name:  "",
+				Owner: "",
+			},
+			region: testRegion,
+			expected: Model{
+				Id:         types.StringValue("pid,region,iid,123"),
+				DatabaseId: types.StringValue("123"),
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Name:       types.StringValue(""),
+				Owner:      types.StringValue(""),
+				Region:     types.StringValue(testRegion),
+			},
+			isValid: true,
+		},
+		{
+			description: "nil_response",
+			input:       nil,
+			region:      testRegion,
+			expected:    Model{},
+			isValid:     false,
 		},
 	}
 	for _, tt := range tests {
@@ -135,38 +111,34 @@ func TestToCreatePayload(t *testing.T) {
 		isValid     bool
 	}{
 		{
-			"default_values",
-			&Model{
+			description: "default_values",
+			input: &Model{
 				Name:  types.StringValue("dbname"),
 				Owner: types.StringValue("username"),
 			},
-			&postgresflex.CreateDatabasePayload{
-				Name: new("dbname"),
-				Options: &map[string]string{
-					"owner": "username",
-				},
+			expected: &postgresflex.CreateDatabasePayload{
+				Name:  "dbname",
+				Owner: new("username"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields",
-			&Model{
+			description: "null_fields",
+			input: &Model{
 				Name:  types.StringNull(),
 				Owner: types.StringNull(),
 			},
-			&postgresflex.CreateDatabasePayload{
-				Name: nil,
-				Options: &map[string]string{
-					"owner": "",
-				},
+			expected: &postgresflex.CreateDatabasePayload{
+				Name:  "",
+				Owner: nil,
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_model",
-			nil,
-			nil,
-			false,
+			description: "nil_model",
+			input:       nil,
+			expected:    nil,
+			isValid:     false,
 		},
 	}
 	for _, tt := range tests {

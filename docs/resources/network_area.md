@@ -69,7 +69,6 @@ resource "stackit_network_area" "example" {
 resource "stackit_network_area_region" "example" {
   organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_area_id = stackit_network_area.example.network_area_id
-  region = "eu01"
   ipv4 = {
     transfer_network = "192.168.1.0/24"
     network_ranges = [
@@ -108,27 +107,10 @@ When the run is completed, you can remove the import-block. Run `$ terraform pla
 
 ### Optional
 
-- `default_nameservers` (List of String, Deprecated) List of DNS Servers/Nameservers for configuration of network area for region `eu01`.
-- `default_prefix_length` (Number, Deprecated) The default prefix length for networks in the network area for region `eu01`.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `max_prefix_length` (Number, Deprecated) The maximal prefix length for networks in the network area for region `eu01`.
-- `min_prefix_length` (Number, Deprecated) The minimal prefix length for networks in the network area for region `eu01`.
-- `network_ranges` (Attributes List, Deprecated) List of Network ranges for configuration of network area for region `eu01`. (see [below for nested schema](#nestedatt--network_ranges))
-- `transfer_network` (String, Deprecated) Classless Inter-Domain Routing (CIDR) for configuration of network area for region `eu01`.
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`".
 - `network_area_id` (String) The network area ID.
 - `project_count` (Number) The amount of projects currently referencing this area.
-
-<a id="nestedatt--network_ranges"></a>
-### Nested Schema for `network_ranges`
-
-Required:
-
-- `prefix` (String, Deprecated) Classless Inter-Domain Routing (CIDR).
-
-Read-Only:
-
-- `network_range_id` (String, Deprecated)

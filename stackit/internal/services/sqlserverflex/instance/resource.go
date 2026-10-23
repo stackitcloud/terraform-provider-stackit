@@ -16,11 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
 	int32planmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/int32planmodifier"
 	listplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
 	objectplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/objectplanmodifier"
-	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
+	stringplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -59,17 +58,18 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
-	// Deprecated: ACL is deprecated and will be removed after January 2027
+	// Deprecated: ACL is deprecated and will be removed after February 2027
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Encryption     types.Object `tfsdk:"encryption"`
-	Flavor         types.Object `tfsdk:"flavor"`
-	FlavorId       types.String `tfsdk:"flavor_id"`
-	Storage        types.Object `tfsdk:"storage"`
-	Version        types.String `tfsdk:"version"`
-	Replicas       types.Int32  `tfsdk:"replicas"`
-	Edition        types.String `tfsdk:"edition"`
-	// Deprecated: Options is deprecated and will be removed after January 2027
+	// Deprecated: Flavor is deprecated and will be removed after February 2027.
+	Flavor   types.Object `tfsdk:"flavor"`
+	FlavorId types.String `tfsdk:"flavor_id"`
+	Storage  types.Object `tfsdk:"storage"`
+	Version  types.String `tfsdk:"version"`
+	Replicas types.Int32  `tfsdk:"replicas"`
+	Edition  types.String `tfsdk:"edition"`
+	// Deprecated: Options is deprecated and will be removed after February 2027
 	Options       types.Object `tfsdk:"options"`
 	RetentionDays types.Int32  `tfsdk:"retention_days"`
 	Network       types.Object `tfsdk:"network"`
@@ -108,7 +108,7 @@ var networkTypes = map[string]attr.Type{
 	"router_address":   basetypes.StringType{},
 }
 
-// Struct corresponding to Model.Flavor
+// Deprecated: Will be removed after February 2027. Struct corresponding to Model.Flavor
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
@@ -116,7 +116,7 @@ type flavorModel struct {
 	RAM         types.Int64  `tfsdk:"ram"`
 }
 
-// Types corresponding to flavorModel
+// Deprecated: Will be removed after February 2027. Types corresponding to flavorModel
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
@@ -155,7 +155,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client       *sqlserverflex.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -166,17 +166,14 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SqlServerFlexV3Client
+
 	tflog.Info(ctx, "SQLServer Flex instance client configured")
 }
 
@@ -219,7 +216,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			planModel.BackupSchedule = types.StringValue("0 0 * * *")
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("backup_schedule"),
-			"backup_schedule will be required in future", "backup_schedule will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to '0 0 * * *' during deprecation period.")
+			"backup_schedule will be required in future", "backup_schedule will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to '0 0 * * *' during deprecation period.")
 	}
 
 	// storage
@@ -231,7 +228,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			})
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("storage"),
-			"storage will be required in future", "storage will be a required field after January 2027. Set values to prevent breaking changes. Fallback to class 'premium-perf12-stackit' with a size of 40 gigabytes during deprecation period.")
+			"storage will be required in future", "storage will be a required field after February 2027. Set values to prevent breaking changes. Fallback to class 'premium-perf12-stackit' with a size of 40 gigabytes during deprecation period.")
 	} else {
 		var storageConfig = &storageModel{}
 		resp.Diagnostics.Append(configModel.Storage.As(ctx, storageConfig, basetypes.ObjectAsOptions{})...)
@@ -250,7 +247,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 				storagePlan.Class = types.StringValue("premium-perf12-stackit")
 			}
 			resp.Diagnostics.AddAttributeWarning(path.Root("storage.class"),
-				"storage.class will be required in future", "storage.class will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 'premium-perf12-stackit' during deprecation period.")
+				"storage.class will be required in future", "storage.class will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 'premium-perf12-stackit' during deprecation period.")
 		}
 
 		// storage.size
@@ -259,7 +256,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 				storagePlan.Size = types.Int64Value(40)
 			}
 			resp.Diagnostics.AddAttributeWarning(path.Root("storage.size"),
-				"storage.size will be required in future", "storage.size will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 40 gigabytes during deprecation period.")
+				"storage.size will be required in future", "storage.size will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 40 gigabytes during deprecation period.")
 		}
 
 		var diags diag.Diagnostics
@@ -276,14 +273,14 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			planModel.Version = types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022))
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("version"),
-			"version will be required in future", "version will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to '2022' during deprecation period.")
+			"version will be required in future", "version will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to '2022' during deprecation period.")
 	}
 
 	// acl
 	if (configModel.ACL.IsNull() || configModel.ACL.IsUnknown()) && (configModel.Network.IsNull() || configModel.Network.IsUnknown()) {
 		// Not setting default ACL and scope to the configModel, instead we send an empty array to the API, where they set the default value.
 		resp.Diagnostics.AddAttributeWarning(path.Root("network").AtName("acl"),
-			"network.acl will be required in future", "network.acl will be a required field after January 2027. Set values to prevent breaking changes.")
+			"network.acl will be required in future", "network.acl will be a required field after February 2027. Set values to prevent breaking changes.")
 	}
 
 	// retention_days
@@ -306,12 +303,12 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			planModel.RetentionDays = types.Int32Value(30)
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("retention_days"),
-			"retention_days will be required in future", "retention_days will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 30 days during deprecation period.")
+			"retention_days will be required in future", "retention_days will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 30 days during deprecation period.")
 	}
 }
 
 // Schema defines the schema for the resource.
-func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	willBeRequired := " Will be required in the future. Set a value to prevent breaking changes."
 	descriptions := map[string]string{
 		"main":                 "SQLServer Flex instance resource schema. Must have a `region` specified in the provider configuration.",
@@ -327,7 +324,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"kek_key_version":      "Version of the key within the STACKIT-KMS to use for the encryption.",
 		"service_account":      "Service-Account linked to the Key within the STACKIT-KMS.",
 		"options":              "Custom parameters for the SQLServer Flex instance.",
-		"flavor_id":            "The flavor ID of the SQLServer Flex instance.",
+		"flavor_id":            "The flavor ID of the SQLServer Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.",
 		"network":              "The network configuration of the instance." + willBeRequired,
 		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
 		"network.acl":          "List of IPV4 cidr." + willBeRequired,
@@ -337,7 +334,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"edition":              "Edition of the MSSQL server instance.",
 		"region":               "The resource region. If not defined, the provider region is used.",
 		"storage":              "The object containing information about the storage size and class." + willBeRequired,
-		"storage.class":        "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID\n```" + willBeRequired,
+		"storage.class":        "The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors`." + willBeRequired,
 		"storage.size":         "The storage size in Gigabytes." + willBeRequired,
 		"version":              "The sqlserver version used for the instance. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(sqlserverflex.AllowedInstanceVersionEnumValues)...) + willBeRequired,
 	}
@@ -387,12 +384,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"acl": schema.ListAttribute{
 				Description:        descriptions["acl"],
-				DeprecationMessage: "acl is deprecated and will be removed after January 2027. Use instead `network.acl`.",
+				DeprecationMessage: "acl is deprecated and will be removed after February 2027. Use instead `network.acl`.",
 				ElementType:        types.StringType,
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListChanged(path.Root("network").AtName("acl")), "sets `UseStateForUnknown` only if `network.acl` has not changed"),
+					listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListUnchanged(path.Root("network").AtName("acl")), "sets `UseStateForUnknown` only if `network.acl` has not changed"),
 				},
 				Validators: []validator.List{
 					listvalidator.ConflictsWith(
@@ -405,7 +402,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifierCustom.CronNormalizationModifier{},
+					stringplanmodifier2.CronNormalizationModifier{},
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
@@ -455,20 +452,15 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Computed: true,
-				Optional: true,
+				Computed:           true,
+				Optional:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"description": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"cpu": schema.Int64Attribute{
 						Required: true,
@@ -494,13 +486,16 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						path.Root("flavor").Expression(),
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					UseStateForUnknownIfFlavorUnchanged(req),
+				},
 			},
 			"network": schema.SingleNestedAttribute{
 				Description: descriptions["network"],
 				Computed:    true,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.ListChanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
+					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.ListUnchanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
 				},
 				Attributes: map[string]schema.Attribute{
 					"access_scope": schema.StringAttribute{
@@ -518,7 +513,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.List{
-							listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListChanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
+							listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListUnchanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
 						},
 						Validators: []validator.List{
 							listvalidator.ConflictsWith(
@@ -588,26 +583,26 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"options": schema.SingleNestedAttribute{
-				DeprecationMessage: "option is deprecated and will be removed after January 2027.",
+				DeprecationMessage: "option is deprecated and will be removed after February 2027.",
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.Int32Changed(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
+					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.Int32Unchanged(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
 				},
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
-						DeprecationMessage: "edition is deprecated and will be removed after January 2027.",
+						DeprecationMessage: "edition is deprecated and will be removed after February 2027.",
 						Computed:           true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"retention_days": schema.Int32Attribute{
-						DeprecationMessage: "retention_days is deprecated and will be removed after January 2027. Use instead `retention_days` from root.",
+						DeprecationMessage: "retention_days is deprecated and will be removed after February 2027. Use instead `retention_days` from root.",
 						Optional:           true,
 						Computed:           true,
 						PlanModifiers: []planmodifier.Int32{
-							int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Changed(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
+							int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Unchanged(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
 						},
 						Validators: []validator.Int32{
 							int32validator.ConflictsWith(
@@ -622,7 +617,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Changed(path.Root("options").AtName("retention_days")), "sets `UseStateForUnknown` only if `options.retention_days` has not changed"),
+					int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Unchanged(path.Root("options").AtName("retention_days")), "sets `UseStateForUnknown` only if `options.retention_days` has not changed"),
 				},
 				Validators: []validator.Int32{
 					int32validator.ConflictsWith(
@@ -686,7 +681,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
+		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -726,7 +721,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -751,7 +746,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
 	// which can be avoided by sleeping before wait
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -805,7 +800,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -827,16 +822,16 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	} else {
 		// Read the flavor here from the API, because during an import the flavor should be set
-		flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
+		flavorResp, err := getFlavor(ctx, r.client, projectId, region, instanceResp.FlavorId)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
-			return
-		}
-		flavor = &flavorModel{
-			Id:          types.StringValue(flavorResp.Id),
-			Description: types.StringValue(flavorResp.Description),
-			CPU:         types.Int64Value(flavorResp.Cpu),
-			RAM:         types.Int64Value(flavorResp.Memory),
+			core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
+		} else if flavorResp != nil {
+			flavor = &flavorModel{
+				Id:          types.StringValue(flavorResp.Id),
+				Description: types.StringValue(flavorResp.Description),
+				CPU:         types.Int64Value(flavorResp.Cpu),
+				RAM:         types.Int64Value(flavorResp.Memory),
+			}
 		}
 	}
 
@@ -890,7 +885,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
+		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -930,7 +925,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -938,7 +933,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -978,7 +973,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing instance
-	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	err := r.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -990,7 +985,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -1162,7 +1157,9 @@ func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, fl
 		if err != nil {
 			return nil, err
 		}
-		networkPayload.AccessScope = (*sqlserverflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
+		if !(network.AccessScope.IsNull() || network.AccessScope.IsUnknown()) {
+			networkPayload.AccessScope = (*sqlserverflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
+		}
 	} else {
 		// TODO: Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
 		networkPayload.Acl = []string{}
@@ -1274,6 +1271,45 @@ type sqlserverflexClient interface {
 	ListFlavorsExecute(r sqlserverflex.ApiListFlavorsRequest) (*sqlserverflex.ListFlavorsResponse, error)
 }
 
+// Deprecated: getAllFlavors is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
+func getAllFlavors(ctx context.Context, client sqlserverflexClient, projectId, region string) ([]sqlserverflex.ListFlavors, error) {
+	var result []sqlserverflex.ListFlavors
+	req := client.ListFlavors(ctx, projectId, region).Size(100)
+	resp, err := client.ListFlavorsExecute(req)
+	if err != nil {
+		return nil, fmt.Errorf("error listing flavors: %w", err)
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("nil response received when listing flavors")
+	}
+	if resp.Flavors != nil {
+		result = append(result, resp.Flavors...)
+	}
+
+	currentPage := resp.Pagination.Page
+	totalPages := resp.Pagination.TotalPages
+	for currentPage < totalPages {
+		nextPage := currentPage + 1
+		resp, err = client.ListFlavorsExecute(req.Page(nextPage))
+		if err != nil {
+			return nil, fmt.Errorf("error listing flavors: %w", err)
+		}
+		if resp == nil {
+			return nil, fmt.Errorf("nil response received when listing flavors on page %d", nextPage)
+		}
+		if resp.Flavors != nil {
+			result = append(result, resp.Flavors...)
+		}
+		if resp.Pagination.Page <= currentPage {
+			break // Prevent infinite loop if page number does not advance
+		}
+		currentPage = resp.Pagination.Page
+		totalPages = resp.Pagination.TotalPages
+	}
+	return result, nil
+}
+
+// Deprecated: loadFlavorId is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
@@ -1292,17 +1328,16 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-	req := client.ListFlavors(ctx, projectId, region)
-	res, err := client.ListFlavorsExecute(req)
+	res, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {
 		return fmt.Errorf("listing sqlserverflex flavors: %w", err)
 	}
 
 	avl := ""
-	if res.Flavors == nil {
+	if res == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
-	for _, f := range res.Flavors {
+	for _, f := range res {
 		if f.Id == "" || f.Cpu == 0 || f.Memory == 0 {
 			continue
 		}
@@ -1320,13 +1355,13 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 	return nil
 }
 
+// Deprecated: getFlavor is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getFlavor(ctx context.Context, client sqlserverflexClient, projectId, region, flavorId string) (*sqlserverflex.ListFlavors, error) {
-	req := client.ListFlavors(ctx, projectId, region)
-	flavorsResp, err := client.ListFlavorsExecute(req)
+	flavorsResp, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list flavors: %w", err)
 	}
-	for _, flavor := range flavorsResp.Flavors {
+	for _, flavor := range flavorsResp {
 		if flavor.Id == flavorId {
 			return &flavor, nil
 		}

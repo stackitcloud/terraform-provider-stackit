@@ -10,9 +10,19 @@ resource "stackit_cdn_distribution" "example_distribution" {
     }
     regions           = ["EU", "US", "ASIA", "AF", "SA"]
     blocked_countries = ["DE", "AT", "CH"]
+    blocked_ips       = ["1.1.1.1"]
+
+    default_cache_duration = "P1DT2H30M"
+    monthly_limit_bytes    = 1048576
 
     optimizer = {
       enabled = true
+    }
+
+    cache_config = {
+      cache_key_headers            = ["Accept-Language"]
+      query_string_vary_enabled    = true
+      query_string_vary_parameters = ["page", "sort"]
     }
   }
 }
@@ -34,6 +44,10 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
     }
     regions           = ["EU", "US"]
     blocked_countries = ["CN", "RU"]
+    blocked_ips       = ["1.1.1.1"]
+
+    default_cache_duration = "P1DT2H30M"
+    monthly_limit_bytes    = 1048576
 
     optimizer = {
       enabled = false

@@ -50,6 +50,23 @@ func ToOptStringMap(tfMap map[string]attr.Value) (*map[string]string, error) { /
 	return labelsPointer, nil
 }
 
+func ToOptStringPointerMap(tfMap map[string]attr.Value) (*map[string]*string, error) { //nolint: gocritic //pointer needed to map optional fields
+	labels := make(map[string]*string, len(tfMap))
+	for l, v := range tfMap {
+		valueString, ok := v.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("error converting map value: expected to string, got %v", v)
+		}
+		labels[l] = valueString.ValueStringPointer()
+	}
+
+	labelsPointer := &labels
+	if len(labels) == 0 {
+		labelsPointer = nil
+	}
+	return labelsPointer, nil
+}
+
 func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.MapValue, error) {
 	labels := make(map[string]attr.Value, len(m))
 	for l, v := range m {
@@ -75,6 +92,22 @@ func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string
 	interfaceMap := make(map[string]any, len(labels))
 	for k, v := range labels {
 		interfaceMap[k] = v
+	}
+
+	return interfaceMap, nil
+}
+
+// ToStringInterfaceMap converts a basetypes.MapValue of Strings to a map[string]*string
+func ToStringStringPointerMap(ctx context.Context, m basetypes.MapValue) (map[string]*string, error) {
+	labels := map[string]string{}
+	diags := m.ElementsAs(ctx, &labels, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
+	}
+
+	interfaceMap := make(map[string]*string, len(labels))
+	for k, v := range labels {
+		interfaceMap[k] = &v
 	}
 
 	return interfaceMap, nil
@@ -217,7 +250,7 @@ func StringSetToSlice(set basetypes.SetValue) ([]string, error) {
 	return result, nil
 }
 
-// ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
+// ToJSONMapPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
 // It takes a current map as it is in the terraform state and a desired map as it is in the user configuratiom
 // and builds a map which sets to null keys that should be removed, updates the values of existing keys and adds new keys
 // This method is needed because in partial updates, e.g. if the key is not provided it is ignored and not removed
@@ -251,32 +284,38 @@ func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.M
 	return mapPayload, nil
 }
 
-func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (core.ProviderData, bool) {
-	// Prevent panic if the provider has not been configured.
-	if providerData == nil {
-		return core.ProviderData{}, false
+// ToLabelsMapPartialUpdatePayload returns a map[string]*string{} to be used in a PATCH request payload.
+// It takes a current map as it is in the terraform state and a desired map as it is in the user configuratiom
+// and builds a map which sets to null keys that should be removed, updates the values of existing keys and adds new keys
+// This method is needed because in partial updates, e.g. if the key is not provided it is ignored and not removed
+func ToLabelsMapPartialUpdatePayload(ctx context.Context, current, desired types.Map) (map[string]*string, error) {
+	currentMap, err := ToStringStringPointerMap(ctx, current)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	stackitProviderData, ok := providerData.(core.ProviderData)
-	if !ok {
-		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.ProviderData, got %T", providerData))
-		return core.ProviderData{}, false
-	}
-	return stackitProviderData, true
-}
-
-func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (core.EphemeralProviderData, bool) {
-	// Prevent panic if the provider has not been configured.
-	if providerData == nil {
-		return core.EphemeralProviderData{}, false
+	desiredMap, err := ToStringStringPointerMap(ctx, desired)
+	if err != nil {
+		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	stackitProviderData, ok := providerData.(core.EphemeralProviderData)
-	if !ok {
-		core.LogAndAddError(ctx, diags, "Error configuring API client", "Expected configure type core.EphemeralProviderData")
-		return core.EphemeralProviderData{}, false
+	mapPayload := map[string]*string{}
+	// Update and remove existing keys
+	for k := range currentMap {
+		if desiredValue, ok := desiredMap[k]; ok {
+			mapPayload[k] = desiredValue
+		} else {
+			mapPayload[k] = nil
+		}
 	}
-	return stackitProviderData, true
+
+	// Add new keys
+	for k, desiredValue := range desiredMap {
+		if _, ok := mapPayload[k]; !ok {
+			mapPayload[k] = desiredValue
+		}
+	}
+	return mapPayload, nil
 }
 
 // StringListToSet safely converts a Go slice of strings into a Terraform framework types.Set.

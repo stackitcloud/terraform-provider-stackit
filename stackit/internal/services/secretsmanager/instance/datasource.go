@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,7 +30,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *secretsmanager.APIClient
+	client secretsmanager.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -43,28 +40,29 @@ func (r *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := secretsmanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	if !core.ValidateServiceRegion(ctx, &providerData, "Secrets Manager", &resp.Diagnostics) {
 		return
 	}
-	r.client = apiClient
+
+	r.client = clients.SecretsmanagerV1Client
+
 	tflog.Info(ctx, "Secrets Manager instance client configured")
 }
 
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                          "Secrets Manager instance data source schema. Must have a `region` specified in the provider configuration.",
+		"main":                          "Secrets Manager instance data source schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		"id":                            "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id":                   "ID of the Secrets Manager instance.",
 		"project_id":                    "STACKIT project ID to which the instance is associated.",
 		"name":                          "Instance name.",
-		"acls":                          "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
+		"acl":                           "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
 		"kms_key":                       "The STACKIT-KMS key for secret encryption and decryption.",
 		"kms_key.key_id":                "UUID of the key within the STACKIT-KMS to use for the encryption.",
 		"kms_key.key_ring_id":           "UUID of the keyring where the key is located within the STACKTI-KMS.",
@@ -99,8 +97,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["name"],
 				Computed:    true,
 			},
-			"acls": schema.SetAttribute{
-				Description: descriptions["acls"],
+			"acls": schema.SetAttribute{ //nolint:tfacl // field is deprecated already
+				Description: descriptions["acl"],
 				ElementType: types.StringType,
 				Computed:    true,
 			},
@@ -146,7 +144,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -164,9 +162,9 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 

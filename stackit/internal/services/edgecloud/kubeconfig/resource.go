@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -77,7 +76,7 @@ func NewKubeconfigResource() resource.Resource {
 
 // kubeconfigResource is the resource implementation.
 type kubeconfigResource struct {
-	client       *edgeCloud.APIClient
+	client       edgeCloud.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -88,21 +87,19 @@ func (r *kubeconfigResource) Metadata(_ context.Context, req resource.MetadataRe
 
 // Configure adds the provider configured client to the resource.
 func (r *kubeconfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.EdgeV1Client
+
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_edgecloud_kubeconfig", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := edgeCloudUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "Edge Cloud kubeconfig client configured")
 }
 
@@ -302,12 +299,15 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "kubeconfig_id", kubeconfigUUID)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// Note: The token itself must not be created via an endpoint. There's only a GET endpoint for the token.
+	// But the instance needs to be ready, that's why wait handlers are used here.
+
 	var kubeconfigResp *edgeCloud.Kubeconfig
 	var err error
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
+		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return
@@ -316,7 +316,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
+		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return
@@ -363,6 +363,13 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if expired, err := edgeCloudUtils.CheckExpiration(model.ExpiresAt, types.Int64Null(), time.Now()); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading kubeconfig", fmt.Sprintf("Checking expiration: %v", err))
+		return
+	} else if expired {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	if !model.InstanceId.IsNull() {

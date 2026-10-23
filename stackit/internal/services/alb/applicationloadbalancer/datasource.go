@@ -7,9 +7,6 @@ import (
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	albUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -32,7 +29,7 @@ func NewApplicationLoadBalancerDataSource() datasource.DataSource {
 
 // albDataSource is the data source implementation.
 type albDataSource struct {
-	client       *albSdk.APIClient
+	client       albSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,16 +41,14 @@ func (r *albDataSource) Metadata(_ context.Context, req datasource.MetadataReque
 // Configure adds the provider configured client to the data source.
 func (r *albDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := albUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.AlbV2Client
+
 	tflog.Info(ctx, "Application Load Balancer client configured")
 }
 
@@ -121,6 +116,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
 		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
 		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
+		"alt_port":                               "Overrides the default port used for health check probes.",
 		"healthy_threshold":                      "Healthy threshold of the health checking.",
 		"http_health_checks":                     "Options for the HTTP health checking.",
 		"http_health_checks.ok_status":           "List of HTTP status codes that indicate a healthy response.",
@@ -435,6 +431,10 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 							Description: descriptions["active_health_check"],
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
+								"alt_port": schema.Int32Attribute{
+									Description: descriptions["alt_port"],
+									Computed:    true,
+								},
 								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Computed:    true,
@@ -557,7 +557,7 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	albResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	albResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

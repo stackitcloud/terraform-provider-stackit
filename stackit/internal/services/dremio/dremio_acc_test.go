@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
-	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait"
+	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
+	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"

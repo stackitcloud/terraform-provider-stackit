@@ -3,9 +3,10 @@ package stringplanmodifier
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 type UseStateForUnknownFuncResponse struct {
@@ -14,20 +15,18 @@ type UseStateForUnknownFuncResponse struct {
 }
 
 // UseStateForUnknownIfFunc is a conditional function used in UseStateForUnknownIf
-type UseStateForUnknownIfFunc func(context.Context, string, planmodifier.StringRequest, *UseStateForUnknownFuncResponse)
+type UseStateForUnknownIfFunc func(context.Context, planmodifier.StringRequest, *UseStateForUnknownFuncResponse)
 
 type useStateForUnknownIf struct {
-	ifFunc        UseStateForUnknownIfFunc
-	attributeName string
-	description   string
+	ifFunc      UseStateForUnknownIfFunc
+	description string
 }
 
 // UseStateForUnknownIf returns a plan modifier similar to UseStateForUnknown with a conditional
-func UseStateForUnknownIf(f UseStateForUnknownIfFunc, attributeName, description string) planmodifier.String {
+func UseStateForUnknownIf(f UseStateForUnknownIfFunc, description string) planmodifier.String {
 	return useStateForUnknownIf{
-		ifFunc:        f,
-		attributeName: attributeName,
-		description:   description,
+		ifFunc:      f,
+		description: description,
 	}
 }
 
@@ -59,7 +58,7 @@ func (m useStateForUnknownIf) PlanModifyString(ctx context.Context, req planmodi
 	// (https://github.com/hashicorp/terraform-plugin-framework/blob/44348af3923c82a93c64ae7dca906d9850ba956b/resource/schema/stringplanmodifier/use_state_for_unknown.go#L38)
 
 	funcResponse := &UseStateForUnknownFuncResponse{}
-	m.ifFunc(ctx, m.attributeName, req, funcResponse)
+	m.ifFunc(ctx, req, funcResponse)
 
 	resp.Diagnostics.Append(funcResponse.Diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -71,26 +70,36 @@ func (m useStateForUnknownIf) PlanModifyString(ctx context.Context, req planmodi
 	}
 }
 
-// StringChanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func StringChanged(ctx context.Context, attributeName string, request planmodifier.StringRequest, response *UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
-	dependencyPath := request.Path.ParentPath().AtName(attributeName)
+// UnchangedPaths sets UseStateForUnknown to true if all values matched by paths are equal in Plan & State
+func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
+	return func(ctx context.Context, req planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+		exprs := req.PathExpression.MergeExpressions(paths...)
+		for _, expr := range exprs {
+			matched, diags := req.Config.PathMatches(ctx, expr)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
 
-	var attributePlan types.String
-	diags := request.Plan.GetAttribute(ctx, dependencyPath, &attributePlan)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
+			for _, match := range matched {
+				var planValue attr.Value
+				resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, match, &planValue)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
 
-	var attributeState types.String
-	diags = request.State.GetAttribute(ctx, dependencyPath, &attributeState)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
+				var stateValue attr.Value
+				resp.Diagnostics.Append(req.State.GetAttribute(ctx, match, &stateValue)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
 
-	if attributeState == attributePlan {
-		response.UseStateForUnknown = true
-		return
+				if !stateValue.Equal(planValue) {
+					resp.UseStateForUnknown = false
+					return
+				}
+			}
+		}
+		resp.UseStateForUnknown = true
 	}
 }

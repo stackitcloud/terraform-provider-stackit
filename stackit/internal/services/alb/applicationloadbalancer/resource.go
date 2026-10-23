@@ -37,7 +37,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	albUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -273,6 +272,7 @@ var targetPoolTypes = map[string]attr.Type{
 
 // Struct corresponding to targetPool.ActiveHealthCheck
 type activeHealthCheck struct {
+	AltPort            types.Int32  `tfsdk:"alt_port"`
 	HealthyThreshold   types.Int32  `tfsdk:"healthy_threshold"`
 	HttpHealthChecks   types.Object `tfsdk:"http_health_checks"`
 	Interval           types.String `tfsdk:"interval"`
@@ -283,6 +283,7 @@ type activeHealthCheck struct {
 
 // Types corresponding to activeHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
+	"alt_port":            types.Int32Type,
 	"healthy_threshold":   types.Int32Type,
 	"http_health_checks":  types.ObjectType{AttrTypes: httpHealthChecksTypes},
 	"interval":            types.StringType,
@@ -332,7 +333,7 @@ func NewApplicationLoadBalancerResource() resource.Resource {
 
 // applicationLoadBalancerResource is the resource implementation.
 type applicationLoadBalancerResource struct {
-	client       *albSdk.APIClient
+	client       albSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -373,17 +374,14 @@ func (r *applicationLoadBalancerResource) ModifyPlan(ctx context.Context, req re
 
 // Configure adds the provider configured client to the resource.
 func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := albUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.AlbV2Client
+
 	tflog.Info(ctx, "Application Load Balancer client configured")
 }
 
@@ -452,6 +450,7 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
 		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
 		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
+		"alt_port":                               "Overrides the default port used for health check probes.",
 		"healthy_threshold":                      "Healthy threshold of the health checking.",
 		"http_health_checks":                     "Options for the HTTP health checking.",
 		"http_health_checks.ok_status":           "List of HTTP status codes that indicate a healthy response.",
@@ -966,6 +965,13 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Description: descriptions["active_health_check"],
 							Optional:    true,
 							Attributes: map[string]schema.Attribute{
+								"alt_port": schema.Int32Attribute{
+									Description: descriptions["alt_port"],
+									Optional:    true,
+									Validators: []validator.Int32{
+										int32validator.Between(1, 65535),
+									},
+								},
 								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Required:    true,
@@ -1165,7 +1171,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 	}
 
 	// Create a new Application Load Balancer
-	createResp, err := r.client.DefaultAPI.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Calling API for create: %v", errStr))
@@ -1183,7 +1189,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Application Load Balancer creation waiting: %v", err))
 		return
@@ -1222,7 +1228,7 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -1290,7 +1296,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 	}
 
 	// Update target pool
-	updateResp, err := r.client.DefaultAPI.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
+	updateResp, err := r.client.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Calling API for update: %v", errStr))
@@ -1299,7 +1305,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Application Load Balancer update waiting: %v", err))
 		return
@@ -1341,7 +1347,7 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete Application Load Balancer
-	_, err := r.client.DefaultAPI.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
+	_, err := r.client.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -1355,7 +1361,7 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
+	_, err = wait.DeleteLoadbalancerWaitHandler(ctx, r.client, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Application Load Balancer deleting waiting: %v", err))
 		return
@@ -1952,6 +1958,7 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*albSdk.Ac
 	}
 
 	return &albSdk.ActiveHealthCheck{
+		AltPort:            conversion.Int32ValueToPointer(activeHealthCheckModel.AltPort),
 		HealthyThreshold:   conversion.Int32ValueToPointer(activeHealthCheckModel.HealthyThreshold),
 		Interval:           conversion.StringValueToPointer(activeHealthCheckModel.Interval),
 		IntervalJitter:     conversion.StringValueToPointer(activeHealthCheckModel.IntervalJitter),
@@ -2774,6 +2781,7 @@ func mapActiveHealthCheck(ctx context.Context, activeHealthCheckResp *albSdk.Act
 	}
 
 	activeHealthCheckMap := map[string]attr.Value{
+		"alt_port":            types.Int32PointerValue(activeHealthCheckResp.AltPort),
 		"healthy_threshold":   types.Int32PointerValue(activeHealthCheckResp.HealthyThreshold),
 		"interval":            types.StringPointerValue(activeHealthCheckResp.Interval),
 		"interval_jitter":     types.StringPointerValue(activeHealthCheckResp.IntervalJitter),

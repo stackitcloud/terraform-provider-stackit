@@ -4,6 +4,7 @@ variable "backend_http_type" {}
 variable "backend_origin_url" {}
 variable "geofencing_list" {}
 variable "blocked_countries" {}
+variable "blocked_ips" {}
 variable "optimizer" {}
 variable "origin_request_headers_name" {}
 variable "origin_request_headers_value" {}
@@ -14,27 +15,27 @@ variable "redirect_status_code" {}
 variable "redirect_rule_description" {}
 variable "redirect_rule_enabled" {}
 variable "redirect_rule_match_condition" {}
-variable "redirect_matcher_value" {}
+variable "redirect_matcher_values" {}
 variable "redirect_matcher_condition" {}
-variable "waf_mode" {}
-variable "waf_type" {}
-variable "waf_allowed_http_methods_0" {}
-variable "waf_allowed_request_content_types_0" {}
-variable "waf_allowed_http_versions_0" {}
-variable "waf_paranoia_level" {}
-variable "waf_enabled_rule_ids_0" {}
-variable "waf_disabled_rule_ids_0" {}
-variable "waf_log_only_rule_ids_0" {}
-variable "waf_enabled_rule_group_ids_0" {}
-variable "waf_disabled_rule_group_ids_0" {}
-variable "waf_log_only_rule_group_ids_0" {}
-variable "waf_enabled_rule_collection_ids_0" {}
-variable "waf_disabled_rule_collection_ids_0" {}
-variable "waf_log_only_rule_collection_ids_0" {}
+variable "waf" {}
 variable "tls_enable_tls_10" {}
 variable "tls_enable_tls_11" {}
 variable "strip_response_cookies" {}
 variable "forward_host_header" {}
+variable "monthly_limit_bytes" {}
+variable "default_cache_duration" {}
+variable "cache_key_headers" {
+  type    = list(string)
+  default = null
+}
+variable "query_string_vary_enabled" {
+  type    = bool
+  default = null
+}
+variable "query_string_vary_parameters" {
+  type    = list(string)
+  default = null
+}
 
 # dns
 variable "dns_zone_name" {}
@@ -75,7 +76,7 @@ resource "stackit_cdn_distribution" "distribution" {
           rule_match_condition = var.redirect_rule_match_condition
           matchers = [
             {
-              values                = [var.redirect_matcher_value]
+              values                = var.redirect_matcher_values
               value_match_condition = var.redirect_matcher_condition
             }
           ]
@@ -88,23 +89,14 @@ resource "stackit_cdn_distribution" "distribution" {
     }
     strip_response_cookies = var.strip_response_cookies
     forward_host_header    = var.forward_host_header
-    waf = {
-      mode                          = var.waf_mode
-      type                          = var.waf_type
-      allowed_http_methods          = [var.waf_allowed_http_methods_0]
-      allowed_request_content_types = [var.waf_allowed_request_content_types_0]
-      allowed_http_versions         = [var.waf_allowed_http_versions_0]
-      paranoia_level                = var.waf_paranoia_level
-      disabled_rule_ids             = [var.waf_disabled_rule_ids_0]
-      enabled_rule_ids              = [var.waf_enabled_rule_ids_0]
-      log_only_rule_ids             = [var.waf_log_only_rule_ids_0]
-      disabled_rule_group_ids       = [var.waf_disabled_rule_group_ids_0]
-      enabled_rule_group_ids        = [var.waf_enabled_rule_group_ids_0]
-      log_only_rule_group_ids       = [var.waf_log_only_rule_group_ids_0]
-      disabled_rule_collection_ids  = [var.waf_disabled_rule_collection_ids_0]
-      enabled_rule_collection_ids   = [var.waf_enabled_rule_collection_ids_0]
-      log_only_rule_collection_ids  = [var.waf_log_only_rule_collection_ids_0]
+    monthly_limit_bytes    = var.monthly_limit_bytes
+    default_cache_duration = var.default_cache_duration
+    cache_config = {
+      cache_key_headers            = var.cache_key_headers
+      query_string_vary_enabled    = var.query_string_vary_enabled
+      query_string_vary_parameters = var.query_string_vary_parameters
     }
+    waf = var.waf
     backend = {
       type       = var.backend_http_type
       origin_url = var.backend_origin_url
@@ -116,6 +108,7 @@ resource "stackit_cdn_distribution" "distribution" {
       }
     }
     blocked_countries = var.blocked_countries
+    blocked_ips       = var.blocked_ips
   }
 }
 

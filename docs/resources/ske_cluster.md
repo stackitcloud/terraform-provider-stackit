@@ -38,6 +38,11 @@ resource "stackit_ske_cluster" "example" {
       access_scope = "PUBLIC"
     }
   }
+  # Cluster audit log forwarding to a Telemetry Router.
+  # Private preview: only configurable for enabled accounts.
+  audit = {
+    enabled = true
+  }
 }
 ```
 
@@ -54,6 +59,7 @@ To keep your Terraform plans clean and readable, always append new node pools to
 ### Optional
 
 - `access` (Attributes) Configure access to the cluster (see [below for nested schema](#nestedatt--access))
+- `audit` (Attributes) Cluster audit log forwarding configuration. (see [below for nested schema](#nestedatt--audit))
 - `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `kubernetes_version_min` (String) The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/). To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.
@@ -129,12 +135,21 @@ Optional:
 
 
 
+<a id="nestedatt--audit"></a>
+### Nested Schema for `audit`
+
+Optional:
+
+- `enabled` (Boolean) Enable cluster audit log forwarding to a Telemetry Router.
+
+
 <a id="nestedatt--extensions"></a>
 ### Nested Schema for `extensions`
 
 Optional:
 
 - `acl` (Attributes) Cluster access control configuration. (see [below for nested schema](#nestedatt--extensions--acl))
+- `application_load_balancer` (Attributes) Application Load Balancer extension. (see [below for nested schema](#nestedatt--extensions--application_load_balancer))
 - `argus` (Attributes, Deprecated) A single argus block as defined below. This field is deprecated and will be removed 06 January 2026. (see [below for nested schema](#nestedatt--extensions--argus))
 - `dns` (Attributes) DNS extension configuration (see [below for nested schema](#nestedatt--extensions--dns))
 - `observability` (Attributes) A single observability block as defined below. (see [below for nested schema](#nestedatt--extensions--observability))
@@ -146,6 +161,14 @@ Required:
 
 - `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist.
 - `enabled` (Boolean) Is ACL enabled?
+
+
+<a id="nestedatt--extensions--application_load_balancer"></a>
+### Nested Schema for `extensions.application_load_balancer`
+
+Optional:
+
+- `enabled` (Boolean) Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected. Default value will change to true once the private preview phase is over.
 
 
 <a id="nestedatt--extensions--argus"></a>
@@ -169,6 +192,7 @@ Required:
 
 Optional:
 
+- `gateway_api` (Boolean) Enables Gateway API support for ExternalDNS. The CRDs must be installed by the user. Once installed, ExternalDNS will be configured at the next cluster reconcile.
 - `zones` (List of String) Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)
 
 
@@ -222,7 +246,7 @@ Optional:
 
 Optional:
 
-- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area.Possible values are: `PUBLIC`, `SNA`. The field is immutable!
+- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.Possible values are: `PUBLIC`, `SNA`. The field is immutable!
 
 ## Import
 

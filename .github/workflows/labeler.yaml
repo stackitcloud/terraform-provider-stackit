@@ -1,0 +1,55 @@
+name: "Labeler"
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+  schedule:
+    # run every full hour (to still label PRs from forks)
+    - cron: '0 * * * *'
+
+jobs:
+  # this job runs when the workflow was triggered by the 'pull_request' event
+  pr-labeler:
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    # don't run on PRs from forks (token has no write permissions)
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    name: "Labeler"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Labeler action
+        uses: actions/labeler@v7
+        with:
+          sync-labels: false
+  
+  # This job runs when the workflow was triggered by the 'workflow_dispatch' or the 'schedule' event.
+  # This is neccessary because for PRs from forks the default short-lived GitHub token has no write permissions
+  # and can not add labels to the PR therefore. This means we have to label all PRs from forks using the 'schedule' event.
+  scheduled-labeler:
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    name: "Label all open PRs"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch open PR numbers
+        id: fetch-prs
+        run: |
+          {
+            echo 'numbers<<EOF'
+            gh pr list --repo ${{ github.repository }} --state open --limit 500 --json number --jq '.[].number'
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Labeler action
+        if: ${{ steps.fetch-prs.outputs.numbers != '' }}
+        uses: actions/labeler@v7
+        with:
+          sync-labels: false
+          pr-number: ${{ steps.fetch-prs.outputs.numbers }}

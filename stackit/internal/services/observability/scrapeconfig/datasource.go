@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -36,7 +33,7 @@ func NewScrapeConfigDataSource() datasource.DataSource {
 
 // scrapeConfigDataSource is the data source implementation.
 type scrapeConfigDataSource struct {
-	client *observabilitySdk.APIClient
+	client observabilitySdk.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -45,22 +42,22 @@ func (d *scrapeConfigDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := observabilityUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	if !core.ValidateServiceRegion(ctx, &providerData, "Observability", &resp.Diagnostics) {
 		return
 	}
-	d.client = apiClient
+
+	d.client = clients.ObservabilityV1Client
 }
 
 // Schema defines the schema for the data source.
 func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability scrape config data source schema. Must have a `region` specified in the provider configuration.",
+		Description: "Observability scrape config data source schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
@@ -198,7 +195,7 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
 
-	scResp, err := d.client.DefaultAPI.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
+	scResp, err := d.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

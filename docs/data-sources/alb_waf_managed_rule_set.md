@@ -4,14 +4,11 @@ page_title: "stackit_alb_waf_managed_rule_set Data Source - stackit"
 subcategory: ""
 description: |-
   ALB WAF Managed Rule Set DataSource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on datasource level.
-  ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_alb_waf_managed_rule_set (Data Source)
 
 ALB WAF Managed Rule Set DataSource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level.
-
-~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -39,7 +36,6 @@ data "stackit_alb_waf_managed_rule_set" "example" {
 - `groups` (Attributes Map) Inventory of all available Managed Rule Set groups and their current configuration. (see [below for nested schema](#nestedatt--groups))
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`name`".
 - `type` (String) Type of the Managed Rule Set.
-- `usage` (Attributes) Managed Rule Set usage (see [below for nested schema](#nestedatt--usage))
 - `version` (String) Managed Rule Set version.
 
 <a id="nestedatt--groups"></a>
@@ -59,13 +55,3 @@ Read-Only:
 - `description` (String) A description of what this rule does.
 - `mode` (String) The current mode of the rule.
 - `severity` (String) Impact level.
-
-
-
-<a id="nestedatt--usage"></a>
-### Nested Schema for `usage`
-
-Read-Only:
-
-- `count` (Number) Number of WAFs using this Managed Rule Set.
-- `items` (List of String) List of WAFs that use this Managed Rule Set.

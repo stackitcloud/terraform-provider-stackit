@@ -10,9 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -42,7 +39,7 @@ func NewZoneDataSource() datasource.DataSource {
 
 // zoneDataSource is the data source implementation.
 type zoneDataSource struct {
-	client *dns.APIClient
+	client dns.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -61,16 +58,13 @@ func (d *zoneDataSource) ConfigValidators(_ context.Context) []datasource.Config
 }
 
 func (d *zoneDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := dnsUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.DnsV1Client
+
 	tflog.Info(ctx, "DNS zone client configured")
 }
 
@@ -219,7 +213,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	var err error
 
 	if zoneId != "" {
-		zoneResp, err = d.client.DefaultAPI.GetZone(ctx, projectId, zoneId).Execute()
+		zoneResp, err = d.client.GetZone(ctx, projectId, zoneId).Execute()
 		if err != nil {
 			utils.LogError(
 				ctx,
@@ -237,7 +231,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 		ctx = core.LogResponse(ctx)
 	} else {
-		listZoneResp, err := d.client.DefaultAPI.ListZones(ctx, projectId).
+		listZoneResp, err := d.client.ListZones(ctx, projectId).
 			DnsNameEq(dnsName).
 			ActiveEq(true).
 			Execute()

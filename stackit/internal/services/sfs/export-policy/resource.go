@@ -25,8 +25,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -76,7 +74,7 @@ func NewExportPolicyResource() resource.Resource {
 }
 
 type exportPolicyResource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -124,22 +122,14 @@ func (r *exportPolicyResource) Metadata(_ context.Context, req resource.Metadata
 
 // Configure adds the provider configured client to the resource.
 func (r *exportPolicyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_export_policy", core.Resource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -148,7 +138,7 @@ func (r *exportPolicyResource) Schema(_ context.Context, _ resource.SchemaReques
 	description := "SFS export policy resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description, core.Resource),
+		MarkdownDescription: description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`policy_id`\".",
@@ -282,7 +272,7 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateShareExportPolicy(ctx, projectId, region).CreateShareExportPolicyPayload(*payload).Execute()
+	createResp, err := r.client.CreateShareExportPolicy(ctx, projectId, region).CreateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -305,7 +295,7 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// get export policy
-	getResp, err := r.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, *createResp.ShareExportPolicy.Id).Execute()
+	getResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, *createResp.ShareExportPolicy.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
 		return
@@ -349,7 +339,7 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	// get export policy
-	exportPolicyResp, err := r.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -413,7 +403,7 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	_, err = r.client.DefaultAPI.UpdateShareExportPolicy(ctx, projectId, region, exportPolicyId).UpdateShareExportPolicyPayload(*payload).Execute()
+	_, err = r.client.UpdateShareExportPolicy(ctx, projectId, region, exportPolicyId).UpdateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to update export policy: %v", err))
 		return
@@ -422,7 +412,7 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = core.LogResponse(ctx)
 
 	// get export policy
-	exportPolicyResp, err := r.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
 		return
@@ -462,7 +452,7 @@ func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	_, err := r.client.DefaultAPI.DeleteShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	_, err := r.client.DeleteShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {

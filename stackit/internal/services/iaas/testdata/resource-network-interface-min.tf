@@ -3,8 +3,7 @@ variable "name" {}
 variable "owner_email" {}
 variable "network_name" {}
 variable "ipv4_prefix" {}
-variable "ipv4_nameserver_0" {}
-variable "ipv4_nameserver_1" {}
+variable "ipv4_nameservers" {}
 
 resource "stackit_resourcemanager_project" "example" {
   parent_container_id = var.parent_container_id
@@ -16,7 +15,7 @@ resource "stackit_network" "network" {
   project_id       = stackit_resourcemanager_project.example.project_id
   name             = var.network_name
   ipv4_prefix      = var.ipv4_prefix
-  ipv4_nameservers = [var.ipv4_nameserver_0, var.ipv4_nameserver_1]
+  ipv4_nameservers = var.ipv4_nameservers
 }
 
 resource "stackit_network_interface" "network_interface" {

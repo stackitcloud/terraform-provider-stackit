@@ -25,6 +25,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -38,6 +40,12 @@ var (
 
 	//go:embed testdata/datasource-image-v2-variants.tf
 	dataSourceImageVariants string
+
+	//go:embed testdata/datasource-images.tf
+	dataSourceImages string
+
+	//go:embed testdata/datasource-networks.tf
+	dataSourceNetworks string
 
 	//go:embed testdata/datasource-public-ip-ranges.tf
 	datasourcePublicIpRanges string
@@ -66,11 +74,20 @@ var (
 	//go:embed testdata/resource-network-area-region-max.tf
 	resourceNetworkAreaRegionMaxConfig string
 
+	//go:embed testdata/resource-network-area-route-min.tf
+	resourceNetworkAreaRouteMinConfig string
+
+	//go:embed testdata/resource-network-area-route-max.tf
+	resourceNetworkAreaRouteMaxConfig string
+
 	//go:embed testdata/resource-network-min.tf
 	resourceNetworkMinConfig string
 
 	//go:embed testdata/resource-network-max.tf
 	resourceNetworkMaxConfig string
+
+	//go:embed testdata/resource-network-vpc.tf
+	resourceNetworkVpcConfig string
 
 	//go:embed testdata/resource-network-interface-min.tf
 	resourceNetworkInterfaceMinConfig string
@@ -99,6 +116,9 @@ var (
 	//go:embed testdata/datasource-machinetype.tf
 	dataSourceMachineTypeConfig string
 
+	//go:embed testdata/datasource-machine-types.tf
+	dataSourceMachineTypesConfig string
+
 	//go:embed testdata/resource-routingtable-min.tf
 	resourceRoutingTableMinConfig string
 
@@ -110,6 +130,9 @@ var (
 
 	//go:embed testdata/resource-routingtable-route-max.tf
 	resourceRoutingTableRouteMaxConfig string
+
+	//go:embed testdata/datasource-iaas-project.tf
+	datasourceIaasProjectConfig string
 )
 
 const (
@@ -123,7 +146,7 @@ var testConfigServerVarsMin = config.Variables{
 	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-server-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"machine_type":        config.StringVariable("t1.1"),
 	"image_id":            config.StringVariable("fb5b3fa8-5e20-478a-929a-2b7da1676b18"),
-	"name":                config.StringVariable(fmt.Sprintf("tfe2e-project-server-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name":                config.StringVariable(fmt.Sprintf("tf-acc-project-server-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
 }
@@ -141,7 +164,7 @@ var testConfigServerVarsMinUpdated = func() config.Variables {
 var testConfigServerVarsMax = config.Variables{
 	"network_name":         config.StringVariable(fmt.Sprintf("tf-acc-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"server_name":          config.StringVariable(fmt.Sprintf("tf-acc-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"project_name":         config.StringVariable(fmt.Sprintf("tfe2e-project-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"project_name":         config.StringVariable(fmt.Sprintf("tf-acc-project-server-max-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"name_not_updated":     config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"machine_type":         config.StringVariable("t1.1"),
 	"image_id":             config.StringVariable("fb5b3fa8-5e20-478a-929a-2b7da1676b18"),
@@ -156,8 +179,7 @@ var testConfigServerVarsMax = config.Variables{
 	"agent_policy":         config.StringVariable("ALWAYS"),
 	"owner_email":          config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"parent_container_id":  config.StringVariable(testutil.TestProjectParentContainerID),
-	"ipv4_nameserver_0":    config.StringVariable("10.2.2.2"),
-	"ipv4_nameserver_1":    config.StringVariable("10.2.2.3"),
+	"ipv4_nameservers":     config.ListVariable(config.StringVariable("10.2.2.2"), config.StringVariable("10.2.2.3")),
 	"ipv4_prefix_length":   config.IntegerVariable(24),
 }
 
@@ -193,11 +215,10 @@ var testConfigAffinityGroupVarsMin = config.Variables{
 // NETWORK INTERFACE - MIN
 
 var testConfigNetworkInterfaceVarsMin = config.Variables{
-	"name":                config.StringVariable(fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name":                config.StringVariable(fmt.Sprintf("tf-acc-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"ipv4_prefix":         config.StringVariable("10.2.10.0/24"),
-	"ipv4_nameserver_0":   config.StringVariable("10.2.2.2"),
-	"ipv4_nameserver_1":   config.StringVariable("10.2.2.3"),
+	"ipv4_nameservers":    config.ListVariable(config.StringVariable("10.2.2.2"), config.StringVariable("10.2.2.3")),
 	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
 }
@@ -205,13 +226,12 @@ var testConfigNetworkInterfaceVarsMin = config.Variables{
 // NETWORK INTERFACE - MAX
 
 var testConfigNetworkInterfaceVarsMax = config.Variables{
-	"name":                config.StringVariable(fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name":                config.StringVariable(fmt.Sprintf("tf-acc-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"network_name":        config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"allowed_address":     config.StringVariable("10.2.10.0/24"),
 	"ipv4":                config.StringVariable("10.2.10.20"),
 	"ipv4_prefix":         config.StringVariable("10.2.10.0/24"),
-	"ipv4_nameserver_0":   config.StringVariable("10.2.2.2"),
-	"ipv4_nameserver_1":   config.StringVariable("10.2.2.3"),
+	"ipv4_nameservers":    config.ListVariable(config.StringVariable("10.2.2.2"), config.StringVariable("10.2.2.3")),
 	"security":            config.BoolVariable(true),
 	"label":               config.StringVariable("label"),
 	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
@@ -272,7 +292,7 @@ var testConfigVolumeVarsMaxUpdated = func() config.Variables {
 var testConfigNetworkVarsMin = config.Variables{
 	"project_id":          config.StringVariable(testutil.ProjectId),
 	"name":                config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"project_name":        config.StringVariable(fmt.Sprintf("tfe2e-project-network-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"project_name":        config.StringVariable(fmt.Sprintf("tf-acc-project-network-min-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
 }
@@ -289,8 +309,7 @@ var testConfigNetworkVarsMinUpdated = func() config.Variables {
 var testConfigNetworkVarsMax = config.Variables{
 	"name":                 config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"ipv4_gateway":         config.StringVariable("10.2.2.1"),
-	"ipv4_nameserver_0":    config.StringVariable("10.2.2.2"),
-	"ipv4_nameserver_1":    config.StringVariable("10.2.2.3"),
+	"ipv4_nameservers":     config.ListVariable(config.StringVariable("10.2.2.2"), config.StringVariable("10.2.2.3")),
 	"ipv4_prefix":          config.StringVariable("10.2.2.0/24"),
 	"ipv4_prefix_length":   config.IntegerVariable(24),
 	"routed":               config.BoolVariable(true),
@@ -305,9 +324,25 @@ var testConfigNetworkVarsMaxUpdated = func() config.Variables {
 	maps.Copy(updatedConfig, testConfigNetworkVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["ipv4_gateway"] = config.StringVariable("")
-	updatedConfig["ipv4_nameserver_0"] = config.StringVariable("10.2.2.10")
+	updatedConfig["ipv4_nameservers"] = config.ListVariable(config.StringVariable("10.2.2.10"), config.StringVariable("10.2.2.3"))
 	updatedConfig["label"] = config.StringVariable("updated")
 	updatedConfig["dhcp"] = config.BoolVariable(false)
+	return updatedConfig
+}()
+
+// NETWORK - VPC
+
+var testConfigNetworkVarsVpc = config.Variables{
+	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"organization_id": config.StringVariable(testutil.OrganizationId),
+	"owner_email":     config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"update":          config.BoolVariable(false),
+}
+
+var testConfigNetworkVarsVpcUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigNetworkVarsVpc)
+	updatedConfig["update"] = config.BoolVariable(true)
 	return updatedConfig
 }()
 
@@ -328,30 +363,15 @@ var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
 // NETWORK AREA - MAX
 
 var testConfigNetworkAreaVarsMax = config.Variables{
-	"organization_id":         config.StringVariable(testutil.OrganizationId),
-	"name":                    config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
-	"transfer_network":        config.StringVariable("10.1.2.0/24"),
-	"network_ranges_prefix":   config.StringVariable("10.0.0.0/16"),
-	"default_nameservers":     config.StringVariable("1.1.1.1"),
-	"default_prefix_length":   config.IntegerVariable(24),
-	"max_prefix_length":       config.IntegerVariable(24),
-	"min_prefix_length":       config.IntegerVariable(16),
-	"route_destination_type":  config.StringVariable("cidrv4"),
-	"route_destination_value": config.StringVariable("1.1.1.0/24"),
-	"route_next_hop_type":     config.StringVariable("ipv4"),
-	"route_next_hop_value":    config.StringVariable("1.1.1.1"),
-	"label":                   config.StringVariable("label"),
+	"organization_id": config.StringVariable(testutil.OrganizationId),
+	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"label":           config.StringVariable("label"),
 }
 
 var testConfigNetworkAreaVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigNetworkAreaVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
-	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
-	updatedConfig["default_nameservers"] = config.StringVariable("1.1.1.2")
-	updatedConfig["default_prefix_length"] = config.IntegerVariable(25)
-	updatedConfig["max_prefix_length"] = config.IntegerVariable(25)
-	updatedConfig["min_prefix_length"] = config.IntegerVariable(20)
 	// TODO: enable once the IaaS API supports IPv6
 	// updatedConfig["route_destination_type"] = config.StringVariable("cidrv6")
 	// updatedConfig["route_destination_value"] = config.StringVariable("2001:db8:3c4d:15::1a2b:3c4d/64")
@@ -398,6 +418,40 @@ var testConfigNetworkAreaRegionVarsMaxUpdated = func() config.Variables {
 	updatedConfig["default_prefix_length"] = config.IntegerVariable(27)
 	updatedConfig["min_prefix_length"] = config.IntegerVariable(26)
 	updatedConfig["max_prefix_length"] = config.IntegerVariable(28)
+	return updatedConfig
+}()
+
+// NETWORK AREA ROUTE - MIN
+
+var testConfigNetworkAreaRouteVarsMin = config.Variables{
+	"organization_id":         config.StringVariable(testutil.OrganizationId),
+	"name":                    config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"transfer_network":        config.StringVariable("10.1.2.0/24"),
+	"network_ranges_prefix":   config.StringVariable("10.0.0.0/16"),
+	"route_destination_type":  config.StringVariable("cidrv4"),
+	"route_destination_value": config.StringVariable("1.1.1.0/24"),
+	"route_next_hop_type":     config.StringVariable("ipv4"),
+	"route_next_hop_value":    config.StringVariable("1.1.1.1"),
+}
+
+// NETWORK AREA ROUTE - MAX
+
+var testConfigNetworkAreaRouteVarsMax = config.Variables{
+	"organization_id":         config.StringVariable(testutil.OrganizationId),
+	"name":                    config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"transfer_network":        config.StringVariable("10.1.2.0/24"),
+	"network_ranges_prefix":   config.StringVariable("10.0.0.0/16"),
+	"route_destination_type":  config.StringVariable("cidrv4"), // TODO: use cidrv6 once it's supported
+	"route_destination_value": config.StringVariable("1.1.1.0/24"),
+	"route_next_hop_type":     config.StringVariable("ipv4"), // TODO: use ipv6, internet or blackhole once they are supported
+	"route_next_hop_value":    config.StringVariable("1.1.1.1"),
+	"label":                   config.StringVariable("label"),
+}
+
+var testConfigNetworkAreaRouteVarsMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigNetworkAreaRouteVarsMax)
+	updatedConfig["label"] = config.StringVariable("updated-label")
 	return updatedConfig
 }()
 
@@ -626,6 +680,13 @@ var testConfigRoutingTableRouteMaxUpdated = func() config.Variables {
 	return updatedConfig
 }()
 
+var testConfigIaasProject = config.Variables{
+	"organization_id":     config.StringVariable(testutil.OrganizationId),
+	"parent_container_id": config.StringVariable(testutil.TestProjectParentContainerID),
+	"name":                config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"owner_email":         config.StringVariable(testutil.TestProjectServiceAccountEmail),
+}
+
 // if no local file is provided the test should create a default file and work with this instead of failing
 var localFileForIaasImage os.File
 
@@ -769,9 +830,7 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "name", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["name"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_gateway", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_gateway"])),
 					resource.TestCheckNoResourceAttr("stackit_network.network_prefix", "no_ipv4_gateway"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network_prefix", "ipv4_nameservers", testConfigNetworkVarsMax["ipv4_nameservers"]),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefixes.#", "1"),
@@ -790,9 +849,7 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "name", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv4_gateway"),
 					// resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "no_ipv4_gateway", "true"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network_prefix_length", "ipv4_nameservers", testConfigNetworkVarsMax["ipv4_nameservers"]),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv4_prefix"),
 					resource.TestCheckNoResourceAttr("stackit_network.network_prefix_length", "ipv6_prefixes.#"),
@@ -858,8 +915,8 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "name", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["name"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_gateway", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_gateway"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_nameservers.#", "2"),
-					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_1"])),
+					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 0)),
+					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 1)),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_prefix", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix", "ipv4_prefixes.#", "1"),
@@ -877,8 +934,8 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "name", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["name"])),
 					// resource.TestCheckNoResourceAttr("data.stackit_network.network_prefix_length", "ipv4_gateway"),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "ipv4_nameservers.#", "2"),
-					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix_length", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix_length", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_1"])),
+					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix_length", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 0)),
+					resource.TestCheckTypeSetElemAttr("data.stackit_network.network_prefix_length", "ipv4_nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 1)),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("data.stackit_network.network_prefix_length", "ipv4_prefixes.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network_prefix_length", "ipv4_prefix"),
@@ -943,8 +1000,8 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_gateway", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_gateway"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_nameservers.#", "2"),
 					// nameservers may be returned in a randomized order, so we have to check them with a helper function
-					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_1"])),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 0)),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 1)),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefixes.#", "1"),
@@ -986,8 +1043,8 @@ func TestAccNetworkMax(t *testing.T) {
 					// resource.TestCheckNoResourceAttr("stackit_network.network_prefix_length", "ipv4_gateway"),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.#", "2"),
 					// nameservers may be returned in a randomized order, so we have to check them with a helper function
-					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix_length", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix_length", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameserver_1"])),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix_length", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 0)),
+					resource.TestCheckTypeSetElemAttr("stackit_network.network_prefix_length", "nameservers.*", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_nameservers"], 1)),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv4_prefix"),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_prefixes.#", "1"),
@@ -1008,9 +1065,7 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "name", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "ipv4_gateway"),
 					// resource.TestCheckResourceAttr("stackit_network.network_prefix", "no_ipv4_gateway", "true"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network_prefix", "ipv4_nameservers", testConfigNetworkVarsMaxUpdated["ipv4_nameservers"]),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["ipv4_prefix"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix", "ipv4_prefixes.#", "1"),
@@ -1028,9 +1083,7 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "name", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["name"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv4_gateway"),
 					// resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "no_ipv4_gateway", "true"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network_prefix_length", "ipv4_nameservers", testConfigNetworkVarsMaxUpdated["ipv4_nameservers"]),
 					resource.TestCheckResourceAttr("stackit_network.network_prefix_length", "ipv4_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["ipv4_prefix_length"])),
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix_length", "ipv4_prefix"),
 					resource.TestCheckNoResourceAttr("stackit_network.network_prefix_length", "ipv6_prefixes.#"),
@@ -1062,6 +1115,110 @@ func TestAccNetworkMax(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccNetworkVpc(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_network" "network_vpc" {
+						project_id  = stackit_network.network_vpc.project_id
+						network_id  = stackit_network.network_vpc.network_id
+					}
+					`,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				ResourceName:    "stackit_network.network_vpc",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network.network_vpc"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network.network_vpc")
+					}
+					projectId, ok := r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", projectId, region, networkId), nil
+				},
+				ImportState: true,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Update
+			{
+				ConfigVariables: testConfigNetworkVarsVpcUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network.network_vpc", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_vpc.vpc-update", "vpc_id",
+						"stackit_network.network_vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_vpc_network_range.network_range-update", "network_range_id",
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+					),
+				),
+			},
 		},
 	})
 }
@@ -1160,31 +1317,7 @@ func TestAccNetworkAreaMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["organization_id"])),
 					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["name"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["network_ranges_prefix"])),
-					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_ranges.0.network_range_id"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["label"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_nameservers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["default_nameservers"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["default_prefix_length"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "max_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["max_prefix_length"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "min_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["min_prefix_length"])),
-
-					// Network Area Route
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_area_route.network_area_route", "organization_id",
-						"stackit_network_area.network_area", "organization_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_area_route.network_area_route", "network_area_id",
-						"stackit_network_area.network_area", "network_area_id",
-					),
-					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_destination_type"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_destination_value"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_next_hop_type"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_next_hop_value"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["label"])),
 				),
 			},
 			// Data source
@@ -1198,12 +1331,6 @@ func TestAccNetworkAreaMax(t *testing.T) {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
 					}
-
-					data "stackit_network_area_route" "network_area_route" {
-						organization_id  	  = stackit_network_area.network_area.organization_id
-						network_area_id  	  = stackit_network_area.network_area.network_area_id
-						network_area_route_id = stackit_network_area_route.network_area_route.network_area_route_id
-					}
 					`,
 					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaMaxConfig,
 				),
@@ -1216,34 +1343,7 @@ func TestAccNetworkAreaMax(t *testing.T) {
 						"stackit_network_area.network_area", "network_area_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "name", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["name"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "network_ranges.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "network_ranges.0.prefix", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["network_ranges_prefix"])),
-					resource.TestCheckResourceAttrSet("data.stackit_network_area.network_area", "network_ranges.0.network_range_id"),
 					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["label"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "default_nameservers.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "default_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["default_nameservers"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "default_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["default_prefix_length"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "max_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["max_prefix_length"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area.network_area", "min_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["min_prefix_length"])),
-
-					// Network Area Route
-					resource.TestCheckResourceAttrPair(
-						"data.stackit_network_area_route.network_area_route", "organization_id",
-						"data.stackit_network_area.network_area", "organization_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"data.stackit_network_area_route.network_area_route", "network_area_id",
-						"data.stackit_network_area.network_area", "network_area_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"data.stackit_network_area_route.network_area_route", "network_area_route_id",
-						"stackit_network_area_route.network_area_route", "network_area_route_id",
-					),
-					resource.TestCheckResourceAttrSet("data.stackit_network_area_route.network_area_route", "network_area_route_id"),
-					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_destination_type"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_destination_value"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_next_hop_type"])),
-					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["route_next_hop_value"])),
 				),
 			},
 			// Import
@@ -1266,37 +1366,8 @@ func TestAccNetworkAreaMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["organization_id"])),
 					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["name"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["network_ranges_prefix"])),
-					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_ranges.0.network_range_id"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["label"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_nameservers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["default_nameservers"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["default_prefix_length"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "max_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["max_prefix_length"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "min_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["min_prefix_length"])),
 				),
-			},
-			{
-				ConfigVariables: testConfigNetworkAreaVarsMaxUpdated,
-				ResourceName:    "stackit_network_area_route.network_area_route",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources["stackit_network_area_route.network_area_route"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_network_area_route.network_area_route")
-					}
-					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute network_area_id")
-					}
-					networkAreaRouteId, ok := r.Primary.Attributes["network_area_route_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute network_area_route_id")
-					}
-					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, networkAreaId, testutil.Region, networkAreaRouteId), nil
-				},
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 			// Update
 			{
@@ -1307,31 +1378,7 @@ func TestAccNetworkAreaMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["organization_id"])),
 					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_area_id"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "name", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["name"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "network_ranges.0.prefix", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["network_ranges_prefix"])),
-					resource.TestCheckResourceAttrSet("stackit_network_area.network_area", "network_ranges.0.network_range_id"),
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["label"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_nameservers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["default_nameservers"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "default_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["default_prefix_length"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "max_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["max_prefix_length"])),
-					resource.TestCheckResourceAttr("stackit_network_area.network_area", "min_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["min_prefix_length"])),
-
-					// Network Area Route
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_area_route.network_area_route", "organization_id",
-						"stackit_network_area.network_area", "organization_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_network_area_route.network_area_route", "network_area_id",
-						"stackit_network_area.network_area", "network_area_id",
-					),
-					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["route_destination_type"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["route_destination_value"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["route_next_hop_type"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["route_next_hop_value"])),
-					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["label"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -1573,6 +1620,238 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaRegionVarsMaxUpdated["default_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.min_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaRegionVarsMaxUpdated["min_prefix_length"])),
 					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.max_prefix_length", testutil.ConvertConfigVariable(testConfigNetworkAreaRegionVarsMaxUpdated["max_prefix_length"])),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccNetworkAreaRouteMin(t *testing.T) {
+	t.Logf("TestAccNetworkAreaRouteMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["name"]))
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigNetworkAreaRouteVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRouteMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction("stackit_network_area_region.network_area_region", plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction("stackit_network_area_route.network_area_route", plancheck.ResourceActionCreate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network Area Route
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "organization_id",
+						"stackit_network_area.network_area", "organization_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "network_area_id",
+						"stackit_network_area_region.network_area_region", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_destination_type"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_destination_value"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_next_hop_type"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_next_hop_value"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.%", "0"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigNetworkAreaRouteVarsMin,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_network_area_route" "network_area_route" {
+						organization_id       = stackit_network_area_route.network_area_route.organization_id
+						network_area_id       = stackit_network_area_route.network_area_route.network_area_id
+						network_area_route_id = stackit_network_area_route.network_area_route.network_area_route_id
+					}
+					`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRouteMinConfig,
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_network_area_region.network_area_region", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_network_area_route.network_area_route", plancheck.ResourceActionNoop),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network_area_route.network_area_route", "organization_id",
+						"stackit_network_area_route.network_area_route", "organization_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network_area_route.network_area_route", "network_area_id",
+						"stackit_network_area_route.network_area_route", "network_area_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network_area_route.network_area_route", "network_area_route_id",
+						"stackit_network_area_route.network_area_route", "network_area_route_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_destination_type"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_destination_value"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_next_hop_type"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["route_next_hop_value"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "labels.%", "0"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigNetworkAreaRouteVarsMin,
+				ResourceName:    "stackit_network_area_route.network_area_route",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network_area_route.network_area_route"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_area_route.network_area_route")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					networkAreaRouteId, ok := r.Primary.Attributes["network_area_route_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_route_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, networkAreaId, testutil.Region, networkAreaRouteId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccNetworkAreaRouteMax(t *testing.T) {
+	t.Logf("TestAccNetworkAreaRouteMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["name"]))
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigNetworkAreaRouteVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRouteMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction("stackit_network_area_region.network_area_region", plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction("stackit_network_area_route.network_area_route", plancheck.ResourceActionCreate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network Area Route
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "organization_id",
+						"stackit_network_area.network_area", "organization_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area_route.network_area_route", "network_area_id",
+						"stackit_network_area_region.network_area_region", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_network_area_route.network_area_route", "network_area_route_id"),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_destination_type"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_destination_value"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_next_hop_type"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_next_hop_value"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["label"])),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigNetworkAreaRouteVarsMax,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_network_area_route" "network_area_route" {
+						organization_id       = stackit_network_area_route.network_area_route.organization_id
+						network_area_id       = stackit_network_area_route.network_area_route.network_area_id
+						network_area_route_id = stackit_network_area_route.network_area_route.network_area_route_id
+					}
+					`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRouteMaxConfig,
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_network_area_region.network_area_region", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_network_area_route.network_area_route", plancheck.ResourceActionNoop),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network_area_route.network_area_route", "organization_id",
+						"stackit_network_area_route.network_area_route", "organization_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network_area_route.network_area_route", "network_area_id",
+						"stackit_network_area_route.network_area_route", "network_area_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network_area_route.network_area_route", "network_area_route_id",
+						"stackit_network_area_route.network_area_route", "network_area_route_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_destination_type"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_destination_value"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_next_hop_type"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["route_next_hop_value"])),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_network_area_route.network_area_route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["label"])),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigNetworkAreaRouteVarsMaxUpdated,
+				ResourceName:    "stackit_network_area_route.network_area_route",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network_area_route.network_area_route"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network_area_route.network_area_route")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					networkAreaRouteId, ok := r.Primary.Attributes["network_area_route_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_route_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, networkAreaId, testutil.Region, networkAreaRouteId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigNetworkAreaRouteVarsMaxUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRouteMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_network_area_region.network_area_region", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_network_area_route.network_area_route", plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMaxUpdated["route_destination_type"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "destination.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMaxUpdated["route_destination_value"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.type", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMaxUpdated["route_next_hop_type"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "next_hop.value", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMaxUpdated["route_next_hop_value"])),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_network_area_route.network_area_route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMaxUpdated["label"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -2467,9 +2746,7 @@ func TestAccServerMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigServerVarsMax["network_name"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigServerVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigServerVarsMax["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network", "ipv4_nameservers", testConfigServerVarsMax["ipv4_nameservers"]),
 
 					// Network interface init
 					resource.TestCheckResourceAttrPair(
@@ -2730,8 +3007,8 @@ func TestAccServerMax(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"ipv4_prefix_length", "ipv4_prefix", "ipv4_nameservers", "ipv6_nameservers"},
 				// Manual check the ipv4_nameservers
 				ImportStateCheck: validateImportedNameservers([]string{
-					testutil.ConvertConfigVariable(testConfigServerVarsMax["ipv4_nameserver_0"]),
-					testutil.ConvertConfigVariable(testConfigServerVarsMax["ipv4_nameserver_1"]),
+					testutil.ConvertConfigVariable(testConfigServerVarsMax["ipv4_nameservers"], 0),
+					testutil.ConvertConfigVariable(testConfigServerVarsMax["ipv4_nameservers"], 1),
 				}),
 			},
 			{
@@ -3726,9 +4003,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 						"stackit_network.network", "project_id",
 					),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["network_name"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network", "ipv4_nameservers", testConfigNetworkInterfaceVarsMin["ipv4_nameservers"]),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
@@ -3794,9 +4069,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 						"data.stackit_network.network", "project_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["network_name"])),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("data.stackit_network.network", "ipv4_nameservers", testConfigNetworkInterfaceVarsMin["ipv4_nameservers"]),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckNoResourceAttr("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
@@ -3867,8 +4140,8 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"ipv4_nameservers", "ipv6_nameservers"},
 				// Manual check the ipv4_nameservers
 				ImportStateCheck: validateImportedNameservers([]string{
-					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameserver_0"]),
-					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameserver_1"]),
+					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameservers"], 0),
+					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["ipv4_nameservers"], 1),
 				}),
 			},
 			{
@@ -3941,9 +4214,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 						"stackit_network.network", "project_id",
 					),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["network_name"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network", "ipv4_nameservers", testConfigNetworkInterfaceVarsMax["ipv4_nameservers"]),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
@@ -4070,9 +4341,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "project_id"),
 					resource.TestCheckResourceAttr("data.stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["network_name"])),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("data.stackit_network.network", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("data.stackit_network.network", "ipv4_nameservers", testConfigNetworkInterfaceVarsMax["ipv4_nameservers"]),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckNoResourceAttr("data.stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "public_ip"),
@@ -4179,8 +4448,8 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"ipv4_nameservers", "ipv6_nameservers"},
 				// Manual check the ipv4_nameservers
 				ImportStateCheck: validateImportedNameservers([]string{
-					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_0"]),
-					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_1"]),
+					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameservers"], 0),
+					testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameservers"], 1),
 				}),
 			},
 			{
@@ -4313,9 +4582,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 						"stackit_network.network", "project_id",
 					),
 					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["network_name"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.0", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_0"])),
-					resource.TestCheckResourceAttr("stackit_network.network", "ipv4_nameservers.1", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["ipv4_nameserver_1"])),
+					testutil.CheckListAttr("stackit_network.network", "ipv4_nameservers", testConfigNetworkInterfaceVarsMax["ipv4_nameservers"]),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "ipv4_prefixes.#"),
 					resource.TestCheckNoResourceAttr("stackit_network.network", "ipv6_prefixes.#"),
 					resource.TestCheckResourceAttrSet("stackit_network.network", "public_ip"),
@@ -4749,6 +5016,23 @@ func TestAccImageMax(t *testing.T) {
 	})
 }
 
+func TestAccImagesDatasource(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{{
+			ConfigVariables: config.Variables{"project_id": config.StringVariable(testutil.ProjectId)},
+			Config:          fmt.Sprintf("%s\n%s", dataSourceImages, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "id"),
+				resource.TestCheckResourceAttr("data.stackit_images.all", "region", testutil.Region),
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "results.#"),
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "results.0.image_id"),
+				resource.TestCheckResourceAttrSet("data.stackit_images.all", "results.0.name"),
+			),
+		}},
+	})
+}
+
 func TestAccImageDatasourceSearchVariants(t *testing.T) {
 	t.Log("TestDataSource Image Variants")
 	resource.ParallelTest(t, resource.TestCase{
@@ -4924,6 +5208,33 @@ func TestAccProject(t *testing.T) {
 				),
 			},
 		},
+	})
+}
+
+func TestAccMachineTypesDatasource(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{{
+			ConfigVariables: config.Variables{
+				"project_id": config.StringVariable(testutil.ProjectId),
+			},
+			Config: fmt.Sprintf("%s\n%s", dataSourceMachineTypesConfig, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("data.stackit_machine_types.all", "id", testutil.ProjectId+","+testutil.Region),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.all", "region", testutil.Region),
+				resource.TestCheckResourceAttrSet("data.stackit_machine_types.all", "results.0.name"),
+				resource.TestCheckResourceAttrSet("data.stackit_machine_types.all", "results.0.vcpus"),
+				resource.TestCheckResourceAttrSet("data.stackit_machine_types.all", "results.0.ram"),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.exact", "results.#", "1"),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.no_match", "results.#", "0"),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.no_match", "region", testutil.Region),
+				resource.TestCheckResourceAttr("data.stackit_machine_types.no_match", "id", testutil.ProjectId+","+testutil.Region),
+				resource.TestCheckOutput("machine_types_sorted", "true"),
+				resource.TestCheckOutput("machine_types_empty_filter_matches_all", "true"),
+				resource.TestCheckOutput("machine_types_hardware_matches", "true"),
+				resource.TestCheckOutput("machine_types_exact_matches", "true"),
+			),
+		}},
 	})
 }
 
@@ -5738,6 +6049,54 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 	})
 }
 
+func TestAccDatasourceIaaSProject(t *testing.T) {
+	t.Logf("TestAccDatasourceIaaSProject name: %s", testutil.ConvertConfigVariable(testConfigIaasProject["name"]))
+	const (
+		publicProject = "data.stackit_iaas_project.public"
+		snaProject    = "data.stackit_iaas_project.sna"
+	)
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Datasource
+			{
+				ConfigVariables: testConfigIaasProject,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), datasourceIaasProjectConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Datasource public project
+					resource.TestCheckResourceAttrSet(publicProject, "id"),
+					resource.TestCheckResourceAttrPair(
+						publicProject, "project_id",
+						"stackit_resourcemanager_project.with_public_network", "project_id",
+					),
+					resource.TestCheckResourceAttr(publicProject, "area_id", "PUBLIC"),
+					resource.TestCheckResourceAttrSet(publicProject, "created_at"),
+					resource.TestCheckResourceAttrSet(publicProject, "updated_at"),
+					resource.TestCheckResourceAttr(publicProject, "internet_access", "true"),
+					resource.TestCheckResourceAttr(publicProject, "status", "CREATED"),
+
+					// Datasource SNA project
+					resource.TestCheckResourceAttrSet(snaProject, "id"),
+					resource.TestCheckResourceAttrPair(
+						snaProject, "project_id",
+						"stackit_resourcemanager_project.with_network_area", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						snaProject, "area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet(snaProject, "created_at"),
+					resource.TestCheckResourceAttrSet(snaProject, "updated_at"),
+					resource.TestCheckResourceAttr(snaProject, "internet_access", "true"),
+					resource.TestCheckResourceAttr(snaProject, "status", "CREATED"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckDestroy(s *terraform.State) error {
 	checkFunctions := []func(s *terraform.State) error{
 		testAccCheckServerDestroy,
@@ -5749,6 +6108,9 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckIaaSImageDestroy,
 		testAccCheckNetworkInterfaceDestroy,
 		testAccCheckNetworkDestroy,
+		iaasalpha.VpcNetworkRangeDestroy,
+		iaasalpha.VpcRegionDestroy,
+		iaasalpha.VpcCheckDestroy,
 		testAccCheckNetworkAreaRegionDestroy,
 		testAccCheckNetworkAreaDestroy,
 		testAccCheckRoutingTableRouteDestroy,
@@ -5779,8 +6141,12 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network" {
 			continue
 		}
-		region := strings.Split(rs.Primary.ID, core.Separator)[1]
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		split := strings.Split(rs.Primary.ID, core.Separator)
+		if len(split) != 2 {
+			continue
+		}
+		region := split[1]
+		networkId := split[2]
 		err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, region, networkId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
@@ -5979,8 +6345,12 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			continue
 		}
 		// network terraform ID: "[project_id],[region],[network_id]"
-		projectId = strings.Split(rs.Primary.ID, core.Separator)[0]
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		split := strings.Split(rs.Primary.ID, core.Separator)
+		if len(split) != 2 {
+			continue
+		}
+		projectId = split[0]
+		networkId := split[2]
 		networksToDestroy = append(networksToDestroy, networkId)
 	}
 
@@ -6373,4 +6743,38 @@ func validateImportedNameservers(expectedIPs []string) func(states []*terraform.
 
 		return nil
 	}
+}
+
+func TestAccNetworksDataSource(t *testing.T) {
+	configVars := config.Variables{
+		"organization_id":      config.StringVariable(testutil.OrganizationId),
+		"project_name":         config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+		"network_name":         config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+		"service_account_mail": config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: configVars,
+				Config:          fmt.Sprintf("%s\n\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), dataSourceNetworks),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// All networks
+					resource.TestCheckResourceAttrSet("data.stackit_networks.networks", "id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_resourcemanager_project.project", "project_id",
+						"data.stackit_networks.networks", "project_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network", "network_id",
+						"data.stackit_networks.networks", "results.0.network_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_networks.networks", "results.0.name", testutil.ConvertConfigVariable(configVars["network_name"])),
+				),
+			},
+		},
+	})
 }

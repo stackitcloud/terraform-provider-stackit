@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -38,7 +39,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -68,7 +68,10 @@ var schemaDescriptions = map[string]string{
 	"config_backend_origin_request_headers":        "The configured type http origin request headers for the backend",
 	"config_backend_geofencing":                    "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
 	"config_blocked_countries":                     "The configured countries where distribution of content is blocked",
-	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
+	"config_blocked_ips":                           "Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.",
+	"config_default_cache_duration":                "Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
+	"config_monthly_limit_bytes":                   "Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
+	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution. Currently, this feature is only available for distributions of backend type HTTP.",
 	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
 	"config_redirects_rule_description":            "An optional description for the redirect rule",
 	"config_redirects_rule_enabled":                "A toggle to enable or disable the redirect rule. Default to true",
@@ -107,6 +110,11 @@ var schemaDescriptions = map[string]string{
 	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
 	"config_strip_response_cookies":                "Enable this to prevent origin-level cookies from being forwarded to the end user.",
 	"config_forward_host_header":                   "Enable this allows the 'Host' header to be passed through to the origin.",
+
+	"config_cache_config":                              "Groups the cache options that influence how the CDN builds its cache key. Warning: enabling query-string vary produces one cache entry per unique query-string combination (unbounded when query_string_vary_parameters is empty). Each entry in cache_key_headers multiplies the number of cache variants by the number of distinct values observed for that header. Use these settings sparingly.",
+	"config_cache_config_query_string_vary_enabled":    "When true, the CDN varies its cache by the request query string. If query_string_vary_parameters is empty, every unique query-string combination produces its own cache entry; if non-empty, only the listed parameters influence the cache key.",
+	"config_cache_config_query_string_vary_parameters": "Allowlist of query-string parameter names that participate in the cache key when query_string_vary_enabled is true. Ignored while query_string_vary_enabled is false, but still stored so it can be re-activated without losing the list.",
+	"config_cache_config_cache_key_headers":            "HTTP request header names whose values participate in the cache key. Each entry multiplies the number of cache variants by the number of distinct values observed for that header.",
 }
 
 type Model struct {
@@ -144,11 +152,21 @@ type distributionConfig struct {
 	Redirects            *redirectConfig `tfsdk:"redirects"`              // A wrapper for a list of redirect rules that allows for redirect settings on a distribution
 	Regions              *[]string       `tfsdk:"regions"`                // The regions in which data will be cached
 	BlockedCountries     *[]string       `tfsdk:"blocked_countries"`      // The countries for which content will be blocked
+	BlockedIps           types.List      `tfsdk:"blocked_ips"`            // Restricts access to your content by specifying a list of blocked IPv4 addresses.
+	DefaultCacheDuration types.String    `tfsdk:"default_cache_duration"` // Sets the default cache duration for the distribution.
+	MonthlyLimitBytes    types.Int64     `tfsdk:"monthly_limit_bytes"`    // Sets the monthly limit of bandwidth in bytes.
 	Optimizer            types.Object    `tfsdk:"optimizer"`              // The optimizer configuration
 	Waf                  types.Object    `tfsdk:"waf"`                    // The WAF configuration
 	Tls                  types.Object    `tfsdk:"tls"`                    // The TLS configuration
+	CacheConfig          types.Object    `tfsdk:"cache_config"`           // The cache configuration
 	StripResponseCookies types.Bool      `tfsdk:"strip_response_cookies"` // The Enable this to prevent origin-level cookies from being forwarded to the end user
 	ForwardHostHeader    types.Bool      `tfsdk:"forward_host_header"`    // The Enable this allows the 'Host' header to be passed through to the origin.
+}
+
+type cacheConfigModel struct {
+	CacheKeyHeaders           types.List `tfsdk:"cache_key_headers"`
+	QueryStringVaryEnabled    types.Bool `tfsdk:"query_string_vary_enabled"`
+	QueryStringVaryParameters types.List `tfsdk:"query_string_vary_parameters"`
 }
 
 type optimizerConfig struct {
@@ -194,9 +212,12 @@ type backendCredentials struct {
 }
 
 var configTypes = map[string]attr.Type{
-	"backend":           types.ObjectType{AttrTypes: backendTypes},
-	"regions":           types.ListType{ElemType: types.StringType},
-	"blocked_countries": types.ListType{ElemType: types.StringType},
+	"backend":                types.ObjectType{AttrTypes: backendTypes},
+	"regions":                types.ListType{ElemType: types.StringType},
+	"blocked_countries":      types.ListType{ElemType: types.StringType},
+	"blocked_ips":            types.ListType{ElemType: types.StringType},
+	"default_cache_duration": types.StringType,
+	"monthly_limit_bytes":    types.Int64Type,
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes,
 	},
@@ -209,9 +230,24 @@ var configTypes = map[string]attr.Type{
 	"tls": types.ObjectType{
 		AttrTypes: tlsTypes,
 	},
+	"cache_config": types.ObjectType{
+		AttrTypes: cacheConfigTypes,
+	},
 	"strip_response_cookies": types.BoolType,
 	"forward_host_header":    types.BoolType,
 }
+
+var cacheConfigTypes = map[string]attr.Type{
+	"cache_key_headers":            types.ListType{ElemType: types.StringType},
+	"query_string_vary_enabled":    types.BoolType,
+	"query_string_vary_parameters": types.ListType{ElemType: types.StringType},
+}
+
+var defaultCacheConfig = types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+	"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+	"query_string_vary_enabled":    types.BoolValue(false),
+	"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{}),
+})
 
 var optimizerTypes = map[string]attr.Type{
 	"enabled": types.BoolType,
@@ -293,7 +329,7 @@ var domainTypes = map[string]attr.Type{
 }
 
 type distributionResource struct {
-	client       *cdnSdk.APIClient
+	client       cdnSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -302,22 +338,19 @@ func NewDistributionResource() resource.Resource {
 }
 
 func (r *distributionResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.CdnV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_cdn_distribution", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "CDN client configured")
 }
 
@@ -325,7 +358,7 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 	resp.TypeName = req.ProviderTypeName + "_cdn_distribution"
 }
 
-func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) { //nolint:tfmodifyplan // false positive - cdn api has a 'regions' array field to define in which regions content to be cached
 	backendOptions := []string{"http", "bucket"}
 	statusCode := []int32{301, 302, 303, 307, 308}
 	resp.Schema = schema.Schema{
@@ -410,6 +443,40 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 						Validators: []validator.Object{
 							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
+						},
+					},
+					"cache_config": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_cache_config"],
+						Optional:    true,
+						Computed:    true,
+						Default:     objectdefault.StaticValue(defaultCacheConfig),
+						Attributes: map[string]schema.Attribute{
+							"cache_key_headers": schema.ListAttribute{
+								Description: schemaDescriptions["config_cache_config_cache_key_headers"],
+								Optional:    true,
+								Computed:    true,
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+								ElementType: types.StringType,
+								Validators: []validator.List{
+									listvalidator.NoNullValues(),
+								},
+							},
+							"query_string_vary_enabled": schema.BoolAttribute{
+								Description: schemaDescriptions["config_cache_config_query_string_vary_enabled"],
+								Optional:    true,
+								Computed:    true,
+								Default:     booldefault.StaticBool(false),
+							},
+							"query_string_vary_parameters": schema.ListAttribute{
+								Description: schemaDescriptions["config_cache_config_query_string_vary_parameters"],
+								Optional:    true,
+								Computed:    true,
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+								ElementType: types.StringType,
+								Validators: []validator.List{
+									listvalidator.NoNullValues(),
+								},
+							},
 						},
 					},
 					"strip_response_cookies": schema.BoolAttribute{
@@ -505,7 +572,8 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 													},
 												},
 											},
-										}},
+										},
+									},
 								},
 							},
 						},
@@ -672,7 +740,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"region": schema.StringAttribute{
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_region"],
-								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
+								Validators:  []validator.String{stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("bucket_url"))},
 							},
 							"credentials": schema.SingleNestedAttribute{
 								Optional:    true,
@@ -690,7 +758,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 										Description: schemaDescriptions["config_backend_credentials_access_key_id"],
 									},
 								},
-								Validators: []validator.Object{objectvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
+								Validators: []validator.Object{objectvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("bucket_url"))},
 							},
 						},
 					},
@@ -714,6 +782,22 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						// API response (empty list).
 						Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 					},
+					"blocked_ips": schema.ListAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_blocked_ips"],
+						ElementType: types.StringType,
+					},
+					"default_cache_duration": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_default_cache_duration"],
+					},
+					"monthly_limit_bytes": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_monthly_limit_bytes"],
+					},
 				},
 			},
 		},
@@ -721,6 +805,22 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 }
 
 func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	// Redirects are only supported for backend type http
+	var backendType types.String
+	var redirects types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("backend").AtName("type"), &backendType)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("redirects"), &redirects)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !utils.IsUndefined(backendType) && backendType.ValueString() != "http" && !redirects.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("config").AtName("redirects"),
+			"Invalid redirects config",
+			fmt.Sprintf("Redirects can only be configured for backend type \"http\", got %q.", backendType.ValueString()),
+		)
+	}
+
 	var model Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
@@ -776,7 +876,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
+	createResp, err := r.client.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -798,7 +898,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client.DefaultAPI, projectId, createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Waiting for create: %v", err))
 		return
@@ -838,7 +938,7 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	cdnResp, err := r.client.DefaultAPI.GetDistribution(ctx, projectId, distributionId).Execute()
+	cdnResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
@@ -883,172 +983,13 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	configModel := distributionConfig{}
-	diags = model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    false,
-		UnhandledUnknownAsEmpty: false,
-	})
-	if diags.HasError() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping plan config")
+	patchPayload, err := toPatchPayload(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Error creating patch payload: %v", err))
 		return
 	}
 
-	regions := []cdnSdk.Region{}
-	for _, r := range *configModel.Regions {
-		regionEnum, err := cdnSdk.NewRegionFromValue(r)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Map regions: %v", err))
-			return
-		}
-		regions = append(regions, *regionEnum)
-	}
-
-	// blockedCountries
-	var blockedCountries []string
-	if configModel.BlockedCountries != nil {
-		tempBlockedCountries := []string{}
-		for _, blockedCountry := range *configModel.BlockedCountries {
-			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
-			if err != nil {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked countries: %v", err))
-				return
-			}
-			tempBlockedCountries = append(tempBlockedCountries, validatedBlockedCountry)
-		}
-		blockedCountries = tempBlockedCountries
-	}
-
-	// tls
-	var tls *cdnSdk.TlsConfigPatch
-	if !utils.IsUndefined(configModel.Tls) {
-		var tlsValue tlsConfig
-		diags = configModel.Tls.As(ctx, &tlsValue, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping TLS config")
-			return
-		}
-		tls = &cdnSdk.TlsConfigPatch{
-			EnableTls10: new(tlsValue.EnableTls10.ValueBool()),
-			EnableTls11: new(tlsValue.EnableTls11.ValueBool()),
-		}
-	}
-
-	// redirects
-	redirectsConfig := convertRedirectconfig(configModel.Redirects)
-
-	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
-
-	switch configModel.Backend.Type {
-	case "http":
-		geofencingPatch := map[string][]string{}
-		if configModel.Backend.Geofencing != nil {
-			gf := make(map[string][]string)
-			for url, countries := range *configModel.Backend.Geofencing {
-				countryStrings := make([]string, len(countries))
-				for i, countryPtr := range countries {
-					if countryPtr == nil {
-						core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Geofencing url %q has a null value", url))
-						return
-					}
-					countryStrings[i] = *countryPtr
-				}
-				gf[url] = countryStrings
-			}
-			geofencingPatch = gf
-		}
-
-		configPatchBackend.HttpBackendPatch = &cdnSdk.HttpBackendPatch{
-			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
-			OriginUrl:            configModel.Backend.OriginURL,
-			Type:                 "http",
-			Geofencing:           &geofencingPatch,
-		}
-	case "bucket":
-		configPatchBackend.BucketBackendPatch = &cdnSdk.BucketBackendPatch{
-			Type:      "bucket",
-			BucketUrl: configModel.Backend.BucketURL,
-			Region:    configModel.Backend.Region,
-		}
-		if configModel.Backend.Credentials != nil {
-			configPatchBackend.BucketBackendPatch.Credentials = &cdnSdk.BucketCredentials{
-				AccessKeyId:     *configModel.Backend.Credentials.AccessKey,
-				SecretAccessKey: *configModel.Backend.Credentials.SecretKey,
-			}
-		}
-	}
-
-	configPatch := &cdnSdk.ConfigPatch{
-		Backend:          configPatchBackend,
-		Regions:          regions,
-		BlockedCountries: blockedCountries,
-		Redirects:        redirectsConfig,
-		Tls:              tls,
-	}
-
-	// forwardHostHeader
-	if !utils.IsUndefined(configModel.ForwardHostHeader) {
-		configPatch.ForwardHostHeader = new(configModel.ForwardHostHeader.ValueBool())
-	}
-	// stripResponseCookies
-	if !utils.IsUndefined(configModel.StripResponseCookies) {
-		configPatch.StripResponseCookies = configModel.StripResponseCookies.ValueBoolPointer()
-	}
-
-	configPatch.Waf = &cdnSdk.WafConfigPatch{
-		Mode: new(cdnSdk.WAFMODE_DISABLED),
-		Type: new(cdnSdk.WAFTYPE_FREE),
-	}
-
-	// Map WAF Update
-	if !utils.IsUndefined(configModel.Waf) {
-		var wafModel wafConfig
-		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
-
-		configPatch.Waf.Mode = new(cdnSdk.WafMode(wafModel.Mode.ValueString()))
-		configPatch.Waf.Type = new(cdnSdk.WafType(wafModel.Type.ValueString()))
-		configPatch.Waf.AllowedHttpVersions = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpVersions, &diags)
-		configPatch.Waf.AllowedRequestContentTypes = conversion.TerraformStringSetToList(ctx, wafModel.AllowedRequestContentTypes, &diags)
-		configPatch.Waf.AllowedHttpMethods = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpMethods, &diags)
-		configPatch.Waf.EnabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleIds, &diags)
-		configPatch.Waf.DisabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleIds, &diags)
-		configPatch.Waf.LogOnlyRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleIds, &diags)
-		configPatch.Waf.EnabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleGroupIds, &diags)
-		configPatch.Waf.DisabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleGroupIds, &diags)
-		configPatch.Waf.LogOnlyRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleGroupIds, &diags)
-		configPatch.Waf.EnabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleCollectionIds, &diags)
-		configPatch.Waf.DisabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleCollectionIds, &diags)
-		configPatch.Waf.LogOnlyRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleCollectionIds, &diags)
-
-		if diags.HasError() {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
-			return
-		}
-
-		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
-			configPatch.Waf.ParanoiaLevel = new(cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString()))
-		}
-	}
-
-	if !utils.IsUndefined(configModel.Optimizer) {
-		var optimizerModel optimizerConfig
-
-		diags = configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping optimizer config")
-			return
-		}
-
-		optimizer := cdnSdk.NewOptimizerPatch()
-		if !utils.IsUndefined(optimizerModel.Enabled) {
-			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
-		}
-		configPatch.Optimizer = optimizer
-	}
-
-	_, err := r.client.DefaultAPI.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdnSdk.PatchDistributionPayload{
-		Config:   configPatch,
-		IntentId: new(uuid.NewString()),
-	}).Execute()
+	_, err = r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(*patchPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Patch distribution: %v", err))
 		return
@@ -1056,7 +997,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Waiting for update: %v", err))
 		return
@@ -1084,21 +1025,21 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	_, err := r.client.DefaultAPI.DeleteDistribution(ctx, projectId, distributionId).Execute()
+	_, err := r.client.DeleteDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Delete distribution: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
+	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Waiting for deletion: %v", err))
 		return
@@ -1443,17 +1384,64 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
 	if diagTls.HasError() {
-		return core.DiagsToError(diagWaf)
+		return core.DiagsToError(diagTls)
 	}
+
+	var cacheKeyHeaders []attr.Value
+	for _, h := range distribution.Config.CacheConfig.CacheKeyHeaders {
+		cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
+	}
+	cacheKeyHeadersList, diags := types.ListValue(types.StringType, cacheKeyHeaders)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	var queryStringVaryParams []attr.Value
+	for _, p := range distribution.Config.CacheConfig.QueryStringVaryParameters {
+		queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
+	}
+	queryStringVaryParamsList, diags := types.ListValue(types.StringType, queryStringVaryParams)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	cacheConfigVal, diagCache := types.ObjectValue(cacheConfigTypes, map[string]attr.Value{
+		"cache_key_headers":            cacheKeyHeadersList,
+		"query_string_vary_enabled":    types.BoolValue(distribution.Config.CacheConfig.QueryStringVaryEnabled),
+		"query_string_vary_parameters": queryStringVaryParamsList,
+	})
+	if diagCache.HasError() {
+		return core.DiagsToError(diagCache)
+	}
+
+	// blockedIps
+	var blockedIps []attr.Value
+	if distribution.Config.BlockedIps != nil {
+		for _, ip := range distribution.Config.BlockedIps {
+			blockedIps = append(blockedIps, types.StringValue(ip))
+		}
+	}
+
+	modelBlockedIps, diags := types.ListValue(types.StringType, blockedIps)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	defaultCacheDuration := types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
+	monthlyLimitBytes := types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
 
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend":                backend,
 		"regions":                modelRegions,
 		"blocked_countries":      modelBlockedCountries,
+		"blocked_ips":            modelBlockedIps,
+		"default_cache_duration": defaultCacheDuration,
+		"monthly_limit_bytes":    monthlyLimitBytes,
 		"optimizer":              optimizerVal,
 		"redirects":              redirectsVal,
 		"waf":                    wafVal,
 		"tls":                    tlsVal,
+		"cache_config":           cacheConfigVal,
 		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
 		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})
@@ -1567,15 +1555,45 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		wafPayload = &cfg.Waf
 	}
 
+	var cacheConfig *cdnSdk.CacheConfigCreate
+	if !utils.IsUndefined(rawConfig.CacheConfig) {
+		var cacheModel cacheConfigModel
+		diags := rawConfig.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		cacheConfig = cdnSdk.NewCacheConfigCreate()
+		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
+			cacheConfig.SetQueryStringVaryEnabled(cacheModel.QueryStringVaryEnabled.ValueBool())
+		}
+		if !utils.IsUndefined(cacheModel.CacheKeyHeaders) {
+			headers, err := conversion.StringListToSlice(cacheModel.CacheKeyHeaders)
+			if err != nil {
+				return nil, err
+			}
+			cacheConfig.SetCacheKeyHeaders(headers)
+		}
+		if !utils.IsUndefined(cacheModel.QueryStringVaryParameters) {
+			params, err := conversion.StringListToSlice(cacheModel.QueryStringVaryParameters)
+			if err != nil {
+				return nil, err
+			}
+			cacheConfig.SetQueryStringVaryParameters(params)
+		}
+	}
+
 	payload := &cdnSdk.CreateDistributionPayload{
 		IntentId:         new(uuid.NewString()),
 		Regions:          cfg.Regions,
 		Backend:          *backend,
 		BlockedCountries: cfg.BlockedCountries,
+		BlockedIps:       cfg.BlockedIps,
 		Optimizer:        optimizer,
 		Redirects:        cfg.Redirects,
 		Waf:              wafPayload,
 		Tls:              tls,
+		CacheConfig:      cacheConfig,
 	}
 
 	if !utils.IsUndefined(rawConfig.ForwardHostHeader) {
@@ -1584,8 +1602,234 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	if !utils.IsUndefined(rawConfig.StripResponseCookies) {
 		payload.StripResponseCookies = rawConfig.StripResponseCookies.ValueBoolPointer()
 	}
+	if !utils.IsUndefined(rawConfig.DefaultCacheDuration) {
+		payload.DefaultCacheDuration = conversion.StringValueToPointer(rawConfig.DefaultCacheDuration)
+	}
+	if !utils.IsUndefined(rawConfig.MonthlyLimitBytes) {
+		payload.MonthlyLimitBytes = conversion.Int64ValueToPointer(rawConfig.MonthlyLimitBytes)
+	}
 
 	return payload, nil
+}
+
+func toPatchPayload(ctx context.Context, model *Model) (*cdnSdk.PatchDistributionPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("missing model")
+	}
+
+	if model.Config.IsNull() || model.Config.IsUnknown() {
+		return nil, fmt.Errorf("config cannot be nil or unknown")
+	}
+
+	configModel := distributionConfig{}
+	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    false,
+		UnhandledUnknownAsEmpty: false,
+	})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
+	regions := []cdnSdk.Region{}
+	if configModel.Regions != nil {
+		for _, r := range *configModel.Regions {
+			regionEnum, err := cdnSdk.NewRegionFromValue(r)
+			if err != nil {
+				return nil, fmt.Errorf("map regions: %w", err)
+			}
+			regions = append(regions, *regionEnum)
+		}
+	}
+
+	// blockedCountries
+	var blockedCountries []string
+	if configModel.BlockedCountries != nil {
+		tempBlockedCountries := []string{}
+		for _, blockedCountry := range *configModel.BlockedCountries {
+			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
+			if err != nil {
+				return nil, fmt.Errorf("blocked countries: %w", err)
+			}
+			tempBlockedCountries = append(tempBlockedCountries, validatedBlockedCountry)
+		}
+		blockedCountries = tempBlockedCountries
+	}
+
+	// blockedIps
+	var blockedIps []string
+	if !utils.IsUndefined(configModel.BlockedIps) {
+		bipDiags := configModel.BlockedIps.ElementsAs(ctx, &blockedIps, false)
+		if bipDiags.HasError() {
+			return nil, fmt.Errorf("blocked IPs: %w", core.DiagsToError(bipDiags))
+		}
+	}
+
+	// tls
+	var tls *cdnSdk.TlsConfigPatch
+	if !utils.IsUndefined(configModel.Tls) {
+		var tlsValue tlsConfig
+		diags = configModel.Tls.As(ctx, &tlsValue, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+		tls = &cdnSdk.TlsConfigPatch{
+			EnableTls10: new(tlsValue.EnableTls10.ValueBool()),
+			EnableTls11: new(tlsValue.EnableTls11.ValueBool()),
+		}
+	}
+
+	// redirects
+	redirectsConfig := convertRedirectconfig(configModel.Redirects)
+
+	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
+
+	switch configModel.Backend.Type {
+	case "http":
+		geofencingPatch := map[string][]string{}
+		if configModel.Backend.Geofencing != nil {
+			gf := make(map[string][]string)
+			for url, countries := range *configModel.Backend.Geofencing {
+				countryStrings := make([]string, len(countries))
+				for i, countryPtr := range countries {
+					if countryPtr == nil {
+						return nil, fmt.Errorf("geofencing url %q has a null value", url)
+					}
+					countryStrings[i] = *countryPtr
+				}
+				gf[url] = countryStrings
+			}
+			geofencingPatch = gf
+		}
+
+		configPatchBackend.HttpBackendPatch = &cdnSdk.HttpBackendPatch{
+			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
+			OriginUrl:            configModel.Backend.OriginURL,
+			Type:                 "http",
+			Geofencing:           &geofencingPatch,
+		}
+	case "bucket":
+		configPatchBackend.BucketBackendPatch = &cdnSdk.BucketBackendPatch{
+			Type:      "bucket",
+			BucketUrl: configModel.Backend.BucketURL,
+			Region:    configModel.Backend.Region,
+		}
+		if configModel.Backend.Credentials != nil {
+			configPatchBackend.BucketBackendPatch.Credentials = &cdnSdk.BucketCredentials{
+				AccessKeyId:     *configModel.Backend.Credentials.AccessKey,
+				SecretAccessKey: *configModel.Backend.Credentials.SecretKey,
+			}
+		}
+	}
+
+	configPatch := &cdnSdk.ConfigPatch{
+		Backend:          configPatchBackend,
+		Regions:          regions,
+		BlockedCountries: blockedCountries,
+		BlockedIps:       blockedIps,
+		Redirects:        redirectsConfig,
+		Tls:              tls,
+	}
+
+	// forwardHostHeader
+	if !utils.IsUndefined(configModel.ForwardHostHeader) {
+		configPatch.ForwardHostHeader = new(configModel.ForwardHostHeader.ValueBool())
+	}
+	// stripResponseCookies
+	if !utils.IsUndefined(configModel.StripResponseCookies) {
+		configPatch.StripResponseCookies = configModel.StripResponseCookies.ValueBoolPointer()
+	}
+	if !utils.IsUndefined(configModel.DefaultCacheDuration) {
+		configPatch.DefaultCacheDuration = *cdnSdk.NewNullableString(conversion.StringValueToPointer(configModel.DefaultCacheDuration))
+	}
+	if !utils.IsUndefined(configModel.MonthlyLimitBytes) {
+		configPatch.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(conversion.Int64ValueToPointer(configModel.MonthlyLimitBytes))
+	}
+
+	configPatch.Waf = &cdnSdk.WafConfigPatch{
+		Mode: new(cdnSdk.WAFMODE_DISABLED),
+		Type: new(cdnSdk.WAFTYPE_FREE),
+	}
+
+	// Map WAF Update
+	if !utils.IsUndefined(configModel.Waf) {
+		var wafModel wafConfig
+		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		configPatch.Waf.Mode = new(cdnSdk.WafMode(wafModel.Mode.ValueString()))
+		configPatch.Waf.Type = new(cdnSdk.WafType(wafModel.Type.ValueString()))
+		configPatch.Waf.AllowedHttpVersions = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpVersions, &diags)
+		configPatch.Waf.AllowedRequestContentTypes = conversion.TerraformStringSetToList(ctx, wafModel.AllowedRequestContentTypes, &diags)
+		configPatch.Waf.AllowedHttpMethods = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpMethods, &diags)
+		configPatch.Waf.EnabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleIds, &diags)
+		configPatch.Waf.DisabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleIds, &diags)
+		configPatch.Waf.LogOnlyRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleIds, &diags)
+		configPatch.Waf.EnabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleGroupIds, &diags)
+		configPatch.Waf.DisabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleGroupIds, &diags)
+		configPatch.Waf.LogOnlyRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleGroupIds, &diags)
+		configPatch.Waf.EnabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleCollectionIds, &diags)
+		configPatch.Waf.DisabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleCollectionIds, &diags)
+		configPatch.Waf.LogOnlyRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleCollectionIds, &diags)
+
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
+			configPatch.Waf.ParanoiaLevel = new(cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString()))
+		}
+	}
+
+	if !utils.IsUndefined(configModel.Optimizer) {
+		var optimizerModel optimizerConfig
+
+		diags = configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		optimizer := cdnSdk.NewOptimizerPatch()
+		if !utils.IsUndefined(optimizerModel.Enabled) {
+			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
+		}
+		configPatch.Optimizer = optimizer
+	}
+
+	var cacheConfigPatch *cdnSdk.CacheConfigPatch
+	if !utils.IsUndefined(configModel.CacheConfig) {
+		var cacheModel cacheConfigModel
+		diags = configModel.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		cacheConfigPatch = cdnSdk.NewCacheConfigPatch()
+		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
+			cacheConfigPatch.SetQueryStringVaryEnabled(cacheModel.QueryStringVaryEnabled.ValueBool())
+		}
+		if !utils.IsUndefined(cacheModel.CacheKeyHeaders) {
+			headers, err := conversion.StringListToSlice(cacheModel.CacheKeyHeaders)
+			if err != nil {
+				return nil, err
+			}
+			cacheConfigPatch.SetCacheKeyHeaders(headers)
+		}
+		if !utils.IsUndefined(cacheModel.QueryStringVaryParameters) {
+			params, err := conversion.StringListToSlice(cacheModel.QueryStringVaryParameters)
+			if err != nil {
+				return nil, err
+			}
+			cacheConfigPatch.SetQueryStringVaryParameters(params)
+		}
+	}
+	configPatch.CacheConfig = cacheConfigPatch
+
+	return &cdnSdk.PatchDistributionPayload{
+		Config:   configPatch,
+		IntentId: new(uuid.NewString()),
+	}, nil
 }
 
 func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.RedirectConfig {
@@ -1747,12 +1991,67 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		}
 	}
 
+	// blockedIps
+	var blockedIps []string
+	if !utils.IsUndefined(configModel.BlockedIps) {
+		diags := configModel.BlockedIps.ElementsAs(ctx, &blockedIps, false)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+	}
+
+	var cacheConfig cdnSdk.CacheConfig
+	if !utils.IsUndefined(configModel.CacheConfig) {
+		var cacheModel cacheConfigModel
+		diags := configModel.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		var cacheKeyHeaders []string
+		if !utils.IsUndefined(cacheModel.CacheKeyHeaders) {
+			headers, err := conversion.StringListToSlice(cacheModel.CacheKeyHeaders)
+			if err != nil {
+				return nil, err
+			}
+			cacheKeyHeaders = headers
+		}
+		var queryStringVaryParams []string
+		if !utils.IsUndefined(cacheModel.QueryStringVaryParameters) {
+			params, err := conversion.StringListToSlice(cacheModel.QueryStringVaryParameters)
+			if err != nil {
+				return nil, err
+			}
+			queryStringVaryParams = params
+		}
+		queryStringVaryEnabled := false
+		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
+			queryStringVaryEnabled = cacheModel.QueryStringVaryEnabled.ValueBool()
+		}
+
+		cacheConfig = cdnSdk.CacheConfig{
+			CacheKeyHeaders:           cacheKeyHeaders,
+			QueryStringVaryEnabled:    queryStringVaryEnabled,
+			QueryStringVaryParameters: queryStringVaryParams,
+		}
+	}
+
 	cdnConfig := &cdnSdk.Config{
 		Backend:          cdnSdk.ConfigBackend{},
 		Regions:          regions,
 		BlockedCountries: blockedCountries,
+		BlockedIps:       blockedIps,
 		Redirects:        redirectsConfig,
 		Tls:              tls,
+		CacheConfig:      cacheConfig,
+	}
+
+	if !utils.IsUndefined(configModel.DefaultCacheDuration) {
+		cdnConfig.DefaultCacheDuration = *cdnSdk.NewNullableString(conversion.StringValueToPointer(configModel.DefaultCacheDuration))
+	}
+
+	if !utils.IsUndefined(configModel.MonthlyLimitBytes) {
+		cdnConfig.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(conversion.Int64ValueToPointer(configModel.MonthlyLimitBytes))
 	}
 
 	if !utils.IsUndefined(configModel.Waf) {

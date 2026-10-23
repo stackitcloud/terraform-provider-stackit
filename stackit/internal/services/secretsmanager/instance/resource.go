@@ -9,15 +9,12 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -42,8 +39,8 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
-	ACLs       types.Set    `tfsdk:"acls"`
 	KmsKey     *KmsKeyModel `tfsdk:"kms_key"`
+	ACLs       types.Set    `tfsdk:"acls"` //nolint:tfacl // field was here before linter was introduced
 }
 
 type KmsKeyModel struct {
@@ -60,7 +57,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *secretsmanager.APIClient
+	client secretsmanager.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -70,28 +67,29 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := secretsmanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
+	if !core.ValidateServiceRegion(ctx, &providerData, "Secrets Manager", &resp.Diagnostics) {
 		return
 	}
-	r.client = apiClient
+
+	r.client = clients.SecretsmanagerV1Client
+
 	tflog.Info(ctx, "Secrets Manager instance client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                          "Secrets Manager instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main":                          "Secrets Manager instance resource schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		"id":                            "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id":                   "ID of the Secrets Manager instance.",
 		"project_id":                    "STACKIT project ID to which the instance is associated.",
 		"name":                          "Instance name.",
-		"acls":                          "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
+		"acl":                           "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
 		"kms_key":                       "The STACKIT-KMS key for secret encryption and decryption.",
 		"kms_key.key_id":                "UUID of the key within the STACKIT-KMS to use for the encryption.",
 		"kms_key.key_ring_id":           "UUID of the keyring where the key is located within the STACKTI-KMS.",
@@ -139,8 +137,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"acls": schema.SetAttribute{
-				Description: descriptions["acls"],
+			"acls": schema.SetAttribute{ //nolint:tfacl // field was here before linter was introduced
+				Description: descriptions["acl"],
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
@@ -189,9 +187,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	var acls []string
+	var acl []string
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
-		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		diags = model.ACLs.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -205,7 +203,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -224,14 +222,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	})
 
 	// Create ACLs
-	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
+	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACL: %v", err))
 		return
 	}
-	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -272,10 +270,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -285,9 +283,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -330,7 +328,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update instance
-	err = r.client.DefaultAPI.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -338,23 +336,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	var acls []string
+	var acl []string
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
-		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		diags = model.ACLs.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	// Update ACLs
-	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
+	// Update ACL
+	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACLs: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
 		return
 	}
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance acl", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -362,9 +360,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -401,10 +399,10 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -466,7 +464,7 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 		}
 	}
 
-	err := mapACLs(aclList, model)
+	err := mapACL(aclList, model)
 	if err != nil {
 		return err
 	}
@@ -474,7 +472,7 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 	return nil
 }
 
-func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
+func mapACL(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	if aclList == nil {
 		return fmt.Errorf("nil ACL list")
 	}
@@ -483,15 +481,17 @@ func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 		return nil
 	}
 
-	acls := []attr.Value{}
-	for _, acl := range aclList.Acls {
-		acls = append(acls, types.StringValue(acl.Cidr))
+	acl := []attr.Value{}
+	for _, elem := range aclList.Acls {
+		acl = append(acl, types.StringValue(elem.Cidr))
 	}
-	aclsList, diags := types.SetValue(types.StringType, acls)
+	aclListTf, diags := types.SetValue(types.StringType, acl)
 	if diags.HasError() {
-		return fmt.Errorf("mapping ACLs: %w", core.DiagsToError(diags))
+		return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 	}
-	model.ACLs = aclsList
+
+	model.ACLs = aclListTf
+
 	return nil
 }
 
@@ -536,12 +536,12 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateInstancePayload, error
 	return payload, nil
 }
 
-// updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
-func updateACLs(ctx context.Context, projectId, instanceId string, acls []string, client *secretsmanager.APIClient) error {
-	// Get ACLs current state
-	currentACLsResp, err := client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+// updateACL creates and deletes ACL so that the instance's ACL are the ones in the model
+func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client secretsmanager.DefaultAPI) error {
+	// Get ACL current state
+	currentACLResp, err := client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		return fmt.Errorf("fetching current ACLs: %w", err)
+		return fmt.Errorf("fetching current ACL: %w", err)
 	}
 
 	type aclState struct {
@@ -549,35 +549,35 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 		isCreated bool
 		id        string
 	}
-	aclsState := make(map[string]*aclState)
-	for _, cidr := range acls {
-		aclsState[cidr] = &aclState{
+	aclStates := make(map[string]*aclState)
+	for _, cidr := range acl {
+		aclStates[cidr] = &aclState{
 			isInModel: true,
 		}
 	}
-	for _, acl := range currentACLsResp.Acls {
+	for _, acl := range currentACLResp.Acls {
 		cidr := acl.Cidr
-		if _, ok := aclsState[cidr]; !ok {
-			aclsState[cidr] = &aclState{}
+		if _, ok := aclStates[cidr]; !ok {
+			aclStates[cidr] = &aclState{}
 		}
-		aclsState[cidr].isCreated = true
-		aclsState[cidr].id = acl.Id
+		aclStates[cidr].isCreated = true
+		aclStates[cidr].id = acl.Id
 	}
 
-	// Create/delete ACLs
-	for cidr, state := range aclsState {
+	// Create/delete ACL
+	for cidr, state := range aclStates {
 		if state.isInModel && !state.isCreated {
 			payload := secretsmanager.CreateACLPayload{
 				Cidr: cidr,
 			}
-			_, err := client.DefaultAPI.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
+			_, err := client.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
 			if err != nil {
 				return fmt.Errorf("creating ACL '%v': %w", cidr, err)
 			}
 		}
 
 		if !state.isInModel && state.isCreated {
-			err := client.DefaultAPI.DeleteACL(ctx, projectId, instanceId, state.id).Execute()
+			err := client.DeleteACL(ctx, projectId, instanceId, state.id).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting ACL '%v': %w", cidr, err)
 			}

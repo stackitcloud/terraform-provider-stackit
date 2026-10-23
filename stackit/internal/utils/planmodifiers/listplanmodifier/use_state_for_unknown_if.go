@@ -70,8 +70,8 @@ func (m useStateForUnknownIf) PlanModifyList(ctx context.Context, req planmodifi
 	}
 }
 
-// ListChanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func ListChanged(attributePath path.Path) UseStateForUnknownIfFunc {
+// ListUnchanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
+func ListUnchanged(attributePath path.Path) UseStateForUnknownIfFunc {
 	return func(ctx context.Context, request planmodifier.ListRequest, response *UseStateForUnknownFuncResponse) {
 		var attributePlan types.List
 		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)

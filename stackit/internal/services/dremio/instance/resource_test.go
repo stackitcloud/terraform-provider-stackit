@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
+	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 )
 
 func TestMapFields(t *testing.T) {

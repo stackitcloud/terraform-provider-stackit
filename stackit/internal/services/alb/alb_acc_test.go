@@ -60,15 +60,30 @@ var testConfigVarsMax = config.Variables{
 	"tls_config_skip":                   config.BoolVariable(false),
 	"tls_config_custom_ca":              config.StringVariable("-----BEGIN CERTIFICATE-----\nMIIDCzCCAfOgAwIBAgIUTyPsTWC9ly7o+wNFYm0uu1+P8IEwDQYJKoZIhvcNAQEL\nBQAwFTETMBEGA1UEAwwKTXlDdXN0b21DQTAeFw0yNTAyMTkxOTI0MjBaFw0yNjAy\nMTkxOTI0MjBaMBUxEzARBgNVBAMMCk15Q3VzdG9tQ0EwggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQCQMEYKbiNxU37fEwBOxkvCshBR+0MwxwLW8Mi3/pvo\nn3huxjcm7EaKW9r7kIaoHXbTS1tnO6rHAHKBDxzuoYD7C2SMSiLxddquNRvpkLaP\n8qAXneQY2VP7LzsAgsC04PKG0YC1NgF5sJGsiWIRGIm+csYLnPMnwaAGx4IvY6mH\nAmM64b6QRCg36LK+P6N9KTvSQLvvmFdkA2sDToCmN/Amp6xNDFq+aQGLwdQQqHDP\nTaUqPmEyiFHKvFUaFMNQVk8B1Om8ASo69m8U3Eat4ZOVW1titE393QkOdA6ZypMC\nrJJpeNNLLJq3mIOWOd7GEyAvjUfmJwGhqEFS7lMG67hnAgMBAAGjUzBRMB0GA1Ud\nDgQWBBSk/IM5jaOAJL3/Knyq3cVva04YZDAfBgNVHSMEGDAWgBSk/IM5jaOAJL3/\nKnyq3cVva04YZDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQBe\nZ/mE8rNIbNbHQep/VppshaZUzgdy4nsmh0wvxMuHIQP0KHrxLCkhOn7A9fu4mY/P\nQ+8QqlnjTsM4cqiuFcd5V1Nk9VF/e5X3HXCDHh/jBFw+O5TGVAR/7DBw31lYv/Lt\nHakkjQCdawuvH3osO/UkElM/i2KC+iYBavTenm97AR7WGgW15/MIqxNaYE+nJth/\ndcVD0b5qSuYQaEmZ3CzMUi188R+go5ozCf2cOaa+3/LEYAaI3vKiSE8KTsshyoKm\nO6YZqrVxQCWCDTOsd28k7lHt8wJ+jzYcjCu60DUpg1ZpY+ZnmrE8vPPDb/zXhBn6\n/llXTWOUjmuTKnGsIDP5\n-----END CERTIFICATE-----"),
 	"web_socket":                        config.BoolVariable(true),
-	"query_parameters_name_1":           config.StringVariable("a"),
-	"query_parameters_exact_match_1":    config.StringVariable("b"),
-	"query_parameters_name_2":           config.StringVariable("c"),
-	"query_parameters_exact_match_2":    config.StringVariable("d"),
-	"headers_name_1":                    config.StringVariable("1"),
-	"headers_exact_match_1":             config.StringVariable("2"),
-	"headers_name_2":                    config.StringVariable("3"),
-	"headers_exact_match_2":             config.StringVariable("4"),
-	"headers_name_3":                    config.StringVariable("5"),
+	"query_parameters": config.ListVariable(
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("a"),
+			"exact_match": config.StringVariable("b"),
+		}),
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("c"),
+			"exact_match": config.StringVariable("d"),
+		}),
+	),
+	"headers": config.ListVariable(
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("1"),
+			"exact_match": config.StringVariable("2"),
+		}),
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("3"),
+			"exact_match": config.StringVariable("4"),
+		}),
+		// the third header intentionally omits exact_match (an optional field)
+		config.ObjectVariable(map[string]config.Variable{
+			"name": config.StringVariable("5"),
+		}),
+	),
 	"host_1":                            config.StringVariable("*"),
 	"host_3":                            config.StringVariable("www.example.org"),
 	"host_4":                            config.StringVariable("www.*"),
@@ -91,6 +106,7 @@ var testConfigVarsMax = config.Variables{
 	"target_pool_port_3":                config.StringVariable("9001"),
 	"target_pool_port_4":                config.StringVariable("1234"),
 	"target_display_name":               config.StringVariable("example-target"),
+	"ahc_alt_port":                      config.StringVariable("8080"),
 	"ahc_interval":                      config.StringVariable("1s"),
 	"ahc_interval_jitter":               config.StringVariable("0.010s"),
 	"ahc_timeout":                       config.StringVariable("1s"),
@@ -123,21 +139,36 @@ func configVarsMaxUpdated() config.Variables {
 	maps.Copy(tempConfig, testConfigVarsMax)
 	tempConfig["ephemeral_address"] = config.BoolVariable(false)
 	tempConfig["web_socket"] = config.BoolVariable(false)
-	tempConfig["query_parameters_name_1"] = config.StringVariable("e")
-	tempConfig["query_parameters_exact_match_1"] = config.StringVariable("f")
-	tempConfig["query_parameters_name_2"] = config.StringVariable("g")
-	tempConfig["query_parameters_exact_match_2"] = config.StringVariable("h")
-	tempConfig["headers_name_1"] = config.StringVariable("6")
-	tempConfig["headers_exact_match_1"] = config.StringVariable("7")
-	tempConfig["headers_name_2"] = config.StringVariable("8")
-	tempConfig["headers_exact_match_2"] = config.StringVariable("9")
-	tempConfig["headers_name_3"] = config.StringVariable("0")
+	tempConfig["query_parameters"] = config.ListVariable(
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("e"),
+			"exact_match": config.StringVariable("f"),
+		}),
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("g"),
+			"exact_match": config.StringVariable("h"),
+		}),
+	)
+	tempConfig["headers"] = config.ListVariable(
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("6"),
+			"exact_match": config.StringVariable("7"),
+		}),
+		config.ObjectVariable(map[string]config.Variable{
+			"name":        config.StringVariable("8"),
+			"exact_match": config.StringVariable("9"),
+		}),
+		config.ObjectVariable(map[string]config.Variable{
+			"name": config.StringVariable("0"),
+		}),
+	)
 	tempConfig["host_1"] = config.StringVariable("www.example.*")
 	tempConfig["target_pool_port_1"] = config.StringVariable("444")
 	tempConfig["ahc_http_ok_status_200"] = config.StringVariable("202")
 	tempConfig["ahc_http_ok_status_201"] = config.StringVariable("203")
 	tempConfig["ahc_timeout"] = config.StringVariable("5s")
 	tempConfig["ahc_healthy_threshold"] = config.StringVariable("5")
+	tempConfig["ahc_alt_port"] = config.StringVariable("8081")
 	tempConfig["acl"] = config.StringVariable("10.11.10.8/24")
 	return tempConfig
 }
@@ -343,15 +374,8 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.host", testutil.ConvertConfigVariable(testConfigVarsMax["host_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.target_pool", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.web_socket", testutil.ConvertConfigVariable(testConfigVarsMax["web_socket"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_name_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.0.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_exact_match_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.1.name", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_name_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.1.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_exact_match_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["headers_name_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.0.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["headers_exact_match_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.1.name", testutil.ConvertConfigVariable(testConfigVarsMax["headers_name_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.1.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["headers_exact_match_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.2.name", testutil.ConvertConfigVariable(testConfigVarsMax["headers_name_3"])),
+					testutil.CheckListAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters", testConfigVarsMax["query_parameters"]),
+					testutil.CheckListAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers", testConfigVarsMax["headers"]),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.path.prefix", testutil.ConvertConfigVariable(testConfigVarsMax["path_prefix_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.1.path.prefix", testutil.ConvertConfigVariable(testConfigVarsMax["path_prefix_2"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.1.target_pool", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_2"])),
@@ -368,6 +392,7 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.target_port", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_port_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.targets.0.display_name", testutil.ConvertConfigVariable(testConfigVarsMax["target_display_name"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_alt_port"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval_jitter"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_timeout"])),
@@ -439,15 +464,8 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.host", testutil.ConvertConfigVariable(testConfigVarsMax["host_1"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.target_pool", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_1"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.web_socket", testutil.ConvertConfigVariable(testConfigVarsMax["web_socket"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_name_1"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.0.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_exact_match_1"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.1.name", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_name_2"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.1.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["query_parameters_exact_match_2"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["headers_name_1"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.0.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["headers_exact_match_1"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.1.name", testutil.ConvertConfigVariable(testConfigVarsMax["headers_name_2"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.1.exact_match", testutil.ConvertConfigVariable(testConfigVarsMax["headers_exact_match_2"])),
-					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.2.name", testutil.ConvertConfigVariable(testConfigVarsMax["headers_name_3"])),
+					testutil.CheckListAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters", testConfigVarsMax["query_parameters"]),
+					testutil.CheckListAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers", testConfigVarsMax["headers"]),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.path.prefix", testutil.ConvertConfigVariable(testConfigVarsMax["path_prefix_1"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.1.path.prefix", testutil.ConvertConfigVariable(testConfigVarsMax["path_prefix_2"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.1.target_pool", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_2"])),
@@ -464,6 +482,7 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_name_1"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.target_port", testutil.ConvertConfigVariable(testConfigVarsMax["target_pool_port_1"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.targets.0.display_name", testutil.ConvertConfigVariable(testConfigVarsMax["target_display_name"])),
+					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_alt_port"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval_jitter"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_timeout"])),
@@ -598,16 +617,10 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "options.ephemeral_address", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ephemeral_address"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.host", testutil.ConvertConfigVariable(configVarsMaxUpdated()["host_1"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.web_socket", testutil.ConvertConfigVariable(configVarsMaxUpdated()["web_socket"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.0.name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["query_parameters_name_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.0.exact_match", testutil.ConvertConfigVariable(configVarsMaxUpdated()["query_parameters_exact_match_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.1.name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["query_parameters_name_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters.1.exact_match", testutil.ConvertConfigVariable(configVarsMaxUpdated()["query_parameters_exact_match_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.0.name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["headers_name_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.0.exact_match", testutil.ConvertConfigVariable(configVarsMaxUpdated()["headers_exact_match_1"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.1.name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["headers_name_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.1.exact_match", testutil.ConvertConfigVariable(configVarsMaxUpdated()["headers_exact_match_2"])),
-					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers.2.name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["headers_name_3"])),
+					testutil.CheckListAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.query_parameters", configVarsMaxUpdated()["query_parameters"]),
+					testutil.CheckListAttr("stackit_application_load_balancer.loadbalancer", "listeners.0.http.hosts.0.rules.0.headers", configVarsMaxUpdated()["headers"]),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.target_port", testutil.ConvertConfigVariable(configVarsMaxUpdated()["target_pool_port_1"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_alt_port"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_timeout"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.healthy_threshold", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_healthy_threshold"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_http_ok_status_200"])),

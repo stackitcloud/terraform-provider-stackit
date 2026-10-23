@@ -70,8 +70,8 @@ func (m useStateForUnknownIf) PlanModifyInt32(ctx context.Context, req planmodif
 	}
 }
 
-// Int32Changed sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func Int32Changed(attributePath path.Path) UseStateForUnknownIfFunc {
+// Int32Unchanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
+func Int32Unchanged(attributePath path.Path) UseStateForUnknownIfFunc {
 	return func(ctx context.Context, request planmodifier.Int32Request, response *UseStateForUnknownFuncResponse) {
 		var attributePlan types.Int32
 		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)

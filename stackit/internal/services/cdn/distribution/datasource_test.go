@@ -62,14 +62,23 @@ func TestMapDataSourceFields(t *testing.T) {
 		"enable_tls_10": types.BoolValue(false),
 		"enable_tls_11": types.BoolValue(false),
 	})
+	defaultCacheConfig := types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+		"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+		"query_string_vary_enabled":    types.BoolValue(false),
+		"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{}),
+	})
 	config := types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
 		"blocked_countries":      blockedCountriesFixture,
+		"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+		"default_cache_duration": types.StringNull(),
+		"monthly_limit_bytes":    types.Int64Null(),
 		"optimizer":              types.ObjectNull(optimizerTypes),
 		"redirects":              types.ObjectNull(redirectsTypes),
 		"waf":                    emptyWaf,
 		"tls":                    defaultTls,
+		"cache_config":           defaultCacheConfig,
 		"strip_response_cookies": types.BoolValue(false),
 		"forward_host_header":    types.BoolValue(false),
 	})
@@ -241,11 +250,15 @@ func TestMapDataSourceFields(t *testing.T) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
-					"optimizer":              optimizer,
 					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              optimizer,
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -272,10 +285,14 @@ func TestMapDataSourceFields(t *testing.T) {
 					"backend":                bucketBackendExpected,
 					"regions":                regionsFixture,
 					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
 					"optimizer":              types.ObjectNull(optimizerTypes),
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -295,11 +312,15 @@ func TestMapDataSourceFields(t *testing.T) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backendWithGeofencing,
 					"regions":                regionsFixture,
-					"optimizer":              types.ObjectNull(optimizerTypes),
 					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -323,11 +344,15 @@ func TestMapDataSourceFields(t *testing.T) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
-					"optimizer":              types.ObjectNull(optimizerTypes),
 					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
 					"redirects":              redirectsConfigExpected,
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -342,11 +367,15 @@ func TestMapDataSourceFields(t *testing.T) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
-					"optimizer":              types.ObjectNull(optimizerTypes),
 					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
 					"redirects":              types.ObjectNull(redirectsTypes),
 					"waf":                    populatedWaf,
 					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -392,16 +421,20 @@ func TestMapDataSourceFields(t *testing.T) {
 		"happy_path_with_tls_and_strip_response_and_cookies_forward": {
 			Expected: expectedModel(func(m *Model) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
-					"backend":           backend,
-					"regions":           regionsFixture,
-					"optimizer":         types.ObjectNull(optimizerTypes),
-					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsTypes),
-					"waf":               emptyWaf,
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
 					"tls": types.ObjectValueMust(tlsTypes, map[string]attr.Value{
 						"enable_tls_10": types.BoolValue(true),
 						"enable_tls_11": types.BoolValue(true),
 					}),
+					"cache_config":           defaultCacheConfig,
 					"strip_response_cookies": types.BoolValue(true),
 					"forward_host_header":    types.BoolValue(true),
 				})
@@ -413,6 +446,74 @@ func TestMapDataSourceFields(t *testing.T) {
 				}
 				d.Config.ForwardHostHeader = true
 				d.Config.StripResponseCookies = true
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_cache_config": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"cache_config": types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("Authorization"),
+							types.StringValue("Accept-Language"),
+						}),
+						"query_string_vary_enabled": types.BoolValue(true),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{
+							types.StringValue("utm_source"),
+							types.StringValue("page"),
+						}),
+					}),
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.CacheConfig = cdnSdk.CacheConfig{
+					CacheKeyHeaders:           []string{"Authorization", "Accept-Language"},
+					QueryStringVaryEnabled:    true,
+					QueryStringVaryParameters: []string{"utm_source", "page"},
+				}
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_cache_config_vary_disabled_with_parameters": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"cache_config": types.ObjectValueMust(cacheConfigTypes, map[string]attr.Value{
+						"cache_key_headers":            types.ListValueMust(types.StringType, []attr.Value{}),
+						"query_string_vary_enabled":    types.BoolValue(false),
+						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("utm_source")}),
+					}),
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.CacheConfig = cdnSdk.CacheConfig{
+					CacheKeyHeaders:           []string{},
+					QueryStringVaryEnabled:    false,
+					QueryStringVaryParameters: []string{"utm_source"},
+				}
 			}),
 			IsValid: true,
 		},

@@ -13,7 +13,7 @@ This guide walks you through setting up log-based alerting in STACKIT Observabil
 
    ```hcl
    provider "stackit" {
-     region = "eu01"
+     default_region = "eu01"
    }
 
    provider "kubernetes" {

@@ -21,7 +21,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -73,7 +72,7 @@ type Model struct {
 }
 
 type logsInstanceResource struct {
-	client       *logs.APIClient
+	client       logs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -82,17 +81,14 @@ func NewLogsInstanceResource() resource.Resource {
 }
 
 func (r *logsInstanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	r.providerData = providerData
+	r.client = clients.LogsV1Client
+
 	tflog.Info(ctx, "Logs client configured")
 }
 
@@ -241,7 +237,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	regionId := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "region", regionId)
-	createResp, err := r.client.DefaultAPI.CreateLogsInstance(ctx, projectId, regionId).CreateLogsInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateLogsInstance(ctx, projectId, regionId).CreateLogsInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -264,7 +260,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	waitResp, err := wait.CreateLogsInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, regionId, createResp.Id).WaitWithContext(ctx)
+	waitResp, err := wait.CreateLogsInstanceWaitHandler(ctx, r.client, projectId, regionId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Waiting for Logs Instance to become active: %v", err))
 		return
@@ -306,7 +302,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 
-	instanceResponse, err := r.client.DefaultAPI.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
+	instanceResponse, err := r.client.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -358,7 +354,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	updateResp, err := r.client.DefaultAPI.UpdateLogsInstance(ctx, projectID, region, instanceID).UpdateLogsInstancePayload(*payload).Execute()
+	updateResp, err := r.client.UpdateLogsInstance(ctx, projectID, region, instanceID).UpdateLogsInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs Instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -400,7 +396,7 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 
-	err := r.client.DefaultAPI.DeleteLogsInstance(ctx, projectID, region, instanceID).Execute()
+	err := r.client.DeleteLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -412,7 +408,7 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteLogsInstanceWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID).WaitWithContext(ctx)
+	_, err = wait.DeleteLogsInstanceWaitHandler(ctx, r.client, projectID, region, instanceID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs Instance", fmt.Sprintf("Waiting for Logs Instance to be deleted: %v", err))
 		return

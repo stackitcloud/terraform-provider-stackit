@@ -45,7 +45,7 @@ func NewKeyPairResource() resource.Resource {
 
 // keyPairResource is the resource implementation.
 type keyPairResource struct {
-	client *iaas.APIClient
+	client iaas.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -55,16 +55,13 @@ func (r *keyPairResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *keyPairResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -162,7 +159,7 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new key pair
 
-	keyPair, err := r.client.DefaultAPI.CreateKeyPair(ctx).CreateKeyPairPayload(*payload).Execute()
+	keyPair, err := r.client.CreateKeyPair(ctx).CreateKeyPairPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key pair", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -199,7 +196,7 @@ func (r *keyPairResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	ctx = tflog.SetField(ctx, "name", name)
 
-	keyPairResp, err := r.client.DefaultAPI.GetKeyPair(ctx, name).Execute()
+	keyPairResp, err := r.client.GetKeyPair(ctx, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -257,7 +254,7 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	// Update existing key pair
-	updatedKeyPair, err := r.client.DefaultAPI.UpdateKeyPair(ctx, name).UpdateKeyPairPayload(*payload).Execute()
+	updatedKeyPair, err := r.client.UpdateKeyPair(ctx, name).UpdateKeyPairPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating key pair", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -295,7 +292,7 @@ func (r *keyPairResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "name", name)
 
 	// Delete existing key pair
-	err := r.client.DefaultAPI.DeleteKeyPair(ctx, name).Execute()
+	err := r.client.DeleteKeyPair(ctx, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

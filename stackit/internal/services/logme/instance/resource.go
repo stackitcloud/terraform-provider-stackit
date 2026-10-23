@@ -12,8 +12,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	logmeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -30,9 +28,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme/v1api/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/logme/v2api/wait"
 
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -40,6 +38,7 @@ var (
 	_ resource.Resource                = &instanceResource{}
 	_ resource.ResourceWithConfigure   = &instanceResource{}
 	_ resource.ResourceWithImportState = &instanceResource{}
+	_ resource.ResourceWithModifyPlan  = &instanceResource{}
 )
 
 type Model struct {
@@ -56,6 +55,7 @@ type Model struct {
 	Version            types.String `tfsdk:"version"`
 	PlanName           types.String `tfsdk:"plan_name"`
 	PlanId             types.String `tfsdk:"plan_id"`
+	Region             types.String `tfsdk:"region"`
 }
 
 // Struct corresponding to DataSourceModel.Parameters
@@ -71,7 +71,7 @@ type parametersModel struct {
 	FluentdUdp             types.Int32   `tfsdk:"fluentd_udp"`
 	Graphite               types.String  `tfsdk:"graphite"`
 	IsmDeletionAfter       types.String  `tfsdk:"ism_deletion_after"`
-	IsmJitter              types.Float32 `tfsdk:"ism_jitter"`
+	IsmJitter              types.Float64 `tfsdk:"ism_jitter"`
 	IsmJobInterval         types.Int32   `tfsdk:"ism_job_interval"`
 	JavaHeapspace          types.Int32   `tfsdk:"java_heapspace"`
 	JavaMaxmetaspace       types.Int32   `tfsdk:"java_maxmetaspace"`
@@ -97,7 +97,7 @@ var parametersTypes = map[string]attr.Type{
 	"fluentd_udp":              basetypes.Int32Type{},
 	"graphite":                 basetypes.StringType{},
 	"ism_deletion_after":       basetypes.StringType{},
-	"ism_jitter":               basetypes.Float32Type{},
+	"ism_jitter":               basetypes.Float64Type{},
 	"ism_job_interval":         basetypes.Int32Type{},
 	"java_heapspace":           basetypes.Int32Type{},
 	"java_maxmetaspace":        basetypes.Int32Type{},
@@ -117,7 +117,8 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *logmeSdk.APIClient
+	client       logmeSdk.DefaultAPI
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -127,24 +128,52 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := logmeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	r.providerData = providerData
+	r.client = clients.LogmeV2Client
+
+	tflog.Info(ctx, "LogMe instance client configured")
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
-	tflog.Info(ctx, "LogMe instance client configured")
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "LogMe instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the LogMe instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
@@ -152,6 +181,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_name":   "The selected plan name.",
 		"plan_id":     "The selected plan ID.",
 		"parameters":  "Configuration parameters. Please note that removing a previously configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, explicitly set a new value for it.",
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	parametersDescriptions := map[string]string{
@@ -284,7 +314,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"ism_jitter": schema.Float32Attribute{
+					"ism_jitter": schema.Float64Attribute{
 						Description: parametersDescriptions["ism_jitter"],
 						Optional:    true,
 						Computed:    true,
@@ -380,6 +410,15 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -396,7 +435,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
@@ -408,7 +449,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	err := r.loadPlanId(ctx, &model)
+	err := r.loadPlanId(ctx, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -421,7 +462,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -433,20 +474,21 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
+		"region":      region,
 		"instance_id": instanceId,
 	})
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -473,6 +515,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
@@ -480,9 +523,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
@@ -496,14 +540,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Compute and store values not present in the API response
-	err = loadPlanNameAndVersion(ctx, r.client, &model)
+	err = loadPlanNameAndVersion(ctx, r.client, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
 		return
@@ -530,8 +574,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	var parameters *parametersModel
@@ -544,7 +590,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	err := r.loadPlanId(ctx, &model)
+	err := r.loadPlanId(ctx, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
 		return
@@ -557,7 +603,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -565,14 +611,14 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -599,12 +645,14 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -617,7 +665,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -626,26 +674,27 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id
+// The expected format of the resource import identifier is: project_id,region,instance_id
 func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing instance",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
-		"instance_id": idParts[1],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
 	})
 	tflog.Info(ctx, "LogMe instance state imported")
 }
 
-func mapFields(instance *logmeSdk.Instance, model *Model) error {
+func mapFields(instance *logmeSdk.Instance, model *Model, region string) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -662,7 +711,8 @@ func mapFields(instance *logmeSdk.Instance, model *Model) error {
 		return fmt.Errorf("instance id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
+	model.Region = types.StringValue(region)
 	model.InstanceId = types.StringValue(instanceId)
 	model.PlanId = types.StringValue(instance.PlanId)
 	model.CfGuid = types.StringValue(instance.CfGuid)
@@ -884,7 +934,7 @@ func toInstanceParams(parameters *parametersModel) (*logmeSdk.InstanceParameters
 	payloadParams.FluentdUdp = conversion.Int32ValueToPointer(parameters.FluentdUdp)
 	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
 	payloadParams.IsmDeletionAfter = conversion.StringValueToPointer(parameters.IsmDeletionAfter)
-	payloadParams.IsmJitter = conversion.Float32ValueToPointer(parameters.IsmJitter)
+	payloadParams.IsmJitter = conversion.Float64ValueToPointer(parameters.IsmJitter)
 	payloadParams.IsmJobInterval = conversion.Int32ValueToPointer(parameters.IsmJobInterval)
 	payloadParams.JavaHeapspace = conversion.Int32ValueToPointer(parameters.JavaHeapspace)
 	payloadParams.JavaMaxmetaspace = conversion.Int32ValueToPointer(parameters.JavaMaxmetaspace)
@@ -912,9 +962,9 @@ func toInstanceParams(parameters *parametersModel) (*logmeSdk.InstanceParameters
 	return payloadParams, nil
 }
 
-func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
+func (r *instanceResource) loadPlanId(ctx context.Context, model *Model, region string) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
+	res, err := r.client.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting LogMe offerings: %w", err)
 	}
@@ -949,10 +999,10 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	return fmt.Errorf("couldn't find plan_name '%s' for version %s, available names are: %s", planName, version, availablePlanNames)
 }
 
-func loadPlanNameAndVersion(ctx context.Context, client *logmeSdk.APIClient, model *Model) error {
+func loadPlanNameAndVersion(ctx context.Context, client logmeSdk.DefaultAPI, model *Model, region string) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
+	res, err := client.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting LogMe offerings: %w", err)
 	}

@@ -11,9 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -27,7 +26,7 @@ func NewKeyRingDataSource() datasource.DataSource {
 }
 
 type keyRingDataSource struct {
-	client       *kms.APIClient
+	client       kms.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -36,18 +35,14 @@ func (k *keyRingDataSource) Metadata(_ context.Context, request datasource.Metad
 }
 
 func (k *keyRingDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
-	var ok bool
-	k.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := kmsUtils.ConfigureClient(ctx, &k.providerData, &response.Diagnostics)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	k.providerData = providerData
+	k.client = clients.KmsV1Client
 
-	k.client = apiClient
 	tflog.Info(ctx, "KMS client configured")
 }
 
@@ -112,7 +107,7 @@ func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadReq
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	keyRingResponse, err := k.client.DefaultAPI.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
+	keyRingResponse, err := k.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

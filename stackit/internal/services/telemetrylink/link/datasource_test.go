@@ -21,6 +21,7 @@ func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceMod
 		TelemetryRouterID: types.StringValue("tlmrid"),
 		CreateTime:        types.StringValue(testTime.Format(time.RFC3339)),
 		Status:            types.StringValue("active"),
+		Enabled:           types.BoolValue(true),
 	}
 	for _, mod := range mods {
 		mod(model)

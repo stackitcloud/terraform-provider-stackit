@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -87,7 +87,7 @@ resource "stackit_mariadb_instance" "example" {
 						testutil.MockResponse{
 							Description: "refresh",
 							Handler: func(w http.ResponseWriter, req *http.Request) {
-								expected := fmt.Sprintf("/v1/projects/%s/instances/%s", projectId, instanceId)
+								expected := fmt.Sprintf("/v2/projects/%s/regions/%s/instances/%s", projectId, region, instanceId)
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
@@ -157,7 +157,7 @@ resource "stackit_mariadb_credential" "example" {
 						testutil.MockResponse{
 							Description: "refresh",
 							Handler: func(w http.ResponseWriter, req *http.Request) {
-								expected := fmt.Sprintf("/v1/projects/%s/instances/%s/credentials/%s", projectId, instanceId, credentialId)
+								expected := fmt.Sprintf("/v2/projects/%s/regions/%s/instances/%s/credentials/%s", projectId, region, instanceId, credentialId)
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}

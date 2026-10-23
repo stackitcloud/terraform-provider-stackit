@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -22,6 +22,7 @@ func TestOpensearchInstanceSavesIDsOnError(t *testing.T) {
 		name     = "opensearch-instance-test"
 		version  = "version"
 		planName = "plan-name"
+		region   = "eu01"
 	)
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
@@ -80,7 +81,7 @@ resource "stackit_opensearch_instance" "instance" {
 						testutil.MockResponse{
 							Description: "refresh",
 							Handler: func(w http.ResponseWriter, req *http.Request) {
-								expected := fmt.Sprintf("/v1/projects/%s/instances/%s", projectId, instanceId)
+								expected := fmt.Sprintf("/v2/projects/%s/regions/%s/instances/%s", projectId, region, instanceId)
 								if req.URL.Path != expected {
 									t.Errorf(fmt.Sprintf("unexpected URL path: got %s, want %s", req.URL.Path, expected), http.StatusBadRequest)
 								}
@@ -104,6 +105,7 @@ func TestOpensearchCredentialSavesIDsOnError(t *testing.T) {
 		instanceId   = uuid.NewString()
 		credentialId = uuid.NewString()
 	)
+	const region = "eu01"
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
 	tfConfig := fmt.Sprintf(`
@@ -142,7 +144,7 @@ resource "stackit_opensearch_credential" "credential" {
 						testutil.MockResponse{
 							Description: "refresh",
 							Handler: func(w http.ResponseWriter, req *http.Request) {
-								expected := fmt.Sprintf("/v1/projects/%s/instances/%s/credentials/%s", projectId, instanceId, credentialId)
+								expected := fmt.Sprintf("/v2/projects/%s/regions/%s/instances/%s/credentials/%s", projectId, region, instanceId, credentialId)
 								if req.URL.Path != expected {
 									t.Errorf(fmt.Sprintf("unexpected URL path: got %s, want %s", req.URL.Path, expected), http.StatusBadRequest)
 								}

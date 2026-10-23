@@ -56,6 +56,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Labels:           types.MapNull(types.StringType),
 				Routed:           types.BoolNull(),
 				Region:           types.StringValue(testRegion),
+				VPCID:            types.StringNull(),
 			},
 			true,
 		},
@@ -96,6 +97,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 				Routed: new(true),
 				Dhcp:   new(true),
+				VpcId:  new("vpcId"),
 			},
 			testRegion,
 			DataSourceModel{
@@ -132,6 +134,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				IPv6Gateway: types.StringValue("gateway"),
 				Region:      types.StringValue(testRegion),
 				DHCP:        types.BoolValue(true),
+				VPCID:       types.StringValue("vpcId"),
 			},
 			true,
 		},

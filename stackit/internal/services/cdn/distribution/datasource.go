@@ -7,7 +7,6 @@ import (
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -34,9 +33,12 @@ var dataSourceBackendTypes = map[string]attr.Type{
 }
 
 var dataSourceConfigTypes = map[string]attr.Type{
-	"backend":           types.ObjectType{AttrTypes: dataSourceBackendTypes},
-	"regions":           types.ListType{ElemType: types.StringType},
-	"blocked_countries": types.ListType{ElemType: types.StringType},
+	"backend":                types.ObjectType{AttrTypes: dataSourceBackendTypes},
+	"regions":                types.ListType{ElemType: types.StringType},
+	"blocked_countries":      types.ListType{ElemType: types.StringType},
+	"blocked_ips":            types.ListType{ElemType: types.StringType},
+	"default_cache_duration": types.StringType,
+	"monthly_limit_bytes":    types.Int64Type,
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes, // Shared from resource.go
 	},
@@ -49,12 +51,15 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"tls": types.ObjectType{
 		AttrTypes: tlsTypes, // Shared from resource.go
 	},
+	"cache_config": types.ObjectType{
+		AttrTypes: cacheConfigTypes, // Shared from resource.go
+	},
 	"strip_response_cookies": types.BoolType,
 	"forward_host_header":    types.BoolType,
 }
 
 type distributionDataSource struct {
-	client *cdnSdk.APIClient
+	client cdnSdk.DefaultAPI
 }
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -67,7 +72,7 @@ func NewDistributionDataSource() datasource.DataSource {
 }
 
 func (d *distributionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -77,11 +82,8 @@ func (d *distributionDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.CdnV1Client
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -203,12 +205,45 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
 					},
+					"blocked_ips": schema.ListAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_blocked_ips"],
+						ElementType: types.StringType,
+					},
+					"default_cache_duration": schema.StringAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_default_cache_duration"],
+					},
+					"monthly_limit_bytes": schema.Int64Attribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_monthly_limit_bytes"],
+					},
 					"optimizer": schema.SingleNestedAttribute{
 						Description: schemaDescriptions["config_optimizer"],
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Computed: true,
+							},
+						},
+					},
+					"cache_config": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_cache_config"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"cache_key_headers": schema.ListAttribute{
+								Description: schemaDescriptions["config_cache_config_cache_key_headers"],
+								Computed:    true,
+								ElementType: types.StringType,
+							},
+							"query_string_vary_enabled": schema.BoolAttribute{
+								Description: schemaDescriptions["config_cache_config_query_string_vary_enabled"],
+								Computed:    true,
+							},
+							"query_string_vary_parameters": schema.ListAttribute{
+								Description: schemaDescriptions["config_cache_config_query_string_vary_parameters"],
+								Computed:    true,
+								ElementType: types.StringType,
 							},
 						},
 					},
@@ -381,7 +416,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
-	distributionResp, err := r.client.DefaultAPI.GetDistribution(ctx, projectId, distributionId).Execute()
+	distributionResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -675,7 +710,61 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
 	if diagTls.HasError() {
-		return core.DiagsToError(diagWaf)
+		return core.DiagsToError(diagTls)
+	}
+
+	var cacheKeyHeaders []attr.Value
+	for _, h := range distribution.Config.CacheConfig.CacheKeyHeaders {
+		cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
+	}
+	cacheKeyHeadersList, diags := types.ListValue(types.StringType, cacheKeyHeaders)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	var queryStringVaryParams []attr.Value
+	for _, p := range distribution.Config.CacheConfig.QueryStringVaryParameters {
+		queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
+	}
+	queryStringVaryParamsList, diags := types.ListValue(types.StringType, queryStringVaryParams)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	cacheConfigVal, diagCache := types.ObjectValue(cacheConfigTypes, map[string]attr.Value{
+		"cache_key_headers":            cacheKeyHeadersList,
+		"query_string_vary_enabled":    types.BoolValue(distribution.Config.CacheConfig.QueryStringVaryEnabled),
+		"query_string_vary_parameters": queryStringVaryParamsList,
+	})
+	if diagCache.HasError() {
+		return core.DiagsToError(diagCache)
+	}
+
+	// blockedIps
+	var blockedIps []attr.Value
+	if distribution.Config.BlockedIps != nil {
+		for _, ip := range distribution.Config.BlockedIps {
+			blockedIps = append(blockedIps, types.StringValue(ip))
+		}
+	}
+
+	modelBlockedIps, diags := types.ListValue(types.StringType, blockedIps)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	var defaultCacheDuration types.String
+	if distribution.Config.DefaultCacheDuration.IsSet() {
+		defaultCacheDuration = types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
+	} else {
+		defaultCacheDuration = types.StringNull()
+	}
+
+	var monthlyLimitBytes types.Int64
+	if distribution.Config.MonthlyLimitBytes.IsSet() {
+		monthlyLimitBytes = types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
+	} else {
+		monthlyLimitBytes = types.Int64Null()
 	}
 
 	// Use dataSourceConfigTypes
@@ -683,10 +772,14 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		"backend":                backend,
 		"regions":                modelRegions,
 		"blocked_countries":      modelBlockedCountries,
+		"blocked_ips":            modelBlockedIps,
+		"default_cache_duration": defaultCacheDuration,
+		"monthly_limit_bytes":    monthlyLimitBytes,
 		"optimizer":              optimizerVal,
 		"redirects":              redirectsVal,
 		"waf":                    wafVal,
 		"tls":                    tlsVal,
+		"cache_config":           cacheConfigVal,
 		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
 		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})

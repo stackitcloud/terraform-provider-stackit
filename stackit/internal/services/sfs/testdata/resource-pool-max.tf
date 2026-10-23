@@ -5,8 +5,7 @@ variable "name" {}
 variable "availability_zone" {}
 variable "performance_class" {}
 variable "size_gigabytes" {}
-variable "ip_acl_1" {}
-variable "ip_acl_2" {}
+variable "ip_acl" {}
 variable "snapshots_are_visible" {}
 variable "snapshot_policy_id" {}
 variable "label" {}
@@ -18,15 +17,19 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
   availability_zone = var.availability_zone
   performance_class = var.performance_class
   size_gigabytes    = var.size_gigabytes
-  ip_acl = [
-    var.ip_acl_1,
-    var.ip_acl_2
-  ]
+  ip_acl            = var.ip_acl
   labels = {
     label = var.label
   }
   snapshots_are_visible = var.snapshots_are_visible
   snapshot_policy = {
     id = var.snapshot_policy_id
+  }
+
+  timeouts = {
+    create = "20m"
+    read   = "20m"
+    update = "20m"
+    delete = "20m"
   }
 }

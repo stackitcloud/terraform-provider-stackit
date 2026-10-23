@@ -1,12 +1,15 @@
 package logme
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
 )
+
+const testRegion = "eu02"
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
@@ -22,7 +25,7 @@ func TestMapFields(t *testing.T) {
 				Raw: &logmeSdk.RawCredentials{},
 			},
 			Model{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -31,6 +34,7 @@ func TestMapFields(t *testing.T) {
 				Port:         types.Int32Null(),
 				Uri:          types.StringNull(),
 				Username:     types.StringValue(""),
+				Region:       types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -49,7 +53,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -58,6 +62,7 @@ func TestMapFields(t *testing.T) {
 				Port:         types.Int32Value(1234),
 				Uri:          types.StringValue("uri"),
 				Username:     types.StringValue("username"),
+				Region:       types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -76,7 +81,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -85,6 +90,7 @@ func TestMapFields(t *testing.T) {
 				Port:         types.Int32Value(2123456789),
 				Uri:          types.StringNull(),
 				Username:     types.StringValue(""),
+				Region:       types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -115,7 +121,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, model)
+			err := mapFields(tt.input, model, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

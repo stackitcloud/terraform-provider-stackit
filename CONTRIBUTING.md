@@ -9,6 +9,7 @@ Your contribution is welcome! Thank you for your interest in contributing to the
   - [Repository structure](#repository-structure)
   - [Implementing a new resource](#implementing-a-new-resource)
   	- [Resource file structure](#resource-file-structure)
+  	- [Implementing write-only attributes](#implementing-write-only-attributes)
   - [Implementing a new datasource](#implementing-a-new-datasource)
   - [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
   - [Implementing IAM Role Bindings](#implementing-iam-role-bindings)
@@ -38,7 +39,7 @@ We make use of the [Terraform Plugin Framework](https://developer.hashicorp.com/
 
 ### Implementing a new resource
 
-Let's suppose you want to want to implement a new resource `bar` of service `foo`:
+Let's suppose you want to implement a new resource `bar` of service `foo`:
 
 1. You would start by creating a new folder `bar/` inside `stackit/internal/services/foo/`
 2. Following with the creation of a file `resource.go` inside your new folder `stackit/internal/services/foo/bar/`
@@ -54,7 +55,7 @@ Let's suppose you want to want to implement a new resource `bar` of service `foo
     }
    ```
 
-Please remember to always add unit tests for the helper functions (in this case `mapFields` and `toCreatePayload`), as well implementing/extending the acceptance (end-to-end) tests. Our acceptance tests are implemented using Hashicorp's [terraform-plugin-testing](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests) package.
+Please remember to always add unit tests for the helper functions (in this case `mapFields` and `toCreatePayload`), as well as implementing/extending the acceptance (end-to-end) tests. Our acceptance tests are implemented using Hashicorp's [terraform-plugin-testing](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests) package.
 
 Additionally, remember to run `make generate-docs` after your changes to keep the commands' documentation in `docs/` updated, which is used as a source for the [Terraform Registry documentation page](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs).
 
@@ -65,6 +66,14 @@ Below is a typical structure of a STACKIT Terraform provider resource:
 https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/resource.go
 
 If the new resource `bar` is the first resource in the TFP using a STACKIT service `foo`, please refer to [Onboarding a new STACKIT service](./CONTRIBUTING.md/#onboarding-a-new-stackit-service).
+
+#### Implementing write-only attributes
+
+When implementing [write-only attributes](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) (supported in Terraform 1.11.0 and later), keep in mind that Terraform never populates write-only values in the plan or state models. They are only available in the config model, i.e. they must be read via `req.Config.Get(...)` in the `Create`/`Update` handlers, while all other values are read from the plan model as usual.
+
+You can find a reference implementation of write-only attributes (including the accompanying `<attribute>_wo_version` rotation counter pattern) in the VPN connection resource:
+
+https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/vpn/connection/resource.go
 
 ### Implementing a new datasource
 

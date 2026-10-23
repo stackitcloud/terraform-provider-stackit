@@ -55,7 +55,7 @@ func NewSecurityGroupResource() resource.Resource {
 
 // securityGroupResource is the resource implementation.
 type securityGroupResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -96,17 +96,14 @@ func (r *securityGroupResource) ModifyPlan(ctx context.Context, req resource.Mod
 
 // Configure adds the provider configured client to the resource.
 func (r *securityGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -222,7 +219,7 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 
 	// Create new security group
 
-	securityGroup, err := r.client.DefaultAPI.CreateSecurityGroup(ctx, projectId, region).CreateSecurityGroupPayload(*payload).Execute()
+	securityGroup, err := r.client.CreateSecurityGroup(ctx, projectId, region).CreateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -272,7 +269,7 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_id", securityGroupId)
 
-	securityGroupResp, err := r.client.DefaultAPI.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
+	securityGroupResp, err := r.client.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -334,7 +331,7 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 	// Update existing security group
-	updatedSecurityGroup, err := r.client.DefaultAPI.UpdateSecurityGroup(ctx, projectId, region, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
+	updatedSecurityGroup, err := r.client.UpdateSecurityGroup(ctx, projectId, region, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -376,7 +373,7 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	// Delete existing security group
-	err := r.client.DefaultAPI.DeleteSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
+	err := r.client.DeleteSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

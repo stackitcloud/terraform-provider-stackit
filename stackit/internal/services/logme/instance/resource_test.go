@@ -2,14 +2,17 @@ package logme
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
 )
+
+const testRegion = "eu02"
 
 var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
 	"sgw_acl":                 types.StringValue("acl"),
@@ -23,7 +26,7 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 	"fluentd_udp":             types.Int32Value(10),
 	"graphite":                types.StringValue("graphite"),
 	"ism_deletion_after":      types.StringValue("deletion_after"),
-	"ism_jitter":              types.Float32Value(10.1),
+	"ism_jitter":              types.Float64Value(10.1),
 	"ism_job_interval":        types.Int32Value(10),
 	"java_heapspace":          types.Int32Value(10),
 	"java_maxmetaspace":       types.Int32Value(10),
@@ -57,7 +60,7 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 	"fluentd_udp":              types.Int32Null(),
 	"graphite":                 types.StringNull(),
 	"ism_deletion_after":       types.StringNull(),
-	"ism_jitter":               types.Float32Null(),
+	"ism_jitter":               types.Float64Null(),
 	"ism_job_interval":         types.Int32Null(),
 	"java_heapspace":           types.Int32Null(),
 	"java_maxmetaspace":        types.Int32Null(),
@@ -82,7 +85,7 @@ var fixtureInstanceParameters = logmeSdk.InstanceParameters{
 	FluentdUdp:             new(int32(10)),
 	Graphite:               new("graphite"),
 	IsmDeletionAfter:       new("deletion_after"),
-	IsmJitter:              new(float32(10.1)),
+	IsmJitter:              new(float64(10.1)),
 	IsmJobInterval:         new(int32(10)),
 	JavaHeapspace:          new(int32(10)),
 	JavaMaxmetaspace:       new(int32(10)),
@@ -106,7 +109,7 @@ func TestMapFields(t *testing.T) {
 			"default_values",
 			&logmeSdk.Instance{},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
 				PlanId:             types.StringValue(""),
@@ -117,6 +120,7 @@ func TestMapFields(t *testing.T) {
 				ImageUrl:           types.StringValue(""),
 				CfOrganizationGuid: types.StringValue(""),
 				Parameters:         types.ObjectNull(parametersTypes),
+				Region:             types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -159,7 +163,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
 				PlanId:             types.StringValue("plan"),
@@ -170,6 +174,7 @@ func TestMapFields(t *testing.T) {
 				ImageUrl:           types.StringValue("image"),
 				CfOrganizationGuid: types.StringValue("org"),
 				Parameters:         fixtureModelParameters,
+				Region:             types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -212,7 +217,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -7,60 +7,64 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/rolebindings/v1/generic"
-
-	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
 )
 
 func NewSecretsmanagerSecretGroupRoleBindingResource() resource.Resource {
-	return &generic.RoleBindingResource[secretsmanagerV1Alpha.APIClient]{
-		ApiName:          "secretsmanager",
-		ResourceType:     "secret_group",
-		ApiClientFactory: secretsmanagerUtils.ConfigureV1AlphaClient,
-		ExecCreateRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
+	return &generic.RoleBindingResource[secretsmanagerV1Alpha.DefaultAPI]{
+		ApiName:      "secretsmanager",
+		ResourceType: "secret_group",
+		ApiClientExtractor: func(clientCollection core.ClientCollection) secretsmanagerV1Alpha.DefaultAPI {
+			return clientCollection.SecretsmanagerV1AlphaClient
+		},
+		ExecCreateRequest: func(ctx context.Context, client secretsmanagerV1Alpha.DefaultAPI, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
 			payload := secretsmanagerV1Alpha.AddSecretGroupRoleBindingsPayload{
 				Role:    role,
 				Subject: subject,
 			}
 
-			return client.DefaultAPI.AddSecretGroupRoleBindings(ctx, region, resourceId).AddSecretGroupRoleBindingsPayload(payload).Execute()
+			return client.AddSecretGroupRoleBindings(ctx, region, resourceId).AddSecretGroupRoleBindingsPayload(payload).Execute()
 		},
-		ExecReadRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
+		ExecReadRequest: func(ctx context.Context, client secretsmanagerV1Alpha.DefaultAPI, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
 			payload := secretsmanagerV1Alpha.GetSecretGroupRoleBindingsPayload{
 				Role:    role,
 				Subject: subject,
 			}
 
-			return client.DefaultAPI.GetSecretGroupRoleBindings(ctx, region, resourceId).GetSecretGroupRoleBindingsPayload(payload).Execute()
+			return client.GetSecretGroupRoleBindings(ctx, region, resourceId).GetSecretGroupRoleBindingsPayload(payload).Execute()
 		},
-		ExecUpdateRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
+		ExecUpdateRequest: func(ctx context.Context, client secretsmanagerV1Alpha.DefaultAPI, region, resourceId, role, subject string) (generic.GenericRoleBindingResponse, error) {
 			payload := secretsmanagerV1Alpha.EditSecretGroupRoleBindingsPayload{
 				Role:    role,
 				Subject: subject,
 			}
 
-			return client.DefaultAPI.EditSecretGroupRoleBindings(ctx, region, resourceId).EditSecretGroupRoleBindingsPayload(payload).Execute()
+			return client.EditSecretGroupRoleBindings(ctx, region, resourceId).EditSecretGroupRoleBindingsPayload(payload).Execute()
 		},
-		ExecDeleteRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId, role, subject string) error {
+		ExecDeleteRequest: func(ctx context.Context, client secretsmanagerV1Alpha.DefaultAPI, region, resourceId, role, subject string) error {
 			payload := secretsmanagerV1Alpha.RemoveSecretGroupRoleBindingsPayload{
 				Role:    role,
 				Subject: subject,
 			}
 
-			return client.DefaultAPI.RemoveSecretGroupRoleBindings(ctx, region, resourceId).RemoveSecretGroupRoleBindingsPayload(payload).Execute()
+			return client.RemoveSecretGroupRoleBindings(ctx, region, resourceId).RemoveSecretGroupRoleBindingsPayload(payload).Execute()
 		},
 	}
 }
 
 func NewSecretsmanagerSecretGroupRoleBindingsDatasource() datasource.DataSource {
-	return &generic.RoleBindingDatasource[secretsmanagerV1Alpha.APIClient]{
-		ApiName:          "secretsmanager",
-		ResourceType:     "secret_group",
-		ApiClientFactory: secretsmanagerUtils.ConfigureV1AlphaClient,
-		ExecReadRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId string) ([]generic.GenericRoleBindingResponse, error) {
-			resp, err := client.DefaultAPI.ListSecretGroupRoleBindings(ctx, region, resourceId).Execute()
+	return &generic.RoleBindingDatasource[secretsmanagerV1Alpha.DefaultAPI]{
+		ApiName:      "secretsmanager",
+		ResourceType: "secret_group",
+		ApiClientExtractor: func(clientCollection core.ClientCollection) secretsmanagerV1Alpha.DefaultAPI {
+			return clientCollection.SecretsmanagerV1AlphaClient
+		},
+		ExecReadRequest: func(ctx context.Context, client secretsmanagerV1Alpha.DefaultAPI, region, resourceId string) ([]generic.GenericRoleBindingResponse, error) {
+			resp, err := client.ListSecretGroupRoleBindings(ctx, region, resourceId).Execute()
 			if err != nil {
 				return nil, err
 			}

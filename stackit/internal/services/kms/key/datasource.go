@@ -13,9 +13,8 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -29,7 +28,7 @@ func NewKeyDataSource() datasource.DataSource {
 }
 
 type keyDataSource struct {
-	client       *kms.APIClient
+	client       kms.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -38,16 +37,13 @@ func (k *keyDataSource) Metadata(_ context.Context, req datasource.MetadataReque
 }
 
 func (k *keyDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	k.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	k.client = kmsUtils.ConfigureClient(ctx, &k.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	k.providerData = providerData
+	k.client = clients.KmsV1Client
 
 	tflog.Info(ctx, "KMS client configured")
 }
@@ -109,7 +105,7 @@ func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 				},
 			},
 			"protection": schema.StringAttribute{
-				Description: fmt.Sprintf("The underlying system that is responsible for protecting the key material. %s", utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(kms.AllowedProtectionEnumValues)...)),
+				Description: "The underlying system that is responsible for protecting the key material.",
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -160,7 +156,7 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
-	keyResponse, err := k.client.DefaultAPI.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	keyResponse, err := k.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

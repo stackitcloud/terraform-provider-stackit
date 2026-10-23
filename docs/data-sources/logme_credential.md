@@ -29,10 +29,14 @@ data "stackit_logme_credential" "example" {
 - `instance_id` (String) ID of the LogMe instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `host` (String)
-- `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
+- `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`region`,`instance_id`,`credential_id`".
 - `password` (String, Sensitive)
 - `port` (Number)
 - `uri` (String, Sensitive)
