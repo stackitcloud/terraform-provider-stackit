@@ -199,7 +199,7 @@ breakpoints and inspect the state of the provider.
 
 When having to debug a Terraform provider on a day-to-day basis it turned out that the process with setting the `TF_REATTACH_PROVIDERS`
 environment variable can get very annoying. Therefore our STACKIT Terraform provider writes the value of `TF_REATTACH_PROVIDERS` to the
-following file in your users home directoy when running with the `-debug` flag: `$HOME/.stackit/tf-debug-reattach.json`.
+following file in your users home directoy when running with the `-debug` flag: `$HOME/.stackit/tf-debug-reattach.json`
 
 The following script wraps the Terraform CLI, so you can just run `./tf-debug.sh apply` instead of `terraform apply` and Terraform will
 automatically connect to your running provider debug instance if there's one running.
