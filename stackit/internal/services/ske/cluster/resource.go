@@ -2264,7 +2264,7 @@ func latestMatchingVersion(availableVersions []VersionWithState, versionMin, cur
 
 	minConstraint, err := semver.NewConstraint(*versionMin)
 	if err != nil {
-		return nil, false, false, fmt.Errorf("provided version is invalid")
+		return nil, false, false, fmt.Errorf("provided version %q is invalid", *versionMin)
 	}
 	selected := selectVersion(availableVersions, minConstraint)
 	if selected == nil {
