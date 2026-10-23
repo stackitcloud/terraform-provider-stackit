@@ -3,6 +3,7 @@ module github.com/stackitcloud/terraform-provider-stackit
 go 1.26.10
 
 require (
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
@@ -55,13 +56,13 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.3
 	github.com/teambition/rrule-go v1.8.2
 	go.uber.org/mock v0.6.0
-	golang.org/x/mod v0.42.0
 )
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 )
 
 require (
