@@ -67,7 +67,7 @@ func NewVpcNetworkRangeResource() resource.Resource {
 	return &vpcNetworkRangeResource{}
 }
 
-// networkResource is the resource implementation.
+// vpcNetworkRangeResource is the resource implementation.
 type vpcNetworkRangeResource struct {
 	client       iaas.DefaultAPI
 	providerData core.ProviderData

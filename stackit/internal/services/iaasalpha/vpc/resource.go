@@ -54,7 +54,7 @@ func NewVPCResource() resource.Resource {
 	return &vpcResource{}
 }
 
-// networkResource is the resource implementation.
+// vpcResource is the resource implementation.
 type vpcResource struct {
 	client iaas.DefaultAPI
 }
@@ -302,7 +302,7 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	// Update existing network
+	// Update existing vpc
 	vpcResp, err := r.client.PartialUpdateVPC(ctx, projectId, vpcId).PartialUpdateVPCPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc", fmt.Sprintf("Calling API: %v", err))
