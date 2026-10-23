@@ -140,6 +140,8 @@ To implement a new IAM role binding, follow these steps:
 
 ### Local development
 
+#### Local testing setup
+
 To test your changes locally, you have to compile the provider (requires Go 1.26) and configure the Terraform CLI to use the local version.
 
 1. Clone the repository.
@@ -174,19 +176,59 @@ To test your changes locally, you have to compile the provider (requires Go 1.26
    > Note: Terraform will store its resources' states locally. To allow multiple people to use the same resources, check [Setup for multi-person usage](#setup-centralized-terraform-state)
 1. Setup authentication (see [Authentication](#authentication) for more details on how to authenticate).
 1. Run `terraform plan` or `terraform apply` commands.
-1. To debug the terraform provider, execute the following steps:
-	* install the compiled terraform provider to binary path defined in the .terraformrc file
-	* run the terraform provider from your IDE with the `-debug` flag set
-	* The provider will emit the setting for the env variable `TF_REATTACH_PROVIDERS`, e.g.
 
-	```shell
-		TF_REATTACH_PROVIDERS='{"registry.terraform.io/stackitcloud/stackit":{"Protocol":"grpc","ProtocolVersion":6,"Pid":123456,"Test":true,"Addr":{"Network":"unix","String":"/tmp/plugin47110815"}}}'
-	```
+#### Debugging the provider
+
+There are two ways to debug the STACKIT Terraform provider. 
+
+**Option 1: Debugging as [documented by Hashicorp](https://developer.hashicorp.com/terraform/plugin/debugging#running-terraform-with-a-provider-in-debug-mode).**
+
+To debug the terraform provider, execute the following steps:
+* install the compiled terraform provider to binary path defined in the .terraformrc file
+* run the terraform provider from your IDE with the `-debug` flag set
+* The provider will emit the setting for the env variable `TF_REATTACH_PROVIDERS`, e.g.
+
+```shell
+	TF_REATTACH_PROVIDERS='{"registry.terraform.io/stackitcloud/stackit":{"Protocol":"grpc","ProtocolVersion":6,"Pid":123456,"Test":true,"Addr":{"Network":"unix","String":"/tmp/plugin47110815"}}}'
+```
 
 Starting terraform with this environment variable set will automatically connect to the running IDE session, instead of starting a new GRPC server with the plugin. This allows to set
 breakpoints and inspect the state of the provider.
-	
 
+**Option 2: STACKIT-specific Terraform wrapper script**
+
+When having to debug a Terraform provider on a day-to-day basis it turned out that the process with setting the `TF_REATTACH_PROVIDERS`
+environment variable can get very annoying. Therefore our STACKIT Terraform provider writes the value of `TF_REATTACH_PROVIDERS` to the
+following file in your users home directoy when running with the `-debug` flag: `$HOME/.stackit/tf-debug-reattach.json`.
+
+The following script wraps the Terraform CLI, so you can just run `./tf-debug.sh apply` instead of `terraform apply` and Terraform will
+automatically connect to your running provider debug instance if there's one running.
+
+```bash
+#!/usr/bin/env bash
+
+REATTACH_FILE="$HOME/.stackit/tf-debug-reattach.json";
+
+if [ -f "${REATTACH_FILE}" ] && [ -s "${REATTACH_FILE}" ]; then
+    PID=$(grep -o '"Pid":[0-9]*' "${REATTACH_FILE}" | cut -d':' -f2)
+
+    # Check if process is still active to avoid using stale debug sessions
+    if [ -n $PID ] && kill -0 $PID 2>/dev/null; then
+        echo "[OK] Active debug session detected (PID $PID). Reattaching provider..."
+        export TF_REATTACH_PROVIDERS=$(cat "${REATTACH_FILE}")
+    else
+        echo "[WARNING] Stale debug config detected. Removing ${REATTACH_FILE} ..."
+        rm -f "${REATTACH_FILE}"
+        unset TF_REATTACH_PROVIDERS
+        echo "[WARNING] Running terraform in regular mode..."
+    fi
+else
+    echo "[WARNING] No debug config found in ${REATTACH_FILE}"
+    echo "[WARNING] Running terraform in regular mode..."
+fi
+
+exec terraform "$@"
+```
 
 #### Setup centralized Terraform state
 
