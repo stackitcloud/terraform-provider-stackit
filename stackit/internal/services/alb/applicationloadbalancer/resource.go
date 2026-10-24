@@ -41,6 +41,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
+// healthCheckDurationRegex matches the health check durations the error message documents: 0s to
+// 999.999s, with up to three decimal places. The alternatives used to be ungrouped, which left the
+// first one unanchored at the end and rejected values such as "1.000s".
+var healthCheckDurationRegex = regexp.MustCompile(`^[0-9]{1,3}(?:\.[0-9]{1,3})?s$`)
+
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &applicationLoadBalancerResource{}
@@ -984,7 +989,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s$`),
+											healthCheckDurationRegex,
 											"The duration must be between 0s and 999.999s (e.g.: 1s or 0.100s or 12.345s)",
 										),
 									},
@@ -994,7 +999,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s$`),
+											healthCheckDurationRegex,
 											"The duration must be between 0s and 999.999s (e.g.: 1s or 0.100s or 12.345s)",
 										),
 									},
@@ -1004,7 +1009,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s$`),
+											healthCheckDurationRegex,
 											"The duration must be between 0s and 999.999s (e.g.: 1s or 0.100s or 12.345s)",
 										),
 									},
