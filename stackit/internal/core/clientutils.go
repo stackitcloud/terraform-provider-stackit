@@ -715,6 +715,7 @@ type RetryTransport struct {
 	BaseBackoff time.Duration
 	MaxJitter   time.Duration
 	// AdditionalRetryStatusCodes are retried in addition to HTTP 429, which is always retried.
+	// Retrying additional status codes is not yet generally available (GA) and is intended only for selected services.
 	AdditionalRetryStatusCodes []int
 }
 
