@@ -16,6 +16,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/enablement"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -850,6 +852,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serviceAccount.NewServiceAccountDataSource,
 		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderDataSource,
 		serviceAccounts.NewServiceAccountsDataSource,
+		enablement.NewServiceEnablementDataSource,
 		share.NewShareDataSource,
 		skeCluster.NewClusterDataSource,
 		skeKubernetesVersion.NewKubernetesVersionsDataSource,
@@ -949,6 +952,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		serviceAccount.NewServiceAccountResource,
 		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderResource,
 		serviceAccountKey.NewServiceAccountKeyResource,
+		enablement.NewServiceEnablementResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
 		resourcepool.NewResourcePoolResource,

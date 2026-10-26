@@ -1,10 +1,11 @@
-package serviceenablement
+package enablement
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -19,7 +20,10 @@ import (
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -32,6 +36,10 @@ var (
 	_ resource.ResourceWithModifyPlan  = &serviceEnablementResource{}
 )
 
+const (
+	deletionWarning = "Services enabled via this resource will **not** be disabled by Terraform during a `terraform destroy`. They will just be thrown out of the Terraform state and not disabled on API side."
+)
+
 // IMPORTANT: Only services should be allowed here which match *all* of the following criteria for
 // PROD env for *all* regions (eu01, eu02):
 // - Enablement: REQUEST
@@ -40,15 +48,28 @@ var (
 // - disable: EVENT
 // When in doubt whether a service can be added here please get in touch with the STACKIT DevTools Core
 // Platform integration team and/or the STACKIT service enablement team.
-var allowedServiceIds = []string{
-	"cloud.stackit.ske",
+var allowedServiceIdsByRegion = map[string][]string{
+	"eu01": {
+		"cloud.stackit.ske",
+	},
+	"eu02": {
+		"cloud.stackit.ske",
+	},
 }
 
-// TODO RUH: add example for resource
+// allowedServiceIds returns all services which are part of the allowedServiceIdsByRegion map
+func allowedServiceIds() []string {
+	var serviceIds []string
 
-// TODO RUH: add example for datasource
+	for _, v := range allowedServiceIdsByRegion {
+		serviceIds = append(serviceIds, v...)
+	}
 
-type Model struct {
+	// remove duplicates
+	return slices.Compact(serviceIds)
+}
+
+type ResourceModel struct {
 	Id        types.String `tfsdk:"id"` // needed by TF
 	ProjectId types.String `tfsdk:"project_id"`
 	Region    types.String `tfsdk:"region"`
@@ -81,7 +102,10 @@ func (r *serviceEnablementResource) Configure(ctx context.Context, req resource.
 	r.providerData = providerData
 	r.client = clients.ServiceEnablementV2Client
 
-	// TODO: beta / experimental
+	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_service_enablement", core.Resource)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Info(ctx, "service enablement client configured")
 }
@@ -90,9 +114,8 @@ func (r *serviceEnablementResource) Configure(ctx context.Context, req resource.
 func (r *serviceEnablementResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Service enablement resource schema."
 	resp.Schema = schema.Schema{
-		Description: description,
-		// TODO: add experiment / beta description
-		MarkdownDescription: description,
+		Description:         features.AddBetaDescription(description, core.Resource),
+		MarkdownDescription: features.AddBetaDescription(fmt.Sprintf("%s\n\n ~> %s", description, deletionWarning), core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`service_id`\".",
@@ -112,15 +135,15 @@ func (r *serviceEnablementResource) Schema(_ context.Context, _ resource.SchemaR
 					validate.NoSeparator(),
 				},
 			},
-			// IMPORTANT: see note above at definition of 'allowedServiceIds' variable
+			// IMPORTANT: see note above at definition of 'allowedServiceIdsByRegion' variable
 			"service_id": schema.StringAttribute{
-				Description: fmt.Sprintf("The identifier of the STACKIT service. %s", utils.FormatPossibleValues(allowedServiceIds...)),
+				Description: fmt.Sprintf("The identifier of the STACKIT service. %s", utils.FormatPossibleValues(allowedServiceIds()...)),
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.OneOf(allowedServiceIds...),
+					stringvalidator.OneOf(allowedServiceIds()...),
 				},
 			},
 			"region": schema.StringAttribute{
@@ -139,7 +162,13 @@ func (r *serviceEnablementResource) Schema(_ context.Context, _ resource.SchemaR
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
 func (r *serviceEnablementResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	var configModel Model
+	// add a warning that destroying the service enablement resource doesn't mean the service will be disabled on API side
+	if req.Plan.Raw.IsNull() && !req.State.Raw.IsNull() {
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_service_enablement", "Note that destroying this resource will only remove it from the Terraform state. It will not disable the service on API side.")
+		return
+	}
+
+	var configModel ResourceModel
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
@@ -149,7 +178,7 @@ func (r *serviceEnablementResource) ModifyPlan(ctx context.Context, req resource
 		return
 	}
 
-	var planModel Model
+	var planModel ResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -157,6 +186,13 @@ func (r *serviceEnablementResource) ModifyPlan(ctx context.Context, req resource
 
 	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// post-modification validation
+	errorDiag := serviceenablementUtils.ValidateServiceIdAndRegionCombination(allowedServiceIdsByRegion, planModel.ServiceId.ValueString(), planModel.Region.ValueString())
+	if errorDiag != nil {
+		resp.Diagnostics.Append(errorDiag)
 		return
 	}
 
@@ -169,7 +205,7 @@ func (r *serviceEnablementResource) ModifyPlan(ctx context.Context, req resource
 // Create creates the resource and sets the initial Terraform state.
 func (r *serviceEnablementResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
-	var model Model
+	var model ResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -205,11 +241,11 @@ func (r *serviceEnablementResource) Create(ctx context.Context, req resource.Cre
 
 	waitResp, err := wait.EnableServiceWaitHandler(ctx, r.client, region, projectId, serviceId).WaitWithContext(ctx)
 	if err != nil {
-		// TODO
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service enablement", fmt.Sprintf("Waiting for service enablement: %v", err))
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, &model)
+	err = mapFields(&model, waitResp, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service enablement", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -226,7 +262,7 @@ func (r *serviceEnablementResource) Create(ctx context.Context, req resource.Cre
 
 // Read refreshes the Terraform state with the latest data.
 func (r *serviceEnablementResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -248,12 +284,26 @@ func (r *serviceEnablementResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service enablement", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
+	enabled, err := serviceenablementUtils.CheckServiceEnabled(serviceEnablementResp)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service enablement", fmt.Sprintf("Processing API payload: %v", err))
+	}
+
+	// in case the service got disabled in the meantime - remove resource from state so it gets recreated (which means the service gets enabled again)
+	if !enabled {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	// Map response body to schema
-	err = mapFields(ctx, serviceEnablementResp, &model.Model)
+	err = mapFields(&model, serviceEnablementResp, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service enablement", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -268,16 +318,16 @@ func (r *serviceEnablementResource) Read(ctx context.Context, req resource.ReadR
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *serviceEnablementResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *serviceEnablementResource) Update(ctx context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// update shouldn't be possible
 	tflog.Info(ctx, "service enablement updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *serviceEnablementResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
-	// TODO: Add warning that nothing happens here
-
-	// TODO: Add warning in plan output (delete) that nothing will happen here
+func (r *serviceEnablementResource) Delete(ctx context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	// Service enablement as of now doesn't allow for consistent disablement of services.
+	// Therefore, we leave the services enabled and show a warning to make users aware.
+	core.LogAndAddWarning(ctx, &resp.Diagnostics, "Service not disabled on API side", deletionWarning)
 
 	tflog.Info(ctx, "service enablement deleted")
 }
@@ -306,4 +356,15 @@ func (r *serviceEnablementResource) ImportState(ctx context.Context, req resourc
 	}
 
 	tflog.Info(ctx, "service enablement state imported")
+}
+
+func mapFields(model *ResourceModel, _ *serviceenablement.ServiceStatus, region string) error {
+	if model == nil {
+		return fmt.Errorf("nil model")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.ServiceId.ValueString())
+	model.Region = types.StringValue(region)
+
+	return nil
 }
