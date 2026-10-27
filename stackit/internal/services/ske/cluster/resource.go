@@ -118,6 +118,7 @@ type nodePool struct {
 	Labels                types.Map    `tfsdk:"labels"`
 	Taints                types.List   `tfsdk:"taints"`
 	CRI                   types.String `tfsdk:"cri"`
+	Kata                  types.Bool   `tfsdk:"kata"`
 	AvailabilityZones     types.List   `tfsdk:"availability_zones"`
 	AllowSystemComponents types.Bool   `tfsdk:"allow_system_components"`
 }
@@ -139,6 +140,7 @@ var nodePoolTypes = map[string]attr.Type{
 	"labels":                  basetypes.MapType{ElemType: types.StringType},
 	"taints":                  basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
 	"cri":                     basetypes.StringType{},
+	"kata":                    basetypes.BoolType{},
 	"availability_zones":      basetypes.ListType{ElemType: types.StringType},
 	"allow_system_components": basetypes.BoolType{},
 }
@@ -637,6 +639,12 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Optional:    true,
 							Computed:    true,
 							Default:     stringdefault.StaticString(DefaultCRI),
+						},
+						"kata": schema.BoolAttribute{
+							Description: "Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts. Otherwise the request will be rejected. Defaults to `false`.",
+							Optional:    true,
+							Computed:    true,
+							Default:     booldefault.StaticBool(false),
 						},
 					},
 				},
@@ -1218,6 +1226,9 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 
 		cn := &ske.CRI{
 			Name: (*ske.NameOfTheCriLibrary)(conversion.StringValueToPointer(nodePool.CRI)),
+			Kata: &ske.Kata{
+				Enabled: nodePool.Kata.ValueBool(),
+			},
 		}
 
 		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
@@ -1691,6 +1702,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 			"volume_size":             types.Int32Value(nodePoolResp.Volume.Size),
 			"labels":                  types.MapNull(types.StringType),
 			"cri":                     types.StringPointerValue((*string)(nodePoolResp.Cri.Name)),
+			"kata":                    mapKata(nodePoolResp.Cri),
 			"availability_zones":      types.ListNull(types.StringType),
 			"allow_system_components": types.BoolPointerValue(nodePoolResp.AllowSystemComponents),
 		}
@@ -1736,6 +1748,13 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 	}
 	model.NodePools = nodePoolsTF
 	return nil
+}
+
+func mapKata(criResp *ske.CRI) types.Bool {
+	if criResp != nil && criResp.Kata != nil {
+		return types.BoolValue(criResp.Kata.Enabled)
+	}
+	return types.BoolValue(false)
 }
 
 func mapTaints(t []ske.Taint, nodePool map[string]attr.Value, existInModel bool) error {

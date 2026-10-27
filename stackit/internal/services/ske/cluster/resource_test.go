@@ -222,7 +222,8 @@ func TestMapFields(t *testing.T) {
 										),
 									},
 								),
-								"cri": types.StringValue("containerd"),
+								"cri":  types.StringValue("containerd"),
+								"kata": types.BoolValue(false),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -612,6 +613,7 @@ func TestMapFields(t *testing.T) {
 							),
 							"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
 							"cri":    types.StringValue("containerd"),
+							"kata":   types.BoolValue(true),
 							"availability_zones": types.ListValueMust(
 								types.StringType,
 								[]attr.Value{
@@ -677,6 +679,9 @@ func TestMapFields(t *testing.T) {
 						AvailabilityZones: []string{"z1", "z2"},
 						Cri: &ske.CRI{
 							Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
+							Kata: &ske.Kata{
+								Enabled: true,
+							},
 						},
 						Labels: &map[string]string{"k": "v"},
 						Machine: ske.Machine{
@@ -745,6 +750,7 @@ func TestMapFields(t *testing.T) {
 								),
 								"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
 								"cri":    types.StringValue("containerd"),
+								"kata":   types.BoolValue(true),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
