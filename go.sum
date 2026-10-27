@@ -159,8 +159,8 @@ github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnB
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
 github.com/stackitcloud/stackit-sdk-go/core v0.27.1 h1:k7SrqqMoHjkvHbx6n6nV3Lt51itp8nNplht6vGHkPhw=
 github.com/stackitcloud/stackit-sdk-go/core v0.27.1/go.mod h1:WU1hhxnjXw2EV7CYa1nlEvNpMiRY6CvmIOaHuL3pOaA=
-github.com/stackitcloud/stackit-sdk-go/services/alb v0.19.0 h1:+8CDG+6lWGoT0cLbjrBg4P2JMiZT+NymwaYFTxLsUTg=
-github.com/stackitcloud/stackit-sdk-go/services/alb v0.19.0/go.mod h1:1BEa7Q0enW0oWZ3ibGdcYXOeadp0QUR8/A731mciQwU=
+github.com/stackitcloud/stackit-sdk-go/services/alb v0.20.0 h1:YT/1o6fRLSjBiOoYqX7j1PpppPuRe2TzaAYhavmoTG4=
+github.com/stackitcloud/stackit-sdk-go/services/alb v0.20.0/go.mod h1:1BEa7Q0enW0oWZ3ibGdcYXOeadp0QUR8/A731mciQwU=
 github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.5 h1:/+dqndnOwG6sHYlUWShOfSoDjUX8iU+5DKIeFTKtCLQ=
 github.com/stackitcloud/stackit-sdk-go/services/albwaf v0.13.5/go.mod h1:o6kIPueaI/+9K2XW5ENNkjGyu+euuLKlunr+xhXAS6Y=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.16.0 h1:I4NJalm+y2hVk+NhK4nCW86U7i8kTkDqF89eFPReaxw=
@@ -185,8 +185,8 @@ github.com/stackitcloud/stackit-sdk-go/services/intake v0.12.0 h1:1RDIGabA3U/kWr
 github.com/stackitcloud/stackit-sdk-go/services/intake v0.12.0/go.mod h1:+v3VG6bXopAB2/uRz5yDXNFUwMSw0qJVRPxb3SDsACM=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.14.0 h1:6vZhGEIEqXUcs6pzpVNsHRAcskAVuKRq9lNMCMlYn+Q=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.14.0/go.mod h1:ZBXRYWP4Yz3Gn75VSFz2mfcLSOrDEbiCoGTIXonvXkA=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.16.0 h1:zcPGXu16E5NRp5ocF/0JTnm6AyAQmk61iqIlUpAbfgo=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.16.0/go.mod h1:tVD3LmpowgML5U3imG9DdGAjhLmccibO92Ta7DPNfc0=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.17.0 h1:yVjO+lEuuguci79NIKbN9fMB+9wHK8/+6t8CPLv5seo=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.17.0/go.mod h1:tVD3LmpowgML5U3imG9DdGAjhLmccibO92Ta7DPNfc0=
 github.com/stackitcloud/stackit-sdk-go/services/logme v1.6.0 h1:uMAKAgYGSlVTxzEp71CP3ZQ19uf2nItJKXJS6baorQc=
 github.com/stackitcloud/stackit-sdk-go/services/logme v1.6.0/go.mod h1:88EgGOZDYkw31BPtuQsqhh2yqzF9ZfoggsP/cYz7+O0=
 github.com/stackitcloud/stackit-sdk-go/services/logs v0.12.0 h1:4ZUQuj5Zp9E4EbymAFxSTnBSa6DjOIQlhKfHM5YF1ZA=
@@ -225,8 +225,8 @@ github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.22.0 h1:rq1vDC
 github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.22.0/go.mod h1:f5RySI1PHkYlv2JWIfbTOBARwf/JR+iAs/qeoGiXAvU=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.8.0 h1:PsLXr7R/R/ceWIJOkist2B5chWm/Q34IgQd/dmhvWbQ=
 github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.8.0/go.mod h1:izKsr/tJKDNPsgZ/LFQ2civLOICA75BKU06NNWgADIw=
-github.com/stackitcloud/stackit-sdk-go/services/sfs v0.13.0 h1:vEgFb6+oSCg6pdUYWAGHsMwpSMeQd5cScBtIoAu6hJo=
-github.com/stackitcloud/stackit-sdk-go/services/sfs v0.13.0/go.mod h1:QDhu6jIIgqgO7l/wAGlfUDHC4Q20vfyUifh3a0qT3W4=
+github.com/stackitcloud/stackit-sdk-go/services/sfs v0.13.1 h1:jlxd9ee8GX4wzQywyKiu9Jid6Mjqiru/QNm4OhUS70U=
+github.com/stackitcloud/stackit-sdk-go/services/sfs v0.13.1/go.mod h1:QDhu6jIIgqgO7l/wAGlfUDHC4Q20vfyUifh3a0qT3W4=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.22.0 h1:DNTwOlCLphNSr454IeqGo/eSIgxlajNzmx30gjyAdyk=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.22.0/go.mod h1:MfP4FhM/g/2C1PREHFyB8oLPzZ9Lrewq9R7z70361F8=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.19.0 h1:uw2dozjFotbbRa0hdp2zxxuou7H4mSowzew2VNbe7pw=
