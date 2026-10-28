@@ -265,7 +265,7 @@ func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.Mo
 			// the mode of rules in rule_modes. Plan exactly that instead of
 			// leaving the whole inventory unknown, which turns every rule-mode
 			// change into a plan hundreds of lines long.
-			if planModel.Groups.IsUnknown() && !stateModel.Groups.IsNull() && !stateModel.Groups.IsUnknown() && !planModel.RuleModes.IsUnknown() {
+			if planModel.Groups.IsUnknown() && !tfutils.IsUndefined(stateModel.Groups) && !planModel.RuleModes.IsUnknown() {
 				groups, err := plannedGroups(ctx, stateModel.Groups, planModel.RuleModes, stateModel.RuleModes)
 				if err != nil {
 					core.LogAndAddError(ctx, &resp.Diagnostics, "Error planning ALB WAF Managed Rule Set", fmt.Sprintf("Planning rule modes: %v", err))
@@ -585,15 +585,15 @@ func toPatchPayload(_ context.Context, managedRuleSet *albWaf.GetManagedRuleSetR
 	}
 
 	modes := map[string]string{}
-	if !previous.IsNull() && !previous.IsUnknown() {
+	if !tfutils.IsUndefined(previous) {
 		for ruleKey := range previous.Elements() {
 			modes[ruleKey] = string(albWaf.MODE_MODE_ENABLED)
 		}
 	}
-	if !wanted.IsNull() && !wanted.IsUnknown() {
+	if !tfutils.IsUndefined(wanted) {
 		for ruleKey, value := range wanted.Elements() {
 			mode, ok := value.(types.String)
-			if !ok || mode.IsNull() || mode.IsUnknown() {
+			if !ok || tfutils.IsUndefined(mode) {
 				return nil, fmt.Errorf("rule %q: mode is not a known string", ruleKey)
 			}
 			modes[ruleKey] = mode.ValueString()
@@ -698,7 +698,7 @@ func mapResourceFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRul
 	// rule_modes holds only the rules the configuration manages. Refresh each
 	// of those from the live rule set so a mode changed outside Terraform
 	// shows as drift; a rule that no longer exists is dropped.
-	if !model.RuleModes.IsNull() && !model.RuleModes.IsUnknown() {
+	if !tfutils.IsUndefined(model.RuleModes) {
 		live := map[string]string{}
 		if groups, ok := managedRuleSet.GetGroupsOk(); ok {
 			for _, group := range *groups {
