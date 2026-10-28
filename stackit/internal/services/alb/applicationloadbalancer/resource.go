@@ -41,10 +41,10 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// healthCheckDurationRegex matches the health check durations the error message documents: 0s to
-// 999.999s, with up to three decimal places. The alternatives used to be ungrouped, which left the
-// first one unanchored at the end and rejected values such as "1.000s".
-var healthCheckDurationRegex = regexp.MustCompile(`^[0-9]{1,3}(?:\.[0-9]{1,3})?s$`)
+// healthCheckDurationRegex accepts only durations in the form the API returns them: whole seconds
+// ("1s") or exactly three non-zero decimals ("0.100s"), so the value in state matches the config
+// and does not drift. The alternatives are grouped so that both are anchored at both ends.
+var healthCheckDurationRegex = regexp.MustCompile(`^(?:[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s)$`)
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
