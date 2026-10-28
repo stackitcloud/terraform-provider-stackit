@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -125,11 +126,7 @@ var descriptions = map[string]string{
 }
 
 // ruleModeValues are the modes a rule can be set to through rule_modes.
-var ruleModeValues = []string{
-	string(albWaf.MODE_MODE_ENABLED),
-	string(albWaf.MODE_MODE_DISABLED),
-	string(albWaf.MODE_MODE_LOG_ONLY),
-}
+var ruleModeValues = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedModeEnumValues)
 
 func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
