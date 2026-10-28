@@ -238,6 +238,22 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							},
 						},
 					},
+					"cni": schema.SingleNestedAttribute{
+						Description: "Container Network Interface (CNI) of the cluster.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"calico": schema.SingleNestedAttribute{
+								Description: "Set if Calico is used as CNI.",
+								Computed:    true,
+								Attributes:  map[string]schema.Attribute{},
+							},
+							"cilium": schema.SingleNestedAttribute{
+								Description: "Set if Cilium is used as CNI.",
+								Computed:    true,
+								Attributes:  map[string]schema.Attribute{},
+							},
+						},
+					},
 				},
 			},
 

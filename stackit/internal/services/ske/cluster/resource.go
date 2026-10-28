@@ -179,13 +179,30 @@ var maintenanceTypes = map[string]attr.Type{
 type network struct {
 	ID           types.String `tfsdk:"id"`
 	ControlPlane types.Object `tfsdk:"control_plane"`
+	CNI          types.Object `tfsdk:"cni"`
 }
 
 // Types corresponding to network
 var networkTypes = map[string]attr.Type{
 	"id":            basetypes.StringType{},
 	"control_plane": types.ObjectType{AttrTypes: controlPlaneTypes},
+	"cni":           types.ObjectType{AttrTypes: cniTypes},
 }
+
+// Struct corresponding to network.CNI
+type cni struct {
+	Calico types.Object `tfsdk:"calico"`
+	Cilium types.Object `tfsdk:"cilium"`
+}
+
+// Types corresponding to cni
+var cniTypes = map[string]attr.Type{
+	"calico": types.ObjectType{AttrTypes: map[string]attr.Type{}},
+	"cilium": types.ObjectType{AttrTypes: map[string]attr.Type{}},
+}
+
+// The Cilium CNI is not modelled by the SDK yet and is sent as an additional property.
+const ciliumCNIKey = "cilium"
 
 type controlPlane struct {
 	AccessScope types.String `tfsdk:"access_scope"`
@@ -749,6 +766,36 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 									stringplanmodifier.RequiresReplace(),
 									stringplanmodifier.UseStateForUnknown(),
 								},
+							},
+						},
+					},
+					"cni": schema.SingleNestedAttribute{
+						Description: "Container Network Interface (CNI) of the cluster. Exactly one of `calico` or `cilium` can be set. Defaults to Cilium. The field is immutable!",
+						Optional:    true,
+						Computed:    true,
+						Default: objectdefault.StaticValue(types.ObjectValueMust(cniTypes, map[string]attr.Value{
+							"calico": types.ObjectNull(map[string]attr.Type{}),
+							"cilium": types.ObjectValueMust(map[string]attr.Type{}, map[string]attr.Value{}),
+						})),
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.RequiresReplace(),
+						},
+						Attributes: map[string]schema.Attribute{
+							"calico": schema.SingleNestedAttribute{
+								Description: "Use Calico as CNI. Set to `{}` to enable.",
+								Optional:    true,
+								Validators: []validator.Object{
+									objectvalidator.ExactlyOneOf(path.MatchRelative().AtParent().AtName("cilium")),
+								},
+								Attributes: map[string]schema.Attribute{},
+							},
+							"cilium": schema.SingleNestedAttribute{
+								Description: "Use Cilium as CNI. Set to `{}` to enable.",
+								Optional:    true,
+								Validators: []validator.Object{
+									objectvalidator.ExactlyOneOf(path.MatchRelative().AtParent().AtName("calico")),
+								},
+								Attributes: map[string]schema.Attribute{},
 							},
 						},
 					},
@@ -1556,7 +1603,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 
 func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 	if m.Network.IsNull() || m.Network.IsUnknown() {
-		return nil, nil
+		return &ske.Network{Cni: defaultCNIPayload()}, nil
 	}
 
 	network := network{}
@@ -1577,10 +1624,41 @@ func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 		}
 	}
 
+	networkCNI, err := toCNIPayload(ctx, network.CNI)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ske.Network{
 		Id:           conversion.StringValueToPointer(network.ID),
 		ControlPlane: networkControlPlane,
+		Cni:          networkCNI,
 	}, nil
+}
+
+func defaultCNIPayload() *ske.CNI {
+	return &ske.CNI{AdditionalProperties: map[string]interface{}{ciliumCNIKey: map[string]interface{}{}}}
+}
+
+func toCNIPayload(ctx context.Context, o types.Object) (*ske.CNI, error) {
+	if utils.IsUndefined(o) {
+		return defaultCNIPayload(), nil
+	}
+
+	cniModel := cni{}
+	diags := o.As(ctx, &cniModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting network cni: %w", core.DiagsToError(diags))
+	}
+
+	payload := &ske.CNI{}
+	switch {
+	case !utils.IsUndefined(cniModel.Calico):
+		payload.Calico = map[string]interface{}{}
+	case !utils.IsUndefined(cniModel.Cilium):
+		payload.AdditionalProperties = map[string]interface{}{ciliumCNIKey: map[string]interface{}{}}
+	}
+	return payload, nil
 }
 
 func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) error {
@@ -1914,9 +1992,15 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 		}
 	}
 
+	networkCNI, err := mapCNI(cl.Network.Cni)
+	if err != nil {
+		return err
+	}
+
 	networkValues := map[string]attr.Value{
 		"id":            id,
 		"control_plane": networkControlPlane,
+		"cni":           networkCNI,
 	}
 	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
@@ -1924,6 +2008,31 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 	}
 	m.Network = networkObject
 	return nil
+}
+
+func mapCNI(c *ske.CNI) (types.Object, error) {
+	if c == nil {
+		return types.ObjectNull(cniTypes), nil
+	}
+
+	emptyObject := types.ObjectValueMust(map[string]attr.Type{}, map[string]attr.Value{})
+	calico := types.ObjectNull(cniTypes["calico"].(types.ObjectType).AttrTypes)
+	cilium := types.ObjectNull(cniTypes["cilium"].(types.ObjectType).AttrTypes)
+	if c.Calico != nil {
+		calico = emptyObject
+	}
+	if _, ok := c.AdditionalProperties[ciliumCNIKey]; ok {
+		cilium = emptyObject
+	}
+
+	obj, diags := types.ObjectValue(cniTypes, map[string]attr.Value{
+		"calico": calico,
+		"cilium": cilium,
+	})
+	if diags.HasError() {
+		return types.ObjectNull(cniTypes), fmt.Errorf("create network cni object: %w", core.DiagsToError(diags))
+	}
+	return obj, nil
 }
 
 func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startTime, endTime string, err error) {

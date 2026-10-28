@@ -229,6 +229,9 @@ resource "stackit_ske_cluster" "cluster" {
 			ControlPlane: new(ske.V2ControlPlaneNetwork{
 				AccessScope: new(ske.ACCESSSCOPE_PUBLIC),
 			}),
+			Cni: &ske.CNI{
+				AdditionalProperties: map[string]interface{}{"cilium": map[string]interface{}{}},
+			},
 		},
 		Maintenance: new(ske.Maintenance{
 			AutoUpdate: &ske.MaintenanceAutoUpdate{
