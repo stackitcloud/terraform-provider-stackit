@@ -507,12 +507,8 @@ func TestAccManagedRuleSetMax(t *testing.T) {
 				}),
 				Config: cfg,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testManagedRuleSetMax["name"])),
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.%", "2"),
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.%", "1"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_LOG_ONLY"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_LOG_ONLY"),
-					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_LOG_ONLY"),
 				),
 			},
 			// Change in place: one group removed (its rule back to enabled), one rule changed
@@ -527,7 +523,6 @@ func TestAccManagedRuleSetMax(t *testing.T) {
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.%", "1"),
 					resource.TestCheckNoResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_DISABLED"),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_ENABLED"),

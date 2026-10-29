@@ -3,6 +3,7 @@ package managed_rule_set
 import (
 	"context"
 	_ "embed"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -210,6 +211,7 @@ func TestFilterRuleSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, missing := filterRuleSet(ruleSet, tt.keep)
+			slices.Sort(missing)
 			groups := map[string][]string{}
 			for groupKey, group := range got.GetGroups() {
 				groups[groupKey] = []string{}

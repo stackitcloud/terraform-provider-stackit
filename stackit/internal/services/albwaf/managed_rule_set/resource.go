@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -120,7 +119,7 @@ var descriptions = map[string]string{
 		"Configure it to set the mode of individual rules: only the listed groups and rules are managed and kept in the state, and every other rule keeps the mode the API gives it. " +
 		"A rule removed from the configuration is set back to `MODE_ENABLED`; removing `groups` entirely does that for all rules it managed.",
 	"resource_group_rules": "Rules of the rule group, keyed by rule ID (e.g. `911100`). Required for every configured group.",
-	"resource_rule_mode":   "The mode of the rule. Required for every configured rule. " + tfutils.FormatPossibleValues(ruleModeValues...),
+	"resource_rule_mode":   "The mode of the rule. Required for every configured rule. Possible values are: `MODE_ENABLED`, `MODE_DISABLED`, `MODE_LOG_ONLY`.",
 }
 
 // ruleModeValues are the modes a rule can be set to through groups.
@@ -204,10 +203,16 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 						"description": schema.StringAttribute{
 							Description: descriptions["group_description"],
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"group_name": schema.StringAttribute{
 							Description: descriptions["group_name"],
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"rules": schema.MapNestedAttribute{
 							Description: descriptions["resource_group_rules"],
@@ -225,6 +230,9 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 									"description": schema.StringAttribute{
 										Description: descriptions["rule_description"],
 										Computed:    true,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
 									"mode": schema.StringAttribute{
 										Description: descriptions["resource_rule_mode"],
@@ -237,6 +245,9 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 									"severity": schema.StringAttribute{
 										Description: descriptions["rule_severity"],
 										Computed:    true,
+										PlanModifiers: []planmodifier.String{
+											stringplanmodifier.UseStateForUnknown(),
+										},
 									},
 								},
 							},
@@ -443,10 +454,21 @@ func (r *managedRuleSetResource) Update(ctx context.Context, req resource.Update
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Creating rule modes payload: %v", err))
 		return
 	}
-	patchResp, err := r.client.PatchManagedRuleSet(ctx, projectId, region, name).PatchManagedRuleSetPayload(*patchPayload).Execute()
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
-		return
+	var patchResp *albWaf.GetManagedRuleSetResponse
+	if len(patchPayload.Groups) > 0 {
+		patchResp, err = r.client.PatchManagedRuleSet(ctx, projectId, region, name).PatchManagedRuleSetPayload(*patchPayload).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
+			return
+		}
+	} else {
+		// Nothing to patch, e.g. when every managed rule has vanished from the
+		// rule set: read the rule set for the new state instead.
+		patchResp, err = r.client.GetManagedRuleSet(ctx, projectId, region, name).Execute()
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
 	}
 
 	ctx = core.LogResponse(ctx)
@@ -707,7 +729,6 @@ func filterRuleSet(managedRuleSet *albWaf.GetManagedRuleSetResponse, keep map[st
 		}
 	}
 	ruleSetCopy.Groups = &groups
-	slices.Sort(missing)
 	return &ruleSetCopy, missing
 }
 
