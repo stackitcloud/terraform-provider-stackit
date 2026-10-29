@@ -19,16 +19,24 @@ resource "stackit_alb_waf_managed_rule_set" "example" {
   type       = "TYPE_OWASP_CRS"
 }
 
-# Set individual rules to a different mode, keyed by rule ID. Only the
-# listed rules are managed; a rule removed from the map goes back to
+# Set individual rules to a different mode, keyed by group ID and rule ID.
+# Only the listed rules are managed; a rule removed from groups goes back to
 # MODE_ENABLED.
 resource "stackit_alb_waf_managed_rule_set" "with_rule_modes" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name       = "example-managed-rule-set-modes"
   type       = "TYPE_OWASP_CRS"
-  rule_modes = {
-    "911100" = "MODE_LOG_ONLY" # allow PUT and DELETE through method enforcement
-    "920450" = "MODE_DISABLED"
+  groups = {
+    "911" = {
+      rules = {
+        "911100" = { mode = "MODE_LOG_ONLY" } # allow PUT and DELETE through method enforcement
+      }
+    }
+    "920" = {
+      rules = {
+        "920450" = { mode = "MODE_DISABLED" }
+      }
+    }
   }
 }
 ```
@@ -44,29 +52,34 @@ resource "stackit_alb_waf_managed_rule_set" "with_rule_modes" {
 
 ### Optional
 
+- `groups` (Attributes Map) Managed Rule Set groups, keyed by group ID (e.g. `911`). Without configuration, this is the inventory of all available groups and their current configuration. Configure it to set the mode of individual rules: only the listed groups and rules are managed and kept in the state, and every other rule keeps the mode the API gives it. A rule removed from the configuration is set back to `MODE_ENABLED`; removing `groups` entirely does that for all rules it managed. (see [below for nested schema](#nestedatt--groups))
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
-- `rule_modes` (Map of String) Modes for individual rules of the rule set, keyed by rule ID (e.g. `911100`). Only the listed rules are managed; every other rule keeps the mode the API gives it. A rule removed from this map is set back to `MODE_ENABLED`. Possible values are: `MODE_ENABLED`, `MODE_DISABLED`, `MODE_LOG_ONLY`.
 
 ### Read-Only
 
-- `groups` (Attributes Map) Inventory of all available Managed Rule Set groups and their current configuration. (see [below for nested schema](#nestedatt--groups))
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`name`".
 - `version` (String) Managed Rule Set version.
 
 <a id="nestedatt--groups"></a>
 ### Nested Schema for `groups`
 
+Optional:
+
+- `rules` (Attributes Map) Rules of the rule group, keyed by rule ID (e.g. `911100`). Required for every configured group. (see [below for nested schema](#nestedatt--groups--rules))
+
 Read-Only:
 
 - `description` (String) A description of what this group covers.
 - `group_name` (String) The name for the rule group.
-- `rules` (Attributes Map) Rules of the rule group. (see [below for nested schema](#nestedatt--groups--rules))
 
 <a id="nestedatt--groups--rules"></a>
 ### Nested Schema for `groups.rules`
 
+Optional:
+
+- `mode` (String) The mode of the rule. Required for every configured rule. Possible values are: `MODE_ENABLED`, `MODE_DISABLED`, `MODE_LOG_ONLY`.
+
 Read-Only:
 
 - `description` (String) A description of what this rule does.
-- `mode` (String) The current mode of the rule.
 - `severity` (String) Impact level.

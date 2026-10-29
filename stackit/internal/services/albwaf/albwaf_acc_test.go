@@ -476,20 +476,21 @@ func TestAccManagedRuleSetMin(t *testing.T) {
 	})
 }
 
-func testManagedRuleSetMaxModes(modes map[string]string) config.Variables {
+// testManagedRuleSetMaxModes returns testManagedRuleSetMax with groups set to
+// the given rule modes, keyed by group ID and rule ID.
+func testManagedRuleSetMaxModes(modes map[string]map[string]string) config.Variables {
 	vars := config.Variables{}
 	maps.Copy(vars, testManagedRuleSetMax)
-	values := map[string]config.Variable{}
-	for rule, mode := range modes {
-		values[rule] = config.StringVariable(mode)
+	groups := map[string]config.Variable{}
+	for group, rules := range modes {
+		rulesVar := map[string]config.Variable{}
+		for rule, mode := range rules {
+			rulesVar[rule] = config.ObjectVariable(map[string]config.Variable{"mode": config.StringVariable(mode)})
+		}
+		groups[group] = config.ObjectVariable(map[string]config.Variable{"rules": config.MapVariable(rulesVar)})
 	}
-	vars["rule_modes"] = config.MapVariable(values)
+	vars["groups"] = config.MapVariable(groups)
 	return vars
-}
-
-// ruleModeInGroups checks the mode of a rule in the computed groups inventory.
-func ruleModeInGroups(group, rule, mode string) resource.TestCheckFunc {
-	return resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", fmt.Sprintf("groups.%s.rules.%s.mode", group, rule), mode)
 }
 
 func TestAccManagedRuleSetMax(t *testing.T) {
@@ -500,29 +501,37 @@ func TestAccManagedRuleSetMax(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation with rule modes
 			{
-				ConfigVariables: testManagedRuleSetMaxModes(map[string]string{"911100": "MODE_LOG_ONLY", "920450": "MODE_LOG_ONLY"}),
-				Config:          cfg,
+				ConfigVariables: testManagedRuleSetMaxModes(map[string]map[string]string{
+					"911": {"911100": "MODE_LOG_ONLY"},
+					"920": {"920450": "MODE_LOG_ONLY"},
+				}),
+				Config: cfg,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.911100", "MODE_LOG_ONLY"),
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.920450", "MODE_LOG_ONLY"),
-					ruleModeInGroups("911", "911100", "MODE_LOG_ONLY"),
-					ruleModeInGroups("920", "920450", "MODE_LOG_ONLY"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testManagedRuleSetMax["name"])),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.%", "2"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.%", "1"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_LOG_ONLY"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_LOG_ONLY"),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_LOG_ONLY"),
 				),
 			},
-			// Change in place: one rule removed (back to enabled), one changed
+			// Change in place: one group removed (its rule back to enabled), one rule changed
 			{
-				ConfigVariables: testManagedRuleSetMaxModes(map[string]string{"920450": "MODE_DISABLED"}),
-				Config:          cfg,
+				ConfigVariables: testManagedRuleSetMaxModes(map[string]map[string]string{
+					"920": {"920450": "MODE_DISABLED"},
+				}),
+				Config: cfg,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_alb_waf_managed_rule_set.managed_rule_set", plancheck.ResourceActionUpdate),
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.911100"),
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "rule_modes.920450", "MODE_DISABLED"),
-					ruleModeInGroups("911", "911100", "MODE_ENABLED"),
-					ruleModeInGroups("920", "920450", "MODE_DISABLED"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.%", "1"),
+					resource.TestCheckNoResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_DISABLED"),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_ENABLED"),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_DISABLED"),
 				),
 			},
 			// Deletion is done by the framework implicitly

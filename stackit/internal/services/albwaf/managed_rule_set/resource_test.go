@@ -111,53 +111,6 @@ func TestMapFields(t *testing.T) {
 	}
 }
 
-func TestMapResourceFields(t *testing.T) {
-	tests := []struct {
-		name     string
-		state    types.Map
-		input    *albWaf.GetManagedRuleSetResponse
-		expected types.Map
-	}{
-		{
-			name:  "drift shows, a rule that no longer exists is dropped, unmanaged rules stay out",
-			state: modes(map[string]string{"911100": "MODE_LOG_ONLY", "999999": "MODE_LOG_ONLY"}),
-			input: testRuleSet(map[string]albWaf.Mode{
-				"911100": albWaf.MODE_MODE_ENABLED,
-				"920450": albWaf.MODE_MODE_LOG_ONLY,
-			}),
-			expected: modes(map[string]string{"911100": "MODE_ENABLED"}),
-		},
-		{
-			name:     "not configured stays null",
-			state:    types.MapNull(types.StringType),
-			input:    testRuleSet(map[string]albWaf.Mode{"911100": albWaf.MODE_MODE_LOG_ONLY}),
-			expected: types.MapNull(types.StringType),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			model := &ResourceModel{
-				Model:     Model{ProjectId: testProjectId, Region: testRegion, Name: testName},
-				RuleModes: tt.state,
-			}
-			if err := mapResourceFields(context.Background(), tt.input, model, testRegion.ValueString()); err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if diff := cmp.Diff(model.RuleModes, tt.expected); diff != "" {
-				t.Errorf("rule_modes do not match: %s", diff)
-			}
-		})
-	}
-}
-
-func modes(m map[string]string) types.Map {
-	values := map[string]attr.Value{}
-	for k, v := range m {
-		values[k] = types.StringValue(v)
-	}
-	return types.MapValueMust(types.StringType, values)
-}
-
 // testRuleSet returns a rule set whose rules sit in the group named by their
 // first three digits, as in OWASP CRS.
 func testRuleSet(rules map[string]albWaf.Mode) *albWaf.GetManagedRuleSetResponse {
@@ -179,26 +132,119 @@ func testRuleSet(rules map[string]albWaf.Mode) *albWaf.GetManagedRuleSetResponse
 	}
 }
 
-func TestToPatchPayload(t *testing.T) {
+func TestRuleModes(t *testing.T) {
+	model := &Model{ProjectId: testProjectId, Region: testRegion, Name: testName}
+	if err := mapFields(context.Background(), testRuleSet(map[string]albWaf.Mode{
+		"911100": albWaf.MODE_MODE_LOG_ONLY,
+		"920450": albWaf.MODE_MODE_DISABLED,
+		"920451": albWaf.MODE_MODE_ENABLED,
+	}), model, testRegion.ValueString()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		groups   types.Map
+		expected map[string]map[string]string
+	}{
+		{
+			name:   "groups",
+			groups: model.Groups,
+			expected: map[string]map[string]string{
+				"911": {"911100": "MODE_LOG_ONLY"},
+				"920": {"920450": "MODE_DISABLED", "920451": "MODE_ENABLED"},
+			},
+		},
+		{
+			name:     "null groups",
+			groups:   types.MapNull(types.ObjectType{AttrTypes: ruleGroupType}),
+			expected: nil,
+		},
+		{
+			name:     "unknown groups",
+			groups:   types.MapUnknown(types.ObjectType{AttrTypes: ruleGroupType}),
+			expected: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ruleModes(context.Background(), tt.groups)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(got, tt.expected); diff != "" {
+				t.Errorf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestFilterRuleSet(t *testing.T) {
 	ruleSet := testRuleSet(map[string]albWaf.Mode{
 		"911100": albWaf.MODE_MODE_ENABLED,
-		"920450": albWaf.MODE_MODE_ENABLED,
-		"921140": albWaf.MODE_MODE_LOG_ONLY,
+		"920450": albWaf.MODE_MODE_LOG_ONLY,
+		"920451": albWaf.MODE_MODE_ENABLED,
+		"942100": albWaf.MODE_MODE_ENABLED,
 	})
+	tests := []struct {
+		name            string
+		keep            map[string]map[string]string
+		expectedGroups  map[string][]string
+		expectedMissing []string
+	}{
+		{
+			name:           "only kept groups and rules stay",
+			keep:           map[string]map[string]string{"920": {"920450": "MODE_LOG_ONLY"}},
+			expectedGroups: map[string][]string{"920": {"920450"}},
+		},
+		{
+			name: "rules and groups that do not exist are reported",
+			keep: map[string]map[string]string{
+				"911": {"911100": "MODE_LOG_ONLY", "911999": "MODE_LOG_ONLY"},
+				"999": {"999100": "MODE_LOG_ONLY"},
+			},
+			expectedGroups:  map[string][]string{"911": {"911100"}},
+			expectedMissing: []string{"911/911999", "999/999100"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, missing := filterRuleSet(ruleSet, tt.keep)
+			groups := map[string][]string{}
+			for groupKey, group := range got.GetGroups() {
+				groups[groupKey] = []string{}
+				for ruleKey := range group.GetRules() {
+					groups[groupKey] = append(groups[groupKey], ruleKey)
+				}
+			}
+			if diff := cmp.Diff(groups, tt.expectedGroups); diff != "" {
+				t.Errorf("groups do not match: %s", diff)
+			}
+			if diff := cmp.Diff(missing, tt.expectedMissing); diff != "" {
+				t.Errorf("missing rules do not match: %s", diff)
+			}
+			if len(ruleSet.GetGroups()) != 3 {
+				t.Errorf("input rule set was modified")
+			}
+		})
+	}
+}
+
+func TestToPatchPayload(t *testing.T) {
 	logOnly := albWaf.MODE_MODE_LOG_ONLY
 	enabled := albWaf.MODE_MODE_ENABLED
 	disabled := albWaf.MODE_MODE_DISABLED
 	tests := []struct {
 		name     string
-		wanted   types.Map
-		previous types.Map
+		wanted   map[string]map[string]string
+		previous map[string]map[string]string
 		expected map[string]albWaf.PatchMRSRuleGroup
 		isValid  bool
 	}{
 		{
 			name:     "set on create",
-			wanted:   modes(map[string]string{"911100": "MODE_LOG_ONLY", "920450": "MODE_LOG_ONLY"}),
-			previous: types.MapNull(types.StringType),
+			wanted:   map[string]map[string]string{"911": {"911100": "MODE_LOG_ONLY"}, "920": {"920450": "MODE_LOG_ONLY"}},
+			previous: nil,
 			expected: map[string]albWaf.PatchMRSRuleGroup{
 				"911": {Rules: map[string]albWaf.PatchMRSRule{"911100": {Mode: &logOnly}}},
 				"920": {Rules: map[string]albWaf.PatchMRSRule{"920450": {Mode: &logOnly}}},
@@ -207,8 +253,8 @@ func TestToPatchPayload(t *testing.T) {
 		},
 		{
 			name:     "removed rule goes back to enabled, changed rule takes its new mode",
-			wanted:   modes(map[string]string{"920450": "MODE_DISABLED"}),
-			previous: modes(map[string]string{"911100": "MODE_LOG_ONLY", "920450": "MODE_LOG_ONLY"}),
+			wanted:   map[string]map[string]string{"920": {"920450": "MODE_DISABLED"}},
+			previous: map[string]map[string]string{"911": {"911100": "MODE_LOG_ONLY"}, "920": {"920450": "MODE_LOG_ONLY"}},
 			expected: map[string]albWaf.PatchMRSRuleGroup{
 				"911": {Rules: map[string]albWaf.PatchMRSRule{"911100": {Mode: &enabled}}},
 				"920": {Rules: map[string]albWaf.PatchMRSRule{"920450": {Mode: &disabled}}},
@@ -216,9 +262,9 @@ func TestToPatchPayload(t *testing.T) {
 			isValid: true,
 		},
 		{
-			name:     "attribute removed entirely",
-			wanted:   types.MapNull(types.StringType),
-			previous: modes(map[string]string{"921140": "MODE_LOG_ONLY"}),
+			name:     "groups removed entirely",
+			wanted:   nil,
+			previous: map[string]map[string]string{"921": {"921140": "MODE_LOG_ONLY"}},
 			expected: map[string]albWaf.PatchMRSRuleGroup{
 				"921": {Rules: map[string]albWaf.PatchMRSRule{"921140": {Mode: &enabled}}},
 			},
@@ -226,21 +272,21 @@ func TestToPatchPayload(t *testing.T) {
 		},
 		{
 			name:     "nothing to do",
-			wanted:   types.MapNull(types.StringType),
-			previous: types.MapNull(types.StringType),
+			wanted:   nil,
+			previous: nil,
 			expected: map[string]albWaf.PatchMRSRuleGroup{},
 			isValid:  true,
 		},
 		{
-			name:     "unknown rule",
-			wanted:   modes(map[string]string{"123456": "MODE_LOG_ONLY"}),
-			previous: types.MapNull(types.StringType),
+			name:     "invalid mode",
+			wanted:   map[string]map[string]string{"911": {"911100": "MODE_FOO"}},
+			previous: nil,
 			isValid:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toPatchPayload(context.Background(), ruleSet, tt.wanted, tt.previous)
+			got, err := toPatchPayload(tt.wanted, tt.previous)
 			if (err == nil) != tt.isValid {
 				t.Fatalf("toPatchPayload() error = %v, isValid %v", err, tt.isValid)
 			}
