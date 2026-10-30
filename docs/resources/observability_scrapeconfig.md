@@ -48,7 +48,7 @@ resource "stackit_observability_scrapeconfig" "example" {
 - `basic_auth` (Attributes) A basic authentication block. (see [below for nested schema](#nestedatt--basic_auth))
 - `saml2` (Attributes) A SAML2 configuration block. (see [below for nested schema](#nestedatt--saml2))
 - `sample_limit` (Number) Specifies the scrape sample limit. Upper limit depends on the service plan. Defaults to `5000`.
-- `scheme` (String) Specifies the http scheme. Defaults to `https`.
+- `scheme` (String) Specifies the http scheme. Defaults to `http`.
 - `scrape_interval` (String) Specifies the scrape interval as duration string. Defaults to `5m`.
 - `scrape_timeout` (String) Specifies the scrape timeout as duration string. Defaults to `2m`.
 
