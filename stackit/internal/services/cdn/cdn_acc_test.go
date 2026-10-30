@@ -62,6 +62,9 @@ var (
 
 	//go:embed testdata/resource-http-custom-domain.tf
 	resourceHttpCustomDomain string
+
+	//go:embed testdata/resource-http-log-sink-wo.tf
+	resourceHttpLogSinkWo string
 )
 
 var resourceHttpFull = resourceHttpBase + "\n" + resourceHttpCustomDomain
@@ -139,6 +142,8 @@ var testConfigVarsHttp = config.Variables{
 	"cache_key_headers":             config.ListVariable(config.StringVariable("Authorization")),
 	"query_string_vary_enabled":     config.BoolVariable(true),
 	"query_string_vary_parameters":  config.ListVariable(config.StringVariable("utm_source"), config.StringVariable("page")),
+	"logs_display_name":             config.StringVariable("TF Acc Test"),
+	"log_sink_type":                 config.StringVariable("otlp"), // Options: "loki" or "otlp"
 	"waf": wafConfigVariable(
 		"ENABLED",
 		"FREE",
@@ -224,6 +229,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpBase,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_logs_instance.logs", "ingest_otlp_url"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "updated_at"),
@@ -278,6 +284,8 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					// WAF Checks
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", testConfigVarsHttp["waf"]),
 
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(testConfigVarsHttp["log_sink_type"])),
+
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 				),
@@ -320,9 +328,19 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, distributionId), nil
 				},
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"domains"},
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"domains",
+					"config.log_sink.credentials.type",
+					"config.log_sink.credentials.token",
+					"config.log_sink.credentials.token_wo",
+					"config.log_sink.credentials.token_wo_version",
+					"config.log_sink.credentials.username",
+					"config.log_sink.credentials.password",
+					"config.log_sink.credentials.password_wo",
+					"config.log_sink.credentials.password_wo_version",
+				},
 			},
 			{
 				ResourceName:    "stackit_cdn_custom_domain.custom_domain",
@@ -414,6 +432,13 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					testutil.CheckListAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.values", testConfigVarsHttp["redirect_matcher_values"]),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.value_match_condition", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_condition"])),
 
+					// LogSink Data Source
+					// Security Check: Secrets should NOT be in Data Source
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.type"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.token"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.username"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.distribution", "config.log_sink.credentials.password"),
+
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
@@ -462,6 +487,8 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["query_string_vary_parameters"], 0)),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.cache_config.query_string_vary_parameters.1", testutil.ConvertConfigVariable(configVarsHttpUpdated()["query_string_vary_parameters"], 1)),
+
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", testutil.ConvertConfigVariable(configVarsHttpUpdated()["log_sink_type"])),
 
 					// Checking WAF Mutated Configurations
 					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", configVarsHttpUpdated()["waf"]),
@@ -558,7 +585,8 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 				// 1. API doesn't return them (security).
 				// 2. State has them (from resource creation).
 				ImportStateVerifyIgnore: []string{
-					"config.backend.credentials"},
+					"config.backend.credentials",
+				},
 			},
 			// Data Source
 			{
@@ -636,8 +664,11 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 			continue
 		}
 		// terraform ID: "[project_id],[distribution_id]"
-		distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
-		distributionsToDestroy = append(distributionsToDestroy, distributionId)
+		splitId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(splitId) > 1 {
+			distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
+			distributionsToDestroy = append(distributionsToDestroy, distributionId)
+		}
 	}
 
 	for _, dist := range distributionsToDestroy {
@@ -665,7 +696,7 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
 			d := net.Dialer{
-				Timeout: time.Millisecond * time.Duration(10000),
+				Timeout: time.Second * time.Duration(10),
 			}
 			// Force query to Google DNS
 			return d.DialContext(ctx, network, "8.8.8.8:53")
@@ -705,4 +736,52 @@ func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, er
 		time.Sleep(sleep)
 	}
 	return zero, fmt.Errorf("retry timed out, last error: %w", errOuter)
+}
+
+func TestAccCDNDistributionLogSinkWriteOnlyRotation(t *testing.T) {
+	woTestName := "acc-wo" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+
+	baseVars := config.Variables{
+		"project_id":         config.StringVariable(testutil.ProjectId),
+		"backend_http_type":  config.StringVariable("http"),
+		"backend_origin_url": config.StringVariable("https://test-backend-1.cdn-dev.runs.onstackit.cloud"),
+		"regions":            config.ListVariable(config.StringVariable("EU")),
+		"logs_display_name":  config.StringVariable(woTestName),
+		"token_wo_version":   config.IntegerVariable(1),
+	}
+
+	bumpedVars := maps.Clone(baseVars)
+	bumpedVars["token_wo_version"] = config.IntegerVariable(2)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckCDNDistributionDestroy,
+		Steps: []resource.TestStep{
+			// Step 1: Create distribution with token_wo and token_wo_version = 1
+			{
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpLogSinkWo,
+				ConfigVariables: baseVars,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.type", "otlp"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.type", "bearer"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo_version", "1"),
+					// Write-only field must NEVER be stored in state
+					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo"),
+					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token"),
+				),
+			},
+			// Step 2: Bump token_wo_version to 2 (triggers update)
+			{
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpLogSinkWo,
+				ConfigVariables: bumpedVars,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.log_sink.credentials.token_wo"),
+				),
+			},
+		},
+	})
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
@@ -25,6 +26,9 @@ func createTestConfig(vals map[string]attr.Value) types.Object {
 	}
 	if _, ok := vals["cache_config"]; !ok {
 		vals["cache_config"] = types.ObjectNull(cacheConfigTypes)
+	}
+	if _, ok := vals["log_sink"]; !ok {
+		vals["log_sink"] = types.ObjectNull(logSinkTypes)
 	}
 	return types.ObjectValueMust(configTypes, vals)
 }
@@ -46,6 +50,7 @@ func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
 		"waf":                    types.ObjectNull(wafTypes),
 		"tls":                    types.ObjectNull(tlsTypes),
 		"cache_config":           types.ObjectNull(cacheConfigTypes),
+		"log_sink":               types.ObjectNull(logSinkTypes),
 		"strip_response_cookies": types.BoolUnknown(),
 		"forward_host_header":    types.BoolUnknown(),
 	}
@@ -125,6 +130,101 @@ func TestToCreatePayload(t *testing.T) {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
 	redirectsAttrTypes := redirectsObjType.AttrTypes
+
+	// LogSink config and fixture
+	testLogSinkPushUrl := "http://foo.bar"
+	testLogSinkCredentialsUsername := "testuser"
+	testLogSinkCredentialsPassword := "testpw"
+	testLogSinkOtlpCredentialsToken := "ey12345"
+
+	testLogSinkLokiType := cdnSdk.LOKILOGSINKCREATETYPE_LOKI
+	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKCREATETYPE_OTLP
+
+	testLogSinkOtlpCredentialsBearerType := cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER
+	testLogSinkOtlpCredentialsBasicType := cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC
+
+	// Otlp config with bearer credentials
+	testLogSinkOtlpBearerConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":                types.StringValue(string(testLogSinkOtlpCredentialsBearerType)), // bearer
+			"token":               types.StringValue(testLogSinkOtlpCredentialsToken),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+			"username":            types.StringNull(),
+			"password":            types.StringNull(),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
+		}),
+	})
+	expectedLogSinkOtlpBearerConfig := cdnSdk.CreateDistributionPayloadLogSink{
+		OtlpLogSinkCreate: &cdnSdk.OtlpLogSinkCreate{
+			Credentials: cdnSdk.OtlpLogSinkCreateCredentials{
+				OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
+					Type:  testLogSinkOtlpCredentialsBearerType,
+					Token: testLogSinkOtlpCredentialsToken,
+				},
+			},
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
+
+	// Otlp with basic credentials
+	testLogSinkOtlpBasicConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":                types.StringValue(string(testLogSinkOtlpCredentialsBasicType)), // basic
+			"username":            types.StringValue(testLogSinkCredentialsUsername),
+			"password":            types.StringValue(testLogSinkCredentialsPassword),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
+			"token":               types.StringNull(),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+		}),
+	})
+	expectedLogSinkOtlpBasicConfig := cdnSdk.CreateDistributionPayloadLogSink{
+		OtlpLogSinkCreate: &cdnSdk.OtlpLogSinkCreate{
+			Credentials: cdnSdk.OtlpLogSinkCreateCredentials{
+				OtlpLogSinkBasicCredentials: &cdnSdk.OtlpLogSinkBasicCredentials{
+					Password: testLogSinkCredentialsPassword,
+					Type:     testLogSinkOtlpCredentialsBasicType,
+					Username: testLogSinkCredentialsUsername,
+				},
+			},
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
+
+	// Loki config with basic credentials (Loki only supports basic auth; no type discriminator)
+	testLogSinkLokiConfig := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkLokiType)), // loki
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"username":            types.StringValue(testLogSinkCredentialsUsername),
+			"password":            types.StringValue(testLogSinkCredentialsPassword),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
+			"type":                types.StringNull(),
+			"token":               types.StringNull(),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+		}),
+	})
+	expectedLogSinkLokiConfig := cdnSdk.CreateDistributionPayloadLogSink{
+		LokiLogSinkCreate: &cdnSdk.LokiLogSinkCreate{
+			Credentials: cdnSdk.LokiLogSinkCredentials{
+				Password: testLogSinkCredentialsPassword,
+				Username: testLogSinkCredentialsUsername,
+			},
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkLokiType,
+		},
+	}
 
 	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
@@ -384,6 +484,99 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			IsValid: true,
 		},
+		"happy_path_with_log_sink_otlp_bearer": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    types.ObjectNull(tlsTypes),
+					"strip_response_cookies": types.BoolUnknown(),
+					"forward_host_header":    types.BoolUnknown(),
+					"log_sink":               testLogSinkOtlpBearerConfig, // otlp bearer
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              nil,
+				LogSink:          &expectedLogSinkOtlpBearerConfig, // otlp bearer
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_log_sink_otlp_basic": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    types.ObjectNull(tlsTypes),
+					"strip_response_cookies": types.BoolUnknown(),
+					"forward_host_header":    types.BoolUnknown(),
+					"log_sink":               testLogSinkOtlpBasicConfig, // otlp basic
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              nil,
+				LogSink:          &expectedLogSinkOtlpBasicConfig, // otlp basic
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_log_sink_loki": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    types.ObjectNull(wafTypes),
+					"tls":                    types.ObjectNull(tlsTypes),
+					"strip_response_cookies": types.BoolUnknown(),
+					"forward_host_header":    types.BoolUnknown(),
+					"log_sink":               testLogSinkLokiConfig, // loki basic
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Waf:              nil,
+				LogSink:          &expectedLogSinkLokiConfig, // loki basic
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
 		"happy_path_with_strip_response_and_cookies_forward": {
 			Input: modelFixture(func(m *Model) {
 				m.Config = createTestConfig(map[string]attr.Value{
@@ -622,7 +815,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			res, err := toCreatePayload(context.Background(), tc.Input)
+			res, err := toCreatePayload(context.Background(), tc.Input, tc.Input)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
@@ -1337,7 +1530,7 @@ func TestConvertConfig(t *testing.T) {
 					cmpopts.EquateEmpty(),
 				)
 				if diff != "" {
-					t.Fatalf("Create Payload not as expected: %s", diff)
+					t.Fatalf("Config payload not as expected: %s", diff)
 				}
 			}
 		})
@@ -1436,6 +1629,47 @@ func TestMapFields(t *testing.T) {
 		"disabled_rule_collection_ids":  types.SetNull(types.StringType),
 		"log_only_rule_collection_ids":  types.SetNull(types.StringType),
 	})
+
+	// LogSink config and fixture
+	testLogSinkPushUrlOld := "http://foo.bar"
+	testLogSinkPushUrl := "http://foo.bar"
+	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKTYPE_OTLP
+
+	// Otlp config with bearer credentials
+	expectedLogSinkConfigOld := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrlOld),
+		"type":     types.StringValue(string(testLogSinkOtlpType)),
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":                types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+			"token":               types.StringValue("ey1234"),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+			"username":            types.StringNull(),
+			"password":            types.StringNull(),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
+		}),
+	})
+	expectedLogSinkConfigNew := types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)),
+		"credentials": types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+			"type":                types.StringValue(string(cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER)),
+			"token":               types.StringValue("ey1234"),
+			"token_wo":            types.StringNull(),
+			"token_wo_version":    types.Int64Null(),
+			"username":            types.StringNull(),
+			"password":            types.StringNull(),
+			"password_wo":         types.StringNull(),
+			"password_wo_version": types.Int64Null(),
+		}),
+	})
+	inputLogSinkConfig := cdnSdk.ConfigLogSink{
+		OtlpLogSink: &cdnSdk.OtlpLogSink{
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
 
 	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
 		"enable_tls_10": types.BoolValue(false),
@@ -1743,6 +1977,42 @@ func TestMapFields(t *testing.T) {
 				wafCopy.DisabledRuleGroupIds = []string{}
 				wafCopy.LogOnlyRuleGroupIds = []string{}
 				d.Config.Waf = wafCopy
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_log_sink": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    defaultWaf,
+					"log_sink":               expectedLogSinkConfigNew,
+					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			InitialState: expectedModel(func(m *Model) {
+				m.Config = createTestConfig(map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsAttrTypes),
+					"waf":                    defaultWaf,
+					"log_sink":               expectedLogSinkConfigOld,
+					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.LogSink = &inputLogSinkConfig
 			}),
 			IsValid: true,
 		},
@@ -2125,4 +2395,1291 @@ func TestValidateCountryCode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testBuildCredentialsObject(credType, username, password, token attr.Value) types.Object {
+	return testBuildCredentialsObjectWithWo(credType, username, password, types.StringNull(), types.Int64Null(), token, types.StringNull(), types.Int64Null())
+}
+
+func testBuildCredentialsObjectWithWo(credType, username, password, passwordWo, passwordWoVersion, token, tokenWo, tokenWoVersion attr.Value) types.Object {
+	return types.ObjectValueMust(logSinkCredentialsTypes, map[string]attr.Value{
+		"type":                credType,
+		"username":            username,
+		"password":            password,
+		"password_wo":         passwordWo,
+		"password_wo_version": passwordWoVersion,
+		"token":               token,
+		"token_wo":            tokenWo,
+		"token_wo_version":    tokenWoVersion,
+	})
+}
+
+func testBuildLogSinkObject(sinkType, pushUrl attr.Value, creds types.Object) types.Object {
+	return types.ObjectValueMust(logSinkTypes, map[string]attr.Value{
+		"type":        sinkType,
+		"push_url":    pushUrl,
+		"credentials": creds,
+	})
+}
+
+func TestValidateLogSinkConfig(t *testing.T) {
+	testCases := []struct {
+		name        string
+		logSink     types.Object
+		expectError bool
+	}{
+		{
+			name:        "skip_when_log_sink_null",
+			logSink:     types.ObjectNull(logSinkTypes),
+			expectError: false,
+		},
+		{
+			name:        "skip_when_log_sink_unknown",
+			logSink:     types.ObjectUnknown(logSinkTypes),
+			expectError: false,
+		},
+		{
+			name: "skip_when_credentials_null",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				types.ObjectNull(logSinkCredentialsTypes),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_credentials_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				types.ObjectUnknown(logSinkCredentialsTypes),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_sink_type_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringUnknown(),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_creds_type_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringUnknown(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "validates_even_when_push_url_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringUnknown(),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_token_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringUnknown()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_username_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringUnknown(), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "skip_when_password_unknown",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringUnknown(), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "loki_happy",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "loki_with_creds_type_set",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "loki_with_token_set",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "loki_missing_username",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "loki_missing_password",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringNull(), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_happy",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "otlp_bearer_happy",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("tok")),
+			),
+			expectError: false,
+		},
+		{
+			name: "otlp_missing_creds_type",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("u"), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_with_token",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringValue("p"), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_missing_username",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringNull(), types.StringValue("p"), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_basic_missing_password",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("u"), types.StringNull(), types.StringNull()),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_bearer_with_username",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringValue("u"), types.StringNull(), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_bearer_with_password",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringValue("p"), types.StringValue("tok")),
+			),
+			expectError: true,
+		},
+		{
+			name: "otlp_bearer_missing_token",
+			logSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &distributionConfig{
+				LogSink: tc.logSink,
+			}
+			var diags diag.Diagnostics
+			validateLogSinkConfig(context.Background(), cfg, &diags)
+
+			if tc.expectError && !diags.HasError() {
+				t.Fatalf("expected validation error, got none")
+			}
+			if !tc.expectError && diags.HasError() {
+				t.Fatalf("unexpected validation errors: %v", diags)
+			}
+		})
+	}
+}
+
+func TestToPatchLogSinkPayload(t *testing.T) {
+	pushURL := "https://example.com"
+
+	expectedLoki := &cdnSdk.ConfigPatchLogSink{
+		LokiLogSinkPatch: &cdnSdk.LokiLogSinkPatch{
+			Credentials: &cdnSdk.LokiLogSinkCredentials{
+				Username: "testuser",
+				Password: "testpassword",
+			},
+			PushUrl: &pushURL,
+			Type:    cdnSdk.LOKILOGSINKPATCHTYPE_LOKI,
+		},
+	}
+
+	expectedOtlpBasic := &cdnSdk.ConfigPatchLogSink{
+		OtlpLogSinkPatch: &cdnSdk.OtlpLogSinkPatch{
+			Credentials: &cdnSdk.OtlpLogSinkPatchCredentials{
+				OtlpLogSinkBasicCredentials: &cdnSdk.OtlpLogSinkBasicCredentials{
+					Type:     cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
+					Username: "testuser",
+					Password: "testpassword",
+				},
+			},
+			PushUrl: &pushURL,
+			Type:    cdnSdk.OTLPLOGSINKPATCHTYPE_OTLP,
+		},
+	}
+
+	expectedOtlpBearer := &cdnSdk.ConfigPatchLogSink{
+		OtlpLogSinkPatch: &cdnSdk.OtlpLogSinkPatch{
+			Credentials: &cdnSdk.OtlpLogSinkPatchCredentials{
+				OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
+					Type:  cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER,
+					Token: "testtoken",
+				},
+			},
+			PushUrl: &pushURL,
+			Type:    cdnSdk.OTLPLOGSINKPATCHTYPE_OTLP,
+		},
+	}
+
+	testCases := []struct {
+		name        string
+		input       types.Object
+		expected    *cdnSdk.ConfigPatchLogSink
+		expectError bool
+	}{
+		{
+			name: "happy_path_loki",
+			input: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    expectedLoki,
+			expectError: false,
+		},
+		{
+			name: "happy_path_otlp_basic",
+			input: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    expectedOtlpBasic,
+			expectError: false,
+		},
+		{
+			name: "happy_path_otlp_bearer",
+			input: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("testtoken")),
+			),
+			expected:    expectedOtlpBearer,
+			expectError: false,
+		},
+		{
+			name: "error_unknown_sink_type",
+			input: testBuildLogSinkObject(
+				types.StringValue("invalid"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name: "error_unknown_otlp_creds_type",
+			input: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(pushURL),
+				testBuildCredentialsObject(types.StringValue("invalid"), types.StringValue("testuser"), types.StringValue("testpassword"), types.StringNull()),
+			),
+			expected:    nil,
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := toPatchLogSinkPayload(context.Background(), tc.input, types.ObjectNull(logSinkTypes), tc.input)
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("expected error, got none")
+				}
+				if result != nil {
+					t.Fatalf("expected nil result on error, got %v", result)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			diff := cmp.Diff(tc.expected, result, cmpopts.EquateEmpty())
+			if diff != "" {
+				t.Fatalf("Patch payload not as expected: %s", diff)
+			}
+		})
+	}
+}
+
+func TestMapLogSinkResource(t *testing.T) {
+	testPushURL := "https://logs.example.com/push"
+
+	testCases := []struct {
+		name        string
+		apiLogSink  *cdnSdk.ConfigLogSink
+		oldLogSink  types.Object
+		expected    types.Object
+		expectError bool
+	}{
+		{
+			name:        "api_nil_returns_null",
+			apiLogSink:  nil,
+			oldLogSink:  types.ObjectNull(logSinkTypes),
+			expected:    types.ObjectNull(logSinkTypes),
+			expectError: false,
+		},
+		{
+			name: "no_drift_loki_preserves_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				LokiLogSink: &cdnSdk.LokiLogSink{
+					Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://old.example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "no_drift_otlp_basic_preserves_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				OtlpLogSink: &cdnSdk.OtlpLogSink{
+					Type:    cdnSdk.OTLPLOGSINKTYPE_OTLP,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://old.example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("olduser"), types.StringValue("oldpass"), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "no_drift_otlp_bearer_preserves_token",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				OtlpLogSink: &cdnSdk.OtlpLogSink{
+					Type:    cdnSdk.OTLPLOGSINKTYPE_OTLP,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://old.example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("oldtoken")),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("oldtoken")),
+			),
+			expectError: false,
+		},
+		{
+			name: "drift_loki_to_otlp_clears_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				OtlpLogSink: &cdnSdk.OtlpLogSink{
+					Type:    cdnSdk.OTLPLOGSINKTYPE_OTLP,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue("https://loki.example.com"),
+				testBuildCredentialsObject(types.StringNull(), types.StringValue("lokiuser"), types.StringValue("lokipass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "drift_otlp_basic_to_loki_clears_creds",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				LokiLogSink: &cdnSdk.LokiLogSink{
+					Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://otlp.example.com"),
+				testBuildCredentialsObject(types.StringValue("basic"), types.StringValue("otlpuser"), types.StringValue("otlppass"), types.StringNull()),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: false,
+		},
+		{
+			name: "drift_otlp_bearer_to_loki_clears_token",
+			apiLogSink: &cdnSdk.ConfigLogSink{
+				LokiLogSink: &cdnSdk.LokiLogSink{
+					Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+					PushUrl: testPushURL,
+				},
+			},
+			oldLogSink: testBuildLogSinkObject(
+				types.StringValue("otlp"),
+				types.StringValue("https://otlp.example.com"),
+				testBuildCredentialsObject(types.StringValue("bearer"), types.StringNull(), types.StringNull(), types.StringValue("otlptoken")),
+			),
+			expected: testBuildLogSinkObject(
+				types.StringValue("loki"),
+				types.StringValue(testPushURL),
+				testBuildCredentialsObject(types.StringNull(), types.StringNull(), types.StringNull(), types.StringNull()),
+			),
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := mapLogSinkResource(context.Background(), tc.apiLogSink, tc.oldLogSink)
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("expected error, got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			diff := cmp.Diff(tc.expected, result)
+			if diff != "" {
+				t.Fatalf("mapped log_sink not as expected: %s", diff)
+			}
+		})
+	}
+}
+
+func TestWriteOnlyLogSinkCredentials(t *testing.T) {
+	testPushURL := "https://logs.example.com/push"
+
+	t.Run("create_loki_with_password_wo", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(), // plain password not set
+				types.StringNull(), // WO stripped from plan
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("supersecret-password"), // WO in config
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		payload, err := toCreateLogSinkPayload(context.Background(), planSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if payload.LokiLogSinkCreate == nil {
+			t.Fatalf("expected LokiLogSinkCreate, got nil")
+		}
+		if payload.LokiLogSinkCreate.Credentials.Password != "supersecret-password" {
+			t.Fatalf("expected password %q, got %q", "supersecret-password", payload.LokiLogSinkCreate.Credentials.Password)
+		}
+	})
+
+	t.Run("create_otlp_basic_with_password_wo", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("otlp-password"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		payload, err := toCreateLogSinkPayload(context.Background(), planSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if payload.OtlpLogSinkCreate == nil || payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBasicCredentials, got nil")
+		}
+		if payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials.Password != "otlp-password" {
+			t.Fatalf("expected password %q, got %q", "otlp-password", payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials.Password)
+		}
+	})
+
+	t.Run("create_otlp_bearer_with_token_wo", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringValue("otlp-bearer-token"),
+				types.Int64Value(1),
+			),
+		)
+
+		payload, err := toCreateLogSinkPayload(context.Background(), planSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if payload.OtlpLogSinkCreate == nil || payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBearerCredentials, got nil")
+		}
+		if payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials.Token != "otlp-bearer-token" {
+			t.Fatalf("expected token %q, got %q", "otlp-bearer-token", payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials.Token)
+		}
+	})
+
+	t.Run("patch_loki_version_bumped_rotates_password", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(2), // version bumped to 2
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // old version 1
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("new-secret"),
+				types.Int64Value(2),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.LokiLogSinkPatch == nil || patch.LokiLogSinkPatch.Credentials == nil {
+			t.Fatalf("expected credentials rotated, got nil")
+		}
+		if patch.LokiLogSinkPatch.Credentials.Password != "new-secret" {
+			t.Fatalf("expected password %q, got %q", "new-secret", patch.LokiLogSinkPatch.Credentials.Password)
+		}
+	})
+
+	t.Run("patch_loki_no_version_bump_omits_credentials", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // unchanged version
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // same version
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("new-secret-ignored"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.LokiLogSinkPatch == nil {
+			t.Fatalf("expected LokiLogSinkPatch, got nil")
+		}
+		if patch.LokiLogSinkPatch.Credentials != nil {
+			t.Fatalf("expected credentials omitted, got %+v", patch.LokiLogSinkPatch.Credentials)
+		}
+	})
+
+	t.Run("patch_otlp_bearer_version_bumped_rotates_token", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(2),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringValue("rotated-token"),
+				types.Int64Value(2),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBearerCredentials rotated, got nil")
+		}
+		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token != "rotated-token" {
+			t.Fatalf("expected token %q, got %q", "rotated-token", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token)
+		}
+	})
+
+	t.Run("map_log_sink_preserves_wo_versions", func(t *testing.T) {
+		apiLogSink := &cdnSdk.ConfigLogSink{
+			LokiLogSink: &cdnSdk.LokiLogSink{
+				Type:    cdnSdk.LOKILOGSINKTYPE_LOKI,
+				PushUrl: testPushURL,
+			},
+		}
+		oldLogSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(), // WO is never in state
+				types.Int64Value(42),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		result, err := mapLogSinkResource(context.Background(), apiLogSink, oldLogSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var logSink logSinkConfig
+		diags := result.As(context.Background(), &logSink, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			t.Fatalf("diags error: %v", diags)
+		}
+		var creds logSinkCredentialsConfig
+		diags = logSink.Credentials.As(context.Background(), &creds, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			t.Fatalf("diags error: %v", diags)
+		}
+
+		if creds.PasswordWoVersion.ValueInt64() != 42 {
+			t.Fatalf("expected password_wo_version 42, got %v", creds.PasswordWoVersion)
+		}
+		if !creds.PasswordWo.IsNull() {
+			t.Fatalf("expected password_wo to be null in state, got %v", creds.PasswordWo)
+		}
+	})
+
+	t.Run("patch_loki_username_changed_without_version_bump_sends_password", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("new-user"), // username changed
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // version NOT bumped
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("old-user"), // old username
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("new-user"),
+				types.StringNull(),
+				types.StringValue("same-password"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.LokiLogSinkPatch == nil || patch.LokiLogSinkPatch.Credentials == nil {
+			t.Fatalf("expected credentials re-sent on username change, got nil")
+		}
+		if patch.LokiLogSinkPatch.Credentials.Username != "new-user" {
+			t.Fatalf("expected username %q, got %q", "new-user", patch.LokiLogSinkPatch.Credentials.Username)
+		}
+		if patch.LokiLogSinkPatch.Credentials.Password != "same-password" {
+			t.Fatalf("expected password %q, got %q", "same-password", patch.LokiLogSinkPatch.Credentials.Password)
+		}
+	})
+
+	t.Run("patch_otlp_basic_username_changed_sends_credentials", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("new-user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("old-user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("new-user"),
+				types.StringNull(),
+				types.StringValue("otlp-password"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBasicCredentials, got nil")
+		}
+		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Username != "new-user" {
+			t.Fatalf("expected username %q, got %q", "new-user", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Username)
+		}
+		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password != "otlp-password" {
+			t.Fatalf("expected password %q, got %q", "otlp-password", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password)
+		}
+	})
+
+	t.Run("patch_otlp_basic_to_bearer_switch_sends_token", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"), // switched to bearer
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"), // old was basic
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringValue("bearer-token"),
+				types.Int64Value(1),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBearerCredentials, got nil")
+		}
+		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token != "bearer-token" {
+			t.Fatalf("expected token %q, got %q", "bearer-token", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token)
+		}
+	})
+
+	t.Run("patch_otlp_bearer_to_basic_switch_sends_password", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"), // switched to basic
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"), // old was bearer
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("basic"),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("basic-password"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBasicCredentials, got nil")
+		}
+		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password != "basic-password" {
+			t.Fatalf("expected password %q, got %q", "basic-password", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password)
+		}
+	})
+
+	t.Run("patch_loki_to_otlp_switch_sends_token", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("otlp"), // switched from loki to otlp
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("loki"), // old was loki
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("otlp"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringValue("new-otlp-token"),
+				types.Int64Value(1),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials == nil {
+			t.Fatalf("expected OtlpLogSinkBearerCredentials, got nil")
+		}
+		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token != "new-otlp-token" {
+			t.Fatalf("expected token %q, got %q", "new-otlp-token", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token)
+		}
+	})
+
+	t.Run("patch_otlp_to_loki_switch_sends_password", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"), // switched from otlp to loki
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("loki-user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("otlp"), // old was otlp
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringValue("bearer"),
+				types.StringNull(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("loki-user"),
+				types.StringNull(),
+				types.StringValue("new-loki-password"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.LokiLogSinkPatch == nil || patch.LokiLogSinkPatch.Credentials == nil {
+			t.Fatalf("expected LokiLogSinkPatch with credentials, got nil")
+		}
+		if patch.LokiLogSinkPatch.Credentials.Password != "new-loki-password" {
+			t.Fatalf("expected password %q, got %q", "new-loki-password", patch.LokiLogSinkPatch.Credentials.Password)
+		}
+	})
+
+	t.Run("patch_loki_username_unchanged_after_fresh_import_omits_credentials", func(t *testing.T) {
+		planSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		// On fresh import, state credentials have null username (API never returned it)
+		stateSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringNull(), // unknown / null from fresh import
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Value(1), // version imported or default
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+		configSink := testBuildLogSinkObject(
+			types.StringValue("loki"),
+			types.StringValue(testPushURL),
+			testBuildCredentialsObjectWithWo(
+				types.StringNull(),
+				types.StringValue("user"),
+				types.StringNull(),
+				types.StringValue("password"),
+				types.Int64Value(1),
+				types.StringNull(),
+				types.StringNull(),
+				types.Int64Null(),
+			),
+		)
+
+		patch, err := toPatchLogSinkPayload(context.Background(), planSink, stateSink, configSink)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Because state username was null (guarded), we should NOT spuriously rotate
+		if patch.LokiLogSinkPatch != nil && patch.LokiLogSinkPatch.Credentials != nil {
+			t.Fatalf("expected credentials omitted when state username was null, got %+v", patch.LokiLogSinkPatch.Credentials)
+		}
+	})
 }
