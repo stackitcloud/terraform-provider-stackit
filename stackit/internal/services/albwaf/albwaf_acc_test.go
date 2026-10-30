@@ -476,7 +476,7 @@ func TestAccManagedRuleSetMin(t *testing.T) {
 	})
 }
 
-// testManagedRuleSetMaxModes returns testManagedRuleSetMax with groups set to
+// testManagedRuleSetMaxModes returns testManagedRuleSetMax with configured_groups set to
 // the given rule modes, keyed by group ID and rule ID.
 func testManagedRuleSetMaxModes(modes map[string]map[string]string) config.Variables {
 	vars := config.Variables{}
@@ -489,7 +489,7 @@ func testManagedRuleSetMaxModes(modes map[string]map[string]string) config.Varia
 		}
 		groups[group] = config.ObjectVariable(map[string]config.Variable{"rules": config.MapVariable(rulesVar)})
 	}
-	vars["groups"] = config.MapVariable(groups)
+	vars["configured_groups"] = config.MapVariable(groups)
 	return vars
 }
 
@@ -507,11 +507,38 @@ func TestAccManagedRuleSetMax(t *testing.T) {
 				}),
 				Config: cfg,
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "configured_groups.911.rules.911100.mode", "MODE_LOG_ONLY"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "configured_groups.920.rules.920450.mode", "MODE_LOG_ONLY"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_LOG_ONLY"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_LOG_ONLY"),
+					// groups holds the full inventory, not only the configured rules
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920100.mode", "MODE_ENABLED"),
 				),
 			},
-			// Change in place: one group removed (its rule back to enabled), one rule changed
+			// Import
+			{
+				ConfigVariables: testManagedRuleSetMaxModes(map[string]map[string]string{
+					"911": {"911100": "MODE_LOG_ONLY"},
+					"920": {"920450": "MODE_LOG_ONLY"},
+				}),
+				ResourceName: "stackit_alb_waf_managed_rule_set.managed_rule_set",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_alb_waf_managed_rule_set.managed_rule_set"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_managed_rule_set.managed_rule_set")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+				// configured_groups is a terraform-only attribute
+				ImportStateVerifyIgnore: []string{"configured_groups"},
+			},
+			// Update: one group removed (its rule back to enabled), one rule changed
 			{
 				ConfigVariables: testManagedRuleSetMaxModes(map[string]map[string]string{
 					"920": {"920450": "MODE_DISABLED"},
@@ -523,10 +550,10 @@ func TestAccManagedRuleSetMax(t *testing.T) {
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckNoResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode"),
+					resource.TestCheckNoResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "configured_groups.911.rules.911100.mode"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "configured_groups.920.rules.920450.mode", "MODE_DISABLED"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_ENABLED"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_DISABLED"),
-					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.911.rules.911100.mode", "MODE_ENABLED"),
-					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "groups.920.rules.920450.mode", "MODE_DISABLED"),
 				),
 			},
 			// Deletion is done by the framework implicitly
