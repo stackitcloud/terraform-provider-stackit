@@ -228,7 +228,7 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// due to security purposes, attempting to get access key for a non-existent Service Account will return 403.
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
+		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
