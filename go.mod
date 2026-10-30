@@ -34,7 +34,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelexperiments v0.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.13.0
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.16.0
