@@ -798,6 +798,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable Argus extensions.",
 								Required:    true,
+								Validators: []validator.Bool{
+									skeUtils.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("argus_instance_id"), "05/2026"),
+								},
 							},
 							"argus_instance_id": schema.StringAttribute{
 								Description: "Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.",
@@ -812,6 +815,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable Observability extensions.",
 								Required:    true,
+								Validators: []validator.Bool{
+									skeUtils.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("instance_id"), "05/2026"),
+								},
 							},
 							"instance_id": schema.StringAttribute{
 								Description: "Observability instance ID to choose which Observability instance is used. Required when enabled is set to `true`.",
@@ -826,6 +832,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"enabled": schema.BoolAttribute{
 								Description: "Is ACL enabled?",
 								Required:    true,
+								Validators: []validator.Bool{
+									skeUtils.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("allowed_cidrs"), "05/2026"),
+								},
 							},
 							"allowed_cidrs": schema.ListAttribute{
 								Description: "Specify a list of CIDRs to whitelist.",
@@ -841,6 +850,10 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable DNS extensions",
 								Required:    true,
+								Validators: []validator.Bool{
+									skeUtils.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("zones"), "05/2026"),
+									skeUtils.EnablesElseDeprecationWarning[types.Bool](path.MatchRelative().AtParent().AtName("gateway_api"), "05/2026"),
+								},
 							},
 							"zones": schema.ListAttribute{
 								Description: "Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)",
@@ -1214,7 +1227,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		// zones
 		zs := []string{}
 		for _, v := range nodePool.AvailabilityZones.Elements() {
-			if v.IsNull() || v.IsUnknown() {
+			if utils.IsUndefined(v) {
 				continue
 			}
 			s, err := conversion.ToString(ctx, v)
@@ -1357,7 +1370,7 @@ func toHibernationsPayload(ctx context.Context, m *Model) (*ske.Hibernation, err
 			Start: h.Start.ValueString(),
 			End:   h.End.ValueString(),
 		}
-		if !h.Timezone.IsNull() && !h.Timezone.IsUnknown() {
+		if !utils.IsUndefined(h.Timezone) {
 			tz := h.Timezone.ValueString()
 			sc.Timezone = &tz
 		}
@@ -1386,7 +1399,7 @@ func toAuditPayload(ctx context.Context, m *Model) (*ske.Audit, error) {
 }
 
 func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) {
-	if m.Extensions.IsNull() || m.Extensions.IsUnknown() {
+	if utils.IsUndefined(m.Extensions) {
 		return nil, nil
 	}
 	ex := extensions{}
@@ -1396,7 +1409,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}
 
 	var skeAcl *ske.ACL
-	if !(ex.ACL.IsNull() || ex.ACL.IsUnknown()) {
+	if !utils.IsUndefined(ex.ACL) {
 		acl := acl{}
 		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1443,7 +1456,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}
 
 	var skeApplicationLoadBalancer *ske.ApplicationLoadBalancer
-	if !(ex.ApplicationLoadBalancer.IsNull() || ex.ApplicationLoadBalancer.IsUnknown()) {
+	if !utils.IsUndefined(ex.ApplicationLoadBalancer) {
 		applicationLoadBalancer := applicationLoadBalancer{}
 		diags = ex.ApplicationLoadBalancer.As(ctx, &applicationLoadBalancer, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1456,7 +1469,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}
 
 	var skeDNS *ske.DNS
-	if !(ex.DNS.IsNull() || ex.DNS.IsUnknown()) {
+	if !utils.IsUndefined(ex.DNS) {
 		dns := dns{}
 		diags = ex.DNS.As(ctx, &dns, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1514,7 +1527,7 @@ func parseMaintenanceWindowTime(t string) (time.Time, error) {
 }
 
 func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, error) {
-	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
+	if utils.IsUndefined(m.Maintenance) {
 		return nil, nil
 	}
 
@@ -1525,7 +1538,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	}
 
 	var timeWindowStart time.Time
-	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
+	if !utils.IsUndefined(maintenance.Start) {
 		tempTime, err := parseMaintenanceWindowTime(maintenance.Start.ValueString())
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
@@ -1534,7 +1547,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 	}
 
 	var timeWindowEnd time.Time
-	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
+	if !utils.IsUndefined(maintenance.End) {
 		tempTime, err := parseMaintenanceWindowTime(maintenance.End.ValueString())
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
@@ -1555,7 +1568,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 }
 
 func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
-	if m.Network.IsNull() || m.Network.IsUnknown() {
+	if utils.IsUndefined(m.Network) {
 		return nil, nil
 	}
 
@@ -1665,7 +1678,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 	modelNodePoolOSVersionMin := map[string]basetypes.StringValue{}
 
 	modelNodePools := []nodePool{}
-	if !model.NodePools.IsNull() && !model.NodePools.IsUnknown() {
+	if !utils.IsUndefined(model.NodePools) {
 		diags := model.NodePools.ElementsAs(ctx, &modelNodePools, false)
 		if diags.HasError() {
 			return core.DiagsToError(diags)
@@ -1708,7 +1721,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 		}
 
 		taintsInModel := false
-		if i < len(modelNodePools) && !modelNodePools[i].Taints.IsNull() && !modelNodePools[i].Taints.IsUnknown() {
+		if i < len(modelNodePools) && !utils.IsUndefined(modelNodePools[i].Taints) {
 			taintsInModel = true
 		}
 		err := mapTaints(nodePoolResp.Taints, nodePool, taintsInModel)
@@ -1933,7 +1946,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 		endTimeAPI = cl.Maintenance.TimeWindow.End
 	}
 
-	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
+	if utils.IsUndefined(m.Maintenance) {
 		return startTimeAPI.Format("15:04:05Z07:00"), endTimeAPI.Format("15:04:05Z07:00"), nil
 	}
 
@@ -1944,7 +1957,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 	}
 
 	startTime = startTimeAPI.Format("15:04:05Z07:00")
-	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
+	if !utils.IsUndefined(maintenance.Start) {
 		startTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.Start.ValueString())
 		if err != nil {
 			return "", "", fmt.Errorf("parsing start time '%s' from TF config as RFC time: %w", maintenance.Start.ValueString(), err)
@@ -1956,7 +1969,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 	}
 
 	endTime = endTimeAPI.Format("15:04:05Z07:00")
-	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
+	if !utils.IsUndefined(maintenance.End) {
 		endTimeTF, err := time.Parse("15:04:05Z07:00", maintenance.End.ValueString())
 		if err != nil {
 			return "", "", fmt.Errorf("parsing end time '%s' from TF config as RFC time: %w", maintenance.End.ValueString(), err)
