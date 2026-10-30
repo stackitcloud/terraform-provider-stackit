@@ -2,6 +2,7 @@ package alb
 
 import (
 	"context"
+	"encoding/base64"
 	"strings"
 	"testing"
 
@@ -256,6 +257,14 @@ func fixtureModel(explicitBool *bool, mods ...func(m *Model)) *Model {
 											},
 										),
 										"path": types.StringValue("/health"),
+										"tls_config": types.ObjectValueMust(
+											tlsConfigTypes,
+											map[string]attr.Value{
+												"enabled":                     types.BoolValue(true),
+												"skip_certificate_validation": types.BoolValue(false),
+												"custom_ca":                   types.StringNull(),
+											},
+										),
 									},
 								),
 							},
@@ -434,6 +443,10 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 					HttpHealthChecks: &albSdk.HttpHealthChecks{
 						Path:       new("/health"),
 						OkStatuses: []string{"200", "201"},
+						Tls: &albSdk.TlsConfig{
+							Enabled:                   new(true),
+							SkipCertificateValidation: new(false),
+						},
 					},
 				},
 			},
@@ -1677,5 +1690,39 @@ func Test_toPathPayload(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestTlsConfigRoundTrip(t *testing.T) {
+	const pem = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
+	tlsConfigTF := types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
+		"enabled":                     types.BoolValue(true),
+		"skip_certificate_validation": types.BoolValue(false),
+		"custom_ca":                   types.StringValue(pem),
+	})
+
+	payload, err := toTlsConfig(context.Background(), tlsConfigTF)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if payload == nil || payload.CustomCa == nil || *payload.CustomCa != base64.StdEncoding.EncodeToString([]byte(pem)) {
+		t.Fatalf("Expected base64 encoded custom CA, got %+v", payload)
+	}
+
+	got, err := tlsConfigToObject(payload)
+	if err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+	if diff := cmp.Diff(got, tlsConfigTF); diff != "" {
+		t.Fatalf("Data does not match: %s", diff)
+	}
+
+	payload, err = toTlsConfig(context.Background(), types.ObjectNull(tlsConfigTypes))
+	if err != nil || payload != nil {
+		t.Fatalf("Expected nil payload for null config, got %+v, %v", payload, err)
+	}
+	got, err = tlsConfigToObject(nil)
+	if err != nil || !got.IsNull() {
+		t.Fatalf("Expected null object for nil response, got %v, %v", got, err)
 	}
 }

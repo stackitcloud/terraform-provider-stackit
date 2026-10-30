@@ -138,6 +138,12 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 		"target_security_group.id":               "ID of the security Group",
 		"target_security_group.name":             "Name of the security Group",
 		"version":                                "Application Load Balancer resource version. Used for concurrency safe updates.",
+
+		// HTTP health check TLS config
+		"http_health_checks.tls_config":                             "Configuration for TLS of the HTTP health checks.",
+		"http_health_checks.tls_config.enabled":                     "Whether TLS is enabled for the HTTP health check requests.",
+		"http_health_checks.tls_config.skip_certificate_validation": "Whether certificate validation is bypassed for the HTTP health check requests.",
+		"http_health_checks.tls_config.custom_ca":                   "Custom Certificate Authority (CA) trusted for the HTTP health check requests.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -467,6 +473,24 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 											Description: descriptions["http_health_checks.ok_status"],
 											Computed:    true,
 											ElementType: types.StringType,
+										},
+										"tls_config": schema.SingleNestedAttribute{
+											Description: descriptions["http_health_checks.tls_config"],
+											Computed:    true,
+											Attributes: map[string]schema.Attribute{
+												"enabled": schema.BoolAttribute{
+													Description: descriptions["http_health_checks.tls_config.enabled"],
+													Computed:    true,
+												},
+												"skip_certificate_validation": schema.BoolAttribute{
+													Description: descriptions["http_health_checks.tls_config.skip_certificate_validation"],
+													Computed:    true,
+												},
+												"custom_ca": schema.StringAttribute{
+													Description: descriptions["http_health_checks.tls_config.custom_ca"],
+													Computed:    true,
+												},
+											},
 										},
 									},
 								},
