@@ -27,8 +27,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -123,11 +121,6 @@ func (r *resourcePoolResource) Configure(ctx context.Context, req resource.Confi
 	r.providerData = providerData
 	r.client = clients.SfsV1Client
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool", core.Resource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -135,7 +128,7 @@ func (r *resourcePoolResource) Configure(ctx context.Context, req resource.Confi
 func (r *resourcePoolResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Resource-pool resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(description, core.Resource),
+		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

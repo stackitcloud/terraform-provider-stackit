@@ -12,8 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -59,11 +57,6 @@ func (r *policiesDataSource) Configure(ctx context.Context, req datasource.Confi
 	r.providerData = providerData
 	r.client = clients.SfsV1Client
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_snapshot_policies", core.Datasource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	tflog.Info(ctx, "SFS client configured.")
 }
 
@@ -71,7 +64,7 @@ func (r *policiesDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 	description := "SFS snapshot policies datasource schema"
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
+		MarkdownDescription: description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source ID. It is structured as \"`project_id`\".",

@@ -71,7 +71,7 @@ type parametersModel struct {
 	FluentdUdp             types.Int32   `tfsdk:"fluentd_udp"`
 	Graphite               types.String  `tfsdk:"graphite"`
 	IsmDeletionAfter       types.String  `tfsdk:"ism_deletion_after"`
-	IsmJitter              types.Float32 `tfsdk:"ism_jitter"`
+	IsmJitter              types.Float64 `tfsdk:"ism_jitter"`
 	IsmJobInterval         types.Int32   `tfsdk:"ism_job_interval"`
 	JavaHeapspace          types.Int32   `tfsdk:"java_heapspace"`
 	JavaMaxmetaspace       types.Int32   `tfsdk:"java_maxmetaspace"`
@@ -97,7 +97,7 @@ var parametersTypes = map[string]attr.Type{
 	"fluentd_udp":              basetypes.Int32Type{},
 	"graphite":                 basetypes.StringType{},
 	"ism_deletion_after":       basetypes.StringType{},
-	"ism_jitter":               basetypes.Float32Type{},
+	"ism_jitter":               basetypes.Float64Type{},
 	"ism_job_interval":         basetypes.Int32Type{},
 	"java_heapspace":           basetypes.Int32Type{},
 	"java_maxmetaspace":        basetypes.Int32Type{},
@@ -314,7 +314,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"ism_jitter": schema.Float32Attribute{
+					"ism_jitter": schema.Float64Attribute{
 						Description: parametersDescriptions["ism_jitter"],
 						Optional:    true,
 						Computed:    true,
@@ -934,7 +934,7 @@ func toInstanceParams(parameters *parametersModel) (*logmeSdk.InstanceParameters
 	payloadParams.FluentdUdp = conversion.Int32ValueToPointer(parameters.FluentdUdp)
 	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
 	payloadParams.IsmDeletionAfter = conversion.StringValueToPointer(parameters.IsmDeletionAfter)
-	payloadParams.IsmJitter = conversion.Float32ValueToPointer(parameters.IsmJitter)
+	payloadParams.IsmJitter = conversion.Float64ValueToPointer(parameters.IsmJitter)
 	payloadParams.IsmJobInterval = conversion.Int32ValueToPointer(parameters.IsmJobInterval)
 	payloadParams.JavaHeapspace = conversion.Int32ValueToPointer(parameters.JavaHeapspace)
 	payloadParams.JavaMaxmetaspace = conversion.Int32ValueToPointer(parameters.JavaMaxmetaspace)
