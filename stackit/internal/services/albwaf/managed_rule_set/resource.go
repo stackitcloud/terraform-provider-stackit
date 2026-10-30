@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -46,6 +46,31 @@ type Model struct {
 	Groups    types.Map    `tfsdk:"groups"`
 	Type      types.String `tfsdk:"type"`
 	Version   types.String `tfsdk:"version"`
+}
+
+type ConfiguredGroupModel struct {
+	Rules types.Map `tfsdk:"rules"`
+}
+
+var configuredGroupType = map[string]attr.Type{
+	"rules": types.MapType{
+		ElemType: types.ObjectType{AttrTypes: configuredRuleType},
+	},
+}
+
+type ConfiguredRuleModel struct {
+	Mode types.String `tfsdk:"mode"`
+}
+
+var configuredRuleType = map[string]attr.Type{
+	"mode": types.StringType,
+}
+
+// ResourceModel is the resource's model: the attributes shared with the data
+// source, plus the ConfiguredGroups to configure rules for the MRS.
+type ResourceModel struct {
+	Model
+	ConfiguredGroups types.Map `tfsdk:"configured_groups"`
 }
 
 type RuleGroupModel struct {
@@ -115,20 +140,13 @@ var descriptions = map[string]string{
 	"rule_description":  "A description of what this rule does.",
 	"rule_mode":         "The current mode of the rule.",
 	"rule_severity":     "Impact level.",
-	"resource_groups": "Managed Rule Set groups, keyed by group ID (e.g. `911`). Without configuration, this is the inventory of all available groups and their current configuration. " +
-		"Configure it to set the mode of individual rules: only the listed groups and rules are managed and kept in the state, and every other rule keeps the mode the API gives it. " +
-		"A rule removed from the configuration is set back to `MODE_ENABLED`; removing `groups` entirely does that for all rules it managed.",
-	"resource_group_rules": "Rules of the rule group, keyed by rule ID (e.g. `911100`). Required for every configured group.",
-	"resource_rule_mode":   "The mode of the rule. Required for every configured rule. Possible values are: `MODE_ENABLED`, `MODE_DISABLED`, `MODE_LOG_ONLY`.",
+	"configured_groups": "Rule modes to set, keyed by group ID (e.g. `911`) and rule ID (e.g. `911100`). Only the listed rules are managed; every other rule keeps the mode the API gives it. " +
+		"A rule removed from the configuration is set back to `MODE_ENABLED`, even if its mode was changed outside Terraform in the meantime. The resulting state of all rules is available in `groups`.",
+	"configured_group_rules": "Rules of the rule group, keyed by rule ID (e.g. `911100`).",
+	"configured_rule_mode":   "The mode of the rule. " + tfutils.FormatPossibleValues(ruleModeValues...),
 }
 
-// ruleModeValues are the modes a rule can be set to through groups.
 var ruleModeValues = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedModeEnumValues)
-
-// groupsManagedKey is the private state key that records whether the
-// configuration sets groups. If it does, the state holds only the configured
-// groups and rules; otherwise it holds the full inventory.
-const groupsManagedKey = "groups_managed"
 
 func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -185,68 +203,67 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Computed:    true,
 			},
 			"groups": schema.MapNestedAttribute{
-				Description: descriptions["resource_groups"],
-				Optional:    true,
+				Description: descriptions["groups"],
 				Computed:    true,
-				Validators: []validator.Map{
-					mapvalidator.SizeAtLeast(1),
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
 				},
-				// rules and mode are Optional+Computed rather than Required: a
-				// non-computed value in the state makes Terraform plan a null
-				// groups when the configuration omits it. AlsoRequires makes
-				// them required wherever a group or rule is configured.
 				NestedObject: schema.NestedAttributeObject{
-					Validators: []validator.Object{
-						objectvalidator.AlsoRequires(path.MatchRelative().AtName("rules")),
-					},
 					Attributes: map[string]schema.Attribute{
 						"description": schema.StringAttribute{
 							Description: descriptions["group_description"],
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
 						},
 						"group_name": schema.StringAttribute{
 							Description: descriptions["group_name"],
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
 						},
 						"rules": schema.MapNestedAttribute{
-							Description: descriptions["resource_group_rules"],
-							Optional:    true,
+							Description: descriptions["group_rules"],
 							Computed:    true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"description": schema.StringAttribute{
+										Description: descriptions["rule_description"],
+										Computed:    true,
+									},
+									"mode": schema.StringAttribute{
+										Description: descriptions["rule_mode"],
+										Computed:    true,
+									},
+									"severity": schema.StringAttribute{
+										Description: descriptions["rule_severity"],
+										Computed:    true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"configured_groups": schema.MapNestedAttribute{
+				Description: descriptions["configured_groups"],
+				Optional:    true,
+				Validators: []validator.Map{
+					mapvalidator.SizeAtLeast(1),
+					mapvalidator.KeysAre(stringvalidator.RegexMatches(regexp.MustCompile(`^\d+$`), "must be a numeric group ID")),
+				},
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"rules": schema.MapNestedAttribute{
+							Description: descriptions["configured_group_rules"],
+							Required:    true,
 							Validators: []validator.Map{
 								mapvalidator.SizeAtLeast(1),
 								mapvalidator.KeysAre(stringvalidator.RegexMatches(regexp.MustCompile(`^\d+$`), "must be a numeric rule ID")),
 							},
 							NestedObject: schema.NestedAttributeObject{
-								Validators: []validator.Object{
-									objectvalidator.AlsoRequires(path.MatchRelative().AtName("mode")),
-								},
 								Attributes: map[string]schema.Attribute{
-									"description": schema.StringAttribute{
-										Description: descriptions["rule_description"],
-										Computed:    true,
-										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.UseStateForUnknown(),
-										},
-									},
 									"mode": schema.StringAttribute{
-										Description: descriptions["resource_rule_mode"],
-										Optional:    true,
-										Computed:    true,
+										Description: descriptions["configured_rule_mode"],
+										Required:    true,
 										Validators: []validator.String{
 											stringvalidator.OneOf(ruleModeValues...),
-										},
-									},
-									"severity": schema.StringAttribute{
-										Description: descriptions["rule_severity"],
-										Computed:    true,
-										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.UseStateForUnknown(),
 										},
 									},
 								},
@@ -260,7 +277,7 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 }
 
 func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	var configModel Model
+	var configModel ResourceModel
 	if req.Config.Raw.IsNull() {
 		return
 	}
@@ -269,7 +286,7 @@ func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.Mo
 		return
 	}
 
-	var planModel Model
+	var planModel ResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -281,20 +298,13 @@ func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.Mo
 	}
 
 	if !req.State.Raw.IsNull() {
-		var stateModel Model
+		var stateModel ResourceModel
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
 		if !resp.Diagnostics.HasError() {
 			utils.WarnIfNameChanges(stateModel.Name, planModel.Name, "Managed Rule Set", &resp.Diagnostics)
-			// Without groups in the configuration, Terraform keeps the groups of
-			// the state. If those are rules the configuration managed before,
-			// plan groups as unknown, so that Update sets them back to
-			// MODE_ENABLED and returns the full inventory.
-			if configModel.Groups.IsNull() {
-				managed, diags := groupsManaged(ctx, req.Private)
-				resp.Diagnostics.Append(diags...)
-				if managed {
-					planModel.Groups = types.MapUnknown(types.ObjectType{AttrTypes: ruleGroupType})
-				}
+			// Changed rule modes change the inventory in groups
+			if !planModel.ConfiguredGroups.Equal(stateModel.ConfiguredGroups) {
+				planModel.Groups = types.MapUnknown(types.ObjectType{AttrTypes: ruleGroupType})
 			}
 		}
 	}
@@ -325,7 +335,7 @@ func (r *managedRuleSetResource) ImportState(ctx context.Context, req resource.I
 }
 
 func (r *managedRuleSetResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ResourceModel
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -340,13 +350,13 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", model.Name)
 
-	wanted, err := ruleModes(ctx, model.Groups)
+	wanted, err := ruleModes(ctx, model.ConfiguredGroups)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Reading rule modes: %v", err))
 		return
 	}
 
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(ctx, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -371,24 +381,33 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 
 	ruleSet := createResp
 	if wanted != nil {
+		// If applying the rule modes fails, we have to delete the MRS to avoid the next apply to run into a name conflict
+		deleteRuleSet := func() {
+			if _, err := r.client.DeleteManagedRuleSet(ctx, projectId, region, model.Name.ValueString()).Execute(); err != nil {
+				tflog.Warn(ctx, "Failed to clean up ALB WAF Managed Rule Set after failed rule mode setup", map[string]any{"error": err})
+			}
+		}
+		if err := checkRulesExist(ruleSet, wanted); err != nil {
+			deleteRuleSet()
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
+			return
+		}
 		patchPayload, err := toPatchPayload(wanted, nil)
 		if err != nil {
+			deleteRuleSet()
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Creating rule modes payload: %v", err))
 			return
 		}
 		patchResp, err := r.client.PatchManagedRuleSet(ctx, projectId, region, model.Name.ValueString()).PatchManagedRuleSetPayload(*patchPayload).Execute()
 		if err != nil {
+			deleteRuleSet()
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
 			return
 		}
-		ruleSet, err = wantedRules(patchResp, wanted)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
-			return
-		}
+		ruleSet = patchResp
 	}
 
-	err = mapFields(ctx, ruleSet, &model, region)
+	err = mapFields(ctx, ruleSet, &model.Model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -399,27 +418,18 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(setGroupsManaged(ctx, resp.Private, wanted != nil)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	tflog.Info(ctx, "ALB WAF Managed Rule Set created")
 }
 
-// Update applies the rule modes in groups, the only attribute that changes without replacement.
+// Update applies the rule modes in configured_groups, the only attribute that changes without replacement.
 func (r *managedRuleSetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var stateModel Model
+	var stateModel ResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	wasManaged, diags := groupsManaged(ctx, req.Private)
-	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -433,20 +443,15 @@ func (r *managedRuleSetResource) Update(ctx context.Context, req resource.Update
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	wanted, err := ruleModes(ctx, model.Groups)
+	wanted, err := ruleModes(ctx, model.ConfiguredGroups)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Reading rule modes: %v", err))
 		return
 	}
-	// Only rules the configuration managed before go back to MODE_ENABLED,
-	// not the inventory a state without configured groups holds.
-	var previous map[string]map[string]string
-	if wasManaged {
-		previous, err = ruleModes(ctx, stateModel.Groups)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Reading previous rule modes: %v", err))
-			return
-		}
+	previous, err := ruleModes(ctx, stateModel.ConfiguredGroups)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Reading previous rule modes: %v", err))
+		return
 	}
 
 	patchPayload, err := toPatchPayload(wanted, previous)
@@ -454,32 +459,30 @@ func (r *managedRuleSetResource) Update(ctx context.Context, req resource.Update
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Creating rule modes payload: %v", err))
 		return
 	}
-	var patchResp *albWaf.GetManagedRuleSetResponse
+
+	// Check the wanted rules against the current rule set before patching, so
+	// that an unknown rule doesn't leave the other mode changes half-applied.
+	ruleSet, err := r.client.GetManagedRuleSet(ctx, projectId, region, name).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	if err := checkRulesExist(ruleSet, wanted); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
+		return
+	}
+
 	if len(patchPayload.Groups) > 0 {
-		patchResp, err = r.client.PatchManagedRuleSet(ctx, projectId, region, name).PatchManagedRuleSetPayload(*patchPayload).Execute()
+		ruleSet, err = r.client.PatchManagedRuleSet(ctx, projectId, region, name).PatchManagedRuleSetPayload(*patchPayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
-			return
-		}
-	} else {
-		// Nothing to patch, e.g. when every managed rule has vanished from the
-		// rule set: read the rule set for the new state instead.
-		patchResp, err = r.client.GetManagedRuleSet(ctx, projectId, region, name).Execute()
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	ruleSet, err := wantedRules(patchResp, wanted)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
-		return
-	}
-
-	err = mapFields(ctx, ruleSet, &model, region)
+	err = mapFields(ctx, ruleSet, &model.Model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Managed Rule Set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -489,21 +492,12 @@ func (r *managedRuleSetResource) Update(ctx context.Context, req resource.Update
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(setGroupsManaged(ctx, resp.Private, wanted != nil)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	tflog.Info(ctx, "ALB WAF Managed Rule Set updated")
 }
 
 func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	managed, diags := groupsManaged(ctx, req.Private)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -531,21 +525,17 @@ func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequ
 
 	ctx = core.LogResponse(ctx)
 
-	// With configured groups, refresh only the configured rules, so that a
-	// mode changed outside Terraform shows as drift; a rule that no longer
-	// exists is dropped.
-	if managed && managedRuleSetResp != nil {
-		keep, err := ruleModes(ctx, model.Groups)
+	// Refresh the modes of the configured rules, so that a mode changed
+	// outside Terraform shows as drift; a rule that no longer exists is dropped.
+	if managedRuleSetResp != nil {
+		model.ConfiguredGroups, err = refreshConfiguredGroups(ctx, model.ConfiguredGroups, managedRuleSetResp)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Managed Rule Set", fmt.Sprintf("Reading rule modes: %v", err))
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Managed Rule Set", fmt.Sprintf("Refreshing configured groups: %v", err))
 			return
-		}
-		if keep != nil {
-			managedRuleSetResp, _ = filterRuleSet(managedRuleSetResp, keep)
 		}
 	}
 
-	err = mapFields(ctx, managedRuleSetResp, &model, region)
+	err = mapFields(ctx, managedRuleSetResp, &model.Model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Managed Rule Set", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -560,7 +550,7 @@ func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 func (r *managedRuleSetResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ResourceModel
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -600,44 +590,19 @@ func toCreatePayload(_ context.Context, model *Model) (*albWaf.CreateManagedRule
 	return payload, nil
 }
 
-// privateStateGetter and privateStateSetter are the parts of the framework's
-// private state that groupsManaged and setGroupsManaged use.
-type privateStateGetter interface {
-	GetKey(ctx context.Context, key string) ([]byte, diag.Diagnostics)
-}
-
-type privateStateSetter interface {
-	SetKey(ctx context.Context, key string, value []byte) diag.Diagnostics
-}
-
-// groupsManaged reports whether groups was configured at the last apply.
-func groupsManaged(ctx context.Context, private privateStateGetter) (bool, diag.Diagnostics) {
-	value, diags := private.GetKey(ctx, groupsManagedKey)
-	return string(value) == "true", diags
-}
-
-// setGroupsManaged records whether groups is configured.
-func setGroupsManaged(ctx context.Context, private privateStateSetter, managed bool) diag.Diagnostics {
-	value := "false"
-	if managed {
-		value = "true"
-	}
-	return private.SetKey(ctx, groupsManagedKey, []byte(value))
-}
-
-// ruleModes returns the mode of every rule in groups, keyed by group ID and
-// rule ID, or nil if groups is null or unknown.
+// ruleModes returns the mode of every rule in configured_groups, keyed by
+// group ID and rule ID, or nil if groups is null or unknown.
 func ruleModes(ctx context.Context, groups types.Map) (map[string]map[string]string, error) {
 	if tfutils.IsUndefined(groups) {
 		return nil, nil
 	}
-	var groupModels map[string]RuleGroupModel
+	var groupModels map[string]ConfiguredGroupModel
 	if diags := groups.ElementsAs(ctx, &groupModels, false); diags.HasError() {
 		return nil, fmt.Errorf("reading groups: %w", core.DiagsToError(diags))
 	}
 	modes := map[string]map[string]string{}
 	for groupKey, group := range groupModels {
-		var rules map[string]RuleModel
+		var rules map[string]ConfiguredRuleModel
 		if diags := group.Rules.ElementsAs(ctx, &rules, false); diags.HasError() {
 			return nil, fmt.Errorf("reading rules of group %q: %w", groupKey, core.DiagsToError(diags))
 		}
@@ -649,24 +614,69 @@ func ruleModes(ctx context.Context, groups types.Map) (map[string]map[string]str
 	return modes, nil
 }
 
-// wantedRules returns the rule set reduced to the wanted rules, or the full
-// inventory if wanted is nil. A wanted rule that the rule set lacks is an error.
-func wantedRules(ruleSet *albWaf.GetManagedRuleSetResponse, wanted map[string]map[string]string) (*albWaf.GetManagedRuleSetResponse, error) {
+// checkRulesExist returns an error listing the wanted rules that the rule set lacks.
+func checkRulesExist(ruleSet *albWaf.GetManagedRuleSetResponse, wanted map[string]map[string]string) error {
 	if ruleSet == nil {
-		return nil, fmt.Errorf("response input is nil")
+		return fmt.Errorf("response input is nil")
 	}
-	if wanted == nil {
-		return ruleSet, nil
+	var missing []string
+	allGroups := ruleSet.GetGroups()
+	for groupKey, rules := range wanted {
+		group := allGroups[groupKey]
+		allRules := group.GetRules()
+		for ruleKey := range rules {
+			if _, ok := allRules[ruleKey]; !ok {
+				missing = append(missing, fmt.Sprintf("%s/%s", groupKey, ruleKey))
+			}
+		}
 	}
-	filtered, missing := filterRuleSet(ruleSet, wanted)
 	if len(missing) > 0 {
-		return nil, fmt.Errorf("rules %s do not exist in managed rule set %q (version %s)", strings.Join(missing, ", "), ruleSet.Name, ruleSet.Version)
+		slices.Sort(missing)
+		return fmt.Errorf("rules %s do not exist in managed rule set %q (version %s)", strings.Join(missing, ", "), ruleSet.Name, ruleSet.Version)
 	}
-	return filtered, nil
+	return nil
+}
+
+// refreshConfiguredGroups returns configured with every rule's mode taken from
+// the rule set. Rules the rule set lacks are dropped, and so are groups left
+// without rules; if no rule is left, the result is null.
+func refreshConfiguredGroups(ctx context.Context, configured types.Map, ruleSet *albWaf.GetManagedRuleSetResponse) (types.Map, error) {
+	modes, err := ruleModes(ctx, configured)
+	if err != nil || modes == nil {
+		return configured, err
+	}
+	allGroups := ruleSet.GetGroups()
+	groupsMap := map[string]attr.Value{}
+	for groupKey, rules := range modes {
+		group := allGroups[groupKey]
+		allRules := group.GetRules()
+		ruleMap := map[string]attr.Value{}
+		for ruleKey := range rules {
+			rule, ok := allRules[ruleKey]
+			if !ok {
+				continue
+			}
+			ruleMap[ruleKey] = types.ObjectValueMust(configuredRuleType, map[string]attr.Value{
+				"mode": types.StringValue(string(rule.Mode)),
+			})
+		}
+		if len(ruleMap) == 0 {
+			continue
+		}
+		groupsMap[groupKey] = types.ObjectValueMust(configuredGroupType, map[string]attr.Value{
+			"rules": types.MapValueMust(types.ObjectType{AttrTypes: configuredRuleType}, ruleMap),
+		})
+	}
+	if len(groupsMap) == 0 {
+		return types.MapNull(types.ObjectType{AttrTypes: configuredGroupType}), nil
+	}
+	return types.MapValueMust(types.ObjectType{AttrTypes: configuredGroupType}, groupsMap), nil
 }
 
 // toPatchPayload builds the PATCH that sets every wanted rule to its mode and
-// every rule only in previous back to MODE_ENABLED.
+// every rule only in previous back to MODE_ENABLED. previous comes from the
+// last read state, so a removed rule is reset even if its mode was changed
+// outside Terraform in the meantime.
 func toPatchPayload(wanted, previous map[string]map[string]string) (*albWaf.PatchManagedRuleSetPayload, error) {
 	groups := map[string]albWaf.PatchMRSRuleGroup{}
 	setMode := func(groupKey, ruleKey, value string) error {
@@ -702,34 +712,6 @@ func toPatchPayload(wanted, previous map[string]map[string]string) (*albWaf.Patc
 	}
 
 	return albWaf.NewPatchManagedRuleSetPayload(groups), nil
-}
-
-// filterRuleSet returns a copy of the rule set that holds only the groups and
-// rules in keep, and the rules in keep that the rule set lacks, as
-// "group/rule".
-func filterRuleSet(managedRuleSet *albWaf.GetManagedRuleSetResponse, keep map[string]map[string]string) (filtered *albWaf.GetManagedRuleSetResponse, missing []string) {
-	ruleSetCopy := *managedRuleSet
-	allGroups := managedRuleSet.GetGroups()
-	groups := map[string]albWaf.MRSRuleGroup{}
-	for groupKey, ruleKeys := range keep {
-		group, groupFound := allGroups[groupKey]
-		allRules := group.GetRules()
-		rules := map[string]albWaf.MRSRule{}
-		for ruleKey := range ruleKeys {
-			rule, ok := allRules[ruleKey]
-			if !ok {
-				missing = append(missing, fmt.Sprintf("%s/%s", groupKey, ruleKey))
-				continue
-			}
-			rules[ruleKey] = rule
-		}
-		if groupFound {
-			group.Rules = &rules
-			groups[groupKey] = group
-		}
-	}
-	ruleSetCopy.Groups = &groups
-	return &ruleSetCopy, missing
 }
 
 func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResponse, model *Model, region string) error {

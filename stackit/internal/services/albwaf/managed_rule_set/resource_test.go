@@ -3,7 +3,7 @@ package managed_rule_set
 import (
 	"context"
 	_ "embed"
-	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -133,37 +133,45 @@ func testRuleSet(rules map[string]albWaf.Mode) *albWaf.GetManagedRuleSetResponse
 	}
 }
 
-func TestRuleModes(t *testing.T) {
-	model := &Model{ProjectId: testProjectId, Region: testRegion, Name: testName}
-	if err := mapFields(context.Background(), testRuleSet(map[string]albWaf.Mode{
-		"911100": albWaf.MODE_MODE_LOG_ONLY,
-		"920450": albWaf.MODE_MODE_DISABLED,
-		"920451": albWaf.MODE_MODE_ENABLED,
-	}), model, testRegion.ValueString()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+// testConfiguredGroups builds a configured_groups value from rule modes keyed
+// by group ID and rule ID.
+func testConfiguredGroups(modes map[string]map[string]string) types.Map {
+	groups := map[string]attr.Value{}
+	for groupKey, rules := range modes {
+		ruleMap := map[string]attr.Value{}
+		for ruleKey, mode := range rules {
+			ruleMap[ruleKey] = types.ObjectValueMust(configuredRuleType, map[string]attr.Value{"mode": types.StringValue(mode)})
+		}
+		groups[groupKey] = types.ObjectValueMust(configuredGroupType, map[string]attr.Value{
+			"rules": types.MapValueMust(types.ObjectType{AttrTypes: configuredRuleType}, ruleMap),
+		})
 	}
+	return types.MapValueMust(types.ObjectType{AttrTypes: configuredGroupType}, groups)
+}
 
+func TestRuleModes(t *testing.T) {
+	modes := map[string]map[string]string{
+		"911": {"911100": "MODE_LOG_ONLY"},
+		"920": {"920450": "MODE_DISABLED", "920451": "MODE_ENABLED"},
+	}
 	tests := []struct {
 		name     string
 		groups   types.Map
 		expected map[string]map[string]string
 	}{
 		{
-			name:   "groups",
-			groups: model.Groups,
-			expected: map[string]map[string]string{
-				"911": {"911100": "MODE_LOG_ONLY"},
-				"920": {"920450": "MODE_DISABLED", "920451": "MODE_ENABLED"},
-			},
+			name:     "groups",
+			groups:   testConfiguredGroups(modes),
+			expected: modes,
 		},
 		{
 			name:     "null groups",
-			groups:   types.MapNull(types.ObjectType{AttrTypes: ruleGroupType}),
+			groups:   types.MapNull(types.ObjectType{AttrTypes: configuredGroupType}),
 			expected: nil,
 		},
 		{
 			name:     "unknown groups",
-			groups:   types.MapUnknown(types.ObjectType{AttrTypes: ruleGroupType}),
+			groups:   types.MapUnknown(types.ObjectType{AttrTypes: configuredGroupType}),
 			expected: nil,
 		},
 	}
@@ -180,53 +188,70 @@ func TestRuleModes(t *testing.T) {
 	}
 }
 
-func TestFilterRuleSet(t *testing.T) {
+func TestCheckRulesExist(t *testing.T) {
+	ruleSet := testRuleSet(map[string]albWaf.Mode{
+		"911100": albWaf.MODE_MODE_ENABLED,
+		"920450": albWaf.MODE_MODE_LOG_ONLY,
+	})
+	if err := checkRulesExist(ruleSet, map[string]map[string]string{"911": {"911100": "MODE_LOG_ONLY"}}); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if err := checkRulesExist(ruleSet, nil); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	err := checkRulesExist(ruleSet, map[string]map[string]string{
+		"911": {"911100": "MODE_LOG_ONLY", "911999": "MODE_LOG_ONLY"},
+		"999": {"999100": "MODE_LOG_ONLY"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "911/911999, 999/999100") {
+		t.Errorf("expected missing rules error, got %v", err)
+	}
+}
+
+func TestRefreshConfiguredGroups(t *testing.T) {
 	ruleSet := testRuleSet(map[string]albWaf.Mode{
 		"911100": albWaf.MODE_MODE_ENABLED,
 		"920450": albWaf.MODE_MODE_LOG_ONLY,
 		"920451": albWaf.MODE_MODE_ENABLED,
-		"942100": albWaf.MODE_MODE_ENABLED,
 	})
 	tests := []struct {
-		name            string
-		keep            map[string]map[string]string
-		expectedGroups  map[string][]string
-		expectedMissing []string
+		name       string
+		configured types.Map
+		expected   types.Map
 	}{
 		{
-			name:           "only kept groups and rules stay",
-			keep:           map[string]map[string]string{"920": {"920450": "MODE_LOG_ONLY"}},
-			expectedGroups: map[string][]string{"920": {"920450"}},
+			name:       "null stays null",
+			configured: types.MapNull(types.ObjectType{AttrTypes: configuredGroupType}),
+			expected:   types.MapNull(types.ObjectType{AttrTypes: configuredGroupType}),
 		},
 		{
-			name: "rules and groups that do not exist are reported",
-			keep: map[string]map[string]string{
-				"911": {"911100": "MODE_LOG_ONLY", "911999": "MODE_LOG_ONLY"},
-				"999": {"999100": "MODE_LOG_ONLY"},
-			},
-			expectedGroups:  map[string][]string{"911": {"911100"}},
-			expectedMissing: []string{"911/911999", "999/999100"},
+			name: "modes from the API, missing rules and empty groups dropped",
+			configured: testConfiguredGroups(map[string]map[string]string{
+				"911": {"911100": "MODE_LOG_ONLY"},
+				"920": {"920450": "MODE_LOG_ONLY", "920999": "MODE_DISABLED"},
+				"999": {"999100": "MODE_DISABLED"},
+			}),
+			expected: testConfiguredGroups(map[string]map[string]string{
+				"911": {"911100": "MODE_ENABLED"},
+				"920": {"920450": "MODE_LOG_ONLY"},
+			}),
+		},
+		{
+			name: "no rules left becomes null",
+			configured: testConfiguredGroups(map[string]map[string]string{
+				"999": {"999100": "MODE_DISABLED"},
+			}),
+			expected: types.MapNull(types.ObjectType{AttrTypes: configuredGroupType}),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, missing := filterRuleSet(ruleSet, tt.keep)
-			slices.Sort(missing)
-			groups := map[string][]string{}
-			for groupKey, group := range got.GetGroups() {
-				groups[groupKey] = []string{}
-				for ruleKey := range group.GetRules() {
-					groups[groupKey] = append(groups[groupKey], ruleKey)
-				}
+			got, err := refreshConfiguredGroups(context.Background(), tt.configured, ruleSet)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
-			if diff := cmp.Diff(groups, tt.expectedGroups); diff != "" {
-				t.Errorf("groups do not match: %s", diff)
-			}
-			if diff := cmp.Diff(missing, tt.expectedMissing); diff != "" {
-				t.Errorf("missing rules do not match: %s", diff)
-			}
-			if len(ruleSet.GetGroups()) != 3 {
-				t.Errorf("input rule set was modified")
+			if !got.Equal(tt.expected) {
+				t.Errorf("got %v, expected %v", got, tt.expected)
 			}
 		})
 	}

@@ -1,7 +1,7 @@
 variable "project_id" {}
 variable "type" {}
 variable "name" {}
-variable "groups" {
+variable "configured_groups" {
   type = map(object({
     rules = map(object({
       mode = string
@@ -10,14 +10,9 @@ variable "groups" {
 }
 
 resource "stackit_alb_waf_managed_rule_set" "managed_rule_set" {
-  project_id = var.project_id
-  type       = var.type
-  name       = var.name
-  groups     = var.groups
+  project_id        = var.project_id
+  type              = var.type
+  name              = var.name
+  configured_groups = var.configured_groups
 }
 
-# Full inventory, to check the modes of rules the resource no longer manages
-data "stackit_alb_waf_managed_rule_set" "managed_rule_set" {
-  project_id = stackit_alb_waf_managed_rule_set.managed_rule_set.project_id
-  name       = stackit_alb_waf_managed_rule_set.managed_rule_set.name
-}
