@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -215,13 +216,15 @@ type DefaultClientFactory struct {
 	ProviderDefaultRegion string
 }
 
-func (f *DefaultClientFactory) defaultConfigOptions(customEndpoint string) []config.ConfigurationOption {
+func (f *DefaultClientFactory) defaultConfigOptions(customEndpoint string, additionalRetryStatusCodes ...int) []config.ConfigurationOption {
 	// Retry HTTP 429 rate limits for every service, outside the authentication transport.
+	// Services can opt in to retrying additional status codes.
 	retryRoundTripper := &RetryTransport{
-		Base:        f.RoundTripper,
-		MaxRetries:  defaultMaxRetries,
-		BaseBackoff: defaultBaseBackoff,
-		MaxJitter:   defaultMaxJitter, // Always added to wait time
+		Base:                       f.RoundTripper,
+		MaxRetries:                 defaultMaxRetries,
+		BaseBackoff:                defaultBaseBackoff,
+		MaxJitter:                  defaultMaxJitter, // Always added to wait time
+		AdditionalRetryStatusCodes: additionalRetryStatusCodes,
 	}
 
 	apiClientConfigOptions := []config.ConfigurationOption{
@@ -545,7 +548,13 @@ func (f *DefaultClientFactory) newAuthorizationV2Client() (authorization.Default
 }
 
 func (f *DefaultClientFactory) newDnsV1Client() (dns.DefaultAPI, error) {
-	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.DnsCustomEndpoint)
+	apiClientConfigOptions := f.defaultConfigOptions(
+		f.CustomEndpoints.DnsCustomEndpoint,
+		http.StatusRequestTimeout,
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout,
+	)
 
 	apiClient, err := dns.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
@@ -699,12 +708,15 @@ func (f *DefaultClientFactory) newObservabilityV1Client() (observability.Default
 	return apiClient.DefaultAPI, nil
 }
 
-// RetryTransport wraps an underlying RoundTripper to retry on HTTP 429 rate limit errors with jitter.
+// RetryTransport wraps an underlying RoundTripper to retry on HTTP 429 and configured additional status codes with jitter.
 type RetryTransport struct {
 	Base        http.RoundTripper
 	MaxRetries  int
 	BaseBackoff time.Duration
 	MaxJitter   time.Duration
+	// AdditionalRetryStatusCodes are retried in addition to HTTP 429, which is always retried.
+	// Retrying additional status codes is not yet generally available (GA) and is intended only for selected services.
+	AdditionalRetryStatusCodes []int
 }
 
 func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -746,8 +758,8 @@ func (t *RetryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		resp, err = base.RoundTrip(reqClone)
 
-		// If success or non-429 error, return immediately
-		if err != nil || resp.StatusCode != http.StatusTooManyRequests {
+		// Return transport errors and responses with non-retryable status codes immediately.
+		if err != nil || (resp.StatusCode != http.StatusTooManyRequests && !slices.Contains(t.AdditionalRetryStatusCodes, resp.StatusCode)) {
 			return resp, err
 		}
 
