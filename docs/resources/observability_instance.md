@@ -3,12 +3,12 @@
 page_title: "stackit_observability_instance Resource - stackit"
 subcategory: ""
 description: |-
-  Observability instance resource schema. Must have a region specified in the provider configuration.
+  Observability instance resource schema. Must have a region specified in the provider configuration. This service is only available when the provider is configured with default_region = "eu01".
 ---
 
 # stackit_observability_instance (Resource)
 
-Observability instance resource schema. Must have a `region` specified in the provider configuration.
+Observability instance resource schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = "eu01"`.
 
 ## Example Usage
 

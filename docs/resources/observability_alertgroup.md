@@ -3,12 +3,12 @@
 page_title: "stackit_observability_alertgroup Resource - stackit"
 subcategory: ""
 description: |-
-  Observability alert group resource schema. Used to create alerts based on metrics (Thanos). Must have a region specified in the provider configuration.
+  Observability alert group resource schema. Used to create alerts based on metrics (Thanos). Must have a region specified in the provider configuration. This service is only available when the provider is configured with default_region = "eu01".
 ---
 
 # stackit_observability_alertgroup (Resource)
 
-Observability alert group resource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration.
+Observability alert group resource schema. Used to create alerts based on metrics (Thanos). Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = "eu01"`.
 
 ## Example Usage
 

@@ -32,16 +32,16 @@ var defaultLabels = config.ObjectVariable(
 	},
 )
 
-var projectNameParentContainerId = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var projectNameParentContainerId = fmt.Sprintf("tf-acc-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 var projectNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", projectNameParentContainerId)
 
-var projectNameParentUUID = fmt.Sprintf("tfe2e-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var projectNameParentUUID = fmt.Sprintf("tf-acc-project-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 var projectNameParentUUIDUpdated = fmt.Sprintf("%s-updated", projectNameParentUUID)
 
-var folderNameParentContainerId = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var folderNameParentContainerId = fmt.Sprintf("tf-acc-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 var folderNameParentContainerIdUpdated = fmt.Sprintf("%s-updated", folderNameParentContainerId)
 
-var folderNameParentUUID = fmt.Sprintf("tfe2e-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+var folderNameParentUUID = fmt.Sprintf("tf-acc-folder-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 var folderNameParentUUIDUpdated = fmt.Sprintf("%s-updated", folderNameParentUUID)
 
 var testConfigResourceProjectParentContainerId = config.Variables{

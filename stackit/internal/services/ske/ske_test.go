@@ -231,11 +231,11 @@ resource "stackit_ske_cluster" "cluster" {
 			}),
 		},
 		Maintenance: new(ske.Maintenance{
-			AutoUpdate: ske.MaintenanceAutoUpdate{
+			AutoUpdate: &ske.MaintenanceAutoUpdate{
 				KubernetesVersion:   new(true),
 				MachineImageVersion: new(true),
 			},
-			TimeWindow: ske.TimeWindow{
+			TimeWindow: &ske.TimeWindow{
 				Start: time.Now(),
 				End:   time.Now(),
 			},

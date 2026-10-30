@@ -25,8 +25,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -132,11 +130,6 @@ func (r *exportPolicyResource) Configure(ctx context.Context, req resource.Confi
 	r.providerData = providerData
 	r.client = clients.SfsV1Client
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_export_policy", core.Resource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -145,7 +138,7 @@ func (r *exportPolicyResource) Schema(_ context.Context, _ resource.SchemaReques
 	description := "SFS export policy resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		Description:         description,
-		MarkdownDescription: features.AddBetaDescription(description, core.Resource),
+		MarkdownDescription: description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`policy_id`\".",

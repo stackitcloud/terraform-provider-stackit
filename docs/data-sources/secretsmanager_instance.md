@@ -3,12 +3,12 @@
 page_title: "stackit_secretsmanager_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  Secrets Manager instance data source schema. Must have a region specified in the provider configuration.
+  Secrets Manager instance data source schema. Must have a region specified in the provider configuration. This service is only available when the provider is configured with default_region = "eu01".
 ---
 
 # stackit_secretsmanager_instance (Data Source)
 
-Secrets Manager instance data source schema. Must have a `region` specified in the provider configuration.
+Secrets Manager instance data source schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = "eu01"`.
 
 ## Example Usage
 

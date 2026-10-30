@@ -57,7 +57,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Check GoReleaser
-        uses: goreleaser/goreleaser-action@v7.2.3
+        uses: goreleaser/goreleaser-action@v7.3.0
         with:
           args: check
 
@@ -72,7 +72,7 @@ jobs:
       pull-requests: write # write permission needed to comment on PR
     steps:
       - name: Check new code coverage
-        uses: fgrosse/go-coverage-report@v1.4.0
+        uses: fgrosse/go-coverage-report@v1.5.0
         continue-on-error: true  # Add this line to prevent pipeline failures in forks
         with:
           coverage-artifact-name: ${{ env.CODE_COVERAGE_ARTIFACT_NAME }}

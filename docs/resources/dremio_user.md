@@ -3,13 +3,13 @@
 page_title: "stackit_dremio_user Resource - stackit"
 subcategory: ""
 description: |-
-  Manages a STACKIT Dremio instances user.
+  Manages a STACKIT Dremio instances user. This service is only available when the provider is configured with default_region = "eu01".
   ~> This resource is part of the experimental feature dremio and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_dremio_user (Resource)
 
-Manages a STACKIT Dremio instances user.
+Manages a STACKIT Dremio instances user. This service is only available when the provider is configured with `default_region = "eu01"`.
 
 ~> This resource is part of the experimental feature dremio and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 

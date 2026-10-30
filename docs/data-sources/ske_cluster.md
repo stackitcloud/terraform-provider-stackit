@@ -175,6 +175,7 @@ Read-Only:
 - `allow_system_components` (Boolean) Allow system components to run on this node pool.
 - `availability_zones` (List of String) Specify a list of availability zones.
 - `cri` (String) Specifies the container runtime.
+- `kata` (Boolean) Whether workload isolation via Kata Containers is enabled for pods scheduled on this node pool.
 - `labels` (Map of String) Labels to add to each node.
 - `machine_type` (String) The machine type.
 - `max_surge` (Number) The maximum number of nodes upgraded simultaneously.

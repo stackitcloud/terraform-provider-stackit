@@ -54,6 +54,7 @@ resource "stackit_ske_cluster" "cluster" {
 
     allow_system_components = var.nodepool_allow_system_components
     cri                     = var.nodepool_cri
+    kata                    = false
     labels = {
       "label_key" = var.nodepool_label_value
     }

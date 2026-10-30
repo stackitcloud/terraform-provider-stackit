@@ -10,11 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
+	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 )
 
 var (
@@ -80,6 +80,10 @@ func (d *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Dremio", &resp.Diagnostics) {
 		return
 	}
 
@@ -215,6 +219,11 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Computed:    true,
 					},
 				},
+			},
+			"acl": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: descriptions["acl"],
 			},
 			"authentication": schema.SingleNestedAttribute{
 				Description: descriptions["authentication"],

@@ -67,8 +67,12 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Secrets Manager", &resp.Diagnostics) {
 		return
 	}
 
@@ -80,7 +84,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                          "Secrets Manager instance resource schema. Must have a `region` specified in the provider configuration.",
+		"main":                          "Secrets Manager instance resource schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		"id":                            "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
 		"instance_id":                   "ID of the Secrets Manager instance.",
 		"project_id":                    "STACKIT project ID to which the instance is associated.",

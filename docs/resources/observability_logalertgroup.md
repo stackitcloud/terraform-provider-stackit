@@ -3,12 +3,12 @@
 page_title: "stackit_observability_logalertgroup Resource - stackit"
 subcategory: ""
 description: |-
-  Observability log alert group resource schema. Used to create alerts based on logs (Loki). Must have a region specified in the provider configuration.
+  Observability log alert group resource schema. Used to create alerts based on logs (Loki). Must have a region specified in the provider configuration. This service is only available when the provider is configured with default_region = "eu01".
 ---
 
 # stackit_observability_logalertgroup (Resource)
 
-Observability log alert group resource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration.
+Observability log alert group resource schema. Used to create alerts based on logs (Loki). Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = "eu01"`.
 
 ## Example Usage
 

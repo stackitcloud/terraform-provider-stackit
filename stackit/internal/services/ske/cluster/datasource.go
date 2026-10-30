@@ -178,6 +178,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "Specifies the container runtime.",
 							Computed:    true,
 						},
+						"kata": schema.BoolAttribute{
+							Description: "Whether workload isolation via Kata Containers is enabled for pods scheduled on this node pool.",
+							Computed:    true,
+						},
 						"availability_zones": schema.ListAttribute{
 							Description: "Specify a list of availability zones.",
 							ElementType: types.StringType,

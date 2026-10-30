@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -332,8 +333,7 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 
 	networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if iaasUtils.IsNetworkAreaRegionNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -444,6 +444,12 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 
 	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
+		// The network area is already gone, and its regional configuration with it
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			tflog.Info(ctx, "Network area region already deleted")
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
 		return
 	}
@@ -451,8 +457,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	// Delete network area region configuration
 	err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if iaasUtils.IsNetworkAreaRegionNotFound(err) {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))

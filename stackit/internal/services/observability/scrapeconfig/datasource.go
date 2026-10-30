@@ -42,8 +42,12 @@ func (d *scrapeConfigDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
+		return
+	}
+
+	if !core.ValidateServiceRegion(ctx, &providerData, "Observability", &resp.Diagnostics) {
 		return
 	}
 
@@ -53,7 +57,7 @@ func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.C
 // Schema defines the schema for the data source.
 func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Observability scrape config data source schema. Must have a `region` specified in the provider configuration.",
+		Description: "Observability scrape config data source schema. Must have a `region` specified in the provider configuration. This service is only available when the provider is configured with `default_region = \"eu01\"`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`instance_id`,`name`\".",
