@@ -62,6 +62,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					Protected:   new(true),
 					Scope:       new("scope"),
 					Config: &iaas.ImageConfig{
+						Architecture:           new("x86"),
 						BootMenu:               new(true),
 						CdromBus:               *iaas.NewNullableString(new("cdrom_bus")),
 						DiskBus:                *iaas.NewNullableString(new("disk_bus")),
@@ -97,6 +98,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Protected:   types.BoolValue(true),
 				Scope:       types.StringValue("scope"),
 				Config: types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"architecture":             types.StringValue("x86"),
 					"boot_menu":                types.BoolValue(true),
 					"cdrom_bus":                types.StringValue("cdrom_bus"),
 					"disk_bus":                 types.StringValue("disk_bus"),
@@ -206,14 +208,16 @@ func TestImageMatchesFilter(t *testing.T) {
 					OperatingSystemVersion: *iaas.NewNullableString(new("22.04")),
 					Uefi:                   new(true),
 					SecureBoot:             new(true),
+					Architecture:           new("x86"),
 				},
 			},
 			filter: &Filter{
-				OS:         types.StringValue("linux"),
-				Distro:     types.StringValue("ubuntu"),
-				Version:    types.StringValue("22.04"),
-				UEFI:       types.BoolValue(true),
-				SecureBoot: types.BoolValue(true),
+				OS:           types.StringValue("linux"),
+				Distro:       types.StringValue("ubuntu"),
+				Version:      types.StringValue("22.04"),
+				UEFI:         types.BoolValue(true),
+				SecureBoot:   types.BoolValue(true),
+				Architecture: types.StringValue("x86"),
 			},
 			expected: true,
 		},
@@ -314,6 +318,66 @@ func TestImageMatchesFilter(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "Architecture match x86",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					Architecture: new("x86"),
+				},
+			},
+			filter: &Filter{
+				Architecture: types.StringValue("x86"),
+			},
+			expected: true,
+		},
+		{
+			name: "Architecture match arm64",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					Architecture: new("arm64"),
+				},
+			},
+			filter: &Filter{
+				Architecture: types.StringValue("arm64"),
+			},
+			expected: true,
+		},
+		{
+			name: "Architecture mismatch",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					Architecture: new("arm64"),
+				},
+			},
+			filter: &Filter{
+				Architecture: types.StringValue("x86"),
+			},
+			expected: false,
+		},
+		{
+			name: "Architecture filter set but image has nil architecture",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					Architecture: nil,
+				},
+			},
+			filter: &Filter{
+				Architecture: types.StringValue("x86"),
+			},
+			expected: false,
+		},
+		{
+			name: "Architecture filter null skip check",
+			img: &iaas.Image{
+				Config: &iaas.ImageConfig{
+					Architecture: new("arm64"),
+				},
+			},
+			filter: &Filter{
+				Architecture: types.StringNull(),
+			},
+			expected: true,
+		},
+		{
 			name: "partial filter match - only distro set and match",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
@@ -358,14 +422,16 @@ func TestImageMatchesFilter(t *testing.T) {
 					OperatingSystemVersion: *iaas.NewNullableString(new("22.04")),
 					Uefi:                   new(false),
 					SecureBoot:             new(false),
+					Architecture:           new("x86"),
 				},
 			},
 			filter: &Filter{
-				OS:         types.StringNull(),
-				Distro:     types.StringNull(),
-				Version:    types.StringNull(),
-				UEFI:       types.BoolNull(),
-				SecureBoot: types.BoolNull(),
+				OS:           types.StringNull(),
+				Distro:       types.StringNull(),
+				Version:      types.StringNull(),
+				UEFI:         types.BoolNull(),
+				SecureBoot:   types.BoolNull(),
+				Architecture: types.StringNull(),
 			},
 			expected: true,
 		},
@@ -378,14 +444,16 @@ func TestImageMatchesFilter(t *testing.T) {
 					OperatingSystemVersion: *iaas.NewNullableString(nil),
 					Uefi:                   nil,
 					SecureBoot:             nil,
+					Architecture:           nil,
 				},
 			},
 			filter: &Filter{
-				OS:         types.StringValue("linux"),
-				Distro:     types.StringValue("ubuntu"),
-				Version:    types.StringValue("22.04"),
-				UEFI:       types.BoolValue(true),
-				SecureBoot: types.BoolValue(true),
+				OS:           types.StringValue("linux"),
+				Distro:       types.StringValue("ubuntu"),
+				Version:      types.StringValue("22.04"),
+				UEFI:         types.BoolValue(true),
+				SecureBoot:   types.BoolValue(true),
+				Architecture: types.StringValue("x86"),
 			},
 			expected: false,
 		},
