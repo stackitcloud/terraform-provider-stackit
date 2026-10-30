@@ -41,6 +41,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
+// healthCheckDurationRegex accepts only durations in the form the API returns them: whole seconds
+// ("1s") or exactly three non-zero decimals ("0.100s"), so the value in state matches the config
+// and does not drift. The alternatives are grouped so that both are anchored at both ends.
+var healthCheckDurationRegex = regexp.MustCompile(`^(?:[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s)$`)
+
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &applicationLoadBalancerResource{}
@@ -984,7 +989,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s$`),
+											healthCheckDurationRegex,
 											"The duration must be between 0s and 999.999s (e.g.: 1s or 0.100s or 12.345s)",
 										),
 									},
@@ -994,7 +999,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s$`),
+											healthCheckDurationRegex,
 											"The duration must be between 0s and 999.999s (e.g.: 1s or 0.100s or 12.345s)",
 										),
 									},
@@ -1004,7 +1009,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.RegexMatches(
-											regexp.MustCompile(`^[0-9]{1,3}s|[0-9]{1,3}\.(?:[0-9]{2}[1-9]|[0-9][1-9][0-9]|[1-9][0-9]{2})s$`),
+											healthCheckDurationRegex,
 											"The duration must be between 0s and 999.999s (e.g.: 1s or 0.100s or 12.345s)",
 										),
 									},
