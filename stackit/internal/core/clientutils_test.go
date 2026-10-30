@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -161,7 +160,7 @@ func TestDefaultClientFactory_defaultConfigOptions(t *testing.T) {
 				customEndpoint: "https://my-custom-endpoint.api.stackit.cloud",
 			},
 			want: []config.ConfigurationOption{
-				config.WithCustomAuth(randomRoundTripper),
+				config.WithCustomAuth(expectedRetryTransport(randomRoundTripper)),
 				config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 				config.WithEndpoint("https://my-custom-endpoint.api.stackit.cloud"),
 			},
@@ -176,7 +175,7 @@ func TestDefaultClientFactory_defaultConfigOptions(t *testing.T) {
 				customEndpoint: "",
 			},
 			want: []config.ConfigurationOption{
-				config.WithCustomAuth(randomRoundTripper),
+				config.WithCustomAuth(expectedRetryTransport(randomRoundTripper)),
 				config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 			},
 		},
@@ -249,7 +248,7 @@ func (h *testHelper[T]) run(t *testing.T) {
 			},
 			want: h.clientInitFunc(
 				config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-				config.WithCustomAuth(testRoundTripper),
+				config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 			),
 		},
 		{
@@ -267,7 +266,7 @@ func (h *testHelper[T]) run(t *testing.T) {
 			want: h.clientInitFunc(
 				config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 				config.WithEndpoint(testCustomEndpoint),
-				config.WithCustomAuth(testRoundTripper),
+				config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 			),
 		},
 	}
@@ -1027,7 +1026,7 @@ func TestDefaultClientFactory_newDremioV1BetaClient(t *testing.T) {
 			want: func() dremio.DefaultAPI {
 				apiClient, err := dremio.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 					config.WithRegion("eu01"),
 				)
 				if err != nil {
@@ -1051,7 +1050,7 @@ func TestDefaultClientFactory_newDremioV1BetaClient(t *testing.T) {
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 					config.WithEndpoint(testCustomEndpoint),
 					config.WithRegion("eu01"),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
@@ -1111,7 +1110,7 @@ func TestDefaultClientFactory_newSecretsManagerV1Client(t *testing.T) {
 			want: func() secretsmanager.DefaultAPI {
 				apiClient, err := secretsmanager.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 					config.WithRegion("eu01"),
 				)
 				if err != nil {
@@ -1134,7 +1133,7 @@ func TestDefaultClientFactory_newSecretsManagerV1Client(t *testing.T) {
 				apiClient, err := secretsmanager.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 					config.WithEndpoint(testCustomEndpoint),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
@@ -1194,7 +1193,7 @@ func TestDefaultClientFactory_newSecretsManagerV1AlphaClient(t *testing.T) {
 			want: func() secretsmanagerV1Alpha.DefaultAPI {
 				apiClient, err := secretsmanagerV1Alpha.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 					config.WithRegion("eu01"),
 				)
 				if err != nil {
@@ -1217,7 +1216,7 @@ func TestDefaultClientFactory_newSecretsManagerV1AlphaClient(t *testing.T) {
 				apiClient, err := secretsmanagerV1Alpha.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 					config.WithEndpoint(testCustomEndpoint),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
@@ -1277,7 +1276,7 @@ func TestDefaultClientFactory_newObservabilityV1Client(t *testing.T) {
 			want: func() observability.DefaultAPI {
 				apiClient, err := observability.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 					config.WithRegion("eu01"),
 				)
 				if err != nil {
@@ -1300,7 +1299,7 @@ func TestDefaultClientFactory_newObservabilityV1Client(t *testing.T) {
 				apiClient, err := observability.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 					config.WithEndpoint(testCustomEndpoint),
-					config.WithCustomAuth(testRoundTripper),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
@@ -1359,12 +1358,7 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 			want: func() objectstorage.DefaultAPI {
 				apiClient, err := objectstorage.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithCustomAuth(&RetryTransport{
-						Base:        testRoundTripper,
-						MaxRetries:  3,
-						BaseBackoff: 10 * time.Second,
-						MaxJitter:   500 * time.Millisecond,
-					}),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
@@ -1385,12 +1379,7 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 				apiClient, err := objectstorage.NewAPIClient(
 					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 					config.WithEndpoint(testCustomEndpoint),
-					config.WithCustomAuth(&RetryTransport{
-						Base:        testRoundTripper,
-						MaxRetries:  3,
-						BaseBackoff: 10 * time.Second,
-						MaxJitter:   500 * time.Millisecond,
-					}),
+					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
 				)
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)

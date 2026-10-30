@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -223,7 +222,8 @@ func TestMapFields(t *testing.T) {
 										),
 									},
 								),
-								"cri": types.StringValue("containerd"),
+								"cri":  types.StringValue("containerd"),
+								"kata": types.BoolValue(false),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -613,6 +613,7 @@ func TestMapFields(t *testing.T) {
 							),
 							"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
 							"cri":    types.StringValue("containerd"),
+							"kata":   types.BoolValue(true),
 							"availability_zones": types.ListValueMust(
 								types.StringType,
 								[]attr.Value{
@@ -678,6 +679,9 @@ func TestMapFields(t *testing.T) {
 						AvailabilityZones: []string{"z1", "z2"},
 						Cri: &ske.CRI{
 							Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
+							Kata: &ske.Kata{
+								Enabled: true,
+							},
 						},
 						Labels: &map[string]string{"k": "v"},
 						Machine: ske.Machine{
@@ -746,6 +750,7 @@ func TestMapFields(t *testing.T) {
 								),
 								"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
 								"cri":    types.StringValue("containerd"),
+								"kata":   types.BoolValue(true),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -868,6 +873,28 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 		expectedWarning              bool
 		isValid                      bool
 	}{
+		{
+			description: "ignore malformed versions when selecting latest supported version",
+			availableVersions: []ske.KubernetesVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.20.1"), State: new(VersionStateSupported)},
+				{Version: new("1.20.2"), State: new(VersionStateSupported)},
+				{Version: new("also-invalid"), State: new(VersionStateSupported)},
+			},
+			expectedVersionUsed: new("1.20.2"),
+			isValid:             true,
+		},
+		{
+			description: "ignore malformed versions when selecting matching version",
+			availableVersions: []ske.KubernetesVersion{
+				{Version: new("1.20.1"), State: new(VersionStateSupported)},
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.20.2"), State: new(VersionStateSupported)},
+			},
+			kubernetesVersionMin: new("1.20"),
+			expectedVersionUsed:  new("1.20.2"),
+			isValid:              true,
+		},
 		{
 			"available_version",
 			[]ske.KubernetesVersion{
@@ -2232,76 +2259,7 @@ func TestGetCurrentVersion(t *testing.T) {
 	}
 }
 
-func TestGetLatestSupportedKubernetesVersion(t *testing.T) {
-	tests := []struct {
-		description           string
-		listKubernetesVersion []ske.KubernetesVersion
-		isValid               bool
-		expectedVersion       *string
-	}{
-		{
-			description: "base",
-			listKubernetesVersion: []ske.KubernetesVersion{
-				{
-					State:   new("supported"),
-					Version: new("1.2.3"),
-				},
-				{
-					State:   new("supported"),
-					Version: new("3.2.1"),
-				},
-				{
-					State:   new("not-supported"),
-					Version: new("4.4.4"),
-				},
-			},
-			isValid:         true,
-			expectedVersion: new("3.2.1"),
-		},
-		{
-			description:           "no Kubernetes versions 1",
-			listKubernetesVersion: nil,
-			isValid:               false,
-		},
-		{
-			description:           "no Kubernetes versions 2",
-			listKubernetesVersion: []ske.KubernetesVersion{},
-			isValid:               false,
-		},
-		{
-			description: "no supported Kubernetes versions",
-			listKubernetesVersion: []ske.KubernetesVersion{
-				{
-					State:   new("not-supported"),
-					Version: new("1.2.3"),
-				},
-			},
-			isValid: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			version, err := getLatestSupportedKubernetesVersion(tt.listKubernetesVersion)
-
-			if tt.isValid && err != nil {
-				t.Errorf("failed on valid input")
-			}
-			if !tt.isValid && err == nil {
-				t.Errorf("did not fail on invalid input")
-			}
-			if !tt.isValid {
-				return
-			}
-			diff := cmp.Diff(version, tt.expectedVersion)
-			if diff != "" {
-				t.Fatalf("Output is not as expected: %s", diff)
-			}
-		})
-	}
-}
-
-func TestGetLatestSupportedMachineVersion(t *testing.T) {
+func TestGetLatestSupportedVersion(t *testing.T) {
 	tests := []struct {
 		description        string
 		listMachineVersion []ske.MachineImageVersion
@@ -2328,6 +2286,27 @@ func TestGetLatestSupportedMachineVersion(t *testing.T) {
 			expectedVersion: new("3.2.1"),
 		},
 		{
+			description: "ignore malformed supported versions",
+			listMachineVersion: []ske.MachineImageVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.2.3"), State: new(VersionStateSupported)},
+				{Version: new("3.2.1"), State: new(VersionStateSupported)},
+				{Version: new("also-invalid"), State: new(VersionStateSupported)},
+			},
+			isValid:         true,
+			expectedVersion: new("3.2.1"),
+		},
+		{
+			description: "no valid supported versions",
+			listMachineVersion: []ske.MachineImageVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new(""), State: new(VersionStateSupported)},
+				{State: new(VersionStateSupported)},
+				{Version: new("3.2.1"), State: new(VersionStatePreview)},
+			},
+			isValid: false,
+		},
+		{
 			description:        "no mchine versions 1",
 			listMachineVersion: nil,
 			isValid:            false,
@@ -2351,7 +2330,10 @@ func TestGetLatestSupportedMachineVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			version, err := getLatestSupportedMachineVersion(tt.listMachineVersion)
+			versions := toVersionsWithState(tt.listMachineVersion, func(version *ske.MachineImageVersion) VersionWithState {
+				return version
+			})
+			version, err := getLatestSupportedVersion(versions)
 
 			if tt.isValid && err != nil {
 				t.Errorf("failed on valid input")
@@ -2667,6 +2649,23 @@ func TestSortK8sVersion(t *testing.T) {
 			},
 		},
 		{
+			description: "malformed versions sort after valid versions",
+			versions: []ske.KubernetesVersion{
+				{Version: new("invalid")},
+				{Version: new("1.20.0")},
+				{Version: new("invalid")},
+				{Version: new("1.20.2")},
+				{Version: new("1.20.1")},
+			},
+			wantSorted: []ske.KubernetesVersion{
+				{Version: new("1.20.2")},
+				{Version: new("1.20.1")},
+				{Version: new("1.20.0")},
+				{Version: new("invalid")},
+				{Version: new("invalid")},
+			},
+		},
+		{
 			description: "slice without prefix and minor version change",
 			versions: []ske.KubernetesVersion{
 				{Version: new("1.20.0")},
@@ -2687,28 +2686,17 @@ func TestSortK8sVersion(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.description, func(t *testing.T) {
-			sortK8sVersions(tc.versions)
+			versions := toVersionsWithState(tc.versions, func(version *ske.KubernetesVersion) VersionWithState {
+				return version
+			})
 
-			joinK8sVersions := func(in []ske.KubernetesVersion, sep string) string {
-				var builder strings.Builder
-				for i, l := 0, len(in); i < l; i++ {
-					if i > 0 {
-						builder.WriteString(sep)
-					}
-					if v := in[i].Version; v != nil {
-						builder.WriteString(*v)
-					} else {
-						builder.WriteString("undef")
-					}
-				}
-				return builder.String()
-			}
+			sortVersions(versions)
 
-			expected := joinK8sVersions(tc.wantSorted, ", ")
-			actual := joinK8sVersions(tc.versions, ", ")
-
-			if expected != actual {
-				t.Errorf("wrong sort order. wanted %s but got %s", expected, actual)
+			expectedVersions := toVersionsWithState(tc.wantSorted, func(version *ske.KubernetesVersion) VersionWithState {
+				return version
+			})
+			if diff := cmp.Diff(expectedVersions, versions); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
