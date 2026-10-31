@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -64,6 +65,21 @@ type Model struct {
 	SAML2          types.Object `tfsdk:"saml2"`
 	BasicAuth      types.Object `tfsdk:"basic_auth"`
 	Targets        types.List   `tfsdk:"targets"`
+
+	BearerToken     types.String `tfsdk:"bearer_token"`
+	TLSConfig       types.Object `tfsdk:"tls_config"`
+	HonorLabels     types.Bool   `tfsdk:"honor_labels"`
+	HonorTimestamps types.Bool   `tfsdk:"honor_timestamps"`
+}
+
+// Struct corresponding to Model.TLSConfig
+type tlsConfigModel struct {
+	InsecureSkipVerify types.Bool `tfsdk:"insecure_skip_verify"`
+}
+
+// Types corresponding to tlsConfigModel
+var tlsConfigTypes = map[string]attr.Type{
+	"insecure_skip_verify": types.BoolType,
 }
 
 // Struct corresponding to Model.SAML2
@@ -261,6 +277,35 @@ func (r *scrapeConfigResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 					},
 				},
+			},
+			"bearer_token": schema.StringAttribute{
+				Description: "Sets the `Authorization` header on every scrape request with the configured bearer token. The API only accepts tokens in JWT format. Conflicts with `basic_auth`.",
+				Optional:    true,
+				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					stringvalidator.ConflictsWith(path.MatchRoot("basic_auth")),
+				},
+			},
+			"tls_config": schema.SingleNestedAttribute{
+				Description: "Configures the scrape request's TLS settings.",
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"insecure_skip_verify": schema.BoolAttribute{
+						Description: "Disable validation of the server certificate.",
+						Required:    true,
+					},
+				},
+			},
+			"honor_labels": schema.BoolAttribute{
+				Description: "Controls how conflicts between labels already present in scraped data and labels that would be attached server-side are handled. If `true`, the labels from the scraped data are kept. If not set, the API uses `false`.",
+				Optional:    true,
+				Computed:    true,
+			},
+			"honor_timestamps": schema.BoolAttribute{
+				Description: "Controls whether the timestamps present in scraped data are respected. If not set, the API uses `false`.",
+				Optional:    true,
+				Computed:    true,
 			},
 			"targets": schema.ListNestedAttribute{
 				Description: "The targets list (specified by the static config).",
@@ -605,7 +650,53 @@ func mapFields(ctx context.Context, sc *observabilitySdk.Job, model *Model) erro
 	if err != nil {
 		return fmt.Errorf("map targets: %w", err)
 	}
+	model.BearerToken = types.StringPointerValue(sc.BearerToken)
+	model.HonorLabels = types.BoolPointerValue(sc.HonorLabels)
+	model.HonorTimestamps = types.BoolPointerValue(sc.HonorTimeStamps)
+	err = mapTLSConfig(ctx, sc, model)
+	if err != nil {
+		return fmt.Errorf("map tls config: %w", err)
+	}
 	return nil
+}
+
+func mapTLSConfig(ctx context.Context, sc *observabilitySdk.Job, model *Model) error {
+	insecureSkipVerify := false
+	if sc.TlsConfig != nil {
+		insecureSkipVerify = sc.TlsConfig.GetInsecureSkipVerify()
+	} else {
+		// The API may omit the TLS config if it only contains default values, keep a configured `insecure_skip_verify = false`
+		configured, err := toTLSConfigPayload(ctx, model)
+		if err != nil {
+			return err
+		}
+		if configured == nil || *configured {
+			model.TLSConfig = types.ObjectNull(tlsConfigTypes)
+			return nil
+		}
+	}
+
+	tlsConfigTF, diags := types.ObjectValue(tlsConfigTypes, map[string]attr.Value{
+		"insecure_skip_verify": types.BoolValue(insecureSkipVerify),
+	})
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	model.TLSConfig = tlsConfigTF
+	return nil
+}
+
+// toTLSConfigPayload returns the configured `insecure_skip_verify` value, or nil if no TLS config is set
+func toTLSConfigPayload(ctx context.Context, model *Model) (*bool, error) {
+	if utils.IsUndefined(model.TLSConfig) {
+		return nil, nil
+	}
+	tlsConfig := tlsConfigModel{}
+	diags := model.TLSConfig.As(ctx, &tlsConfig, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting tls config: %w", core.DiagsToError(diags))
+	}
+	return conversion.BoolValueToPointer(tlsConfig.InsecureSkipVerify), nil
 }
 
 func mapBasicAuth(sc *observabilitySdk.Job, model *Model) error {
@@ -729,8 +820,20 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: new(float32(model.SampleLimit.ValueInt32())),
 		Scheme:      observabilitySdk.CreateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
+
+		BearerToken:     conversion.StringValueToPointer(model.BearerToken),
+		HonorLabels:     conversion.BoolValueToPointer(model.HonorLabels),
+		HonorTimeStamps: conversion.BoolValueToPointer(model.HonorTimestamps),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
+
+	insecureSkipVerify, err := toTLSConfigPayload(ctx, model)
+	if err != nil {
+		return nil, err
+	}
+	if insecureSkipVerify != nil {
+		sc.TlsConfig = &observabilitySdk.CreateScrapeConfigPayloadTlsConfig{InsecureSkipVerify: insecureSkipVerify}
+	}
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]any)
@@ -818,8 +921,20 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: new(float32(model.SampleLimit.ValueInt32())),
 		Scheme:      observabilitySdk.UpdateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
+
+		BearerToken:     conversion.StringValueToPointer(model.BearerToken),
+		HonorLabels:     conversion.BoolValueToPointer(model.HonorLabels),
+		HonorTimeStamps: conversion.BoolValueToPointer(model.HonorTimestamps),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
+
+	insecureSkipVerify, err := toTLSConfigPayload(ctx, model)
+	if err != nil {
+		return nil, err
+	}
+	if insecureSkipVerify != nil {
+		sc.TlsConfig = &observabilitySdk.UpdateScrapeConfigPayloadTlsConfig{InsecureSkipVerify: insecureSkipVerify}
+	}
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
 		m := make(map[string]any)

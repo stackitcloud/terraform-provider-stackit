@@ -18,6 +18,10 @@ variable "logalertgroup_expression" {}
 variable "scrapeconfig_name" {}
 variable "scrapeconfig_metrics_path" {}
 variable "scrapeconfig_targets_url" {}
+variable "scrapeconfig_bearer_token" {}
+variable "scrapeconfig_tls_insecure_skip_verify" {}
+variable "scrapeconfig_honor_labels" {}
+variable "scrapeconfig_honor_timestamps" {}
 
 
 resource "stackit_observability_alertgroup" "alertgroup" {
@@ -69,6 +73,13 @@ resource "stackit_observability_scrapeconfig" "scrapeconfig" {
   metrics_path = var.scrapeconfig_metrics_path
 
   targets = [{ urls = [var.scrapeconfig_targets_url] }]
+
+  bearer_token     = var.scrapeconfig_bearer_token
+  honor_labels     = var.scrapeconfig_honor_labels
+  honor_timestamps = var.scrapeconfig_honor_timestamps
+  tls_config = {
+    insecure_skip_verify = var.scrapeconfig_tls_insecure_skip_verify
+  }
 }
 
 
