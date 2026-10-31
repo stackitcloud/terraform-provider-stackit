@@ -56,6 +56,7 @@ var testConfigVarsMax = config.Variables{
 	"network_role":                      config.StringVariable("ROLE_LISTENERS_AND_TARGETS"),
 	"server_name":                       config.StringVariable(fmt.Sprintf("tf-acc-s%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"loadbalancer_name":                 config.StringVariable(fmt.Sprintf("tf-acc-l%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"label_env":                         config.StringVariable("acc-test"),
 
 	"target_display_name": config.StringVariable("example-target"),
 
@@ -112,6 +113,7 @@ func configVarsMaxUpdated() config.Variables {
 	maps.Copy(tempConfig, testConfigVarsMax)
 	tempConfig["plan_id"] = config.StringVariable("p50")
 	tempConfig["acl"] = config.StringVariable("10.2.1.0/24")
+	tempConfig["label_env"] = config.StringVariable("acc-test-updated")
 	tempConfig["target_display_name"] = config.StringVariable("example-target-updated")
 
 	tempConfig["sni_target_pool_name"] = config.StringVariable("example-target-pool-updated")
@@ -327,6 +329,8 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMax["loadbalancer_name"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "plan_id", testutil.ConvertConfigVariable(testConfigVarsMax["plan_id"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "labels.env", testutil.ConvertConfigVariable(testConfigVarsMax["label_env"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(testConfigVarsMax["network_role"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "external_address"),
@@ -403,6 +407,8 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMax["loadbalancer_name"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "plan_id", testutil.ConvertConfigVariable(testConfigVarsMax["plan_id"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "labels.env", testutil.ConvertConfigVariable(testConfigVarsMax["label_env"])),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_loadbalancer.loadbalancer", "project_id",
 						"stackit_loadbalancer.loadbalancer", "project_id",
@@ -507,6 +513,8 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["loadbalancer_name"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "plan_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["plan_id"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "labels.env", testutil.ConvertConfigVariable(configVarsMaxUpdated()["label_env"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "networks.0.network_id"),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "networks.0.role", testutil.ConvertConfigVariable(configVarsMaxUpdated()["network_role"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "external_address"),
