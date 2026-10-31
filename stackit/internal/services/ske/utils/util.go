@@ -5,7 +5,7 @@ import (
 )
 
 func IsEmptyNetwork(network *ske.Network) bool {
-	if !network.HasId() && !network.HasControlPlane() {
+	if !network.HasId() && !network.HasControlPlane() && !network.HasCni() {
 		return true
 	}
 	return false
