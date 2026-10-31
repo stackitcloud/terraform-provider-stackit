@@ -97,6 +97,7 @@ import (
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
 	objectstorageDefaultRetention "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/default-retention"
 	alertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/alertgroup"
+	observabilityCertCheck "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/certcheck"
 	observabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/credential"
 	observabilityInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/instance"
 	logAlertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/log-alertgroup"
@@ -923,6 +924,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		objecStorageCredentialsGroup.NewCredentialsGroupResource,
 		objecStorageCredential.NewCredentialResource,
 		objectstorageDefaultRetention.NewDefaultRetentionResource,
+		observabilityCertCheck.NewCertCheckResource,
 		observabilityCredential.NewCredentialResource,
 		observabilityInstance.NewInstanceResource,
 		observabilityScrapeConfig.NewScrapeConfigResource,
