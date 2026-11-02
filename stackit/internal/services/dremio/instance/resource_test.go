@@ -35,6 +35,7 @@ func TestMapFields(t *testing.T) {
 				CreateTime:  time.Now(),
 				Description: utils.Ptr("minimal-required-values"),
 				DisplayName: "greatName",
+				Acl:         []string{"0.0.0.0/0"},
 				Authentication: dremioSdk.Authentication{
 					Azuread: &dremioSdk.Azuread{
 						AuthorityUrl: "azure-authority",
@@ -74,6 +75,8 @@ func TestMapFields(t *testing.T) {
 
 					DisplayName: types.StringValue("greatName"),
 					Description: types.StringValue("minimal-required-values"),
+
+					Acl: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("0.0.0.0/0")}),
 
 					Endpoints: types.ObjectValueMust(
 						map[string]attr.Type{
@@ -378,7 +381,7 @@ func TestToCreatePayload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toCreatePayload(tt.state)
+			payload, err := toCreatePayload(t.Context(), tt.state)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -609,7 +612,7 @@ func TestToUpdatePayload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toUpdatePayload(tt.state)
+			payload, err := toUpdatePayload(t.Context(), tt.state)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload error = %v, wantErr %v", err, tt.wantErr)
 				return
