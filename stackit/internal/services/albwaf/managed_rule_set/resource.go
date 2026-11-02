@@ -381,27 +381,8 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 
 	ruleSet := createResp
 	if wanted != nil {
-		// If applying the rule modes fails, we have to delete the MRS to avoid the next apply to run into a name conflict
-		deleteRuleSet := func() {
-			if _, err := r.client.DeleteManagedRuleSet(ctx, projectId, region, model.Name.ValueString()).Execute(); err != nil {
-				tflog.Warn(ctx, "Failed to clean up ALB WAF Managed Rule Set after failed rule mode setup", map[string]any{"error": err})
-			}
-		}
-		if err := checkRulesExist(ruleSet, wanted); err != nil {
-			deleteRuleSet()
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
-			return
-		}
-		patchPayload, err := toPatchPayload(wanted, nil)
-		if err != nil {
-			deleteRuleSet()
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Creating rule modes payload: %v", err))
-			return
-		}
-		patchResp, err := r.client.PatchManagedRuleSet(ctx, projectId, region, model.Name.ValueString()).PatchManagedRuleSetPayload(*patchPayload).Execute()
-		if err != nil {
-			deleteRuleSet()
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
+		patchResp := r.setManagedRuleSetRules(ctx, resp, projectId, region, &model, ruleSet, wanted)
+		if patchResp == nil {
 			return
 		}
 		ruleSet = patchResp
@@ -774,4 +755,35 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 	}
 
 	return nil
+}
+
+// setManagedRuleSetRules is used during creation of the resource to set the MRS rules.
+// This is a workaround to the API only offering this functionality in the PATCH endpoint. Once it is also settable in the POST/CREATE endpoint, we should switch to that.
+func (r *managedRuleSetResource) setManagedRuleSetRules(ctx context.Context, resp *resource.CreateResponse, projectId, region string, model *ResourceModel, ruleSet *albWaf.GetManagedRuleSetResponse, wanted map[string]map[string]string) *albWaf.GetManagedRuleSetResponse {
+	// If applying the rule modes fails, we have to delete the MRS to avoid the next apply to run into a name conflict
+	deleteRuleSet := func() {
+		if _, err := r.client.DeleteManagedRuleSet(ctx, projectId, region, model.Name.ValueString()).Execute(); err != nil {
+			tflog.Warn(ctx, "Failed to clean up ALB WAF Managed Rule Set after failed rule mode setup", map[string]any{"error": err})
+		}
+		resp.State.RemoveResource(ctx)
+	}
+	if err := checkRulesExist(ruleSet, wanted); err != nil {
+		deleteRuleSet()
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
+		return nil
+	}
+	patchPayload, err := toPatchPayload(wanted, nil)
+	if err != nil {
+		deleteRuleSet()
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Creating rule modes payload: %v", err))
+		return nil
+	}
+	patchResp, err := r.client.PatchManagedRuleSet(ctx, projectId, region, model.Name.ValueString()).PatchManagedRuleSetPayload(*patchPayload).Execute()
+	if err != nil {
+		deleteRuleSet()
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Setting rule modes: %v", err))
+		return nil
+	}
+
+	return patchResp
 }
