@@ -54,6 +54,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.3
+	github.com/stackitcloud/stackit-sdk-go/services/identity v0.0.0
 	github.com/teambition/rrule-go v1.8.2
 	go.uber.org/mock v0.6.0
 )
@@ -114,4 +115,8 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
+)
+
+replace (
+	github.com/stackitcloud/stackit-sdk-go/services/identity => ../../dev/stackit-sdk-go-github/services/identity
 )
