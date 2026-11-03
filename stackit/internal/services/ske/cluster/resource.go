@@ -798,9 +798,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"enabled": schema.BoolAttribute{
 								Description: "Flag to enable/disable Argus extensions.",
 								Required:    true,
-								Validators: []validator.Bool{
-									validate.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("argus_instance_id"), "05/2026"),
-								},
 							},
 							"argus_instance_id": schema.StringAttribute{
 								Description: "Argus instance ID to choose which Argus instance is used. Required when enabled is set to `true`.",
@@ -816,7 +813,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Description: "Flag to enable/disable Observability extensions.",
 								Required:    true,
 								Validators: []validator.Bool{
-									validate.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("instance_id"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("instance_id"), "05/2027"),
 								},
 							},
 							"instance_id": schema.StringAttribute{
@@ -833,7 +830,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Description: "Is ACL enabled?",
 								Required:    true,
 								Validators: []validator.Bool{
-									validate.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("allowed_cidrs"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("allowed_cidrs"), "05/2027"),
 								},
 							},
 							"allowed_cidrs": schema.ListAttribute{
@@ -851,8 +848,8 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Description: "Flag to enable/disable DNS extensions",
 								Required:    true,
 								Validators: []validator.Bool{
-									validate.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("zones"), "05/2026"),
-									validate.EnablesElseDeprecationWarning[types.Bool](path.MatchRelative().AtParent().AtName("gateway_api"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("zones"), "05/2027"),
+									validate.EnablesElseDeprecationWarning[types.Bool](path.MatchRelative().AtParent().AtName("gateway_api"), "05/2027"),
 								},
 							},
 							"zones": schema.ListAttribute{
