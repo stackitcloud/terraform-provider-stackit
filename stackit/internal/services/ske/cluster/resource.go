@@ -799,7 +799,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Description: "Flag to enable/disable Argus extensions.",
 								Required:    true,
 								Validators: []validator.Bool{
-									skeUtils.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("argus_instance_id"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("argus_instance_id"), "05/2026"),
 								},
 							},
 							"argus_instance_id": schema.StringAttribute{
@@ -816,7 +816,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Description: "Flag to enable/disable Observability extensions.",
 								Required:    true,
 								Validators: []validator.Bool{
-									skeUtils.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("instance_id"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.String](path.MatchRelative().AtParent().AtName("instance_id"), "05/2026"),
 								},
 							},
 							"instance_id": schema.StringAttribute{
@@ -833,7 +833,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Description: "Is ACL enabled?",
 								Required:    true,
 								Validators: []validator.Bool{
-									skeUtils.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("allowed_cidrs"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("allowed_cidrs"), "05/2026"),
 								},
 							},
 							"allowed_cidrs": schema.ListAttribute{
@@ -851,8 +851,8 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Description: "Flag to enable/disable DNS extensions",
 								Required:    true,
 								Validators: []validator.Bool{
-									skeUtils.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("zones"), "05/2026"),
-									skeUtils.EnablesElseDeprecationWarning[types.Bool](path.MatchRelative().AtParent().AtName("gateway_api"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.List](path.MatchRelative().AtParent().AtName("zones"), "05/2026"),
+									validate.EnablesElseDeprecationWarning[types.Bool](path.MatchRelative().AtParent().AtName("gateway_api"), "05/2026"),
 								},
 							},
 							"zones": schema.ListAttribute{

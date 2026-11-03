@@ -1,4 +1,4 @@
-package utils
+package validate
 
 import (
 	"context"
@@ -41,7 +41,7 @@ type fieldInterface interface {
 }
 
 // "enables" returns a bool validator that prevents another attribute from being set if
-// the own value is not true. The attributed enables another attribute.
+// the own value is not true or not set. This attributed enables another attribute.
 func enables[T fieldInterface](target path.Expression, callback func(*diag.Diagnostics, path.Path, path.Path)) *BoolValidator {
 	description := "this attribute enables another attribute to be set by being true"
 

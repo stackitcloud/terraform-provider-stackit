@@ -1,4 +1,4 @@
-package utils
+package validate
 
 import (
 	"context"
@@ -19,7 +19,7 @@ func enablesTestHelper[T fieldInterface](target path.Expression, callback func(*
 	return enables[T](target, callback)
 }
 
-func TestOnlyAllowedIfBoolEquals(t *testing.T) {
+func TestEnables(t *testing.T) {
 	tests := []struct {
 		description     string
 		value           *bool
