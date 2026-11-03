@@ -85,6 +85,7 @@ type CustomEndpointConfig struct {
 	EdgeCloudCustomEndpoint         string
 	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
+	IdentityV1CustomEndpoint        string
 	IntakeCustomEndpoint            string
 	KMSCustomEndpoint               string
 	LoadBalancerCustomEndpoint      string

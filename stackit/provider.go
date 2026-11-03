@@ -221,6 +221,7 @@ type providerModel struct {
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	IntakeCustomEndpoint            types.String `tfsdk:"intake_custom_endpoint"`
+	IdentityV1CustomEndpoint        types.String `tfsdk:"identity_v1_custom_endpoint"`
 	KmsCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
@@ -555,6 +556,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
 			},
+			"identity_v1_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: "Custom endpoint for the Identity API v1 service",
+			},
 		},
 	}
 }
@@ -646,6 +651,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { customEndpointConfig.TelemetryLinkCustomEndpoint = v })
 	setStringField(providerConfig.ValkeyCustomEndpoint, func(v string) { customEndpointConfig.ValkeyCustomEndpoint = v })
 	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { customEndpointConfig.VpnCustomEndpoint = v })
+	setStringField(providerConfig.IdentityV1CustomEndpoint, func(v string) { customEndpointConfig.IdentityV1CustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
