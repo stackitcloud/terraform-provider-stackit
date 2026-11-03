@@ -764,6 +764,7 @@ func (r *managedRuleSetResource) setManagedRuleSetRules(ctx context.Context, res
 	deleteRuleSet := func() {
 		if _, err := r.client.DeleteManagedRuleSet(ctx, projectId, region, model.Name.ValueString()).Execute(); err != nil {
 			tflog.Warn(ctx, "Failed to clean up ALB WAF Managed Rule Set after failed rule mode setup", map[string]any{"error": err})
+			return
 		}
 		resp.State.RemoveResource(ctx)
 	}
