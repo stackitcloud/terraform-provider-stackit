@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-func enablesTestHelper[T fieldInterface](target path.Expression, callback func(*diag.Diagnostics, path.Path, path.Path), _ T) *BoolValidator {
-	return enables[T](target, callback)
+func enablesTestHelper(target path.Expression, callback func(*diag.Diagnostics, path.Path, path.Path)) *BoolValidator {
+	return enables(target, callback)
 }
 
 func TestEnables(t *testing.T) {
@@ -169,7 +169,7 @@ func TestEnables(t *testing.T) {
 					customErrorSummary,
 					fmt.Sprintf("This can not be set. Target: %q; Self: %q", targetPath.String(), ownPath.String()),
 				)
-			}, tt.targetValue).ValidateBool(ctx, req, resp)
+			}).ValidateBool(ctx, req, resp)
 
 			if tt.isValid {
 				if resp.Diagnostics.HasError() {

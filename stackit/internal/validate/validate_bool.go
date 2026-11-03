@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -35,14 +36,9 @@ func (v *BoolValidator) ValidateBool(ctx context.Context, req validator.BoolRequ
 	v.validate(ctx, req, resp)
 }
 
-type fieldInterface interface {
-	IsNull() bool
-	IsUnknown() bool
-}
-
 // "enables" returns a bool validator that prevents another attribute from being set if
 // the own value is not true or not set. This attributed enables another attribute.
-func enables[T fieldInterface](target path.Expression, callback func(*diag.Diagnostics, path.Path, path.Path)) *BoolValidator {
+func enables(target path.Expression, callback func(*diag.Diagnostics, path.Path, path.Path)) *BoolValidator {
 	description := "this attribute enables another attribute to be set by being true"
 
 	return &BoolValidator{
@@ -54,7 +50,7 @@ func enables[T fieldInterface](target path.Expression, callback func(*diag.Diagn
 			resp.Diagnostics.Append(diags...)
 
 			for _, targetPath := range matchedPaths {
-				var target T
+				var target attr.Value
 
 				diags := req.Config.GetAttribute(ctx, targetPath, &target)
 				resp.Diagnostics.Append(diags...)
@@ -75,8 +71,8 @@ func enables[T fieldInterface](target path.Expression, callback func(*diag.Diagn
 }
 
 // Returns a bool validator based on "enables", which throws a deprecation warning instead of an error
-func EnablesElseDeprecationWarning[T fieldInterface](target path.Expression, deprecationDate string) *BoolValidator {
-	return enables[T](target, func(diagnostics *diag.Diagnostics, ownPath path.Path, targetPath path.Path) {
+func EnablesElseDeprecationWarning(target path.Expression, deprecationDate string) *BoolValidator {
+	return enables(target, func(diagnostics *diag.Diagnostics, ownPath path.Path, targetPath path.Path) {
 		diagnostics.AddAttributeWarning(
 			targetPath,
 			"Deprecation: Attribute can not be set",
@@ -86,8 +82,8 @@ func EnablesElseDeprecationWarning[T fieldInterface](target path.Expression, dep
 }
 
 // Returns a bool validator based on "enables", which throws an error
-func EnablesElseError[T fieldInterface](target path.Expression) *BoolValidator {
-	return enables[T](target, func(diagnostics *diag.Diagnostics, ownPath path.Path, targetPath path.Path) {
+func EnablesElseError(target path.Expression) *BoolValidator {
+	return enables(target, func(diagnostics *diag.Diagnostics, ownPath path.Path, targetPath path.Path) {
 		diagnostics.AddAttributeError(
 			targetPath,
 			"Attribute can not be set",
