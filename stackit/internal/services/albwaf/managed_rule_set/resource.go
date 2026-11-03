@@ -241,6 +241,8 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 					},
 				},
 			},
+			// groups and configured_groups are based on the same API field. configured_groups is TFP ONLY and does not exist in the API.
+			// We split this attribute in a computed and separate optional attribute to avoid issues that come with optional + computed attributes.
 			"configured_groups": schema.MapNestedAttribute{
 				Description: descriptions["configured_groups"],
 				Optional:    true,
