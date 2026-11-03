@@ -116,7 +116,3 @@ require (
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-replace (
-	github.com/stackitcloud/stackit-sdk-go/services/identity => ../../dev/stackit-sdk-go-github/services/identity
-)
