@@ -15,6 +15,7 @@ import (
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/group"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/groups"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/members"
