@@ -29,7 +29,7 @@ func (v *BoolValidator) MarkdownDescription(_ context.Context) string {
 }
 
 func (v *BoolValidator) ValidateBool(ctx context.Context, req validator.BoolRequest, resp *validator.BoolResponse) { // nolint:gocritic // function signature required by Terraform
-	if req.ConfigValue.IsUnknown() || req.ConfigValue.IsNull() {
+	if req.ConfigValue.IsUnknown() {
 		return
 	}
 	v.validate(ctx, req, resp)
@@ -63,10 +63,10 @@ func enables[T fieldInterface](target path.Expression, callback func(*diag.Diagn
 				}
 
 				if target.IsNull() || target.IsUnknown() {
-					return
+					continue
 				}
 
-				if req.ConfigValue.ValueBoolPointer() != nil && *req.ConfigValue.ValueBoolPointer() != true {
+				if req.ConfigValue.IsNull() || !req.ConfigValue.ValueBool() {
 					callback(&resp.Diagnostics, req.Path, targetPath)
 				}
 			}
