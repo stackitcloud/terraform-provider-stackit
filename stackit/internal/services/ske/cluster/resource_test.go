@@ -243,7 +243,8 @@ func TestMapFields(t *testing.T) {
 					"end":                                  types.StringValue("13:14:15Z"),
 				}),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"id": types.StringValue("nid"),
+					"cni": types.ObjectNull(cniTypes),
+					"id":  types.StringValue("nid"),
 					"control_plane": types.ObjectValueMust(controlPlaneTypes, map[string]attr.Value{
 						"access_scope": types.StringValue("SNA"),
 					}),
@@ -770,7 +771,8 @@ func TestMapFields(t *testing.T) {
 					"end":                                  types.StringValue("13:14:15Z"),
 				}),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"id": types.StringValue("nid"),
+					"cni": types.ObjectNull(cniTypes),
+					"id":  types.StringValue("nid"),
 					"control_plane": types.ObjectValueMust(controlPlaneTypes, map[string]attr.Value{
 						"access_scope": types.StringValue("SNA"),
 					}),
@@ -2365,7 +2367,8 @@ func TestToNetworkPayload(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				Name:      types.StringValue("name"),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"id": types.StringValue("nid"),
+					"cni": types.ObjectNull(cniTypes),
+					"id":  types.StringValue("nid"),
 					"control_plane": types.ObjectValueMust(controlPlaneTypes, map[string]attr.Value{
 						"access_scope": types.StringValue("SNA"),
 					}),
@@ -2376,6 +2379,7 @@ func TestToNetworkPayload(t *testing.T) {
 				ControlPlane: &ske.V2ControlPlaneNetwork{
 					AccessScope: ske.ACCESSSCOPE_SNA.Ptr(),
 				},
+				Cni: &ske.CNI{AdditionalProperties: map[string]interface{}{"cilium": map[string]interface{}{}}},
 			},
 			true,
 		},
@@ -2385,11 +2389,12 @@ func TestToNetworkPayload(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				Name:      types.StringValue("name"),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"cni":           types.ObjectNull(cniTypes),
 					"id":            types.StringNull(),
 					"control_plane": types.ObjectNull(controlPlaneTypes),
 				}),
 			},
-			&ske.Network{},
+			&ske.Network{Cni: &ske.CNI{AdditionalProperties: map[string]interface{}{"cilium": map[string]interface{}{}}}},
 			true,
 		},
 		{
@@ -2398,6 +2403,7 @@ func TestToNetworkPayload(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				Name:      types.StringValue("name"),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"cni":           types.ObjectNull(cniTypes),
 					"id":            types.StringValue("nid"),
 					"control_plane": types.ObjectNull(controlPlaneTypes),
 				}),
@@ -2405,6 +2411,7 @@ func TestToNetworkPayload(t *testing.T) {
 			&ske.Network{
 				Id:           new("nid"),
 				ControlPlane: nil,
+				Cni:          &ske.CNI{AdditionalProperties: map[string]interface{}{"cilium": map[string]interface{}{}}},
 			},
 			true,
 		},
@@ -2415,7 +2422,24 @@ func TestToNetworkPayload(t *testing.T) {
 				Name:      types.StringValue("name"),
 				Network:   types.ObjectNull(networkTypes),
 			},
-			nil,
+			&ske.Network{Cni: &ske.CNI{AdditionalProperties: map[string]interface{}{"cilium": map[string]interface{}{}}}},
+			true,
+		},
+		{
+			"calico",
+			&Model{
+				ProjectId: types.StringValue("pid"),
+				Name:      types.StringValue("name"),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"id":            types.StringNull(),
+					"control_plane": types.ObjectNull(controlPlaneTypes),
+					"cni": types.ObjectValueMust(cniTypes, map[string]attr.Value{
+						"calico": types.ObjectValueMust(map[string]attr.Type{}, map[string]attr.Value{}),
+						"cilium": types.ObjectNull(map[string]attr.Type{}),
+					}),
+				}),
+			},
+			&ske.Network{Cni: &ske.CNI{Calico: map[string]interface{}{}}},
 			true,
 		},
 	}

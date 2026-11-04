@@ -38,6 +38,9 @@ resource "stackit_ske_cluster" "example" {
     control_plane = {
       access_scope = "PUBLIC"
     }
+    cni = {
+      cilium = {}
+    }
   }
   # Cluster audit log forwarding to a Telemetry Router.
   # Private preview: only configurable for enabled accounts.
@@ -240,8 +243,26 @@ Optional:
 
 Optional:
 
+- `cni` (Attributes) Container Network Interface (CNI) of the cluster. Exactly one of `calico` or `cilium` can be set. Defaults to Cilium. The field is immutable! (see [below for nested schema](#nestedatt--network--cni))
 - `control_plane` (Attributes) Control plane for the cluster. (see [below for nested schema](#nestedatt--network--control_plane))
 - `id` (String) ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.
+
+<a id="nestedatt--network--cni"></a>
+### Nested Schema for `network.cni`
+
+Optional:
+
+- `calico` (Attributes) Use Calico as CNI. Set to `{}` to enable. (see [below for nested schema](#nestedatt--network--cni--calico))
+- `cilium` (Attributes) Use Cilium as CNI. Set to `{}` to enable. (see [below for nested schema](#nestedatt--network--cni--cilium))
+
+<a id="nestedatt--network--cni--calico"></a>
+### Nested Schema for `network.cni.calico`
+
+
+<a id="nestedatt--network--cni--cilium"></a>
+### Nested Schema for `network.cni.cilium`
+
+
 
 <a id="nestedatt--network--control_plane"></a>
 ### Nested Schema for `network.control_plane`

@@ -20,6 +20,9 @@ resource "stackit_ske_cluster" "example" {
     control_plane = {
       access_scope = "PUBLIC"
     }
+    cni = {
+      cilium = {}
+    }
   }
   # Cluster audit log forwarding to a Telemetry Router.
   # Private preview: only configurable for enabled accounts.
