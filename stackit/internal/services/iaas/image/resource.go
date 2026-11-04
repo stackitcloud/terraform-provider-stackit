@@ -1,20 +1,29 @@
 package image
 
 import (
-	"bufio"
 	"context"
+
+	//nolint:gosec // G501: weak crypto is acceptable here for hash generation
+	"crypto/md5"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -37,11 +46,14 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &imageResource{}
-	_ resource.ResourceWithConfigure   = &imageResource{}
-	_ resource.ResourceWithImportState = &imageResource{}
-	_ resource.ResourceWithModifyPlan  = &imageResource{}
+	_ resource.Resource                     = &imageResource{}
+	_ resource.ResourceWithConfigure        = &imageResource{}
+	_ resource.ResourceWithImportState      = &imageResource{}
+	_ resource.ResourceWithModifyPlan       = &imageResource{}
+	_ resource.ResourceWithConfigValidators = &imageResource{}
 )
+
+const tmpDirPrefix = "com.stackit.terraform-provider-download-*"
 
 type Model struct {
 	Id            types.String `tfsdk:"id"` // needed by TF
@@ -58,6 +70,7 @@ type Model struct {
 	Checksum      types.Object `tfsdk:"checksum"`
 	Labels        types.Map    `tfsdk:"labels"`
 	LocalFilePath types.String `tfsdk:"local_file_path"`
+	ImageFile     types.Object `tfsdk:"image_file"`
 }
 
 // Struct corresponding to Model.Config
@@ -117,6 +130,23 @@ type imageResource struct {
 	providerData core.ProviderData
 }
 
+// Struct corresponding to Model.ImageFile
+type imageFileModel struct {
+	Local    types.Object `tfsdk:"local"`
+	Download types.Object `tfsdk:"download"`
+}
+
+// Struct corresponding to Model.ImageFile.Download
+type downloadModel struct {
+	URL types.String `tfsdk:"url"`
+}
+
+// Struct corresponding to Model.ImageFile.Local
+type localModel struct {
+	Path                  types.String `tfsdk:"file_path"`
+	DisablePlanValidation types.Bool   `tfsdk:"disable_plan_validation"`
+}
+
 // Metadata returns the resource type name.
 func (r *imageResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_image"
@@ -134,7 +164,19 @@ func (r *imageResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	if !configModel.ImageFile.IsNull() && !configModel.ImageFile.IsUnknown() {
+		var imageFileModel imageFileModel
+		resp.Diagnostics.Append(configModel.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
+			features.CheckExperimentEnabled(ctx, &r.providerData, features.IaasExperiment, "stackit_iaas_image", core.Resource, &resp.Diagnostics)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	}
 	var planModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
@@ -163,6 +205,22 @@ func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
+}
+
+func (r *imageResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		// Mutually exclusive top-level fields
+		resourcevalidator.ExactlyOneOf(
+			path.MatchRoot("local_file_path"),
+			path.MatchRoot("image_file"),
+		),
+		// Disallow empty `image_file = {}` block by requiring at least local or download when image_file is used
+		resourcevalidator.AtLeastOneOf(
+			path.MatchRoot("local_file_path"),
+			path.MatchRoot("image_file").AtName("local"),
+			path.MatchRoot("image_file").AtName("download"),
+		),
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -219,9 +277,10 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"local_file_path": schema.StringAttribute{
-				Description: "The filepath of the raw image file to be uploaded.",
-				Required:    true,
+			"local_file_path": schema.StringAttribute{ // Deprecated: local_file_path is deprecated and will be removed after February 2027.
+				Description:        "The filepath of the raw image file to be uploaded.",
+				DeprecationMessage: "local_file_path is deprecated and will be removed after February 2027. Use image_file.local.file_path instead.",
+				Optional:           true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -403,6 +462,61 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				ElementType: types.StringType,
 				Optional:    true,
 			},
+			"image_file": schema.SingleNestedAttribute{
+				Description: "Configuration of an image file.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"local": schema.SingleNestedAttribute{
+						Description: "Configuration for uploading an image from a local file path.",
+						Optional:    true,
+						Validators: []validator.Object{
+							objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("download")),
+						},
+						Attributes: map[string]schema.Attribute{
+							"file_path": schema.StringAttribute{
+								Description: "Path to the local image file on the machine running Terraform. Updating this path triggers a resource replacement.",
+								Required:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.RequiresReplace(),
+								},
+								Validators: []validator.String{
+									validate.FileExistsUnlessDisabled("disable_plan_validation"),
+								},
+							},
+							"disable_plan_validation": schema.BoolAttribute{
+								Description: "If set to `true`, disables the plan-time check that verifies the file exists on the local filesystem (defaults to `false`). Useful when running plans in remote environments where the file isn't available yet.",
+								Optional:    true,
+							},
+						},
+					},
+					"download": schema.SingleNestedAttribute{
+						Description: features.AddExperimentDescription(
+							"Configuration of an image file to be downloaded.",
+							features.IaasExperiment,
+							core.Resource,
+						),
+						Optional: true,
+						Validators: []validator.Object{
+							objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("local")),
+						},
+						Attributes: map[string]schema.Attribute{
+							"url": schema.StringAttribute{
+								Description: "URL to download the image from via HTTP(S). Updating this URL forces the image to be re-downloaded (triggers replacement).",
+								Required:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.RequiresReplace(),
+								},
+								Validators: []validator.String{
+									validate.URL("http", "https"), // will only be validated if parent is present since parent is optional
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -423,6 +537,25 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	ctx = core.InitProviderContext(ctx)
+
+	filePath, isDownload, err := resolveFilePath(ctx, &resp.Diagnostics, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Resolving file path: %v", err))
+		return
+	}
+
+	// Cleanup on exit
+	if isDownload {
+		tmpDir := filepath.Dir(filePath)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				tflog.Warn(ctx, "failed to cleanup downloaded temp image dir", map[string]interface{}{
+					"dir":   tmpDir,
+					"error": err.Error(),
+				})
+			}
+		}()
+	}
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -464,7 +597,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Upload image
-	err = uploadImage(ctx, &resp.Diagnostics, model.LocalFilePath.ValueString(), imageCreateResp.UploadUrl)
+	err = uploadImage(ctx, &resp.Diagnostics, filePath, imageCreateResp.UploadUrl)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Uploading image: %v", err))
 		return
@@ -871,12 +1004,21 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			tflog.Debug(ctx, "failed to close upload file handle", map[string]interface{}{
+				"file":  filePath,
+				"error": err.Error(),
+			})
+		}
+	}()
+
 	stat, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("stat file: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPut, uploadURL, bufio.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, file)
 	if err != nil {
 		return fmt.Errorf("create upload request: %w", err)
 	}
@@ -900,4 +1042,107 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	}
 
 	return nil
+}
+
+func downloadImage(ctx context.Context, diags *diag.Diagnostics, downloadURL string) (fileName string, err error) {
+	if downloadURL == "" {
+		return "", fmt.Errorf("download URL is empty")
+	}
+
+	//nolint:gosec // G401: weak crypto is acceptable here for hash generation
+	md5sum := fmt.Sprintf("%x", md5.Sum([]byte(downloadURL)))
+
+	tmpDir, err := os.MkdirTemp("", tmpDirPrefix)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+
+	defer func() {
+		if err != nil {
+			if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+				tflog.Warn(ctx, "failed to cleanup temp directory", map[string]interface{}{
+					"dir":   tmpDir,
+					"error": removeErr.Error(),
+				})
+			}
+		}
+	}()
+
+	fileName = filepath.Join(tmpDir, md5sum+".img")
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, http.NoBody)
+	if err != nil {
+		return "", fmt.Errorf("create download request: %w", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("download image: %w", err)
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			core.LogAndAddError(ctx, diags, "Error uploading image", fmt.Sprintf("Closing response body: %v", err))
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return "", fmt.Errorf("download image unexpected status: %s", resp.Status)
+	}
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		return "", fmt.Errorf("creating file: %w", err)
+	}
+
+	if _, err = io.Copy(file, resp.Body); err != nil {
+		_ = file.Close()
+		return "", fmt.Errorf("writing to file: %w", err)
+	}
+
+	if err = file.Close(); err != nil {
+		return "", fmt.Errorf("closing file: %w", err)
+	}
+
+	return fileName, nil
+}
+
+func resolveFilePath(ctx context.Context, diags *diag.Diagnostics, model *Model) (filePath string, isDownload bool, err error) {
+	// Handle deprecated option
+	if !model.LocalFilePath.IsNull() && !model.LocalFilePath.IsUnknown() {
+		return model.LocalFilePath.ValueString(), false, nil
+	} else if !model.ImageFile.IsNull() && !model.ImageFile.IsUnknown() {
+		var imageFileModel imageFileModel
+		diags.Append(model.ImageFile.As(ctx, &imageFileModel, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
+			return "", false, fmt.Errorf("parsing image_file block: %v", diags)
+		}
+
+		// Handle download option
+		if !imageFileModel.Download.IsNull() && !imageFileModel.Download.IsUnknown() {
+			var downloadModel downloadModel
+			diags.Append(imageFileModel.Download.As(ctx, &downloadModel, basetypes.ObjectAsOptions{})...)
+			if diags.HasError() {
+				return "", false, fmt.Errorf("parsing download block: %v", diags)
+			}
+			filePath, err := downloadImage(ctx, diags, downloadModel.URL.ValueString())
+			if err != nil {
+				return "", false, fmt.Errorf("downloading image: %w", err)
+			}
+			return filePath, true, nil
+		}
+
+		// Handle local option
+		if !imageFileModel.Local.IsNull() && !imageFileModel.Local.IsUnknown() {
+			var localModel localModel
+			diags.Append(imageFileModel.Local.As(ctx, &localModel, basetypes.ObjectAsOptions{})...)
+			if diags.HasError() {
+				return "", false, fmt.Errorf("parsing local block: %v", diags)
+			}
+			return localModel.Path.ValueString(), false, nil
+		}
+	}
+
+	return "", false, nil
 }

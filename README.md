@@ -195,7 +195,7 @@ To enable experiments set the experiments field in the provider definition:
 ```hcl
 provider "stackit" {
   default_region        = "eu01"
-  experiments           = ["iam", "routing-tables", "network", "dremio", "ske"]
+  experiments           = ["iam", "routing-tables", "network", "dremio", "ske", "iaas"]
 }
 ```
 
@@ -224,6 +224,10 @@ The fields of the resources are still subject to change.
 #### `ske`
 
 Enables experimental SKE features. These features are subject to change and may be removed or redesigned in future releases.
+
+#### iaas
+
+Enables downloading files from a specified URL to the local machine before uploading them as an image resource. The underlying image fetching feature is experimental and subject to change.
 
 ## Acceptance Tests
 

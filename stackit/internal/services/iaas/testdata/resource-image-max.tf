@@ -1,5 +1,6 @@
 variable "project_id" {}
 variable "name" {}
+variable "name2" {}
 variable "disk_format" {}
 variable "local_file_path" {}
 variable "min_disk_size" {}
@@ -16,16 +17,21 @@ variable "rescue_bus" {}
 variable "rescue_device" {}
 variable "secure_boot" {}
 variable "uefi" {}
+variable "url" {}
 variable "video_model" {}
 variable "virtio_scsi" {}
 
 resource "stackit_image" "image" {
-  project_id      = var.project_id
-  name            = var.name
-  disk_format     = var.disk_format
-  local_file_path = var.local_file_path
-  min_disk_size   = var.min_disk_size
-  min_ram         = var.min_ram
+  project_id  = var.project_id
+  name        = var.name
+  disk_format = var.disk_format
+  image_file = {
+    local = {
+      file_path = var.local_file_path
+    }
+  }
+  min_disk_size = var.min_disk_size
+  min_ram       = var.min_ram
   labels = {
     "acc-test" : var.label
   }
@@ -45,4 +51,35 @@ resource "stackit_image" "image" {
     virtio_scsi              = var.virtio_scsi
   }
 
+}
+
+resource "stackit_image" "image2" {
+  project_id  = var.project_id
+  name        = var.name2
+  disk_format = var.disk_format
+  image_file = {
+    download = {
+      url = var.url
+    }
+  }
+  min_disk_size = var.min_disk_size
+  min_ram       = var.min_ram
+  labels = {
+    "acc-test" : var.label
+  }
+  config = {
+    boot_menu                = var.boot_menu
+    cdrom_bus                = var.cdrom_bus
+    disk_bus                 = var.disk_bus
+    nic_model                = var.nic_model
+    operating_system         = var.operating_system
+    operating_system_distro  = var.operating_system_distro
+    operating_system_version = var.operating_system_version
+    rescue_bus               = var.rescue_bus
+    rescue_device            = var.rescue_device
+    secure_boot              = var.secure_boot
+    uefi                     = var.uefi
+    video_model              = var.video_model
+    virtio_scsi              = var.virtio_scsi
+  }
 }
