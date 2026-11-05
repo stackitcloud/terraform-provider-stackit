@@ -20,7 +20,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/automation v0.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.22.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.25.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.16.0
