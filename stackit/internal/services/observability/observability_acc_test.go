@@ -34,6 +34,7 @@ var alert_rule_expression_updated = "sum(kube_pod_status_phase{phase=\"Error\"})
 var logalertgroup_expression_updated = "sum(rate({namespace=\"example\"} |= \"Another error message\" [1m])) > 0"
 
 var testConfigVarsMin = config.Variables{
+	"cert_check_source":         config.StringVariable("tcp://www.stackit.de:443"),
 	"project_id":                config.StringVariable(testutil.ProjectId),
 	"alertgroup_name":           config.StringVariable(fmt.Sprintf("tf-acc-ag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"alert_rule_name":           config.StringVariable("alert1"),
@@ -130,6 +131,7 @@ func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
 	tempConfig["alert_rule_name"] = config.StringVariable("alert1-updated")
+	tempConfig["cert_check_source"] = config.StringVariable("https://www.stackit.de:443")
 	return tempConfig
 }
 
@@ -229,6 +231,14 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_alert"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression", logalertgroup_expression),
+					// cert check
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_cert_check.cert_check", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.cert_check", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.cert_check", "cert_check_id"),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.cert_check", "source", testutil.ConvertConfigVariable(testConfigVarsMin["cert_check_source"])),
 				),
 			},
 			// Data source
@@ -405,6 +415,28 @@ func TestAccResourceMin(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			// Import 5
+			{
+				ConfigVariables: testConfigVarsMin,
+				ResourceName:    "stackit_observability_cert_check.cert_check",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_observability_cert_check.cert_check"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_observability_cert_check.cert_check")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					certCheckId, ok := r.Primary.Attributes["cert_check_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute cert_check_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, certCheckId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
@@ -481,6 +513,14 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.alert", testutil.ConvertConfigVariable(testConfigVarsMin["logalertgroup_alert"])),
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "rules.0.expression", logalertgroup_expression),
+					// cert check
+					resource.TestCheckResourceAttrPair(
+						"stackit_observability_instance.instance", "instance_id",
+						"stackit_observability_cert_check.cert_check", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.cert_check", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_observability_cert_check.cert_check", "cert_check_id"),
+					resource.TestCheckResourceAttr("stackit_observability_cert_check.cert_check", "source", testutil.ConvertConfigVariable(configVarsMinUpdated()["cert_check_source"])),
 				),
 			},
 		},
