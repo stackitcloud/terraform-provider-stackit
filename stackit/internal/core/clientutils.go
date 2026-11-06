@@ -38,6 +38,7 @@ import (
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
+	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
@@ -65,6 +66,7 @@ type ClientFactory interface {
 	newAuthorizationV2Client() (authorization.DefaultAPI, error)
 	newAutomationV1Client() (automation.DefaultAPI, error)
 	newCdnV1Client() (cdn.DefaultAPI, error)
+	newContainerRegistryV1Client() (registry.DefaultAPI, error)
 	newDnsV1Client() (dns.DefaultAPI, error)
 	newDremioV1BetaClient() (dremio.DefaultAPI, error)
 	newEdgeV1Client() (edge.DefaultAPI, error)
@@ -118,6 +120,10 @@ func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error
 	g.Go(func() (err error) { cc.VpnV1Client, err = clientFactory.newVpnV1Client(); return err })
 	g.Go(func() (err error) { cc.IaaSv2AlphaClient, err = clientFactory.newIaaSV2AlphaClient(); return err })
 	g.Go(func() (err error) { cc.CdnV1Client, err = clientFactory.newCdnV1Client(); return err })
+	g.Go(func() (err error) {
+		cc.ContainerRegistryV1Client, err = clientFactory.newContainerRegistryV1Client()
+		return err
+	})
 	g.Go(func() (err error) { cc.PostgresflexV3Client, err = clientFactory.newPostgresflexV3Client(); return err })
 	g.Go(func() (err error) { cc.AlbV2Client, err = clientFactory.newAlbV2Client(); return err })
 	g.Go(func() (err error) { cc.SkeV2Client, err = clientFactory.newSkeV2Client(); return err })
@@ -495,6 +501,17 @@ func (f *DefaultClientFactory) newCdnV1Client() (cdn.DefaultAPI, error) {
 	apiClient, err := cdn.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("configuring CdnV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newContainerRegistryV1Client() (registry.DefaultAPI, error) {
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.ContainerRegistryCustomEndpoint)
+
+	apiClient, err := registry.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("configuring ContainerRegistryV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil

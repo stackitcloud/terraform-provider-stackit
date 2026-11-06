@@ -38,6 +38,7 @@ import (
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
+	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
@@ -79,6 +80,7 @@ type CustomEndpointConfig struct {
 	AuthorizationCustomEndpoint     string
 	AutomationCustomEndpoint        string
 	CdnCustomEndpoint               string
+	ContainerRegistryCustomEndpoint string
 	DnsCustomEndpoint               string
 	DremioCustomEndpoint            string
 	EdgeCloudCustomEndpoint         string
@@ -215,6 +217,7 @@ type ClientCollection struct {
 	AuthorizationV2Client       authorization.DefaultAPI
 	AutomationV1Client          automation.DefaultAPI
 	CdnV1Client                 cdn.DefaultAPI
+	ContainerRegistryV1Client   registry.DefaultAPI
 	DnsV1Client                 dns.DefaultAPI
 	DremioV1BetaClient          dremio.DefaultAPI
 	EdgeV1Client                edge.DefaultAPI
