@@ -79,6 +79,7 @@ var (
 	ALBCertCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_ALB_CERT_CUSTOM_ENDPOINT", providerName: "alb_certificates_custom_endpoint"}
 	AlbWafCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_ALB_WAF_CUSTOM_ENDPOINT", providerName: "alb_waf_custom_endpoint"}
 	CdnCustomEndpoint               = customEndpointConfig{envVarName: "TF_ACC_CDN_CUSTOM_ENDPOINT", providerName: "cdn_custom_endpoint"}
+	ContainerRegistryCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_CONTAINER_REGISTRY_CUSTOM_ENDPOINT", providerName: "container_registry_custom_endpoint"}
 	DnsCustomEndpoint               = customEndpointConfig{envVarName: "TF_ACC_DNS_CUSTOM_ENDPOINT", providerName: "dns_custom_endpoint"}
 	DremioCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_DREMIO_CUSTOM_ENDPOINT", providerName: "dremio_custom_endpoint"}
 	EdgeCloudCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT", providerName: "edgecloud_custom_endpoint"}
@@ -122,6 +123,7 @@ var (
 		ALBCertCustomEndpoint,
 		AlbWafCustomEndpoint,
 		CdnCustomEndpoint,
+		ContainerRegistryCustomEndpoint,
 		DnsCustomEndpoint,
 		EdgeCloudCustomEndpoint,
 		GitCustomEndpoint,

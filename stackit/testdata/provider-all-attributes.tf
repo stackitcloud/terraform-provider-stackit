@@ -12,6 +12,7 @@ provider "stackit" {
   service_account_email              = "abc@abc.de"
   cdn_custom_endpoint                = "https://cdn.api.eu01.stackit.cloud"
   dns_custom_endpoint                = "https://dns.api.stackit.cloud"
+  containerregistry_custom_endpoint  = "https://registry.api.stackit.cloud"
   edgecloud_custom_endpoint          = "https://edge.api.stackit.cloud"
   git_custom_endpoint                = "https://git.api.stackit.cloud"
   iaas_custom_endpoint               = "https://iaas.api.stackit.cloud"

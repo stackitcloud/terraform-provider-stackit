@@ -28,6 +28,7 @@ import (
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
+	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
@@ -54,6 +55,7 @@ type MockClientFactory struct {
 	AlbWafV1ClientMock              albWaf.DefaultAPI
 	AuthorizationV2ClientMock       authorization.DefaultAPI
 	CdnV1ClientMock                 cdnSdk.DefaultAPI
+	ContainerRegistryV1ClientMock   registry.DefaultAPI
 	DnsV1ClientMock                 dns.DefaultAPI
 	DremioV2BetaClientMock          dremioSdk.DefaultAPI
 	EdgeV1ClientMock                edge.DefaultAPI
@@ -322,6 +324,14 @@ func (m *MockClientFactory) newCdnV1Client() (cdnSdk.DefaultAPI, error) {
 	}
 
 	return cdnSdk.DefaultAPIServiceMock{}, nil
+}
+
+func (m *MockClientFactory) newContainerRegistryV1Client() (registry.DefaultAPI, error) {
+	if m.ContainerRegistryV1ClientMock != nil {
+		return m.ContainerRegistryV1ClientMock, nil
+	}
+
+	return registry.DefaultAPIServiceMock{}, nil
 }
 
 func (m *MockClientFactory) newIaaSV2AlphaClient() (iaasV2Alpha.DefaultAPI, error) {

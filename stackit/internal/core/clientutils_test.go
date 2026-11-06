@@ -36,6 +36,7 @@ import (
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
+	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
@@ -742,6 +743,25 @@ func TestDefaultClientFactory_newCdnV1Client(t *testing.T) {
 		},
 		customEndpointSetter: func(cfg *CustomEndpointConfig) {
 			cfg.CdnCustomEndpoint = testCustomEndpoint
+		},
+	}
+
+	test.run(t)
+}
+
+func TestDefaultClientFactory_newContainerRegistryV1Client(t *testing.T) {
+	test := testHelper[registry.DefaultAPI]{
+		factoryMethod: (*DefaultClientFactory).newContainerRegistryV1Client,
+		clientInitFunc: func(opts ...config.ConfigurationOption) registry.DefaultAPI {
+			client, err := registry.NewAPIClient(opts...)
+			if err != nil {
+				t.Fatalf("error creating client: %v", err)
+			}
+
+			return client.DefaultAPI
+		},
+		customEndpointSetter: func(cfg *CustomEndpointConfig) {
+			cfg.ContainerRegistryCustomEndpoint = testCustomEndpoint
 		},
 	}
 
