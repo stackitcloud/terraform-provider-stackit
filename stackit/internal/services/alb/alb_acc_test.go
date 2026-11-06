@@ -115,6 +115,8 @@ var testConfigVarsMax = config.Variables{
 	"ahc_http_ok_status_200":            config.StringVariable("200"),
 	"ahc_http_ok_status_201":            config.StringVariable("201"),
 	"ahc_http_path":                     config.StringVariable("/healthy"),
+	"ahc_http_tls_enabled":              config.BoolVariable(true),
+	"ahc_http_tls_skip":                 config.BoolVariable(true),
 	"ephemeral_address":                 config.BoolVariable(true),
 	"private_network_only":              config.BoolVariable(false),
 	"acl":                               config.StringVariable("192.168.0.0/24"),
@@ -138,6 +140,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMax))
 	maps.Copy(tempConfig, testConfigVarsMax)
 	tempConfig["ephemeral_address"] = config.BoolVariable(false)
+	tempConfig["ahc_http_tls_skip"] = config.BoolVariable(false)
 	tempConfig["web_socket"] = config.BoolVariable(false)
 	tempConfig["query_parameters"] = config.ListVariable(
 		config.ObjectVariable(map[string]config.Variable{
@@ -401,6 +404,8 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.0", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_ok_status_200"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.1", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_ok_status_201"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.path", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_path"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.tls_config.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_tls_enabled"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.tls_config.skip_certificate_validation", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_tls_skip"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_enabled"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.skip_certificate_validation", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_skip"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.custom_ca", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_custom_ca"])),
@@ -491,6 +496,8 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.0", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_ok_status_200"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.1", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_ok_status_201"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.path", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_path"])),
+					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.tls_config.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_tls_enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.tls_config.skip_certificate_validation", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_tls_skip"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_enabled"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.skip_certificate_validation", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_skip"])),
 					resource.TestCheckResourceAttr("data.stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.custom_ca", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_custom_ca"])),
@@ -582,6 +589,8 @@ func TestAccALBResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_interval_jitter"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.unhealthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_unhealthy_threshold"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.path", testutil.ConvertConfigVariable(testConfigVarsMax["ahc_http_path"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.tls_config.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_http_tls_enabled"])),
+					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.tls_config.skip_certificate_validation", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ahc_http_tls_skip"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_enabled"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.skip_certificate_validation", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_skip"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "target_pools.0.tls_config.custom_ca", testutil.ConvertConfigVariable(testConfigVarsMax["tls_config_custom_ca"])),
