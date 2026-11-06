@@ -13,6 +13,7 @@ import (
 	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 	iaasV2Alpha "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
 	iaasV2 "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	identity "github.com/stackitcloud/stackit-sdk-go/services/identity/v1api"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
@@ -61,6 +62,7 @@ type MockClientFactory struct {
 	IaaSV2ClientMock                iaasV2.DefaultAPI
 	IaasV2AlphaClientMock           iaasV2Alpha.DefaultAPI
 	IntakeV1BetaClientMock          intake.DefaultAPI
+	IdentityV1ClientMock            identity.DefaultAPI
 	KmsV1ClientMock                 kms.DefaultAPI
 	LoadbalancerV2ClientMock        loadbalancer.DefaultAPI
 	LogmeV2ClientMock               logmeSdk.DefaultAPI
@@ -90,6 +92,13 @@ type MockClientFactory struct {
 	TelemetryRouterV1ClientMock     telemetryrouter.DefaultAPI
 	ValkeyV2ClientMock              valkey.DefaultAPI
 	VpnV1ClientMock                 vpn.DefaultAPI
+}
+
+func (m *MockClientFactory) newIdentityV1Client() (identity.DefaultAPI, error) {
+	if m.IdentityV1ClientMock != nil {
+		return m.IdentityV1ClientMock, nil
+	}
+	return identity.DefaultAPIServiceMock{}, nil
 }
 
 func (m *MockClientFactory) newValkeyV2Client() (valkey.DefaultAPI, error) {

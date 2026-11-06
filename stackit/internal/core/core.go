@@ -23,6 +23,7 @@ import (
 	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 	iaasv2alpha "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
 	iaasv2 "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	identity "github.com/stackitcloud/stackit-sdk-go/services/identity/v1api"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
@@ -84,6 +85,7 @@ type CustomEndpointConfig struct {
 	EdgeCloudCustomEndpoint         string
 	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
+	IdentityV1CustomEndpoint        string
 	IntakeCustomEndpoint            string
 	KMSCustomEndpoint               string
 	LoadBalancerCustomEndpoint      string
@@ -221,6 +223,7 @@ type ClientCollection struct {
 	GitV1BetaClient             git.DefaultAPI
 	IaaSv2AlphaClient           iaasv2alpha.DefaultAPI
 	IaaSv2Client                iaasv2.DefaultAPI
+	IdentityV1Client            identity.DefaultAPI
 	IntakeV1BetaClient          intake.DefaultAPI
 	KmsV1Client                 kms.DefaultAPI
 	LoadbalancerV2Client        loadbalancer.DefaultAPI

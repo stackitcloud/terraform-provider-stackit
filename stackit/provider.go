@@ -16,6 +16,12 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/group"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/groups"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/members"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/user"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/identity/users"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -216,6 +222,7 @@ type providerModel struct {
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	IntakeCustomEndpoint            types.String `tfsdk:"intake_custom_endpoint"`
+	IdentityV1CustomEndpoint        types.String `tfsdk:"identity_v1_custom_endpoint"`
 	KmsCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
@@ -550,6 +557,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
 			},
+			"identity_v1_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: "Custom endpoint for the Identity API v1 service",
+			},
 		},
 	}
 }
@@ -641,6 +652,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { customEndpointConfig.TelemetryLinkCustomEndpoint = v })
 	setStringField(providerConfig.ValkeyCustomEndpoint, func(v string) { customEndpointConfig.ValkeyCustomEndpoint = v })
 	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { customEndpointConfig.VpnCustomEndpoint = v })
+	setStringField(providerConfig.IdentityV1CustomEndpoint, func(v string) { customEndpointConfig.IdentityV1CustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
@@ -869,6 +881,11 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		vpnConnection.NewVPNConnectionDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
+		group.NewGroupDataSource,
+		groups.NewGroupsDataSource,
+		members.NewGroupMemberDataSource,
+		user.NewUserDataSource,
+		users.NewUsersDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -985,6 +1002,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasRoutingTable.NewRoutingTableResource,
 		iaasRoutingTableRoute.NewRoutingTableRouteResource,
 		iaasVolume.NewVolumeResource,
+		group.NewGroupResource,
+		members.NewGroupMemberResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

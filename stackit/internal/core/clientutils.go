@@ -23,6 +23,7 @@ import (
 	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 	iaasV2Alpha "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
 	iaasV2 "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	identity "github.com/stackitcloud/stackit-sdk-go/services/identity/v1api"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
@@ -71,6 +72,7 @@ type ClientFactory interface {
 	newGitV1BetaClient() (git.DefaultAPI, error)
 	newIaaSV2AlphaClient() (iaasV2Alpha.DefaultAPI, error)
 	newIaaSV2Client() (iaasV2.DefaultAPI, error)
+	newIdentityV1Client() (identity.DefaultAPI, error)
 	newIntakeV1BetaClient() (intake.DefaultAPI, error)
 	newKmsV1Client() (kms.DefaultAPI, error)
 	newLoadbalancerV2Client() (loadbalancer.DefaultAPI, error)
@@ -137,6 +139,7 @@ func initClientCollection(clientFactory ClientFactory) (*ClientCollection, error
 	g.Go(func() (err error) { cc.IntakeV1BetaClient, err = clientFactory.newIntakeV1BetaClient(); return err })
 	g.Go(func() (err error) { cc.ValkeyV2Client, err = clientFactory.newValkeyV2Client(); return err })
 	g.Go(func() (err error) { cc.DremioV1BetaClient, err = clientFactory.newDremioV1BetaClient(); return err })
+	g.Go(func() (err error) { cc.IdentityV1Client, err = clientFactory.newIdentityV1Client(); return err })
 	g.Go(func() (err error) {
 		cc.ResourceManagerClient, err = clientFactory.newResourceManagerClient()
 		return err
@@ -694,6 +697,17 @@ func (f *DefaultClientFactory) newObservabilityV1Client() (observability.Default
 	apiClient, err := observability.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("configuring ObservabilityV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
+	}
+
+	return apiClient.DefaultAPI, nil
+}
+
+func (f *DefaultClientFactory) newIdentityV1Client() (identity.DefaultAPI, error) {
+	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.IdentityV1CustomEndpoint)
+
+	apiClient, err := identity.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("configuring IdentityV1 client: %w. This is an error related to the provider configuration, not to the resource configuration", err)
 	}
 
 	return apiClient.DefaultAPI, nil

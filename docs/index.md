@@ -186,6 +186,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc, ske
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
+- `identity_v1_custom_endpoint` (String) Custom endpoint for the Identity API v1 service
 - `intake_custom_endpoint` (String) Custom endpoint for the Intake service
 - `kms_custom_endpoint` (String) Custom endpoint for the KMS service
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
