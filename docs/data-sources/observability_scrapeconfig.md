@@ -32,6 +32,9 @@ data "stackit_observability_scrapeconfig" "example" {
 ### Read-Only
 
 - `basic_auth` (Attributes) A basic authentication block. (see [below for nested schema](#nestedatt--basic_auth))
+- `bearer_token` (String, Sensitive) Bearer token set in the `Authorization` header on every scrape request.
+- `honor_labels` (Boolean) Whether the labels from the scraped data are kept on conflicts with server-side labels.
+- `honor_timestamps` (Boolean) Whether the timestamps present in scraped data are respected.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`name`".
 - `metrics_path` (String) Specifies the job scraping url path.
 - `saml2` (Attributes) A SAML2 configuration block. (see [below for nested schema](#nestedatt--saml2))
@@ -40,6 +43,7 @@ data "stackit_observability_scrapeconfig" "example" {
 - `scrape_interval` (String) Specifies the scrape interval as duration string.
 - `scrape_timeout` (String) Specifies the scrape timeout as duration string.
 - `targets` (Attributes List) The targets list (specified by the static config). (see [below for nested schema](#nestedatt--targets))
+- `tls_config` (Attributes) The scrape request's TLS settings. (see [below for nested schema](#nestedatt--tls_config))
 
 <a id="nestedatt--basic_auth"></a>
 ### Nested Schema for `basic_auth`
@@ -65,3 +69,11 @@ Read-Only:
 
 - `labels` (Map of String) Specifies labels.
 - `urls` (List of String) Specifies target URLs.
+
+
+<a id="nestedatt--tls_config"></a>
+### Nested Schema for `tls_config`
+
+Read-Only:
+
+- `insecure_skip_verify` (Boolean) Whether validation of the server certificate is disabled.
