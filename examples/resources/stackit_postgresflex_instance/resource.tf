@@ -13,3 +13,21 @@ resource "stackit_postgresflex_instance" "example" {
   version        = "17"
   retention_days = 32
 }
+
+# Instance with deletion protection
+resource "stackit_postgresflex_instance" "protected" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-protected-instance"
+  network = {
+    acl = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
+  }
+  backup_schedule = "0 0 * * *"
+  flavor_id       = "4.8-replica"
+  storage = {
+    class = "premium-perf2-stackit"
+    size  = 5
+  }
+  version             = "17"
+  retention_days      = 32
+  deletion_protection = true
+}

@@ -78,8 +78,9 @@ func TestMapFields(t *testing.T) {
 				"instance_address": types.StringNull(),
 				"router_address":   types.StringNull(),
 			}),
-			Version: types.StringValue(""),
-			Region:  types.StringValue(testRegion),
+			Version:            types.StringValue(""),
+			Region:             types.StringValue(testRegion),
+			DeletionProtection: types.BoolValue(true),
 		}
 
 		for _, mod := range mods {
@@ -129,6 +130,7 @@ func TestMapFields(t *testing.T) {
 				Id:             "iid",
 				Name:           "name",
 				State:          postgresflex.STATE_READY,
+				IsDeletable:    true,
 				Storage: postgresflex.Storage{
 					Class: new("class"),
 					Size:  new(int64(78)),
@@ -177,8 +179,9 @@ func TestMapFields(t *testing.T) {
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
 				}),
-				Version: types.StringValue("version"),
-				Region:  types.StringValue(testRegion),
+				Version:            types.StringValue("version"),
+				Region:             types.StringValue(testRegion),
+				DeletionProtection: types.BoolValue(false),
 			},
 			isValid: true,
 		},
@@ -254,8 +257,9 @@ func TestMapFields(t *testing.T) {
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
 				}),
-				Version: types.StringValue("version"),
-				Region:  types.StringValue(testRegion),
+				Version:            types.StringValue("version"),
+				Region:             types.StringValue(testRegion),
+				DeletionProtection: types.BoolValue(true),
 			},
 			isValid: true,
 		},
@@ -333,8 +337,9 @@ func TestMapFields(t *testing.T) {
 					"instance_address": types.StringNull(),
 					"router_address":   types.StringNull(),
 				}),
-				Version: types.StringValue("version"),
-				Region:  types.StringValue(testRegion),
+				Version:            types.StringValue("version"),
+				Region:             types.StringValue(testRegion),
+				DeletionProtection: types.BoolValue(true),
 			},
 			isValid: true,
 		},
@@ -1293,6 +1298,75 @@ func TestGetAllFlavors(t *testing.T) {
 			}
 			if !cmp.Equal(got, tt.want) {
 				t.Errorf("getAllFlavors() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToUpdateProtectionPayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		expected    *postgresflex.UpdateInstanceProtectionPayload
+		isValid     bool
+	}{
+		{
+			description: "protection_enabled",
+			input: &Model{
+				DeletionProtection: types.BoolValue(true),
+			},
+			expected: &postgresflex.UpdateInstanceProtectionPayload{
+				IsDeletable: false,
+			},
+			isValid: true,
+		},
+		{
+			description: "protection_disabled",
+			input: &Model{
+				DeletionProtection: types.BoolValue(false),
+			},
+			expected: &postgresflex.UpdateInstanceProtectionPayload{
+				IsDeletable: true,
+			},
+			isValid: true,
+		},
+		{
+			description: "protection_null",
+			input: &Model{
+				DeletionProtection: types.BoolNull(),
+			},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			description: "protection_unknown",
+			input: &Model{
+				DeletionProtection: types.BoolUnknown(),
+			},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			description: "nil_model",
+			input:       nil,
+			expected:    nil,
+			isValid:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdateProtectionPayload(tt.input)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
 			}
 		})
 	}
