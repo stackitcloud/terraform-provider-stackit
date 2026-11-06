@@ -137,6 +137,10 @@ Required:
 
 - `remote_asn` (Number) Remote ASN for BGP peering (private ASN range, 64512-4294967294).
 
+Optional:
+
+- `inbound_filter_id` (String) UUID of a `stackit_vpn_bgp_filter` to apply for inbound route filtering on this tunnel's BGP peering session. If omitted, no inbound filtering is applied.
+
 
 <a id="nestedatt--tunnel1--peering"></a>
 ### Nested Schema for `tunnel1.peering`
@@ -201,6 +205,10 @@ Optional:
 Required:
 
 - `remote_asn` (Number) Remote ASN for BGP peering (private ASN range, 64512-4294967294).
+
+Optional:
+
+- `inbound_filter_id` (String) UUID of a `stackit_vpn_bgp_filter` to apply for inbound route filtering on this tunnel's BGP peering session. If omitted, no inbound filtering is applied.
 
 
 <a id="nestedatt--tunnel2--peering"></a>
