@@ -49,7 +49,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.13.1
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.22.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.19.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.4.0
