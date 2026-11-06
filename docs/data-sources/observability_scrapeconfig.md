@@ -34,6 +34,7 @@ data "stackit_observability_scrapeconfig" "example" {
 - `basic_auth` (Attributes) A basic authentication block. (see [below for nested schema](#nestedatt--basic_auth))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`instance_id`,`name`".
 - `metrics_path` (String) Specifies the job scraping url path.
+- `metrics_relabel_configs` (Attributes List) List of metric relabel configurations, applied to the scraped samples before they are stored. (see [below for nested schema](#nestedatt--metrics_relabel_configs))
 - `saml2` (Attributes) A SAML2 configuration block. (see [below for nested schema](#nestedatt--saml2))
 - `sample_limit` (Number) Specifies the scrape sample limit.
 - `scheme` (String) Specifies the http scheme.
@@ -48,6 +49,20 @@ Read-Only:
 
 - `password` (String, Sensitive) Specifies basic auth password.
 - `username` (String) Specifies basic auth username.
+
+
+<a id="nestedatt--metrics_relabel_configs"></a>
+### Nested Schema for `metrics_relabel_configs`
+
+Read-Only:
+
+- `action` (String) Action to perform based on the regex matching.
+- `modulus` (Number) Modulus to take of the hash of the source label values.
+- `regex` (String) Regular expression against which the extracted value is matched.
+- `replacement` (String) Replacement value against which a regex replace is performed if the regular expression matches.
+- `separator` (String) Separator placed between concatenated source label values.
+- `source_labels` (List of String) The source labels select values from existing labels.
+- `target_label` (String) Label to which the resulting value is written in a `replace` action.
 
 
 <a id="nestedatt--saml2"></a>

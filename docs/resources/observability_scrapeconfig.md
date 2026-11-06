@@ -21,6 +21,13 @@ resource "stackit_observability_scrapeconfig" "example" {
   saml2 = {
     enable_url_parameters = true
   }
+  metrics_relabel_configs = [
+    {
+      action        = "drop"
+      source_labels = ["__name__"]
+      regex         = "go_.*"
+    }
+  ]
   targets = [
     {
       urls = ["url1", "urls2"]
@@ -46,6 +53,7 @@ resource "stackit_observability_scrapeconfig" "example" {
 ### Optional
 
 - `basic_auth` (Attributes) A basic authentication block. (see [below for nested schema](#nestedatt--basic_auth))
+- `metrics_relabel_configs` (Attributes List) List of metric relabel configurations, applied to the scraped samples before they are stored. (see [below for nested schema](#nestedatt--metrics_relabel_configs))
 - `saml2` (Attributes) A SAML2 configuration block. (see [below for nested schema](#nestedatt--saml2))
 - `sample_limit` (Number) Specifies the scrape sample limit. Upper limit depends on the service plan. Defaults to `5000`.
 - `scheme` (String) Specifies the http scheme. Defaults to `https`.
@@ -75,6 +83,20 @@ Required:
 
 - `password` (String, Sensitive) Specifies basic auth password.
 - `username` (String) Specifies basic auth username.
+
+
+<a id="nestedatt--metrics_relabel_configs"></a>
+### Nested Schema for `metrics_relabel_configs`
+
+Optional:
+
+- `action` (String) Action to perform based on the regex matching. Possible values are: `replace`, `keep`, `drop`, `hashmod`, `labelmap`, `labeldrop`, `labelkeep`. If not set, the API uses `replace`.
+- `modulus` (Number) Modulus to take of the hash of the source label values. Only used with the `hashmod` action.
+- `regex` (String) Regular expression against which the extracted value is matched. If not set, the API uses `.*`.
+- `replacement` (String) Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. If not set, the API uses `$1`.
+- `separator` (String) Separator placed between concatenated source label values. If not set, the API uses `;`.
+- `source_labels` (List of String) The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression.
+- `target_label` (String) Label to which the resulting value is written in a `replace` action. Regex capture groups are available.
 
 
 <a id="nestedatt--saml2"></a>

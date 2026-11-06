@@ -48,6 +48,8 @@ var testConfigVarsMin = config.Variables{
 	"scrapeconfig_metrics_path": config.StringVariable("/metrics"),
 	"scrapeconfig_targets_url":  config.StringVariable("www.y97xyrrocx2gsxx.de"),
 	"grafana_admin_enabled":     config.StringVariable("true"),
+
+	"scrapeconfig_relabel_regex": config.StringVariable("go_.*"),
 }
 
 var testConfigVarsMax = config.Variables{
@@ -130,6 +132,7 @@ func configVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(tempConfig, testConfigVarsMin)
 	tempConfig["alert_rule_name"] = config.StringVariable("alert1-updated")
+	tempConfig["scrapeconfig_relabel_regex"] = config.StringVariable("process_.*")
 	return tempConfig
 }
 
@@ -196,6 +199,14 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "name", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.#", "1"),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_path", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_metrics_path"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.#", "2"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.action", "drop"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.source_labels.0", "__name__"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.regex", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_relabel_regex"])),
+					// defaults set by the API
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.action", "replace"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.separator", ";"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.target_label", "source_job"),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.0", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_targets_url"])),
 
 					// credentials
@@ -295,6 +306,14 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "name", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_name"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_path", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_metrics_path"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.action", "drop"),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.source_labels.0", "__name__"),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.regex", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_relabel_regex"])),
+					// defaults set by the API
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.action", "replace"),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.separator", ";"),
+					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.target_label", "source_job"),
 					resource.TestCheckResourceAttr("data.stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.0", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_targets_url"])),
 
 					// alertgroup
@@ -448,6 +467,14 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "name", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.#", "1"),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_path", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_metrics_path"])),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.#", "2"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.action", "drop"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.source_labels.0", "__name__"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.0.regex", testutil.ConvertConfigVariable(configVarsMinUpdated()["scrapeconfig_relabel_regex"])),
+					// defaults set by the API
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.action", "replace"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.separator", ";"),
+					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "metrics_relabel_configs.1.target_label", "source_job"),
 					resource.TestCheckResourceAttr("stackit_observability_scrapeconfig.scrapeconfig", "targets.0.urls.0", testutil.ConvertConfigVariable(testConfigVarsMin["scrapeconfig_targets_url"])),
 
 					// credentials
