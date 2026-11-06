@@ -148,6 +148,129 @@ func TestDefaultClientFactory_RetryRequests(t *testing.T) {
 	}
 }
 
+func TestRetryTransport_AdditionalStatusCodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{
+			name:       "request timeout",
+			statusCode: http.StatusRequestTimeout,
+		},
+		{
+			name:       "bad gateway",
+			statusCode: http.StatusBadGateway,
+		},
+		{
+			name:       "service unavailable",
+			statusCode: http.StatusServiceUnavailable,
+		},
+		{
+			name:       "gateway timeout",
+			statusCode: http.StatusGatewayTimeout,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				attempts := 0
+				transport := expectedRetryTransport(retryTestRoundTripper(func(*http.Request) (*http.Response, error) {
+					attempts++
+					if attempts > 2 {
+						t.Fatal("unexpected extra retry")
+					}
+					status := tt.statusCode
+					if attempts == 2 {
+						status = http.StatusOK
+					}
+					return &http.Response{
+						StatusCode: status,
+						Body:       http.NoBody,
+					}, nil
+				}))
+				transport.AdditionalRetryStatusCodes = []int{tt.statusCode}
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com", http.NoBody)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				resp, err := transport.RoundTrip(req)
+
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := resp.Body.Close(); err != nil {
+					t.Fatal(err)
+				}
+				if resp.StatusCode != http.StatusOK {
+					t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+				}
+				if attempts != 2 {
+					t.Errorf("attempts = %d, want 2", attempts)
+				}
+			})
+		})
+	}
+}
+
+func TestRetryTransport_AdditionalStatusCodes_RetryAfter(t *testing.T) {
+	statusCodes := []int{
+		http.StatusRequestTimeout,
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout,
+	}
+
+	for _, statusCode := range statusCodes {
+		t.Run(http.StatusText(statusCode), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				attempts := 0
+				transport := expectedRetryTransport(retryTestRoundTripper(func(*http.Request) (*http.Response, error) {
+					attempts++
+					if attempts > 2 {
+						t.Fatal("unexpected extra retry")
+					}
+					if attempts == 2 {
+						return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+					}
+					return &http.Response{
+						StatusCode: statusCode,
+						Header:     http.Header{"Retry-After": {"30"}},
+						Body:       http.NoBody,
+					}, nil
+				}))
+				transport.AdditionalRetryStatusCodes = []int{statusCode}
+				transport.MaxJitter = time.Nanosecond // use exact timing
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com", http.NoBody)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				start := time.Now()
+
+				resp, err := transport.RoundTrip(req)
+
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := resp.Body.Close(); err != nil {
+					t.Fatal(err)
+				}
+				if resp.StatusCode != http.StatusOK {
+					t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+				}
+				if attempts != 2 {
+					t.Errorf("attempts = %d, want 2", attempts)
+				}
+				if elapsed := time.Since(start); elapsed != 30*time.Second {
+					t.Errorf("elapsed = %s, want Retry-After delay of 30s", elapsed)
+				}
+			})
+		})
+	}
+}
+
 func TestRetryTransport_ExponentialBackoffWithJitter(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		attempts := 0
