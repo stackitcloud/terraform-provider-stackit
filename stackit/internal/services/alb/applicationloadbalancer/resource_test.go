@@ -1679,3 +1679,40 @@ func Test_toPathPayload(t *testing.T) {
 		})
 	}
 }
+
+func TestHealthCheckDurationRegex(t *testing.T) {
+	tests := []struct {
+		value string
+		valid bool
+	}{
+		{"0s", true},
+		{"1s", true},
+		{"999s", true},
+		{"0.100s", true},
+		{"1.500s", true},
+		{"12.345s", true},
+		{"999.999s", true},
+		// Returned by the API as "0.100s", "1s" and "0s", which would drift.
+		{"0.1s", false},
+		{"1.000s", false},
+		{"0.000s", false},
+		{"", false},
+		{"s", false},
+		{"1000s", false},
+		{"1.0000s", false},
+		{"1.s", false},
+		{"-1s", false},
+		{"1", false},
+		{"1ms", false},
+		{"5sGARBAGE", false},
+		{"GARBAGE1.500s", false},
+		{"5s1.500s", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.value, func(t *testing.T) {
+			if got := healthCheckDurationRegex.MatchString(tt.value); got != tt.valid {
+				t.Errorf("healthCheckDurationRegex.MatchString(%q) = %v, want %v", tt.value, got, tt.valid)
+			}
+		})
+	}
+}
