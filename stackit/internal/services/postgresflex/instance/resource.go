@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -76,6 +77,8 @@ type Model struct {
 	RetentionDays types.Int32  `tfsdk:"retention_days"`
 	Version       types.String `tfsdk:"version"`
 	Region        types.String `tfsdk:"region"`
+	// DeletionProtection is the inverse of the API field `isDeletable`
+	DeletionProtection types.Bool `tfsdk:"deletion_protection"`
 }
 
 // Deprecated: Will be removed after February 2027. Struct corresponding to Model.Flavor
@@ -270,6 +273,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"network.access_scope":       "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(postgresflex.AllowedInstanceNetworkAccessScopeEnumValues)...),
 		"network.acl":                "List of IPV4 cidr." + willBeRequired,
 		"retention_days":             "How long backups are retained. The value can only be between 32 and 90 days." + willBeRequired,
+		"deletion_protection":        "If set to `true`, the instance is protected from deletion. The protection must be disabled (set to `false`) before the instance can be destroyed. If not set, the current value of the instance is kept.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -542,6 +546,14 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"deletion_protection": schema.BoolAttribute{
+				Description: descriptions["deletion_protection"],
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 }
@@ -643,6 +655,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
+	}
+
+	// The deletion protection can't be set in the create request, it has to be enabled afterwards
+	if model.DeletionProtection.ValueBool() {
+		err = r.updateDeletionProtection(ctx, projectId, region, createResp.Id, &model, waitResp)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Enabling deletion protection: %v", err))
+			return
+		}
 	}
 
 	// Map response body to schema
@@ -810,6 +831,15 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	// The deletion protection is managed by a separate endpoint
+	if !model.DeletionProtection.IsNull() && !model.DeletionProtection.IsUnknown() && model.DeletionProtection.ValueBool() == waitResp.IsDeletable {
+		err = r.updateDeletionProtection(ctx, projectId, region, instanceId, &model, waitResp)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating deletion protection: %v", err))
+			return
+		}
+	}
+
 	// Map response body to schema
 	err = mapFields(ctx, waitResp, &model, flavor, region)
 	if err != nil {
@@ -842,6 +872,11 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
+
+	if model.DeletionProtection.ValueBool() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", "The instance is protected from deletion. Set `deletion_protection` to `false` and apply the change before destroying the instance.")
+		return
+	}
 
 	// Delete existing instance
 	err := r.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
@@ -883,6 +918,27 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 		"instance_id": idParts[2],
 	})
 	tflog.Info(ctx, "Postgres Flex instance state imported")
+}
+
+// updateDeletionProtection sets the deletion protection of the instance to the value of the model
+// and updates the given instance response with the resulting value.
+func (r *instanceResource) updateDeletionProtection(ctx context.Context, projectId, region, instanceId string, model *Model, instanceResp *postgresflex.GetInstanceResponse) error {
+	if instanceResp == nil {
+		return fmt.Errorf("instance response is nil")
+	}
+	payload, err := toUpdateProtectionPayload(model)
+	if err != nil {
+		return fmt.Errorf("creating API payload: %w", err)
+	}
+	protectionResp, err := r.client.UpdateInstanceProtection(ctx, projectId, region, instanceId).UpdateInstanceProtectionPayload(*payload).Execute()
+	if err != nil {
+		return fmt.Errorf("calling API: %w", err)
+	}
+	if protectionResp == nil {
+		return fmt.Errorf("got empty response")
+	}
+	instanceResp.IsDeletable = protectionResp.IsDeletable
+	return nil
 }
 
 func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, model *Model, flavor *flavorModel, region string) error {
@@ -1012,6 +1068,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 	model.Region = types.StringValue(region)
 	model.Network = networkObject
 	model.ConnectionInfo = connectionObject
+	model.DeletionProtection = types.BoolValue(!resp.IsDeletable)
 	return nil
 }
 
@@ -1129,6 +1186,19 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		},
 		RetentionDays: conversion.Int32ValueToPointer(model.RetentionDays),
 		Version:       conversion.StringValueToPointer(model.Version),
+	}, nil
+}
+
+func toUpdateProtectionPayload(model *Model) (*postgresflex.UpdateInstanceProtectionPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+	if model.DeletionProtection.IsNull() || model.DeletionProtection.IsUnknown() {
+		return nil, fmt.Errorf("deletion protection is not set")
+	}
+
+	return &postgresflex.UpdateInstanceProtectionPayload{
+		IsDeletable: !model.DeletionProtection.ValueBool(),
 	}, nil
 }
 
