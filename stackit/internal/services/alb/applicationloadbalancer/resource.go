@@ -293,13 +293,15 @@ var activeHealthCheckTypes = map[string]attr.Type{
 }
 
 type httpHealthChecks struct {
-	OkStatus types.Set    `tfsdk:"ok_status"`
-	Path     types.String `tfsdk:"path"`
+	OkStatus  types.Set    `tfsdk:"ok_status"`
+	Path      types.String `tfsdk:"path"`
+	TLSConfig types.Object `tfsdk:"tls_config"`
 }
 
 var httpHealthChecksTypes = map[string]attr.Type{
-	"path":      types.StringType,
-	"ok_status": types.SetType{ElemType: types.StringType},
+	"path":       types.StringType,
+	"ok_status":  types.SetType{ElemType: types.StringType},
+	"tls_config": types.ObjectType{AttrTypes: tlsConfigTypes},
 }
 
 // Struct corresponding to targetPool.Targets[i]
@@ -472,6 +474,12 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"target_security_group.id":               "ID of the security Group",
 		"target_security_group.name":             "Name of the security Group",
 		"version":                                "Application Load Balancer resource version. Used for concurrency safe updates.",
+
+		// HTTP health check TLS config
+		"http_health_checks.tls_config":                             "Configuration for TLS of the HTTP health checks.",
+		"http_health_checks.tls_config.enabled":                     "Enable TLS for the HTTP health check requests to the targets. When enabled, public CAs are trusted. Can be used in tandem with the options either custom CA or skip validation or alone.",
+		"http_health_checks.tls_config.skip_certificate_validation": "Bypass certificate validation for the HTTP health check requests. This option is insecure and can only be used with public CAs by setting enabled true. Meant to be used for testing purposes only!",
+		"http_health_checks.tls_config.custom_ca":                   "Specifies a custom Certificate Authority (CA) that is trusted for the HTTP health check requests, in addition to any system-trusted CAs. Enabled needs to be set to true and skip validation to false for this option.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -1039,6 +1047,31 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 														"must match expression",
 													),
 												),
+											},
+										},
+										"tls_config": schema.SingleNestedAttribute{
+											Description: descriptions["http_health_checks.tls_config"],
+											Optional:    true,
+											Attributes: map[string]schema.Attribute{
+												"enabled": schema.BoolAttribute{
+													Description: descriptions["http_health_checks.tls_config.enabled"],
+													Optional:    true,
+													Computed:    true,
+													Default:     booldefault.StaticBool(false),
+												},
+												"skip_certificate_validation": schema.BoolAttribute{
+													Description: descriptions["http_health_checks.tls_config.skip_certificate_validation"],
+													Optional:    true,
+													Computed:    true,
+													Default:     booldefault.StaticBool(false),
+												},
+												"custom_ca": schema.StringAttribute{
+													Description: descriptions["http_health_checks.tls_config.custom_ca"],
+													Optional:    true,
+													Validators: []validator.String{
+														stringvalidator.LengthBetween(1, 8192),
+													},
+												},
 											},
 										},
 									},
@@ -1842,14 +1875,23 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) ([]albSdk.TargetPoo
 }
 
 func toTlsConfigPayload(ctx context.Context, tp *targetPool) (*albSdk.TlsConfig, error) {
-	if utils.IsUndefined(tp.TLSConfig) {
+	payload, err := toTlsConfig(ctx, tp.TLSConfig)
+	if err != nil {
+		return nil, fmt.Errorf("converting target pool TLS config: %w", err)
+	}
+	return payload, nil
+}
+
+// toTlsConfig converts a `tls_config` object (target pool or HTTP health check) to the API payload
+func toTlsConfig(ctx context.Context, tlsConfigTF types.Object) (*albSdk.TlsConfig, error) {
+	if utils.IsUndefined(tlsConfigTF) {
 		return nil, nil
 	}
 
 	tlsConfigModel := tlsConfig{}
-	diags := tp.TLSConfig.As(ctx, &tlsConfigModel, basetypes.ObjectAsOptions{})
+	diags := tlsConfigTF.As(ctx, &tlsConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
-		return nil, fmt.Errorf("converting target pool TLS config: %w", core.DiagsToError(diags))
+		return nil, core.DiagsToError(diags)
 	}
 
 	payload := albSdk.TlsConfig{
@@ -1984,9 +2026,15 @@ func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (*
 		return nil, fmt.Errorf("converting active health check ok status: %w", err)
 	}
 
+	tlsConfigPayload, err := toTlsConfig(ctx, httpHealthChecksModel.TLSConfig)
+	if err != nil {
+		return nil, fmt.Errorf("converting http health check TLS config: %w", err)
+	}
+
 	payload := albSdk.HttpHealthChecks{
 		OkStatuses: okStatus,
 		Path:       conversion.StringValueToPointer(httpHealthChecksModel.Path),
+		Tls:        tlsConfigPayload,
 	}
 	return &payload, nil
 }
@@ -2813,9 +2861,14 @@ func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *albSdk.HttpH
 	if diags.HasError() {
 		return fmt.Errorf("map OkStatuses list: %w", core.DiagsToError(diags))
 	}
+	tlsConfigTF, err := tlsConfigToObject(httpHealthChecksResp.Tls)
+	if err != nil {
+		return fmt.Errorf("map TLS config: %w", err)
+	}
 	httpHealthChecksMap := map[string]attr.Value{
-		"ok_status": okStatusesTF,
-		"path":      types.StringPointerValue(httpHealthChecksResp.Path),
+		"ok_status":  okStatusesTF,
+		"path":       types.StringPointerValue(httpHealthChecksResp.Path),
+		"tls_config": tlsConfigTF,
 	}
 
 	httpHealthChecksTF, diags := types.ObjectValue(httpHealthChecksTypes, httpHealthChecksMap)
@@ -2828,11 +2881,6 @@ func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *albSdk.HttpH
 }
 
 func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig, tp map[string]attr.Value, tlsModel basetypes.ObjectValue) error {
-	if targetPoolTLSConfigResp == nil {
-		tp["tls_config"] = types.ObjectNull(tlsConfigTypes)
-		return nil
-	}
-
 	var configTLS = &tlsConfig{}
 	if !tlsModel.IsNull() && !tlsModel.IsUnknown() {
 		diags := tlsModel.As(ctx, configTLS, basetypes.ObjectAsOptions{})
@@ -2841,14 +2889,28 @@ func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig
 		}
 	}
 
+	targetPoolTLSConfigTF, err := tlsConfigToObject(targetPoolTLSConfigResp)
+	if err != nil {
+		return err
+	}
+	tp["tls_config"] = targetPoolTLSConfigTF
+	return nil
+}
+
+// tlsConfigToObject maps a TLS config of the API (target pool or HTTP health check) to a `tls_config` object
+func tlsConfigToObject(tlsConfigResp *albSdk.TlsConfig) (types.Object, error) {
+	if tlsConfigResp == nil {
+		return types.ObjectNull(tlsConfigTypes), nil
+	}
+
 	enabled := types.BoolValue(false)
 	skipCertificateValidation := types.BoolValue(false)
 	// If the enabled or skip field is nil in the response we set it to false in the TF state to
 	// prevent an inconsistent result after apply error
-	if targetPoolTLSConfigResp.Enabled != nil && *targetPoolTLSConfigResp.Enabled {
+	if tlsConfigResp.Enabled != nil && *tlsConfigResp.Enabled {
 		enabled = types.BoolValue(true)
 	}
-	if targetPoolTLSConfigResp.SkipCertificateValidation != nil && *targetPoolTLSConfigResp.SkipCertificateValidation {
+	if tlsConfigResp.SkipCertificateValidation != nil && *tlsConfigResp.SkipCertificateValidation {
 		skipCertificateValidation = types.BoolValue(true)
 	}
 
@@ -2858,21 +2920,19 @@ func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig
 		"skip_certificate_validation": skipCertificateValidation,
 	}
 
-	if targetPoolTLSConfigResp.CustomCa != nil {
-		pemBytes, err := base64.StdEncoding.DecodeString(*targetPoolTLSConfigResp.CustomCa)
+	if tlsConfigResp.CustomCa != nil {
+		pemBytes, err := base64.StdEncoding.DecodeString(*tlsConfigResp.CustomCa)
 		if err != nil {
-			return fmt.Errorf("base64 decoding custom ca: %w", err)
+			return types.ObjectNull(tlsConfigTypes), fmt.Errorf("base64 decoding custom ca: %w", err)
 		}
 		tlsConfigMap["custom_ca"] = types.StringValue(string(pemBytes))
 	}
 
-	targetPoolTLSConfigTF, diags := types.ObjectValue(tlsConfigTypes, tlsConfigMap)
+	tlsConfigTF, diags := types.ObjectValue(tlsConfigTypes, tlsConfigMap)
 	if diags.HasError() {
-		return fmt.Errorf("mapping TLSConfig: %w", core.DiagsToError(diags))
+		return types.ObjectNull(tlsConfigTypes), fmt.Errorf("mapping TLSConfig: %w", core.DiagsToError(diags))
 	}
-
-	tp["tls_config"] = targetPoolTLSConfigTF
-	return nil
+	return tlsConfigTF, nil
 }
 
 func mapTargets(targetsResp []albSdk.Target, tp map[string]attr.Value) error {

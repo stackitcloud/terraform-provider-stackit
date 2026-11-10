@@ -233,6 +233,9 @@ resource "stackit_application_load_balancer" "example" {
         http_health_checks = {
           ok_status = ["200", "201"]
           path      = "/healthy"
+          tls_config = {
+            enabled = true
+          }
         }
       }
       target_port = 80
@@ -447,6 +450,20 @@ Required:
 
 - `ok_status` (Set of String) List of HTTP status codes that indicate a healthy response.
 - `path` (String) Path to send the health check request to.
+
+Optional:
+
+- `tls_config` (Attributes) Configuration for TLS of the HTTP health checks. (see [below for nested schema](#nestedatt--target_pools--active_health_check--http_health_checks--tls_config))
+
+<a id="nestedatt--target_pools--active_health_check--http_health_checks--tls_config"></a>
+### Nested Schema for `target_pools.active_health_check.http_health_checks.tls_config`
+
+Optional:
+
+- `custom_ca` (String) Specifies a custom Certificate Authority (CA) that is trusted for the HTTP health check requests, in addition to any system-trusted CAs. Enabled needs to be set to true and skip validation to false for this option.
+- `enabled` (Boolean) Enable TLS for the HTTP health check requests to the targets. When enabled, public CAs are trusted. Can be used in tandem with the options either custom CA or skip validation or alone.
+- `skip_certificate_validation` (Boolean) Bypass certificate validation for the HTTP health check requests. This option is insecure and can only be used with public CAs by setting enabled true. Meant to be used for testing purposes only!
+
 
 
 
