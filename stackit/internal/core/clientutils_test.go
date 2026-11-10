@@ -211,9 +211,10 @@ func TestDefaultClientFactory_defaultConfigOptions(t *testing.T) {
 }
 
 type testHelper[T any] struct {
-	factoryMethod        func(*DefaultClientFactory) (T, error)
-	clientInitFunc       func(opts ...config.ConfigurationOption) T
-	customEndpointSetter func(endpointConfig *CustomEndpointConfig)
+	factoryMethod                      func(*DefaultClientFactory) (T, error)
+	clientInitFunc                     func(opts ...config.ConfigurationOption) T
+	customEndpointSetter               func(endpointConfig *CustomEndpointConfig)
+	expectedAdditionalRetryStatusCodes []int
 }
 
 func (h *testHelper[T]) run(t *testing.T) {
@@ -222,6 +223,8 @@ func (h *testHelper[T]) run(t *testing.T) {
 	var testRoundTripper http.RoundTripper = &http.Transport{
 		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
 	}
+	retryTransport := expectedRetryTransport(testRoundTripper)
+	retryTransport.AdditionalRetryStatusCodes = h.expectedAdditionalRetryStatusCodes
 
 	type fields struct {
 		RoundTripper          http.RoundTripper
@@ -248,7 +251,7 @@ func (h *testHelper[T]) run(t *testing.T) {
 			},
 			want: h.clientInitFunc(
 				config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-				config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
+				config.WithCustomAuth(retryTransport),
 			),
 		},
 		{
@@ -266,7 +269,7 @@ func (h *testHelper[T]) run(t *testing.T) {
 			want: h.clientInitFunc(
 				config.WithUserAgent("stackit-terraform-provider/1.2.3"),
 				config.WithEndpoint(testCustomEndpoint),
-				config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
+				config.WithCustomAuth(retryTransport),
 			),
 		},
 	}
@@ -837,6 +840,12 @@ func TestDefaultClientFactory_newDnsV1Client(t *testing.T) {
 		},
 		customEndpointSetter: func(cfg *CustomEndpointConfig) {
 			cfg.DnsCustomEndpoint = testCustomEndpoint
+		},
+		expectedAdditionalRetryStatusCodes: []int{
+			http.StatusRequestTimeout,
+			http.StatusBadGateway,
+			http.StatusServiceUnavailable,
+			http.StatusGatewayTimeout,
 		},
 	}
 
