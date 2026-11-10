@@ -5,6 +5,7 @@ variable "network_role" {}
 variable "server_name" {}
 
 variable "loadbalancer_name" {}
+variable "label_env" {}
 variable "plan_id" {}
 variable "disable_security_group_assignment" {}
 
@@ -88,6 +89,9 @@ resource "stackit_server" "server" {
 }
 
 resource "stackit_loadbalancer" "loadbalancer" {
+  labels = {
+    env = var.label_env
+  }
   project_id                        = var.project_id
   name                              = var.loadbalancer_name
   plan_id                           = var.plan_id
