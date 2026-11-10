@@ -30,6 +30,9 @@ import (
 	automationVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/volume"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
+	containerRegistryArtifactories "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/containerregistry/artifactories"
+	containerRegistryArtifactory "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/containerregistry/artifactory"
+	containerRegistryReplicationAdapters "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/containerregistry/replicationadapters"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	dremioInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/instance"
@@ -208,6 +211,7 @@ type providerModel struct {
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	AutomationCustomEndpoint        types.String `tfsdk:"automation_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
+	ContainerRegistryCustomEndpoint types.String `tfsdk:"container_registry_custom_endpoint"`
 	ALBCertificatesCustomEndpoint   types.String `tfsdk:"alb_certificates_custom_endpoint"`
 	AlbWafCustomEndpoint            types.String `tfsdk:"alb_waf_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
@@ -275,6 +279,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"alb_custom_endpoint":                  "Custom endpoint for the Application Load Balancer service",
 		"automation_custom_endpoint":           "Custom endpoint for the Automation service",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
+		"container_registry_custom_endpoint":   "Custom endpoint for the Container Registry service",
 		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
 		"dremio_custom_endpoint":               "Custom endpoint for the Dremio service",
 		"edgecloud_custom_endpoint":            "Custom endpoint for the Edge Cloud service",
@@ -393,6 +398,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"cdn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["cdn_custom_endpoint"],
+			},
+			"container_registry_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["container_registry_custom_endpoint"],
 			},
 			"alb_certificates_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -607,6 +616,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { customEndpointConfig.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.AutomationCustomEndpoint, func(v string) { customEndpointConfig.AutomationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { customEndpointConfig.CdnCustomEndpoint = v })
+	setStringField(providerConfig.ContainerRegistryCustomEndpoint, func(v string) { customEndpointConfig.ContainerRegistryCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { customEndpointConfig.DnsCustomEndpoint = v })
 	setStringField(providerConfig.DremioCustomEndpoint, func(v string) { customEndpointConfig.DremioCustomEndpoint = v })
 	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { customEndpointConfig.EdgeCloudCustomEndpoint = v })
@@ -761,6 +771,9 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		automationVolume.NewVolumeAutomationDataSource,
 		cdn.NewDistributionDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
+		containerRegistryArtifactory.NewArtifactoryDataSource,
+		containerRegistryArtifactories.NewArtifactoriesDataSource,
+		containerRegistryReplicationAdapters.NewReplicationAdaptersDataSource,
 		cert.NewCertificatesDataSource,
 		compliancelock.NewComplianceLockDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
@@ -888,6 +901,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		cdn.NewDistributionResource,
 		cert.NewCertificatesResource,
 		cdnCustomDomain.NewCustomDomainResource,
+		containerRegistryArtifactory.NewArtifactoryResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
 		dremioInstance.NewInstanceResource,
