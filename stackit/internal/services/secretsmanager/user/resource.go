@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -253,10 +254,11 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
+		if errors.As(err, &oapiErr) && slices.Contains([]int{http.StatusForbidden, http.StatusNotFound}, oapiErr.StatusCode) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
