@@ -71,6 +71,9 @@ var testConfigVarsMax = config.Variables{
 	"sni_health_interval_jitter":          config.StringVariable("5s"),
 	"sni_health_timeout":                  config.StringVariable("10s"),
 	"sni_unhealthy_threshold":             config.StringVariable("3"),
+	"sni_health_alt_port":                 config.StringVariable("8080"),
+	"sni_health_http_path":                config.StringVariable("/healthz"),
+	"sni_health_http_ok_status":           config.StringVariable("200"),
 	"sni_use_source_ip_address":           config.StringVariable("true"),
 
 	"udp_target_pool_name":      config.StringVariable("udp-target-pool"),
@@ -126,6 +129,9 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["sni_health_interval_jitter"] = config.StringVariable("7s")
 	tempConfig["sni_health_timeout"] = config.StringVariable("15s")
 	tempConfig["sni_unhealthy_threshold"] = config.StringVariable("4")
+	tempConfig["sni_health_alt_port"] = config.StringVariable("8081")
+	tempConfig["sni_health_http_path"] = config.StringVariable("/ready")
+	tempConfig["sni_health_http_ok_status"] = config.StringVariable("204")
 	tempConfig["sni_use_source_ip_address"] = config.StringVariable("false")
 
 	tempConfig["udp_target_pool_name"] = config.StringVariable("udp-target-pool-updated")
@@ -350,6 +356,10 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_interval_jitter"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_timeout"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.unhealthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["sni_unhealthy_threshold"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_alt_port"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.path", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_http_path"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.0", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_http_ok_status"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.#", "1"),
 
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.1.display_name", testutil.ConvertConfigVariable(testConfigVarsMax["udp_listener_display_name"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.1.port", testutil.ConvertConfigVariable(testConfigVarsMax["udp_listener_port"])),
@@ -435,6 +445,10 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_interval_jitter"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_timeout"])),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.unhealthy_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["sni_unhealthy_threshold"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_alt_port"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.path", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_http_path"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.0", testutil.ConvertConfigVariable(testConfigVarsMax["sni_health_http_ok_status"])),
+					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence.use_source_ip_address", testutil.ConvertConfigVariable(testConfigVarsMax["sni_use_source_ip_address"])),
 
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.1.display_name", testutil.ConvertConfigVariable(testConfigVarsMax["udp_listener_display_name"])),
@@ -530,6 +544,10 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.interval_jitter", testutil.ConvertConfigVariable(configVarsMaxUpdated()["sni_health_interval_jitter"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.timeout", testutil.ConvertConfigVariable(configVarsMaxUpdated()["sni_health_timeout"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.unhealthy_threshold", testutil.ConvertConfigVariable(configVarsMaxUpdated()["sni_unhealthy_threshold"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.alt_port", testutil.ConvertConfigVariable(configVarsMaxUpdated()["sni_health_alt_port"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.path", testutil.ConvertConfigVariable(configVarsMaxUpdated()["sni_health_http_path"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["sni_health_http_ok_status"])),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.active_health_check.http_health_checks.ok_status.#", "1"),
 
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.1.display_name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["udp_listener_display_name"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "listeners.1.port", testutil.ConvertConfigVariable(configVarsMaxUpdated()["udp_listener_port"])),

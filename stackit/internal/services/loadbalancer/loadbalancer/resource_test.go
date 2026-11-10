@@ -102,6 +102,11 @@ func TestToCreatePayload(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"alt_port": types.Int32Value(8080),
+							"http_health_checks": types.ObjectValueMust(httpHealthChecksTypes, map[string]attr.Value{
+								"ok_status": types.SetValueMust(types.StringType, []attr.Value{types.StringValue("200"), types.StringValue("204")}),
+								"path":      types.StringValue("/healthz"),
+							}),
 							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
@@ -173,6 +178,11 @@ func TestToCreatePayload(t *testing.T) {
 				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
+							AltPort: new(int32(8080)),
+							HttpHealthChecks: &loadbalancer.HttpHealthChecks{
+								OkStatuses: []string{"200", "204"},
+								Path:       new("/healthz"),
+							},
 							HealthyThreshold:   new(int32(1)),
 							Interval:           new("2s"),
 							IntervalJitter:     new("3s"),
@@ -252,6 +262,8 @@ func TestToCreatePayload(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"alt_port":            types.Int32Null(),
+							"http_health_checks":  types.ObjectNull(httpHealthChecksTypes),
 							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
@@ -485,6 +497,11 @@ func TestMapFields(t *testing.T) {
 				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: new(loadbalancer.ActiveHealthCheck{
+							AltPort: new(int32(8080)),
+							HttpHealthChecks: &loadbalancer.HttpHealthChecks{
+								OkStatuses: []string{"200", "204"},
+								Path:       new("/healthz"),
+							},
 							HealthyThreshold:   new(int32(1)),
 							Interval:           new("2s"),
 							IntervalJitter:     new("3s"),
@@ -567,6 +584,11 @@ func TestMapFields(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"alt_port": types.Int32Value(8080),
+							"http_health_checks": types.ObjectValueMust(httpHealthChecksTypes, map[string]attr.Value{
+								"ok_status": types.SetValueMust(types.StringType, []attr.Value{types.StringValue("200"), types.StringValue("204")}),
+								"path":      types.StringValue("/healthz"),
+							}),
 							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
@@ -715,6 +737,8 @@ func TestMapFields(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"alt_port":            types.Int32Null(),
+							"http_health_checks":  types.ObjectNull(httpHealthChecksTypes),
 							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
@@ -982,6 +1006,11 @@ func Test_toUpdatePayload(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"alt_port": types.Int32Value(8080),
+							"http_health_checks": types.ObjectValueMust(httpHealthChecksTypes, map[string]attr.Value{
+								"ok_status": types.SetValueMust(types.StringType, []attr.Value{types.StringValue("200"), types.StringValue("204")}),
+								"path":      types.StringValue("/healthz"),
+							}),
 							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
@@ -1053,6 +1082,11 @@ func Test_toUpdatePayload(t *testing.T) {
 				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
+							AltPort: new(int32(8080)),
+							HttpHealthChecks: &loadbalancer.HttpHealthChecks{
+								OkStatuses: []string{"200", "204"},
+								Path:       new("/healthz"),
+							},
 							HealthyThreshold:   new(int32(1)),
 							Interval:           new("2s"),
 							IntervalJitter:     new("3s"),
@@ -1132,6 +1166,8 @@ func Test_toUpdatePayload(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
+							"alt_port":            types.Int32Null(),
+							"http_health_checks":  types.ObjectNull(httpHealthChecksTypes),
 							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),

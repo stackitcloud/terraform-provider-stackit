@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -180,7 +182,9 @@ var targetPoolTypes = map[string]attr.Type{
 
 // Struct corresponding to targetPool.ActiveHealthCheck
 type activeHealthCheck struct {
+	AltPort            types.Int32  `tfsdk:"alt_port"`
 	HealthyThreshold   types.Int32  `tfsdk:"healthy_threshold"`
+	HttpHealthChecks   types.Object `tfsdk:"http_health_checks"`
 	Interval           types.String `tfsdk:"interval"`
 	IntervalJitter     types.String `tfsdk:"interval_jitter"`
 	Timeout            types.String `tfsdk:"timeout"`
@@ -189,11 +193,25 @@ type activeHealthCheck struct {
 
 // Types corresponding to activeHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
+	"alt_port":            types.Int32Type,
 	"healthy_threshold":   types.Int32Type,
+	"http_health_checks":  types.ObjectType{AttrTypes: httpHealthChecksTypes},
 	"interval":            types.StringType,
 	"interval_jitter":     types.StringType,
 	"timeout":             types.StringType,
 	"unhealthy_threshold": types.Int32Type,
+}
+
+// Struct corresponding to activeHealthCheck.HttpHealthChecks
+type httpHealthChecks struct {
+	OkStatus types.Set    `tfsdk:"ok_status"`
+	Path     types.String `tfsdk:"path"`
+}
+
+// Types corresponding to httpHealthChecks
+var httpHealthChecksTypes = map[string]attr.Type{
+	"ok_status": types.SetType{ElemType: types.StringType},
+	"path":      types.StringType,
 }
 
 // Struct corresponding to targetPool.Targets[i]
@@ -352,6 +370,10 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"private_address":                       "Transient private Load Balancer IP address. It can change any time.",
 		"target_pools":                          "List of all target pools which will be used in the Load Balancer. Limited to 20.",
 		"healthy_threshold":                     "Healthy threshold of the health checking.",
+		"alt_port":                              "Overrides the default port used for health check probes.",
+		"http_health_checks":                    "Options for the HTTP health checking.",
+		"http_health_checks.ok_status":          "List of HTTP status codes that indicate a healthy response.",
+		"http_health_checks.path":               "Path to send the health check request to.",
 		"interval":                              "Interval duration of health checking in seconds.",
 		"interval_jitter":                       "Interval duration threshold of the health checking in seconds.",
 		"timeout":                               "Active health checking timeout duration in seconds.",
@@ -643,10 +665,44 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Optional:    true,
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
+								"alt_port": schema.Int32Attribute{
+									Description: descriptions["alt_port"],
+									Optional:    true,
+									Validators: []validator.Int32{
+										int32validator.Between(1, 65535),
+									},
+								},
 								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Optional:    true,
 									Computed:    true,
+								},
+								"http_health_checks": schema.SingleNestedAttribute{
+									Description: descriptions["http_health_checks"],
+									Optional:    true,
+									Attributes: map[string]schema.Attribute{
+										"path": schema.StringAttribute{
+											Description: descriptions["http_health_checks.path"],
+											Required:    true,
+											Validators: []validator.String{
+												stringvalidator.LengthBetween(1, 253),
+											},
+										},
+										"ok_status": schema.SetAttribute{
+											Description: descriptions["http_health_checks.ok_status"],
+											Required:    true,
+											ElementType: types.StringType,
+											Validators: []validator.Set{
+												setvalidator.SizeBetween(1, 100),
+												setvalidator.ValueStringsAre(
+													stringvalidator.RegexMatches(
+														regexp.MustCompile(`^\d{3}$`),
+														"must be a three-digit HTTP status code",
+													),
+												),
+											},
+										},
+									},
 								},
 								"interval": schema.StringAttribute{
 									Description: descriptions["interval"],
@@ -1329,12 +1385,41 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalan
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
 	}
 
+	httpHealthChecksPayload, err := toHttpHealthChecksPayload(ctx, &activeHealthCheckModel)
+	if err != nil {
+		return nil, fmt.Errorf("converting http health checks: %w", err)
+	}
+
 	return &loadbalancer.ActiveHealthCheck{
+		AltPort:            conversion.Int32ValueToPointer(activeHealthCheckModel.AltPort),
 		HealthyThreshold:   conversion.Int32ValueToPointer(activeHealthCheckModel.HealthyThreshold),
+		HttpHealthChecks:   httpHealthChecksPayload,
 		Interval:           conversion.StringValueToPointer(activeHealthCheckModel.Interval),
 		IntervalJitter:     conversion.StringValueToPointer(activeHealthCheckModel.IntervalJitter),
 		Timeout:            conversion.StringValueToPointer(activeHealthCheckModel.Timeout),
 		UnhealthyThreshold: conversion.Int32ValueToPointer(activeHealthCheckModel.UnhealthyThreshold),
+	}, nil
+}
+
+func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (*loadbalancer.HttpHealthChecks, error) {
+	if utils.IsUndefined(check.HttpHealthChecks) {
+		return nil, nil
+	}
+
+	httpHealthChecksModel := httpHealthChecks{}
+	diags := check.HttpHealthChecks.As(ctx, &httpHealthChecksModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting http health checks: %w", core.DiagsToError(diags))
+	}
+
+	okStatus, err := conversion.StringSetToSlice(httpHealthChecksModel.OkStatus)
+	if err != nil {
+		return nil, fmt.Errorf("converting http health checks ok status: %w", err)
+	}
+
+	return &loadbalancer.HttpHealthChecks{
+		OkStatuses: okStatus,
+		Path:       conversion.StringValueToPointer(httpHealthChecksModel.Path),
 	}, nil
 }
 
@@ -1414,7 +1499,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
-	err = mapTargetPools(lb, m)
+	err = mapTargetPools(ctx, lb, m)
 	if err != nil {
 		return fmt.Errorf("mapping target pools: %w", err)
 	}
@@ -1671,7 +1756,7 @@ func mapACL(accessControlResp *loadbalancer.LoadbalancerOptionAccessControl, o m
 	return nil
 }
 
-func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
+func mapTargetPools(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	if loadBalancerResp.TargetPools == nil {
 		m.TargetPools = types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes})
 		return nil
@@ -1684,7 +1769,7 @@ func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error
 			"target_port": types.Int32PointerValue(targetPoolResp.TargetPort),
 		}
 
-		err := mapActiveHealthCheck(targetPoolResp.ActiveHealthCheck, targetPoolMap)
+		err := mapActiveHealthCheck(ctx, targetPoolResp.ActiveHealthCheck, targetPoolMap)
 		if err != nil {
 			return fmt.Errorf("mapping index %d, field ActiveHealthCheck: %w", i, err)
 		}
@@ -1719,18 +1804,24 @@ func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error
 	return nil
 }
 
-func mapActiveHealthCheck(activeHealthCheckResp *loadbalancer.ActiveHealthCheck, tp map[string]attr.Value) error {
+func mapActiveHealthCheck(ctx context.Context, activeHealthCheckResp *loadbalancer.ActiveHealthCheck, tp map[string]attr.Value) error {
 	if activeHealthCheckResp == nil {
 		tp["active_health_check"] = types.ObjectNull(activeHealthCheckTypes)
 		return nil
 	}
 
 	activeHealthCheckMap := map[string]attr.Value{
+		"alt_port":            types.Int32PointerValue(activeHealthCheckResp.AltPort),
 		"healthy_threshold":   types.Int32PointerValue(activeHealthCheckResp.HealthyThreshold),
 		"interval":            types.StringPointerValue(activeHealthCheckResp.Interval),
 		"interval_jitter":     types.StringPointerValue(activeHealthCheckResp.IntervalJitter),
 		"timeout":             types.StringPointerValue(activeHealthCheckResp.Timeout),
 		"unhealthy_threshold": types.Int32PointerValue(activeHealthCheckResp.UnhealthyThreshold),
+	}
+
+	err := mapHttpHealthChecks(ctx, activeHealthCheckResp.HttpHealthChecks, activeHealthCheckMap)
+	if err != nil {
+		return fmt.Errorf("mapping http health checks: %w", err)
 	}
 
 	activeHealthCheckTF, diags := types.ObjectValue(activeHealthCheckTypes, activeHealthCheckMap)
@@ -1739,6 +1830,29 @@ func mapActiveHealthCheck(activeHealthCheckResp *loadbalancer.ActiveHealthCheck,
 	}
 
 	tp["active_health_check"] = activeHealthCheckTF
+	return nil
+}
+
+func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *loadbalancer.HttpHealthChecks, ahc map[string]attr.Value) error {
+	if httpHealthChecksResp == nil {
+		ahc["http_health_checks"] = types.ObjectNull(httpHealthChecksTypes)
+		return nil
+	}
+
+	okStatusTF, diags := types.SetValueFrom(ctx, types.StringType, httpHealthChecksResp.OkStatuses)
+	if diags.HasError() {
+		return fmt.Errorf("mapping ok status: %w", core.DiagsToError(diags))
+	}
+
+	httpHealthChecksTF, diags := types.ObjectValue(httpHealthChecksTypes, map[string]attr.Value{
+		"ok_status": okStatusTF,
+		"path":      types.StringPointerValue(httpHealthChecksResp.Path),
+	})
+	if diags.HasError() {
+		return fmt.Errorf("mapping http health checks: %w", core.DiagsToError(diags))
+	}
+
+	ahc["http_health_checks"] = httpHealthChecksTF
 	return nil
 }
 
