@@ -23,6 +23,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
+// String validator factory
 type Validator struct {
 	description         string
 	markdownDescription string

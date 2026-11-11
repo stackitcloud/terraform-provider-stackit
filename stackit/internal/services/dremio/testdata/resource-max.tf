@@ -5,6 +5,7 @@ variable "region" {}
 // Instance Variables
 variable "display_name" {}
 variable "description" {}
+variable "acl" {}
 
 variable "authentication_type" {}
 
@@ -36,6 +37,7 @@ resource "stackit_dremio_instance" "example" {
   region       = var.region
   display_name = var.display_name
   description  = var.description
+  acl          = var.acl
   authentication = {
     type = var.authentication_type
 

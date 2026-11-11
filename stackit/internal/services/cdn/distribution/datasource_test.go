@@ -79,6 +79,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		"waf":                    emptyWaf,
 		"tls":                    defaultTls,
 		"cache_config":           defaultCacheConfig,
+		"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 		"strip_response_cookies": types.BoolValue(false),
 		"forward_host_header":    types.BoolValue(false),
 	})
@@ -172,6 +173,35 @@ func TestMapDataSourceFields(t *testing.T) {
 		LogOnlyRuleCollectionIds:   []string{"rule1", "rule2"},
 	}
 
+	// LogSink config and fixture
+	testLogSinkPushUrl := "http://foo.bar"
+	testLogSinkLokiType := cdnSdk.LOKILOGSINKTYPE_LOKI
+	testLogSinkOtlpType := cdnSdk.OTLPLOGSINKTYPE_OTLP
+
+	// Otlp config
+	testLogSinkOtlpConfig := types.ObjectValueMust(dataSourcelogSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkOtlpType)), // otlp
+	})
+	expectedLogSinkOtlpConfig := cdnSdk.ConfigLogSink{
+		OtlpLogSink: &cdnSdk.OtlpLogSink{
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkOtlpType,
+		},
+	}
+
+	// Loki config
+	testLogSinkLokiConfig := types.ObjectValueMust(dataSourcelogSinkTypes, map[string]attr.Value{
+		"push_url": types.StringValue(testLogSinkPushUrl),
+		"type":     types.StringValue(string(testLogSinkLokiType)), // loki
+	})
+	expectedLogSinkLokiConfig := cdnSdk.ConfigLogSink{
+		LokiLogSink: &cdnSdk.LokiLogSink{
+			PushUrl: testLogSinkPushUrl,
+			Type:    testLogSinkLokiType,
+		},
+	}
+
 	expectedModel := func(mods ...func(*Model)) *Model {
 		model := &Model{
 			ID:             types.StringValue("test-project-id,test-distribution-id"),
@@ -259,6 +289,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
 					"cache_config":           defaultCacheConfig,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -293,6 +324,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
 					"cache_config":           defaultCacheConfig,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -321,6 +353,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
 					"cache_config":           defaultCacheConfig,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -353,6 +386,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"waf":                    emptyWaf,
 					"tls":                    defaultTls,
 					"cache_config":           defaultCacheConfig,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -376,12 +410,61 @@ func TestMapDataSourceFields(t *testing.T) {
 					"waf":                    populatedWaf,
 					"tls":                    defaultTls,
 					"cache_config":           defaultCacheConfig,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Config.Waf = expectedWafConfig
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_log_sink_otlp": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+					"log_sink":               testLogSinkOtlpConfig, // otlp
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.LogSink = &expectedLogSinkOtlpConfig // otlp
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_log_sink_loki": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+					"default_cache_duration": types.StringNull(),
+					"monthly_limit_bytes":    types.Int64Null(),
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"cache_config":           defaultCacheConfig,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
+					"log_sink":               testLogSinkLokiConfig, // loki
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.LogSink = &expectedLogSinkLokiConfig // loki
 			}),
 			IsValid: true,
 		},
@@ -435,6 +518,7 @@ func TestMapDataSourceFields(t *testing.T) {
 						"enable_tls_11": types.BoolValue(true),
 					}),
 					"cache_config":           defaultCacheConfig,
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(true),
 					"forward_host_header":    types.BoolValue(true),
 				})
@@ -473,6 +557,7 @@ func TestMapDataSourceFields(t *testing.T) {
 							types.StringValue("page"),
 						}),
 					}),
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
@@ -504,6 +589,7 @@ func TestMapDataSourceFields(t *testing.T) {
 						"query_string_vary_enabled":    types.BoolValue(false),
 						"query_string_vary_parameters": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("utm_source")}),
 					}),
+					"log_sink":               types.ObjectNull(dataSourcelogSinkTypes),
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})

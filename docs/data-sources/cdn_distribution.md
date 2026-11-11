@@ -54,6 +54,7 @@ Read-Only:
 - `cache_config` (Attributes) Groups the cache options that influence how the CDN builds its cache key. Warning: enabling query-string vary produces one cache entry per unique query-string combination (unbounded when query_string_vary_parameters is empty). Each entry in cache_key_headers multiplies the number of cache variants by the number of distinct values observed for that header. Use these settings sparingly. (see [below for nested schema](#nestedatt--config--cache_config))
 - `default_cache_duration` (String) Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
+- `log_sink` (Attributes) The configured log sink used to export the distribution's access logs. (see [below for nested schema](#nestedatt--config--log_sink))
 - `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution. Currently, this feature is only available for distributions of backend type HTTP. (see [below for nested schema](#nestedatt--config--redirects))
@@ -83,6 +84,15 @@ Read-Only:
 - `cache_key_headers` (List of String) HTTP request header names whose values participate in the cache key. Each entry multiplies the number of cache variants by the number of distinct values observed for that header.
 - `query_string_vary_enabled` (Boolean) When true, the CDN varies its cache by the request query string. If query_string_vary_parameters is empty, every unique query-string combination produces its own cache entry; if non-empty, only the listed parameters influence the cache key.
 - `query_string_vary_parameters` (List of String) Allowlist of query-string parameter names that participate in the cache key when query_string_vary_enabled is true. Ignored while query_string_vary_enabled is false, but still stored so it can be re-activated without losing the list.
+
+
+<a id="nestedatt--config--log_sink"></a>
+### Nested Schema for `config.log_sink`
+
+Read-Only:
+
+- `push_url` (String) The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).
+- `type` (String) The log sink protocol
 
 
 <a id="nestedatt--config--optimizer"></a>

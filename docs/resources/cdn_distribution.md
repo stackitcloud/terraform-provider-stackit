@@ -45,6 +45,24 @@ resource "stackit_cdn_distribution" "example_distribution" {
   }
 }
 
+# Logs instance used as the OTLP destination for the CDN distribution below.
+# See https://docs.stackit.cloud/stackit/en/logs-service for setup details.
+resource "stackit_logs_instance" "logs" {
+  project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  region         = "eu01"
+  display_name   = "cdn-logs-example"
+  retention_days = 30
+}
+
+# Access token the CDN uses to authenticate when pushing logs to the instance.
+resource "stackit_logs_access_token" "logs_token" {
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id  = stackit_logs_instance.logs.instance_id
+  region       = "eu01"
+  display_name = "cdn-logs-token-example"
+  permissions  = ["read", "write"]
+}
+
 resource "stackit_cdn_distribution" "example_bucket_distribution" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   config = {
@@ -128,6 +146,17 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       disabled_rule_ids = ["@builtin/crs/request/942151"]
       log_only_rule_ids = ["@builtin/crs/response/954120"]
     }
+
+    log_sink = {
+      # ingest_otlp_url is returned without the protocol prefix, so prepend "https://".
+      push_url = "https://${stackit_logs_instance.logs.ingest_otlp_url}"
+      type     = "otlp"
+      credentials = {
+        type             = "bearer"
+        token_wo         = stackit_logs_access_token.logs_token.access_token
+        token_wo_version = 1
+      }
+    }
   }
 }
 ```
@@ -165,6 +194,7 @@ Optional:
 - `cache_config` (Attributes) Groups the cache options that influence how the CDN builds its cache key. Warning: enabling query-string vary produces one cache entry per unique query-string combination (unbounded when query_string_vary_parameters is empty). Each entry in cache_key_headers multiplies the number of cache variants by the number of distinct values observed for that header. Use these settings sparingly. (see [below for nested schema](#nestedatt--config--cache_config))
 - `default_cache_duration` (String) Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
+- `log_sink` (Attributes) Configures a log sink to export the distribution's access logs. Only one of Loki or OTLP can be configured at a time; the sink is selected via the `type` attribute. Note: because the API never returns raw credentials, `username`, `password`, and `token` are preserved from state during Read operations. If the sink type is changed outside of Terraform, previously stored credentials are cleared on refresh and must be re-applied via `terraform apply`. (see [below for nested schema](#nestedatt--config--log_sink))
 - `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution. Currently, this feature is only available for distributions of backend type HTTP. (see [below for nested schema](#nestedatt--config--redirects))
@@ -206,6 +236,33 @@ Optional:
 - `cache_key_headers` (List of String) HTTP request header names whose values participate in the cache key. Each entry multiplies the number of cache variants by the number of distinct values observed for that header.
 - `query_string_vary_enabled` (Boolean) When true, the CDN varies its cache by the request query string. If query_string_vary_parameters is empty, every unique query-string combination produces its own cache entry; if non-empty, only the listed parameters influence the cache key.
 - `query_string_vary_parameters` (List of String) Allowlist of query-string parameter names that participate in the cache key when query_string_vary_enabled is true. Ignored while query_string_vary_enabled is false, but still stored so it can be re-activated without losing the list.
+
+
+<a id="nestedatt--config--log_sink"></a>
+### Nested Schema for `config.log_sink`
+
+Required:
+
+- `credentials` (Attributes) Authentication credentials the CDN uses when pushing logs. Loki requires `username` and `password`. OTLP requires `type` to be set to `basic` (with `username` and `password`) or `bearer` (with `token`).
+
+~> Write-Only arguments `password_wo` and `token_wo` are available to use in place of `password` and `token`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments). (see [below for nested schema](#nestedatt--config--log_sink--credentials))
+- `push_url` (String) The fully qualified URL where the CDN should push access logs (for example, `https://loki.example.com/loki/api/v1/push` for Loki or `https://otlp.example.com/otlp/v1/logs` for OTLP).
+- `type` (String) The log sink protocolPossible values are: `loki`, `otlp`.
+
+<a id="nestedatt--config--log_sink--credentials"></a>
+### Nested Schema for `config.log_sink.credentials`
+
+Optional:
+
+- `password` (String, Sensitive) The password corresponding to `username`. Required for Loki and for OTLP when `credentials.type` is `basic`. Write-only argument `password_wo` should be preferred.
+- `password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only password for log sink authentication. Never stored in state and never returned by the API. To rotate the password, update this value AND increment `password_wo_version`. Changing this field alone will NOT trigger an update.
+- `password_wo_version` (Number) User-managed rotation counter for `password_wo`. Must be incremented every time `password_wo` is changed. Note: because the API treats credentials atomically (username + password together for Loki/OTLP basic), the password is also automatically re-sent when `username`, `log_sink.type`, or `credentials.type` changes, even without a version bump.
+- `token` (String, Sensitive) The bearer token used to authenticate. Required for OTLP when `credentials.type` is `bearer`. Write-only argument `token_wo` should be preferred.
+- `token_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only bearer token for OTLP log sink authentication. Never stored in state and never returned by the API. To rotate the token, update this value AND increment `token_wo_version`. Changing this field alone will NOT trigger an update.
+- `token_wo_version` (Number) User-managed rotation counter for `token_wo`. Must be incremented every time `token_wo` is changed. Note: the token is also automatically re-sent when `log_sink.type` or `credentials.type` changes, even without a version bump.
+- `type` (String) The authentication type when using an OTLP log sink. Leave unset for Loki.Possible values are: `basic`, `bearer`.
+- `username` (String, Sensitive) The username used to authenticate. Required for Loki and for OTLP when `credentials.type` is `basic`.
+
 
 
 <a id="nestedatt--config--optimizer"></a>
