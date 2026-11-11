@@ -41,6 +41,7 @@ import (
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
+	ufw "github.com/stackitcloud/stackit-sdk-go/services/ufw/v1api"
 	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
@@ -88,6 +89,7 @@ type MockClientFactory struct {
 	SqlServerFlexV3ClientMock       sqlserverflex.DefaultAPI
 	TelemetryLinkV1ClientMock       telemetrylink.DefaultAPI
 	TelemetryRouterV1ClientMock     telemetryrouter.DefaultAPI
+	UfwV1ClientMock                 ufw.DefaultAPI
 	ValkeyV2ClientMock              valkey.DefaultAPI
 	VpnV1ClientMock                 vpn.DefaultAPI
 }
@@ -426,4 +428,11 @@ func (m *MockClientFactory) newModelExperimentsV1Client() (modelexperiments.Defa
 	}
 
 	return modelexperiments.DefaultAPIServiceMock{}, nil
+}
+
+func (m *MockClientFactory) newUfwV1Client() (ufw.DefaultAPI, error) {
+	if m.UfwV1ClientMock != nil {
+		return m.UfwV1ClientMock, nil
+	}
+	return ufw.DefaultAPIServiceMock{}, nil
 }
