@@ -13,18 +13,18 @@ env:
   DAYS_BEFORE_PR_CLOSE: 14
   EXEMPT_PR_LABELS: "ignore-stale"
 
-permissions:
-  issues: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   stale:
     name: "Stale"
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pull-requests: write
     steps:
       - name: "Mark old PRs as stale"
-        uses: actions/stale@v11.0.0
+        uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-pr-message: "This PR was marked as stale after ${{ env.DAYS_BEFORE_PR_STALE }} days of inactivity and will be closed after another ${{ env.DAYS_BEFORE_PR_CLOSE }} days of further inactivity. If this PR should be kept open, just add a comment, remove the stale label or push new commits to it."
