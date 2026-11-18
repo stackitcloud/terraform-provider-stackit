@@ -57,6 +57,7 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 			i++
 		}
 	}
+
 	list1Copy = list1Copy[:i]
 
 	// Append elements to list1Copy that are in list2 but not in list1Copy
@@ -64,6 +65,7 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 	for _, elem := range list1Copy {
 		inList1[elem] = true
 	}
+
 	for _, elem := range list2 {
 		if !inList1[elem] {
 			list1Copy = append(list1Copy, elem)
@@ -80,6 +82,7 @@ func ListValueToStringSlice(list basetypes.ListValue) ([]string, error) {
 		if !ok {
 			return result, fmt.Errorf("expected record to be of type %T, got %T", types.String{}, elStr)
 		}
+
 		result = append(result, elStr.ValueString())
 	}
 
@@ -91,12 +94,14 @@ func ConvertPointerSliceToStringSlice(pointerSlice []*string) []string {
 	if pointerSlice == nil {
 		return []string{}
 	}
+
 	stringSlice := make([]string, 0, len(pointerSlice))
 	for _, strPtr := range pointerSlice {
 		if strPtr != nil { // Safely skip any nil pointers in the list
 			stringSlice = append(stringSlice, *strPtr)
 		}
 	}
+
 	return stringSlice
 }
 
@@ -119,9 +124,11 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 	if err == nil {
 		return
 	}
+
 	tflog.Error(ctx, fmt.Sprintf("%s. Err: %v", summary, err))
 
 	var oapiErr *oapierror.GenericOpenAPIError
+
 	ok := errors.As(err, &oapiErr)
 	if !ok {
 		core.LogAndAddError(ctx, inputDiags, summary, fmt.Sprintf("Calling API: %v", err))
@@ -132,9 +139,11 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 	if len(descriptions) != 0 {
 		description, ok = descriptions[oapiErr.StatusCode]
 	}
+
 	if !ok || description == "" {
 		description = defaultDescription
 	}
+
 	core.LogAndAddError(ctx, inputDiags, summary, description)
 }
 
@@ -148,6 +157,7 @@ func FormatPossibleValues(values ...string) string {
 
 		formattedValues = append(formattedValues, fmt.Sprintf("`%v`", value))
 	}
+
 	return fmt.Sprintf("Possible values are: %s.", strings.Join(formattedValues, ", "))
 }
 
@@ -174,6 +184,7 @@ func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *t
 		ctx = tflog.SetField(ctx, key, val)
 		diags.Append(state.SetAttribute(ctx, path.Root(key), val)...)
 	}
+
 	return ctx
 }
 
@@ -187,6 +198,7 @@ func Coalesce[T interface {
 			return t
 		}
 	}
+
 	return r
 }
 
@@ -197,9 +209,11 @@ func Join(separator string, parts ...types.String) types.String {
 			if i > 0 {
 				builder.WriteString(separator)
 			}
+
 			builder.WriteString(parts[i].ValueString())
 		}
 	}
+
 	return types.StringValue(builder.String())
 }
 
@@ -214,8 +228,10 @@ func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) strin
 			// if there is an error formating the JSON just return the unformatted error to the user
 			return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, string(oapiErr.Body))
 		}
+
 		return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
 	}
+
 	return err.Error()
 }
 
@@ -225,5 +241,6 @@ func Map[T, U any](input []T, mapFn func(T) U) []U {
 	for i := range input {
 		values[i] = mapFn(input[i])
 	}
+
 	return values
 }

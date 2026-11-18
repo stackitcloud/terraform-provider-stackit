@@ -59,6 +59,7 @@ func TestMarshalKubeconfig(t *testing.T) {
 				t.Errorf("marshalKubeconfig() error = %v, wantErr %v", err, tt.wantErr)
 				return // Stop if error status is wrong
 			}
+
 			if gotResult != tt.wantResult {
 				t.Errorf("marshalKubeconfig() = %v, want %v", gotResult, tt.wantResult)
 			}

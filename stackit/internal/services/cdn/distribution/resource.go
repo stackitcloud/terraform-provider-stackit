@@ -955,13 +955,17 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 
 func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	// Redirects are only supported for backend type http
-	var backendType types.String
-	var redirects types.Object
+	var (
+		backendType types.String
+		redirects   types.Object
+	)
+
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("backend").AtName("type"), &backendType)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("config").AtName("redirects"), &redirects)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	if !utils.IsUndefined(backendType) && backendType.ValueString() != "http" && !redirects.IsNull() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("config").AtName("redirects"),
@@ -983,12 +987,14 @@ func (r *distributionResource) ValidateConfig(ctx context.Context, req resource.
 			if diags.HasError() {
 				return
 			}
+
 			if geofencing := config.Backend.Geofencing; geofencing != nil {
 				for url, region := range *geofencing {
 					if region == nil {
 						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be null.", url))
 						continue
 					}
+
 					if len(region) == 0 {
 						core.LogAndAddError(ctx, &resp.Diagnostics, "Invalid geofencing config", fmt.Sprintf("The list of countries for URL %q must not be empty.", url))
 						continue
@@ -1025,6 +1031,7 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 	}
 
 	var logSink logSinkConfig
+
 	d := config.LogSink.As(ctx, &logSink, basetypes.ObjectAsOptions{})
 	if d.HasError() {
 		diags.Append(d...)
@@ -1036,6 +1043,7 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 	}
 
 	var creds logSinkCredentialsConfig
+
 	d = logSink.Credentials.As(ctx, &creds, basetypes.ObjectAsOptions{})
 	if d.HasError() {
 		diags.Append(d...)
@@ -1072,16 +1080,19 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 				"When log_sink.type is \"loki\" "+
 					"log_sink.credentials.type must not be set. Loki only supports basic auth (username/password).")
 		}
+
 		if tokenSet {
 			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
 				"When log_sink.type is \"loki\" "+
 					"log_sink.credentials.token/token_wo must not be set. Use username and password instead.")
 		}
+
 		if !usernameSet {
 			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
 				"When log_sink.type is \"loki\" "+
 					"log_sink.credentials.username is required.")
 		}
+
 		if !passwordSet {
 			core.LogAndAddError(ctx, diags, "Invalid log_sink config",
 				"When log_sink.type is \"loki\" "+
@@ -1093,18 +1104,22 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 				fmt.Sprintf("When log_sink.type is \"otlp\", log_sink.credentials.type is required (%q or %q).",
 					cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
 					cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER))
+
 			return
 		}
+
 		switch credsType {
 		case string(cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC):
 			if tokenSet {
 				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
 					"When log_sink.credentials.type is \"basic\", log_sink.credentials.token/token_wo must not be set.")
 			}
+
 			if !usernameSet {
 				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
 					"When log_sink.credentials.type is \"basic\", log_sink.credentials.username is required.")
 			}
+
 			if !passwordSet {
 				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
 					"When log_sink.credentials.type is \"basic\", one of log_sink.credentials.password or password_wo is required.")
@@ -1115,6 +1130,7 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 					"When log_sink.credentials.type is \"bearer\", "+
 						"log_sink.credentials.username, password, and password_wo must not be set.")
 			}
+
 			if !tokenSet {
 				core.LogAndAddError(ctx, diags, "Invalid log_sink config",
 					"When log_sink.credentials.type is \"bearer\", one of log_sink.credentials.token or token_wo is required.")
@@ -1125,6 +1141,7 @@ func validateLogSinkConfig(ctx context.Context, config *distributionConfig, diag
 
 func (r *distributionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1134,6 +1151,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 	// Read config model to access write-only fields (e.g. password_wo, token_wo)
 	// which are stripped from the plan model by Terraform for security.
 	var configModel Model
+
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1190,11 +1208,13 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN distribution created")
 }
 
 func (r *distributionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1204,12 +1224,14 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	distributionId := model.DistributionId.ValueString()
 	if distributionId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
@@ -1223,7 +1245,9 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -1240,11 +1264,13 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN distribution read")
 }
 
 func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1252,6 +1278,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1259,6 +1286,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	var rawConfigModel Model
+
 	diags = req.Config.Get(ctx, &rawConfigModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1303,11 +1331,13 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN distribution updated")
 }
 
 func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1333,6 +1363,7 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Waiting for deletion: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "CDN distribution deleted")
 }
 
@@ -1342,6 +1373,7 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing CDN distribution", fmt.Sprintf("Expected import identifier on the format: [project_id]%q[distribution_id], got %q", core.Separator, req.ID))
 	}
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      idParts[0],
 		"distribution_id": idParts[1],
@@ -1353,6 +1385,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	if distribution == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -1383,10 +1416,12 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			distributionErrors = append(distributionErrors, types.StringValue(e.En))
 		}
 	}
+
 	modelErrors, diags := types.ListValue(types.StringType, distributionErrors)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Errors = modelErrors
 
 	// regions
@@ -1394,6 +1429,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	for _, r := range distribution.Config.Regions {
 		regions = append(regions, types.StringValue(string(r)))
 	}
+
 	modelRegions, diags := types.ListValue(types.StringType, regions)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1436,6 +1472,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 					if diags.HasError() {
 						return core.DiagsToError(diags)
 					}
+
 					tfMatchers = append(tfMatchers, tfMatcherObj)
 				}
 			}
@@ -1481,6 +1518,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			tfRules = append(tfRules, tfRuleObj)
 		}
 
@@ -1490,6 +1528,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		}
 
 		var objDiags diag.Diagnostics
+
 		redirectsVal, objDiags = types.ObjectValue(redirectsTypes, map[string]attr.Value{
 			"rules": tfRulesList,
 		})
@@ -1519,8 +1558,10 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			for k, v := range origHeaders {
 				headers[k] = types.StringValue(v)
 			}
+
 			mappedHeaders, diags := types.MapValue(types.StringType, headers)
 			originRequestHeaders = mappedHeaders
+
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
@@ -1556,14 +1597,17 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			geofencingMapElems[url] = listVal
 		}
 
 		var mappedGeofencing basetypes.MapValue
+
 		mappedGeofencing, diags = types.MapValue(geofencingTypes.ElemType, geofencingMapElems)
 		if diags.HasError() {
 			return core.DiagsToError(diags)
 		}
+
 		geofencingVal = mappedGeofencing
 	}
 	// Map Backend Fields (HTTP or Bucket)
@@ -1588,9 +1632,11 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		if oldConfig.Backend.Credentials != nil && oldConfig.Backend.Credentials.AccessKey != nil {
 			accessKeyVal = types.StringValue(*oldConfig.Backend.Credentials.AccessKey)
 		}
+
 		if oldConfig.Backend.Credentials != nil && oldConfig.Backend.Credentials.SecretKey != nil {
 			secretKeyVal = types.StringValue(*oldConfig.Backend.Credentials.SecretKey)
 		}
+
 		credentialsObj, diags := types.ObjectValue(backendCredentialsTypes, map[string]attr.Value{
 			"access_key_id":     accessKeyVal,
 			"secret_access_key": secretKeyVal,
@@ -1622,6 +1668,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	if distribution.Config.Waf.ParanoiaLevel != nil {
 		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
 	}
+
 	wafObjAttrs := map[string]attr.Value{
 		"mode":                          types.StringValue(string(distribution.Config.Waf.Mode)),
 		"type":                          types.StringValue(string(distribution.Config.Waf.Type)),
@@ -1647,6 +1694,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	var wafVal attr.Value
 
 	var diagWaf diag.Diagnostics
+
 	wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
 	if diagWaf.HasError() {
 		return core.DiagsToError(diagWaf)
@@ -1657,6 +1705,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		optimizerEnabled, ok := o.GetEnabledOk()
 		if ok {
 			var diags diag.Diagnostics
+
 			optimizerVal, diags = types.ObjectValue(optimizerTypes, map[string]attr.Value{
 				"enabled": types.BoolPointerValue(optimizerEnabled),
 			})
@@ -1680,6 +1729,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	for _, h := range distribution.Config.CacheConfig.CacheKeyHeaders {
 		cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
 	}
+
 	cacheKeyHeadersList, diags := types.ListValue(types.StringType, cacheKeyHeaders)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1689,6 +1739,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	for _, p := range distribution.Config.CacheConfig.QueryStringVaryParameters {
 		queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
 	}
+
 	queryStringVaryParamsList, diags := types.ListValue(types.StringType, queryStringVaryParams)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1746,6 +1797,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Config = cfg
 
 	domains := []attr.Value{}
@@ -1757,16 +1809,20 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 					if e.En == "" {
 						return fmt.Errorf("error description missing")
 					}
+
 					domainErrors = append(domainErrors, types.StringValue(e.En))
 				}
 			}
+
 			modelDomainErrors, diags := types.ListValue(types.StringType, domainErrors)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			if d.Name == "" || d.Status == "" || d.Type == "" {
 				return fmt.Errorf("domain entry incomplete")
 			}
+
 			modelDomain, diags := types.ObjectValue(domainTypes, map[string]attr.Value{
 				"name":   types.StringValue(d.Name),
 				"status": types.StringValue(string(d.Status)),
@@ -1785,7 +1841,9 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Domains = modelDomains
+
 	return nil
 }
 
@@ -1795,6 +1853,7 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*cdnSdk.Cr
 	}
 
 	var rawConfig distributionConfig
+
 	diags := model.Config.As(ctx, &rawConfig, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    false,
 		UnhandledUnknownAsEmpty: false,
@@ -1842,6 +1901,7 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*cdnSdk.Cr
 			accessKey = rawConfig.Backend.Credentials.AccessKey
 			secretKey = rawConfig.Backend.Credentials.SecretKey
 		}
+
 		backend = &cdnSdk.CreateDistributionPayloadBackend{
 			BucketBackendCreate: &cdnSdk.BucketBackendCreate{
 				Type:      "bucket",
@@ -1864,6 +1924,7 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*cdnSdk.Cr
 	var cacheConfig *cdnSdk.CacheConfigCreate
 	if !utils.IsUndefined(rawConfig.CacheConfig) {
 		var cacheModel cacheConfigModel
+
 		diags := rawConfig.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -1873,18 +1934,22 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*cdnSdk.Cr
 		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
 			cacheConfig.SetQueryStringVaryEnabled(cacheModel.QueryStringVaryEnabled.ValueBool())
 		}
+
 		if !utils.IsUndefined(cacheModel.CacheKeyHeaders) {
 			headers, err := conversion.StringListToSlice(cacheModel.CacheKeyHeaders)
 			if err != nil {
 				return nil, err
 			}
+
 			cacheConfig.SetCacheKeyHeaders(headers)
 		}
+
 		if !utils.IsUndefined(cacheModel.QueryStringVaryParameters) {
 			params, err := conversion.StringListToSlice(cacheModel.QueryStringVaryParameters)
 			if err != nil {
 				return nil, err
 			}
+
 			cacheConfig.SetQueryStringVaryParameters(params)
 		}
 	}
@@ -1905,12 +1970,15 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*cdnSdk.Cr
 	if !utils.IsUndefined(rawConfig.ForwardHostHeader) {
 		payload.ForwardHostHeader = rawConfig.ForwardHostHeader.ValueBoolPointer()
 	}
+
 	if !utils.IsUndefined(rawConfig.StripResponseCookies) {
 		payload.StripResponseCookies = rawConfig.StripResponseCookies.ValueBoolPointer()
 	}
+
 	if !utils.IsUndefined(rawConfig.DefaultCacheDuration) {
 		payload.DefaultCacheDuration = conversion.StringValueToPointer(rawConfig.DefaultCacheDuration)
 	}
+
 	if !utils.IsUndefined(rawConfig.MonthlyLimitBytes) {
 		payload.MonthlyLimitBytes = conversion.Int64ValueToPointer(rawConfig.MonthlyLimitBytes)
 	}
@@ -1920,6 +1988,7 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*cdnSdk.Cr
 		if err != nil {
 			return nil, fmt.Errorf("mapping log_sink: %w", err)
 		}
+
 		payload.LogSink = logSinkPayload
 	}
 
@@ -1939,11 +2008,13 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 	if len(extraModels) > 0 {
 		stateModel = extraModels[0]
 	}
+
 	if len(extraModels) > 1 {
 		rawConfigModel = extraModels[1]
 	}
 
 	configModel := distributionConfig{}
+
 	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    false,
 		UnhandledUnknownAsEmpty: false,
@@ -1959,6 +2030,7 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 			if err != nil {
 				return nil, fmt.Errorf("map regions: %w", err)
 			}
+
 			regions = append(regions, *regionEnum)
 		}
 	}
@@ -1972,8 +2044,10 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 			if err != nil {
 				return nil, fmt.Errorf("blocked countries: %w", err)
 			}
+
 			tempBlockedCountries = append(tempBlockedCountries, validatedBlockedCountry)
 		}
+
 		blockedCountries = tempBlockedCountries
 	}
 
@@ -1990,10 +2064,12 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 	var tls *cdnSdk.TlsConfigPatch
 	if !utils.IsUndefined(configModel.Tls) {
 		var tlsValue tlsConfig
+
 		diags = configModel.Tls.As(ctx, &tlsValue, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
+
 		tls = &cdnSdk.TlsConfigPatch{
 			EnableTls10: new(tlsValue.EnableTls10.ValueBool()),
 			EnableTls11: new(tlsValue.EnableTls11.ValueBool()),
@@ -2016,10 +2092,13 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 					if countryPtr == nil {
 						return nil, fmt.Errorf("geofencing url %q has a null value", url)
 					}
+
 					countryStrings[i] = *countryPtr
 				}
+
 				gf[url] = countryStrings
 			}
+
 			geofencingPatch = gf
 		}
 
@@ -2060,9 +2139,11 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 	if !utils.IsUndefined(configModel.StripResponseCookies) {
 		configPatch.StripResponseCookies = configModel.StripResponseCookies.ValueBoolPointer()
 	}
+
 	if !utils.IsUndefined(configModel.DefaultCacheDuration) {
 		configPatch.DefaultCacheDuration = *cdnSdk.NewNullableString(conversion.StringValueToPointer(configModel.DefaultCacheDuration))
 	}
+
 	if !utils.IsUndefined(configModel.MonthlyLimitBytes) {
 		configPatch.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(conversion.Int64ValueToPointer(configModel.MonthlyLimitBytes))
 	}
@@ -2075,6 +2156,7 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 	// Map WAF Update
 	if !utils.IsUndefined(configModel.Waf) {
 		var wafModel wafConfig
+
 		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -2116,12 +2198,14 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 		if !utils.IsUndefined(optimizerModel.Enabled) {
 			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
 		}
+
 		configPatch.Optimizer = optimizer
 	}
 
 	var cacheConfigPatch *cdnSdk.CacheConfigPatch
 	if !utils.IsUndefined(configModel.CacheConfig) {
 		var cacheModel cacheConfigModel
+
 		diags = configModel.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -2131,21 +2215,26 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
 			cacheConfigPatch.SetQueryStringVaryEnabled(cacheModel.QueryStringVaryEnabled.ValueBool())
 		}
+
 		if !utils.IsUndefined(cacheModel.CacheKeyHeaders) {
 			headers, err := conversion.StringListToSlice(cacheModel.CacheKeyHeaders)
 			if err != nil {
 				return nil, err
 			}
+
 			cacheConfigPatch.SetCacheKeyHeaders(headers)
 		}
+
 		if !utils.IsUndefined(cacheModel.QueryStringVaryParameters) {
 			params, err := conversion.StringListToSlice(cacheModel.QueryStringVaryParameters)
 			if err != nil {
 				return nil, err
 			}
+
 			cacheConfigPatch.SetQueryStringVaryParameters(params)
 		}
 	}
+
 	configPatch.CacheConfig = cacheConfigPatch
 
 	// LogSink: set the value when the user provided one, or explicitly set it
@@ -2173,6 +2262,7 @@ func toPatchPayload(ctx context.Context, model *Model, extraModels ...*Model) (*
 		if err != nil {
 			return nil, fmt.Errorf("mapping log_sink: %w", err)
 		}
+
 		configPatch.SetLogSink(*logSinkPatch)
 	}
 
@@ -2188,9 +2278,11 @@ func getLogSinkPassword(planCreds, configCreds *logSinkCredentialsConfig) string
 	if planCreds != nil && !utils.IsUndefined(planCreds.Password) {
 		return planCreds.Password.ValueString()
 	}
+
 	if configCreds != nil && !utils.IsUndefined(configCreds.PasswordWo) {
 		return configCreds.PasswordWo.ValueString()
 	}
+
 	return ""
 }
 
@@ -2200,9 +2292,11 @@ func getLogSinkToken(planCreds, configCreds *logSinkCredentialsConfig) string {
 	if planCreds != nil && !utils.IsUndefined(planCreds.Token) {
 		return planCreds.Token.ValueString()
 	}
+
 	if configCreds != nil && !utils.IsUndefined(configCreds.TokenWo) {
 		return configCreds.TokenWo.ValueString()
 	}
+
 	return ""
 }
 
@@ -2238,6 +2332,7 @@ func shouldSendLokiCredentials(
 		!planSink.Type.Equal(stateSink.Type) {
 		return true
 	}
+
 	return false
 }
 
@@ -2252,12 +2347,14 @@ func shouldSendOtlpCredentials(
 		if !utils.IsUndefined(planCreds.Password) {
 			return true
 		}
+
 		if !utils.IsUndefined(planCreds.Token) {
 			return true
 		}
 	}
 
 	noPasswordWo := configCreds == nil || utils.IsUndefined(configCreds.PasswordWo)
+
 	noTokenWo := configCreds == nil || utils.IsUndefined(configCreds.TokenWo)
 	if noPasswordWo && noTokenWo {
 		return false
@@ -2268,6 +2365,7 @@ func shouldSendOtlpCredentials(
 		if !planCreds.PasswordWoVersion.Equal(stateCreds.PasswordWoVersion) {
 			return true
 		}
+
 		if !planCreds.TokenWoVersion.Equal(stateCreds.TokenWoVersion) {
 			return true
 		}
@@ -2287,6 +2385,7 @@ func shouldSendOtlpCredentials(
 		!planCreds.Type.Equal(stateCreds.Type) {
 		return true
 	}
+
 	return false
 }
 
@@ -2300,6 +2399,7 @@ func getLogSinkPasswordForPatch(
 		s := planCreds.Password.ValueString()
 		return &s
 	}
+
 	if shouldSendLokiCredentials(planSink, stateSink, planCreds, stateCreds, configCreds) ||
 		shouldSendOtlpCredentials(planSink, stateSink, planCreds, stateCreds, configCreds) {
 		if configCreds != nil && !utils.IsUndefined(configCreds.PasswordWo) {
@@ -2307,6 +2407,7 @@ func getLogSinkPasswordForPatch(
 			return &s
 		}
 	}
+
 	return nil
 }
 
@@ -2320,12 +2421,14 @@ func getLogSinkTokenForPatch(
 		s := planCreds.Token.ValueString()
 		return &s
 	}
+
 	if shouldSendOtlpCredentials(planSink, stateSink, planCreds, stateCreds, configCreds) {
 		if configCreds != nil && !utils.IsUndefined(configCreds.TokenWo) {
 			s := configCreds.TokenWo.ValueString()
 			return &s
 		}
 	}
+
 	return nil
 }
 
@@ -2335,12 +2438,14 @@ func getLogSinkTokenForPatch(
 // so this function branches on that value.
 func toCreateLogSinkPayload(ctx context.Context, planLogSink, configLogSink types.Object) (*cdnSdk.CreateDistributionPayloadLogSink, error) {
 	var planModel logSinkConfig
+
 	diags := planLogSink.As(ctx, &planModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	var planCreds logSinkCredentialsConfig
+
 	diags = planModel.Credentials.As(ctx, &planCreds, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -2349,10 +2454,12 @@ func toCreateLogSinkPayload(ctx context.Context, planLogSink, configLogSink type
 	var configCreds logSinkCredentialsConfig
 	if !utils.IsUndefined(configLogSink) {
 		var configModel logSinkConfig
+
 		diags = configLogSink.As(ctx, &configModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
+
 		if !utils.IsUndefined(configModel.Credentials) {
 			diags = configModel.Credentials.As(ctx, &configCreds, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
@@ -2378,6 +2485,7 @@ func toCreateLogSinkPayload(ctx context.Context, planLogSink, configLogSink type
 		if err != nil {
 			return nil, err
 		}
+
 		return &cdnSdk.CreateDistributionPayloadLogSink{
 			OtlpLogSinkCreate: &cdnSdk.OtlpLogSinkCreate{
 				Credentials: *otlpCreds,
@@ -2424,24 +2532,29 @@ func toOtlpCreateCredentials(planCreds, configCreds *logSinkCredentialsConfig) (
 // ConfigPatchLogSink SDK type used by the Update path.
 func toPatchLogSinkPayload(ctx context.Context, planLogSink, stateLogSink, configLogSink types.Object) (*cdnSdk.ConfigPatchLogSink, error) {
 	var planModel logSinkConfig
+
 	diags := planLogSink.As(ctx, &planModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
 	var planCreds logSinkCredentialsConfig
+
 	diags = planModel.Credentials.As(ctx, &planCreds, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
 
-	var stateCreds logSinkCredentialsConfig
-	var stateModel logSinkConfig
+	var (
+		stateCreds logSinkCredentialsConfig
+		stateModel logSinkConfig
+	)
 	if !utils.IsUndefined(stateLogSink) {
 		diags = stateLogSink.As(ctx, &stateModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
+
 		if !utils.IsUndefined(stateModel.Credentials) {
 			diags = stateModel.Credentials.As(ctx, &stateCreds, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
@@ -2453,10 +2566,12 @@ func toPatchLogSinkPayload(ctx context.Context, planLogSink, stateLogSink, confi
 	var configCreds logSinkCredentialsConfig
 	if !utils.IsUndefined(configLogSink) {
 		var configModel logSinkConfig
+
 		diags = configLogSink.As(ctx, &configModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
+
 		if !utils.IsUndefined(configModel.Credentials) {
 			diags = configModel.Credentials.As(ctx, &configCreds, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
@@ -2476,6 +2591,7 @@ func toPatchLogSinkPayload(ctx context.Context, planLogSink, stateLogSink, confi
 				Password: *pwd,
 			}
 		}
+
 		return &cdnSdk.ConfigPatchLogSink{
 			LokiLogSinkPatch: &cdnSdk.LokiLogSinkPatch{
 				Credentials: lokiCreds,
@@ -2488,6 +2604,7 @@ func toPatchLogSinkPayload(ctx context.Context, planLogSink, stateLogSink, confi
 		if err != nil {
 			return nil, err
 		}
+
 		return &cdnSdk.ConfigPatchLogSink{
 			OtlpLogSinkPatch: &cdnSdk.OtlpLogSinkPatch{
 				Credentials: otlpCreds,
@@ -2510,6 +2627,7 @@ func toOtlpPatchCredentials(planSink, stateSink *logSinkConfig, planCreds, state
 		if pwd == nil {
 			return nil, nil
 		}
+
 		return &cdnSdk.OtlpLogSinkPatchCredentials{
 			OtlpLogSinkBasicCredentials: &cdnSdk.OtlpLogSinkBasicCredentials{
 				Type:     cdnSdk.OTLPLOGSINKBASICCREDENTIALSTYPE_BASIC,
@@ -2522,6 +2640,7 @@ func toOtlpPatchCredentials(planSink, stateSink *logSinkConfig, planCreds, state
 		if tok == nil {
 			return nil, nil
 		}
+
 		return &cdnSdk.OtlpLogSinkPatchCredentials{
 			OtlpLogSinkBearerCredentials: &cdnSdk.OtlpLogSinkBearerCredentials{
 				Type:  cdnSdk.OTLPLOGSINKBEARERCREDENTIALSTYPE_BEARER,
@@ -2560,6 +2679,7 @@ func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.Redirect
 				if rule.RuleMatchCondition != nil {
 					ruleMatchCond = new(cdnSdk.MatchCondition(*rule.RuleMatchCondition))
 				}
+
 				targetUrl := rule.TargetUrl
 
 				sdkConfigRule := cdnSdk.RedirectRule{
@@ -2573,10 +2693,12 @@ func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.Redirect
 				sdkRules = append(sdkRules, sdkConfigRule)
 			}
 		}
+
 		redirectsConfig = &cdnSdk.RedirectConfig{
 			Rules: sdkRules,
 		}
 	}
+
 	return redirectsConfig
 }
 
@@ -2588,7 +2710,9 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	if utils.IsUndefined(model.Config) {
 		return nil, errors.New("config cannot be nil or unknown")
 	}
+
 	configModel := distributionConfig{}
+
 	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    false,
 		UnhandledUnknownAsEmpty: false,
@@ -2604,6 +2728,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		regions = append(regions, *regionEnum)
 	}
 
@@ -2611,10 +2736,12 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	var tls cdnSdk.TlsConfig
 	if !utils.IsUndefined(configModel.Tls) {
 		var tlsValue tlsConfig
+
 		diags := configModel.Tls.As(ctx, &tlsValue, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
+
 		tls = cdnSdk.TlsConfig{
 			EnableTls10: tlsValue.EnableTls10.ValueBool(),
 			EnableTls11: tlsValue.EnableTls11.ValueBool(),
@@ -2629,6 +2756,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			blockedCountries = append(blockedCountries, validatedBlockedCountry)
 		}
 	}
@@ -2671,6 +2799,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 				sdkRules = append(sdkRules, sdkConfigRule)
 			}
 		}
+
 		redirectsConfig = &cdnSdk.RedirectConfig{
 			Rules: sdkRules,
 		}
@@ -2685,12 +2814,15 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 				if countryCodePtr == nil {
 					return nil, fmt.Errorf("geofencing url %q has a null value", endpoint)
 				}
+
 				validatedCountry, err := validateCountryCode(*countryCodePtr)
 				if err != nil {
 					return nil, err
 				}
+
 				geofencingCountry[i] = validatedCountry
 			}
+
 			geofencing[endpoint] = geofencingCountry
 		}
 	}
@@ -2707,6 +2839,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	var cacheConfig cdnSdk.CacheConfig
 	if !utils.IsUndefined(configModel.CacheConfig) {
 		var cacheModel cacheConfigModel
+
 		diags := configModel.CacheConfig.As(ctx, &cacheModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -2718,16 +2851,20 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			cacheKeyHeaders = headers
 		}
+
 		var queryStringVaryParams []string
 		if !utils.IsUndefined(cacheModel.QueryStringVaryParameters) {
 			params, err := conversion.StringListToSlice(cacheModel.QueryStringVaryParameters)
 			if err != nil {
 				return nil, err
 			}
+
 			queryStringVaryParams = params
 		}
+
 		queryStringVaryEnabled := false
 		if !utils.IsUndefined(cacheModel.QueryStringVaryEnabled) {
 			queryStringVaryEnabled = cacheModel.QueryStringVaryEnabled.ValueBool()
@@ -2760,6 +2897,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 	if !utils.IsUndefined(configModel.Waf) {
 		var wafModel wafConfig
+
 		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -2794,6 +2932,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		if configModel.Backend.OriginRequestHeaders != nil {
 			maps.Copy(originRequestHeaders, *configModel.Backend.OriginRequestHeaders)
 		}
+
 		cdnConfig.Backend.HttpBackend = &cdnSdk.HttpBackend{
 			OriginRequestHeaders: originRequestHeaders,
 			OriginUrl:            *configModel.Backend.OriginURL,
@@ -2810,6 +2949,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 	if !utils.IsUndefined(configModel.Optimizer) {
 		var optimizerModel optimizerConfig
+
 		diags := configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -2839,14 +2979,18 @@ func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, o
 
 	// Extract the prior credentials and sink type so we can preserve secrets that
 	// the API does not return, provided the sink type hasn't changed.
-	var oldCreds logSinkCredentialsConfig
-	var oldType types.String
+	var (
+		oldCreds logSinkCredentialsConfig
+		oldType  types.String
+	)
 	if !utils.IsUndefined(oldLogSink) {
 		var oldLogSinkModel logSinkConfig
+
 		diags := oldLogSink.As(ctx, &oldLogSinkModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return types.ObjectNull(logSinkTypes), core.DiagsToError(diags)
 		}
+
 		oldType = oldLogSinkModel.Type
 		if !utils.IsUndefined(oldLogSinkModel.Credentials) {
 			diags = oldLogSinkModel.Credentials.As(ctx, &oldCreds, basetypes.ObjectAsOptions{})
@@ -2857,6 +3001,7 @@ func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, o
 	}
 
 	var typeVal, pushUrlVal types.String
+
 	credsAttrs := map[string]attr.Value{
 		"type":                types.StringNull(),
 		"username":            types.StringNull(),
@@ -2880,9 +3025,11 @@ func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, o
 			if !oldCreds.Username.IsNull() {
 				credsAttrs["username"] = oldCreds.Username
 			}
+
 			if !oldCreds.Password.IsNull() {
 				credsAttrs["password"] = oldCreds.Password
 			}
+
 			if !oldCreds.PasswordWoVersion.IsNull() {
 				credsAttrs["password_wo_version"] = oldCreds.PasswordWoVersion
 			}
@@ -2899,18 +3046,23 @@ func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, o
 			if !oldCreds.Type.IsNull() {
 				credsAttrs["type"] = oldCreds.Type
 			}
+
 			if !oldCreds.Username.IsNull() {
 				credsAttrs["username"] = oldCreds.Username
 			}
+
 			if !oldCreds.Password.IsNull() {
 				credsAttrs["password"] = oldCreds.Password
 			}
+
 			if !oldCreds.PasswordWoVersion.IsNull() {
 				credsAttrs["password_wo_version"] = oldCreds.PasswordWoVersion
 			}
+
 			if !oldCreds.Token.IsNull() {
 				credsAttrs["token"] = oldCreds.Token
 			}
+
 			if !oldCreds.TokenWoVersion.IsNull() {
 				credsAttrs["token_wo_version"] = oldCreds.TokenWoVersion
 			}
@@ -2932,6 +3084,7 @@ func mapLogSinkResource(ctx context.Context, apiLogSink *cdnSdk.ConfigLogSink, o
 	if diags.HasError() {
 		return types.ObjectNull(logSinkTypes), core.DiagsToError(diags)
 	}
+
 	return logSinkObj, nil
 }
 

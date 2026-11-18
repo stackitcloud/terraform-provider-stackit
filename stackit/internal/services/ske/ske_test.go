@@ -19,14 +19,17 @@ import (
 
 func TestSKEClusterSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
+
 	const (
 		clusterName          = "cluster-name"
 		kubernetesVersionMin = "1.33.8"
 		region               = "eu01"
 		machineType          = "g2i.2"
 	)
+
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -132,6 +135,7 @@ resource "stackit_ske_cluster" "cluster" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -152,6 +156,7 @@ resource "stackit_ske_cluster" "cluster" {
 
 func TestSKEClusterNetworkEmpty(t *testing.T) {
 	projectId := uuid.NewString()
+
 	const (
 		clusterName          = "cluster-name"
 		kubernetesVersionMin = "1.33.8"
@@ -159,8 +164,10 @@ func TestSKEClusterNetworkEmpty(t *testing.T) {
 		machineType          = "g2i.2"
 		nodeName             = "node-name"
 	)
+
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"

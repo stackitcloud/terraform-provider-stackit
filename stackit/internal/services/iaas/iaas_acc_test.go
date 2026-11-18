@@ -156,6 +156,7 @@ var testConfigServerVarsMinUpdated = func() config.Variables {
 	maps.Copy(updatedConfig, testConfigServerVarsMin)
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
+
 	return updatedConfig
 }()
 
@@ -191,6 +192,7 @@ var testConfigServerVarsMaxUpdated = func() config.Variables {
 	updatedConfig["label"] = config.StringVariable("updated")
 	updatedConfig["desired_status"] = config.StringVariable("inactive")
 	updatedConfig["agent_policy"] = config.StringVariable("NEVER")
+
 	return updatedConfig
 }()
 
@@ -201,6 +203,7 @@ var testConfigServerVarsMaxUpdatedDesiredStatus = func() config.Variables {
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
 	updatedConfig["desired_status"] = config.StringVariable("deallocated")
+
 	return updatedConfig
 }()
 
@@ -245,6 +248,7 @@ var testConfigNetworkInterfaceVarsMaxUpdated = func() config.Variables {
 	updatedConfig["ipv4"] = config.StringVariable("10.2.10.21")
 	updatedConfig["security"] = config.BoolVariable(false)
 	updatedConfig["label"] = config.StringVariable("updated")
+
 	return updatedConfig
 }()
 
@@ -284,6 +288,7 @@ var testConfigVolumeVarsMaxUpdated = func() config.Variables {
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])))
 	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["description"])))
 	updatedConfig["label"] = config.StringVariable("updated")
+
 	return updatedConfig
 }()
 
@@ -327,6 +332,7 @@ var testConfigNetworkVarsMaxUpdated = func() config.Variables {
 	updatedConfig["ipv4_nameservers"] = config.ListVariable(config.StringVariable("10.2.2.10"), config.StringVariable("10.2.2.3"))
 	updatedConfig["label"] = config.StringVariable("updated")
 	updatedConfig["dhcp"] = config.BoolVariable(false)
+
 	return updatedConfig
 }()
 
@@ -418,6 +424,7 @@ var testConfigNetworkAreaRegionVarsMaxUpdated = func() config.Variables {
 	updatedConfig["default_prefix_length"] = config.IntegerVariable(27)
 	updatedConfig["min_prefix_length"] = config.IntegerVariable(26)
 	updatedConfig["max_prefix_length"] = config.IntegerVariable(28)
+
 	return updatedConfig
 }()
 
@@ -506,12 +513,15 @@ var testConfigImageVarsMin = func() config.Variables {
 	localFilePath := testutil.TestImageLocalFilePath
 	if localFilePath == "default" {
 		localFileForIaasImage = testutil.CreateDefaultLocalFile()
+
 		filePath, err := filepath.Abs(localFileForIaasImage.Name())
 		if err != nil {
 			fmt.Println("Absolute path for localFileForIaasImage could not be retrieved.")
 		}
+
 		localFilePath = filePath
 	}
+
 	return config.Variables{
 		"project_id":      config.StringVariable(testutil.ProjectId),
 		"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
@@ -533,12 +543,15 @@ var testConfigImageVarsMax = func() config.Variables {
 	localFilePath := testutil.TestImageLocalFilePath
 	if localFilePath == "default" {
 		localFileForIaasImage = testutil.CreateDefaultLocalFile()
+
 		filePath, err := filepath.Abs(localFileForIaasImage.Name())
 		if err != nil {
 			fmt.Println("Absolute path for localFileForIaasImage could not be retrieved.")
 		}
+
 		localFilePath = filePath
 	}
+
 	return config.Variables{
 		"project_id":               config.StringVariable(testutil.ProjectId),
 		"name":                     config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
@@ -583,6 +596,7 @@ var testConfigImageVarsMaxUpdated = func() config.Variables {
 	updatedConfig["uefi"] = config.BoolVariable(false)
 	updatedConfig["video_model"] = config.StringVariable("virtio")
 	updatedConfig["virtio_scsi"] = config.BoolVariable(false)
+
 	return updatedConfig
 }()
 
@@ -642,6 +656,7 @@ var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
 	updatedConfig["system_routes"] = config.BoolVariable(true)
 	updatedConfig["dynamic_routes"] = config.BoolVariable(true)
+
 	return updatedConfig
 }()
 
@@ -760,14 +775,17 @@ func TestAccNetworkMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network.network")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, networkId), nil
 				},
 				ImportState: true,
@@ -975,6 +993,7 @@ func TestAccNetworkMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find stackit_resourcemanager_project.project")
 					}
+
 					projectId, ok := projectResource.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
@@ -984,10 +1003,12 @@ func TestAccNetworkMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network.network_prefix")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, networkId), nil
 				},
 				ImportState: true,
@@ -1018,6 +1039,7 @@ func TestAccNetworkMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find stackit_resourcemanager_project.project")
 					}
+
 					projectId, ok := projectResource.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
@@ -1027,10 +1049,12 @@ func TestAccNetworkMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network.network_prefix_length")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, networkId), nil
 				},
 				ImportState: true,
@@ -1173,18 +1197,22 @@ func TestAccNetworkVpc(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network.network_vpc")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, region, networkId), nil
 				},
 				ImportState: true,
@@ -1276,10 +1304,12 @@ func TestAccNetworkAreaMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_area.network_area")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.OrganizationId, networkAreaId), nil
 				},
 				ImportState:       true,
@@ -1355,10 +1385,12 @@ func TestAccNetworkAreaMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_area.network_area")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					return fmt.Sprintf("%s,%s", testutil.OrganizationId, networkAreaId), nil
 				},
 				ImportState: true,
@@ -1464,10 +1496,12 @@ func TestAccNetworkAreaRegionMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_area_region.network_area_region")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.OrganizationId, networkAreaId, testutil.Region), nil
 				},
 				ImportState:       true,
@@ -1585,10 +1619,12 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_area_region.network_area_region")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.OrganizationId, networkAreaId, testutil.Region), nil
 				},
 				ImportState:       true,
@@ -1714,14 +1750,17 @@ func TestAccNetworkAreaRouteMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_area_route.network_area_route")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					networkAreaRouteId, ok := r.Primary.Attributes["network_area_route_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_route_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, networkAreaId, testutil.Region, networkAreaRouteId), nil
 				},
 				ImportState:       true,
@@ -1821,14 +1860,17 @@ func TestAccNetworkAreaRouteMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_area_route.network_area_route")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					networkAreaRouteId, ok := r.Primary.Attributes["network_area_route_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_route_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, networkAreaId, testutil.Region, networkAreaRouteId), nil
 				},
 				ImportState:       true,
@@ -1958,10 +2000,12 @@ func TestAccVolumeMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_size")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -1975,10 +2019,12 @@ func TestAccVolumeMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.volume")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2277,10 +2323,12 @@ func TestAccVolumeMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_size")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2294,10 +2342,12 @@ func TestAccVolumeMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_source")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2311,10 +2361,12 @@ func TestAccVolumeMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_encrypted_no_key_payload")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2337,10 +2389,12 @@ func TestAccVolumeMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_encrypted_with_regular_key_payload")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2363,10 +2417,12 @@ func TestAccVolumeMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_encrypted_with_write_only_key_payload")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2618,14 +2674,17 @@ func TestAccServerMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server.server")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, serverId), nil
 				},
 				ImportState:             true,
@@ -2902,14 +2961,17 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_affinity_group.affinity_group")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					affinityGroupId, ok := r.Primary.Attributes["affinity_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute affinity_group_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, affinityGroupId), nil
 				},
 				ImportState:       true,
@@ -2923,14 +2985,17 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.base_volume")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2944,14 +3009,17 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_volume.data_volume")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, volumeId), nil
 				},
 				ImportState:       true,
@@ -2965,18 +3033,22 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server_volume_attach.data_volume_attachment")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					volumeId, ok := r.Primary.Attributes["volume_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, serverId, volumeId), nil
 				},
 				ImportState:       true,
@@ -2990,14 +3062,17 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network.network")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, networkId), nil
 				},
 				ImportState: true,
@@ -3019,18 +3094,22 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface_init")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_interface_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, networkId, networkInterfaceId), nil
 				},
 				ImportState:       true,
@@ -3044,18 +3123,22 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface_second")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_interface_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, networkId, networkInterfaceId), nil
 				},
 				ImportState:       true,
@@ -3069,18 +3152,22 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server_network_interface_attach.network_interface_second_attachment")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_interface_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, serverId, networkInterfaceId), nil
 				},
 				ImportState:       true,
@@ -3094,10 +3181,12 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_key_pair.key_pair")
 					}
+
 					keyPairName, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return keyPairName, nil
 				},
 				ImportState:       true,
@@ -3111,18 +3200,22 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server_service_account_attach.attached_service_account")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					serviceAccountEmail, ok := r.Primary.Attributes["service_account_email"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute volume_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, serverId, serviceAccountEmail), nil
 				},
 				ImportState:       true,
@@ -3136,14 +3229,17 @@ func TestAccServerMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server.server")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, serverId), nil
 				},
 				ImportState:             true,
@@ -3454,10 +3550,12 @@ func TestAccAffinityGroupMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_affinity_group.affinity_group")
 					}
+
 					affinityGroupId, ok := r.Primary.Attributes["affinity_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute affinity_group_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, affinityGroupId), nil
 				},
 				ImportState:       true,
@@ -3551,10 +3649,12 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_security_group.security_group")
 					}
+
 					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute security_group_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, securityGroupId), nil
 				},
 				ImportState:       true,
@@ -3568,14 +3668,17 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_security_group_rule.security_group_rule")
 					}
+
 					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute security_group_id")
 					}
+
 					securityGroupRuleId, ok := r.Primary.Attributes["security_group_rule_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute security_group_rule_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, securityGroupId, securityGroupRuleId), nil
 				},
 				ImportState:       true,
@@ -3859,10 +3962,12 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_security_group.security_group")
 					}
+
 					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute security_group_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, securityGroupId), nil
 				},
 				ImportState:       true,
@@ -3876,14 +3981,17 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_security_group_rule.security_group_rule")
 					}
+
 					securityGroupId, ok := r.Primary.Attributes["security_group_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute security_group_id")
 					}
+
 					securityGroupRuleId, ok := r.Primary.Attributes["security_group_rule_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute security_group_rule_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, securityGroupId, securityGroupRuleId), nil
 				},
 				ImportState:       true,
@@ -4098,18 +4206,22 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_interface_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, networkId, networkInterfaceId), nil
 				},
 				ImportState:       true,
@@ -4123,14 +4235,17 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network.network")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, networkId), nil
 				},
 				ImportState: true,
@@ -4152,14 +4267,17 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute public_ip_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, publicIpId), nil
 				},
 				ImportState:       true,
@@ -4406,18 +4524,22 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_interface_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, networkId, networkInterfaceId), nil
 				},
 				ImportState:       true,
@@ -4431,14 +4553,17 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network.network")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, networkId), nil
 				},
 				ImportState: true,
@@ -4460,14 +4585,17 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute public_ip_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, publicIpId), nil
 				},
 				ImportState:       true,
@@ -4481,18 +4609,22 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_network_interface.network_interface_simple")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					networkId, ok := r.Primary.Attributes["network_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_id")
 					}
+
 					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_interface_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, networkId, networkInterfaceId), nil
 				},
 				ImportState:       true,
@@ -4506,14 +4638,17 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip_simple")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute public_ip_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, publicIpId), nil
 				},
 				ImportState:       true,
@@ -4527,18 +4662,22 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_public_ip.public_ip")
 					}
+
 					projectId, ok := r.Primary.Attributes["project_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute project_id")
 					}
+
 					publicIpId, ok := r.Primary.Attributes["public_ip_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute public_ip_id")
 					}
+
 					networkInterfaceId, ok := r.Primary.Attributes["network_interface_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_interface_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", projectId, testutil.Region, publicIpId, networkInterfaceId), nil
 				},
 				ImportState: true,
@@ -4694,10 +4833,12 @@ func TestAccKeyPairMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_key_pair.key_pair")
 					}
+
 					keyPairName, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return keyPairName, nil
 				},
 				ImportState:       true,
@@ -4760,10 +4901,12 @@ func TestAccKeyPairMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_key_pair.key_pair")
 					}
+
 					keyPairName, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					return keyPairName, nil
 				},
 				ImportState:       true,
@@ -4845,10 +4988,12 @@ func TestAccImageMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_image.image")
 					}
+
 					imageId, ok := r.Primary.Attributes["image_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute image_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, imageId), nil
 				},
 				ImportState:             true,
@@ -4969,10 +5114,12 @@ func TestAccImageMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_image.image")
 					}
+
 					imageId, ok := r.Primary.Attributes["image_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute image_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, imageId), nil
 				},
 				ImportState:             true,
@@ -5141,6 +5288,7 @@ func TestAccImageDatasourceSearchVariants(t *testing.T) {
 						if latest == nil {
 							return fmt.Errorf("datasource 'data.stackit_image_v2.ubuntu_latest' not found")
 						}
+
 						if oldest == nil {
 							return fmt.Errorf("datasource 'data.stackit_image_v2.ubuntu_oldest' not found")
 						}
@@ -5413,18 +5561,22 @@ func TestAccRoutingTableMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_routing_table.routing_table")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute routing_table_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId), nil
 				},
 				ImportState:       true,
@@ -5599,18 +5751,22 @@ func TestAccRoutingTableMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_routing_table.routing_table")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute routing_table_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId), nil
 				},
 				ImportState:       true,
@@ -5786,22 +5942,27 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_routing_table_route.route")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute routing_table_id")
 					}
+
 					routeId, ok := r.Primary.Attributes["route_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute route_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId, routeId), nil
 				},
 				ImportState:       true,
@@ -5987,22 +6148,27 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_routing_table_route.route")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute network_area_id")
 					}
+
 					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute routing_table_id")
 					}
+
 					routeId, ok := r.Primary.Attributes["route_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute route_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId, routeId), nil
 				},
 				ImportState:       true,
@@ -6051,6 +6217,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 
 func TestAccDatasourceIaaSProject(t *testing.T) {
 	t.Logf("TestAccDatasourceIaaSProject name: %s", testutil.ConvertConfigVariable(testConfigIaasProject["name"]))
+
 	const (
 		publicProject = "data.stackit_iaas_project.public"
 		snaProject    = "data.stackit_iaas_project.sna"
@@ -6117,6 +6284,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckRoutingTableDestroy,
 		testAccCheckResourceManagerProjectsDestroy,
 	}
+
 	var errs []error
 
 	for _, f := range checkFunctions {
@@ -6130,6 +6298,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6141,12 +6310,15 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network" {
 			continue
 		}
+
 		split := strings.Split(rs.Primary.ID, core.Separator)
 		if len(split) != 2 {
 			continue
 		}
+
 		region := split[1]
 		networkId := split[2]
+
 		err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, region, networkId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
@@ -6155,8 +6327,10 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger network deletion %q: %w", networkId, err))
 		}
+
 		_, err = wait.DeleteNetworkWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, region, networkId).WaitWithContext(ctx)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot delete network %q: %w", networkId, err))
@@ -6168,6 +6342,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6179,18 +6354,22 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network_interface" {
 			continue
 		}
+
 		ids := strings.Split(rs.Primary.ID, core.Separator)
 		projectId := ids[0]
 		region := ids[1]
 		networkId := ids[2]
 		networkInterfaceId := ids[3]
+
 		err := client.DefaultAPI.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 		if err != nil {
 			if isIgnorableDestroyError(err) {
 				continue
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger network interface deletion %q: %w", networkInterfaceId, err))
 		}
+
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot delete network interface %q: %w", networkInterfaceId, err))
 		}
@@ -6201,6 +6380,7 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6227,6 +6407,7 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 		if networkAreas[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(networkAreasToDestroy, *networkAreas[i].Id) {
 			err := client.DefaultAPI.DeleteNetworkAreaRegion(ctx, testutil.OrganizationId, *networkAreas[i].Id, testutil.Region).Execute()
 			if err != nil {
@@ -6234,11 +6415,13 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6265,6 +6448,7 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 		if networkAreas[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(networkAreasToDestroy, *networkAreas[i].Id) {
 			err := client.DefaultAPI.DeleteNetworkArea(ctx, testutil.OrganizationId, *networkAreas[i].Id).Execute()
 			if err != nil {
@@ -6272,11 +6456,13 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6302,6 +6488,7 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 		if volumes[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(volumesToDestroy, *volumes[i].Id) {
 			err := client.DefaultAPI.DeleteVolume(ctx, testutil.ProjectId, testutil.Region, *volumes[i].Id).Execute()
 			if err != nil {
@@ -6309,11 +6496,13 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6322,6 +6511,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 	// Servers
 
 	projectId := testutil.ProjectId // Default
+
 	serversToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_server" {
@@ -6349,6 +6539,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		if len(split) != 2 {
 			continue
 		}
+
 		projectId = split[0]
 		networkId := split[2]
 		networksToDestroy = append(networksToDestroy, networkId)
@@ -6378,6 +6569,7 @@ func cleanUpServers(ctx context.Context, client *iaas.APIClient, projectId strin
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -6398,6 +6590,7 @@ func cleanUpNetworks(ctx context.Context, client *iaas.APIClient, projectId stri
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -6407,11 +6600,13 @@ func isIgnorableDestroyError(err error) bool {
 		return oapiErr.StatusCode == http.StatusForbidden ||
 			oapiErr.StatusCode == http.StatusNotFound
 	}
+
 	return false
 }
 
 func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6437,6 +6632,7 @@ func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 		if affinityGroups[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(affinityGroupsToDestroy, *affinityGroups[i].Id) {
 			err := client.DefaultAPI.DeleteAffinityGroup(ctx, testutil.ProjectId, testutil.Region, *affinityGroups[i].Id).Execute()
 			if err != nil {
@@ -6444,11 +6640,13 @@ func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6474,6 +6672,7 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 		if securityGroups[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(securityGroupsToDestroy, *securityGroups[i].Id) {
 			err := client.DefaultAPI.DeleteSecurityGroup(ctx, testutil.ProjectId, testutil.Region, *securityGroups[i].Id).Execute()
 			if err != nil {
@@ -6481,11 +6680,13 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6511,6 +6712,7 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 		if publicIps[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(publicIpsToDestroy, *publicIps[i].Id) {
 			err := client.DefaultAPI.DeletePublicIP(ctx, testutil.ProjectId, testutil.Region, *publicIps[i].Id).Execute()
 			if err != nil {
@@ -6518,11 +6720,13 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6547,6 +6751,7 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 		if keyPairs[i].Name == nil {
 			continue
 		}
+
 		if utils.Contains(keyPairsToDestroy, *keyPairs[i].Name) {
 			err := client.DefaultAPI.DeleteKeyPair(ctx, *keyPairs[i].Name).Execute()
 			if err != nil {
@@ -6554,11 +6759,13 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6584,6 +6791,7 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 		if images[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(imagesToDestroy, *images[i].Id) {
 			err := client.DefaultAPI.DeleteImage(ctx, testutil.ProjectId, testutil.Region, *images[i].Id).Execute()
 			if err != nil {
@@ -6591,11 +6799,13 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6607,9 +6817,11 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_routing_table" {
 			continue
 		}
+
 		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
+
 		err := client.DefaultAPI.DeleteRoutingTableFromArea(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
@@ -6618,6 +6830,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger routing table deletion %q: %w", routingTableId, err))
 		}
 	}
@@ -6627,6 +6840,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 
 func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -6638,6 +6852,7 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_routing_table_route" {
 			continue
 		}
+
 		routingTableRouteId := strings.Split(rs.Primary.ID, core.Separator)[4]
 		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
@@ -6651,6 +6866,7 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger routing table route deletion %q: %w", routingTableId, err))
 		}
 	}
@@ -6660,22 +6876,26 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
 	projectsToDestroy := []string{}
+
 	var errs []error
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_resourcemanager_project" {
 			continue
 		}
+
 		containerId, ok := rs.Primary.Attributes["container_id"]
 		if !ok {
 			errs = append(errs, fmt.Errorf("no container_id found in %s", rs.Primary))
 			continue
 		}
+
 		projectsToDestroy = append(projectsToDestroy, containerId)
 	}
 
@@ -6685,7 +6905,9 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 			if isIgnorableDestroyError(err) {
 				continue // project is already gone, nothing to do
 			}
+
 			errs = append(errs, fmt.Errorf("getting projectsResp: %w", err))
+
 			continue
 		}
 
@@ -6703,6 +6925,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 			errs = append(errs, fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", projectsResp.ContainerId, err))
 		}
 	}
+
 	return errors.Join(errs...)
 }
 
@@ -6712,6 +6935,7 @@ func validateImportedNameservers(expectedIPs []string) func(states []*terraform.
 		if len(states) == 0 {
 			return fmt.Errorf("no states returned from import")
 		}
+
 		attrs := states[0].Attributes
 
 		// Check if there are any nameservers present

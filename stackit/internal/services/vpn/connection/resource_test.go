@@ -42,6 +42,7 @@ func fixtureTunnelResponse(mods ...func(m *vpn.TunnelConfiguration)) vpn.TunnelC
 	for _, mod := range mods {
 		mod(&resp)
 	}
+
 	return resp
 }
 
@@ -61,6 +62,7 @@ func fixtureConnectionResponse(mods ...func(m *vpn.ConnectionResponse)) *vpn.Con
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -80,6 +82,7 @@ func fixtureBasePhaseModel(mods ...func(m *BasePhaseModel)) BasePhaseModel {
 	for _, mod := range mods {
 		mod(&resp)
 	}
+
 	return resp
 }
 
@@ -103,6 +106,7 @@ func fixtureTunnelModel(mods ...func(m *TunnelModel)) *TunnelModel {
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -135,6 +139,7 @@ func fixtureModel(mods ...func(m *Model)) Model {
 	for _, mod := range mods {
 		mod(&resp)
 	}
+
 	return resp
 }
 
@@ -160,6 +165,7 @@ func fixtureTunnelPayload(mods ...func(m *vpn.TunnelConfiguration)) vpn.TunnelCo
 	for _, mod := range mods {
 		mod(&resp)
 	}
+
 	return resp
 }
 
@@ -186,6 +192,7 @@ func fixtureCreatePayload(mods ...func(m *vpn.CreateGatewayConnectionPayload)) *
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -212,6 +219,7 @@ func fixtureUpdatePayload(mods ...func(m *vpn.UpdateGatewayConnectionPayload)) *
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -385,9 +393,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(&tt.expected, state); diff != "" {
 					t.Fatalf("Data mismatch (-want +got):\n%s", diff)
@@ -559,9 +569,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.expected, payload)
 				if diff != "" {
@@ -833,9 +845,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.expected, payload)
 				if diff != "" {
@@ -885,9 +899,11 @@ func TestToTunnelConfiguration(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
+
 			if !tt.isValid {
 				return
 			}
@@ -895,6 +911,7 @@ func TestToTunnelConfiguration(t *testing.T) {
 			if config.RemoteAddress != tt.input.RemoteAddress.ValueString() {
 				t.Errorf("RemoteAddress mismatch: got %v, want %v", config.RemoteAddress, tt.input.RemoteAddress.ValueString())
 			}
+
 			if !tfutils.IsUndefined(tt.input.PreSharedKeyWo) {
 				if config.PreSharedKey == nil || *config.PreSharedKey != tt.input.PreSharedKeyWo.ValueString() {
 					t.Errorf("PreSharedKey mismatch")

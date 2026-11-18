@@ -72,6 +72,7 @@ func (d *routingTableDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 // Read refreshes the Terraform state with the latest data.
 func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model shared.RoutingTableDataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -102,6 +103,7 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -112,11 +114,13 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table read")
 }
 
@@ -124,6 +128,7 @@ func mapDatasourceFields(ctx context.Context, routingTable *iaas.RoutingTable, m
 	if routingTable == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -153,5 +158,6 @@ func mapDatasourceFields(ctx context.Context, routingTable *iaas.RoutingTable, m
 	}
 
 	model.Region = types.StringValue(region)
+
 	return nil
 }

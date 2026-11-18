@@ -33,6 +33,7 @@ func (v *BoolValidator) ValidateBool(ctx context.Context, req validator.BoolRequ
 	if req.ConfigValue.IsUnknown() {
 		return
 	}
+
 	v.validate(ctx, req, resp)
 }
 

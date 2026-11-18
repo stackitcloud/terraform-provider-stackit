@@ -126,8 +126,10 @@ func (s *scfPlatformDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.ReadRequest, response *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := request.Config.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -156,6 +158,7 @@ func (s *scfPlatformDataSource) Read(ctx context.Context, request datasource.Rea
 			},
 		)
 		response.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -178,6 +181,7 @@ func mapFields(response *scf.Platforms, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -190,5 +194,6 @@ func mapFields(response *scf.Platforms, model *Model) error {
 	model.Region = types.StringValue(response.Region)
 	model.ApiUrl = types.StringValue(response.ApiUrl)
 	model.ConsoleUrl = types.StringPointerValue(response.ConsoleUrl)
+
 	return nil
 }

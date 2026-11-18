@@ -130,6 +130,7 @@ func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.Schema
 
 func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -153,7 +154,9 @@ func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.Read
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Managed Rule Set", err.Error())
+
 		return
 	}
 
@@ -170,5 +173,6 @@ func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Managed Rule Set read")
 }

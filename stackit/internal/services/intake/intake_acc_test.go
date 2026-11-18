@@ -234,6 +234,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 // testAccCheckIntakeRunnerDestroy act as independent auditor to verify destroy operation
 func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := intake.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -277,5 +278,6 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

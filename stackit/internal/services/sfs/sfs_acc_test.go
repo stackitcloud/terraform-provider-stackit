@@ -107,6 +107,7 @@ var testConfigResourcePoolVarsMinUpdated = func() config.Variables {
 	updatedConfig["performance_class"] = config.StringVariable("Premium")
 	updatedConfig["size_gigabytes"] = config.IntegerVariable(512)
 	updatedConfig["ip_acl"] = config.ListVariable(config.StringVariable("172.17.0.0/24"), config.StringVariable("172.17.0.250/32"))
+
 	return updatedConfig
 }
 
@@ -133,6 +134,7 @@ var testConfigResourcePoolVarsMaxUpdated = func() config.Variables {
 	updatedConfig["size_gigabytes"] = config.IntegerVariable(1024)
 	updatedConfig["ip_acl"] = config.ListVariable(config.StringVariable("172.17.0.0/24"), config.StringVariable("172.17.0.250/32"))
 	updatedConfig["label"] = config.StringVariable("bar")
+
 	return updatedConfig
 }
 
@@ -169,6 +171,7 @@ var testConfigShareVarsMaxUpdated = func() config.Variables {
 	maps.Copy(updatedConfig, testConfigShareVarsMax)
 	updatedConfig["space_hard_limit_gigabytes"] = config.IntegerVariable(50)
 	updatedConfig["label"] = config.StringVariable("bar")
+
 	return updatedConfig
 }
 
@@ -238,10 +241,12 @@ func TestAccExportPolicyMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sfs_export_policy.exportpolicy")
 					}
+
 					policyId, ok := r.Primary.Attributes["policy_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute policy_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -360,10 +365,12 @@ func TestAccExportPolicyMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_sfs_export_policy.exportpolicy")
 					}
+
 					policyId, ok := r.Primary.Attributes["policy_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute policy_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
 				},
 				ImportState:       true,
@@ -476,10 +483,12 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					if !found {
 						return "", fmt.Errorf("could not find resource stackit_sfs_resource_pool.resourcepool")
 					}
+
 					resourcepoolId, ok := res.Primary.Attributes["resource_pool_id"]
 					if !ok {
 						return "", fmt.Errorf("resource pool id attribute not found")
 					}
+
 					return testutil.ProjectId + "," + testutil.Region + "," + resourcepoolId, nil
 				},
 				ImportState:       true,
@@ -593,10 +602,12 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					if !found {
 						return "", fmt.Errorf("could not find resource stackit_sfs_resource_pool.resourcepool")
 					}
+
 					resourcepoolId, ok := res.Primary.Attributes["resource_pool_id"]
 					if !ok {
 						return "", fmt.Errorf("resource pool id attribute not found")
 					}
+
 					return testutil.ProjectId + "," + testutil.Region + "," + resourcepoolId, nil
 				},
 				ImportState:       true,
@@ -704,14 +715,17 @@ func TestAccShareResourceMin(t *testing.T) {
 					if !found {
 						return "", fmt.Errorf("could not find resource stackit_sfs_share.share")
 					}
+
 					resourcepoolId, ok := res.Primary.Attributes["resource_pool_id"]
 					if !ok {
 						return "", fmt.Errorf("resource pool id attribute not found")
 					}
+
 					shareId, ok := res.Primary.Attributes["share_id"]
 					if !ok {
 						return "", fmt.Errorf("share id attribute not found")
 					}
+
 					return testutil.ProjectId + "," + testutil.Region + "," + resourcepoolId + "," + shareId, nil
 				},
 				ImportState:       true,
@@ -826,14 +840,17 @@ func TestAccShareResourceMax(t *testing.T) {
 					if !found {
 						return "", fmt.Errorf("could not find resource stackit_sfs_share.share")
 					}
+
 					resourcepoolId, ok := res.Primary.Attributes["resource_pool_id"]
 					if !ok {
 						return "", fmt.Errorf("resource pool id attribute not found")
 					}
+
 					shareId, ok := res.Primary.Attributes["share_id"]
 					if !ok {
 						return "", fmt.Errorf("share id attribute not found")
 					}
+
 					return testutil.ProjectId + "," + testutil.Region + "," + resourcepoolId + "," + shareId, nil
 				},
 				ImportState:       true,
@@ -989,6 +1006,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccExportPolicyDestroy,
 		testAccResourcePoolDestroyed,
 	}
+
 	var errs []error
 
 	for _, f := range checkFunctions {
@@ -999,11 +1017,13 @@ func testAccCheckDestroy(s *terraform.State) error {
 			}
 		}()
 	}
+
 	return errors.Join(errs...)
 }
 
 func testAccExportPolicyDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
@@ -1035,11 +1055,13 @@ func testAccExportPolicyDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccResourcePoolDestroyed(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
@@ -1069,6 +1091,7 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("cannot list shares: %w", err)
 			}
+
 			if shares.Shares != nil {
 				for _, share := range shares.Shares {
 					_, err := client.DefaultAPI.DeleteShare(ctx, testutil.ProjectId, testutil.Region, *id, *share.Id).Execute()
@@ -1085,11 +1108,13 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func testAccProjectLockDestroyed(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := createClient()
 	if err != nil {
 		return err
@@ -1122,10 +1147,12 @@ func testAccProjectLockDestroyed(s *terraform.State) error {
 		_, err := client.DefaultAPI.GetLock(ctx, lock.Region, lock.ProjectId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
+
 			ok := errors.As(err, &oapiErr)
 			if !(ok && oapiErr.StatusCode == http.StatusNotFound) {
 				errs = append(errs, err)
 			}
+
 			continue
 		}
 
@@ -1134,5 +1161,6 @@ func testAccProjectLockDestroyed(s *terraform.State) error {
 			errs = append(errs, err)
 		}
 	}
+
 	return errors.Join(errs...)
 }

@@ -160,6 +160,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -190,6 +191,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -208,6 +210,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "RabbitMQ credential read")
 }
 
@@ -215,12 +218,15 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *rabbitmq.Credenti
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if credentialsResp.Raw == nil {
 		return fmt.Errorf("response credentials raw is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	credentials := credentialsResp.Raw.Credentials
 
 	var credentialId string
@@ -242,10 +248,12 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *rabbitmq.Credenti
 	if err != nil {
 		return err
 	}
+
 	modelHttpApiUris, err := utils.ListValueToStringSlice(model.HttpAPIURIs)
 	if err != nil {
 		return err
 	}
+
 	modelUris, err := utils.ListValueToStringSlice(model.Uris)
 	if err != nil {
 		return err
@@ -253,6 +261,7 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *rabbitmq.Credenti
 
 	model.Hosts = types.ListNull(types.StringType)
 	model.Uris = types.ListNull(types.StringType)
+
 	model.HttpAPIURIs = types.ListNull(types.StringType)
 	if credentials.Hosts != nil {
 		respHosts := credentials.Hosts
@@ -265,6 +274,7 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *rabbitmq.Credenti
 
 		model.Hosts = hostsTF
 	}
+
 	model.Host = types.StringValue(credentials.Host)
 	if credentials.HttpApiUris != nil {
 		respHttpApiUris := credentials.HttpApiUris

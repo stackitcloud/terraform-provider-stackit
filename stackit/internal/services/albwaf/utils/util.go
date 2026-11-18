@@ -13,9 +13,11 @@ func WarnIfNameChanges(stateName, planName types.String, resourceLabel string, d
 	if utils.IsUndefined(stateName) {
 		return
 	}
+
 	if planName.Equal(stateName) {
 		return
 	}
+
 	diags.AddWarning(
 		fmt.Sprintf("%s name change requires resource replacement", resourceLabel),
 		fmt.Sprintf(

@@ -56,6 +56,7 @@ func TestMapFields(t *testing.T) {
 		input  *iaas.SecurityGroupRule
 		region string
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -299,9 +300,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.args.state, tt.expected)
 				if diff != "" {
@@ -352,12 +355,15 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var icmpParameters *icmpParametersModel
-			var portRange *portRangeModel
-			var protocol *protocolModel
+			var (
+				icmpParameters *icmpParametersModel
+				portRange      *portRangeModel
+				protocol       *protocolModel
+			)
 			if tt.input != nil {
 				if !(tt.input.IcmpParameters.IsNull() || tt.input.IcmpParameters.IsUnknown()) {
 					icmpParameters = &icmpParametersModel{}
+
 					diags := tt.input.IcmpParameters.As(context.Background(), icmpParameters, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting icmp parameters: %v", diags.Errors())
@@ -366,6 +372,7 @@ func TestToCreatePayload(t *testing.T) {
 
 				if !(tt.input.PortRange.IsNull() || tt.input.PortRange.IsUnknown()) {
 					portRange = &portRangeModel{}
+
 					diags := tt.input.PortRange.As(context.Background(), portRange, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting port range: %v", diags.Errors())
@@ -374,6 +381,7 @@ func TestToCreatePayload(t *testing.T) {
 
 				if !(tt.input.Protocol.IsNull() || tt.input.Protocol.IsUnknown()) {
 					protocol = &protocolModel{}
+
 					diags := tt.input.Protocol.As(context.Background(), protocol, basetypes.ObjectAsOptions{})
 					if diags.HasError() {
 						t.Fatalf("Error converting protocol: %v", diags.Errors())
@@ -385,9 +393,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {

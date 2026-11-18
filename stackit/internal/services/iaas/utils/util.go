@@ -26,6 +26,7 @@ func MapLabels(ctx context.Context, responseLabels map[string]any, currentLabels
 
 	if len(responseLabels) != 0 {
 		var diags diag.Diagnostics
+
 		labelsTF, diags = types.MapValueFrom(ctx, types.StringType, responseLabels)
 		if diags.HasError() {
 			return labelsTF, fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
@@ -45,6 +46,7 @@ func ReadXRequestId(ctx context.Context) (string, error) {
 		}
 		return "", fmt.Errorf("no XRequestID header found in response")
 	}
+
 	return "", fmt.Errorf("no response with type `**http.Response` found in context")
 }
 
@@ -57,6 +59,7 @@ func IsNetworkAreaRegionNotFound(err error) bool {
 	if !errors.As(err, &oapiErr) {
 		return false
 	}
+
 	switch oapiErr.StatusCode {
 	case http.StatusNotFound:
 		return true
