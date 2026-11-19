@@ -129,7 +129,7 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 
 		ok := errors.As(err, &oapiErr)
 		// due to security purposes, attempting to get access federation for a non-existent Service Account will return 403.
-		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
+		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
