@@ -122,6 +122,7 @@ func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaR
 
 func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -138,8 +139,10 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "resource_id", resourceID)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var response *telemetrylink.TelemetryLinkResponse
-	var err error
+	var (
+		response *telemetrylink.TelemetryLinkResponse
+		err      error
+	)
 	switch resourceType {
 	case resourceTypeOrganization:
 		response, err = d.client.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
@@ -151,6 +154,7 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
 		return
 	}
+
 	if err != nil {
 		tfutils.LogError(
 			ctx,
@@ -163,8 +167,10 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, response, &model, region)
@@ -172,11 +178,13 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryLink read", map[string]interface{}{
 		"resource_type": resourceType,
 		"resource_id":   resourceID,
@@ -187,6 +195,7 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 	if link == nil {
 		return fmt.Errorf("link is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}

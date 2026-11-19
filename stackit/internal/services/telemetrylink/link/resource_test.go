@@ -24,6 +24,7 @@ func fixtureLink(mods ...func(link *telemetrylink.TelemetryLinkResponse)) *telem
 	for _, mod := range mods {
 		mod(link)
 	}
+
 	return link
 }
 
@@ -46,6 +47,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 	for _, mod := range mods {
 		mod(model)
 	}
+
 	return model
 }
 
@@ -88,13 +90,16 @@ func TestMapFields(t *testing.T) {
 				ResourceID:   tt.expected.ResourceID,
 				Region:       tt.expected.Region,
 			}
+
 			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if !tt.wantErr {
 				diff := cmp.Diff(state, tt.expected)
 				if diff != "" {
@@ -180,9 +185,11 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)
@@ -266,9 +273,11 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)
@@ -352,9 +361,11 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)
@@ -471,9 +482,11 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)
@@ -585,9 +598,11 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)
@@ -699,9 +714,11 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
+
 			if tt.wantErrMessage == "" && err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
 			diff := cmp.Diff(got, tt.expected)
 			if diff != "" {
 				t.Fatalf("Payload does not match: %s", diff)

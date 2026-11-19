@@ -82,6 +82,7 @@ func NewTelemetryRouterAccessTokenResource() resource.Resource {
 
 func (r *telemetryRouterAccessTokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -95,9 +96,11 @@ func (r *telemetryRouterAccessTokenResource) Configure(ctx context.Context, req 
 
 func (r *telemetryRouterAccessTokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -235,6 +238,7 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 
 func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -291,6 +295,7 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", "Got empty credential id")
 		return
 	}
+
 	accessTokenId = waitResp.Id
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenId)
 
@@ -299,16 +304,19 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter access token created")
 }
 
 func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -336,14 +344,18 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, accessTokenResponse, &model, region)
@@ -351,11 +363,13 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter access token read", map[string]interface{}{
 		"access_token_id": accessTokenID,
 	})
@@ -363,6 +377,7 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 
 func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -412,6 +427,7 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "TelemetryRouter access token updated", map[string]interface{}{
 		"access_token_id": accessTokenID,
 	})
@@ -419,6 +435,7 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 
 func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -460,6 +477,7 @@ func (r *telemetryRouterAccessTokenResource) ImportState(ctx context.Context, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryRouter access token", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`,`access_token_id`", req.ID))
 		return
 	}
+
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      idParts[0],
 		"region":          idParts[1],
@@ -491,29 +509,35 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
 
-	var id, creatorId, displayName, status string
-	var description *string
-	var expirationTime *time.Time
-	var hasExpirationTime bool
+	var (
+		id, creatorId, displayName, status string
+		description                        *string
+		expirationTime                     *time.Time
+		hasExpirationTime                  bool
+	)
 
 	switch v := accessToken.(type) {
 	case *telemetryrouter.CreateAccessTokenResponse:
 		if v == nil {
 			return fmt.Errorf("access token is nil")
 		}
+
 		id = v.Id
 		creatorId = v.CreatorId
 		description = v.Description
 		displayName = v.DisplayName
 		status = string(v.Status)
+
 		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()
 		}
+
 		if v.AccessToken != "" {
 			model.AccessToken = types.StringValue(v.AccessToken)
 		}
@@ -521,11 +545,13 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		if v == nil {
 			return fmt.Errorf("access token is nil")
 		}
+
 		id = v.Id
 		creatorId = v.CreatorId
 		description = v.Description
 		displayName = v.DisplayName
 		status = string(v.Status)
+
 		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()
@@ -534,11 +560,13 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		if v == nil {
 			return fmt.Errorf("access token is nil")
 		}
+
 		id = v.Id
 		creatorId = v.CreatorId
 		description = v.Description
 		displayName = v.DisplayName
 		status = string(v.Status)
+
 		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()

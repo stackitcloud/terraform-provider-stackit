@@ -50,6 +50,7 @@ func TestUUID(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -94,6 +95,7 @@ func TestNoUUID(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -191,6 +193,7 @@ func TestIP(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -348,6 +351,7 @@ func TestRecordSet(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -392,6 +396,7 @@ func TestNoSeparator(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -446,6 +451,7 @@ func TestNonLegacyProjectRole(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -510,6 +516,7 @@ func TestMinorVersionNumber(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -604,6 +611,7 @@ func TestVersionNumber(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -658,6 +666,7 @@ func TestRFC3339SecondsOnly(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -742,6 +751,7 @@ func TestCIDR(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -796,6 +806,7 @@ func TestRrule(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -835,6 +846,7 @@ func TestFileExists(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}
@@ -911,6 +923,7 @@ func TestValidTtlDuration(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to fail for input: %v", tt.input)
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to succeed for input: %v, but got errors: %v", tt.input, r.Diagnostics.Errors())
 			}
@@ -982,6 +995,7 @@ func TestValidNoTrailingNewline(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to fail for input: %q", tt.input)
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
 			}
@@ -1024,6 +1038,7 @@ func TestIsLowercased(t *testing.T) {
 			if tt.wantErr && !r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to fail for input: %q", tt.input)
 			}
+
 			if !tt.wantErr && r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
 			}
@@ -1033,6 +1048,7 @@ func TestIsLowercased(t *testing.T) {
 
 func TestNoLeadingOrtTrailingWhitespace(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   string
@@ -1074,13 +1090,16 @@ func TestNoLeadingOrtTrailingWhitespace(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			r := validator.StringResponse{}
 			NoLeadingOrTrailingWhitespace().ValidateString(context.Background(), validator.StringRequest{
 				ConfigValue: types.StringValue(tt.input),
 			}, &r)
+
 			if tt.wantErr && !r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to fail for input: %q", tt.input)
 			}
+
 			if !tt.wantErr && r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
 			}

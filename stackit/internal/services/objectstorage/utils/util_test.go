@@ -46,6 +46,7 @@ func TestEnableProject(t *testing.T) {
 				if !tt.isValid && err == nil {
 					t.Fatalf("Should have failed")
 				}
+
 				if tt.isValid && err != nil {
 					t.Fatalf("Should not have failed: %v", err)
 				}
@@ -77,6 +78,7 @@ func TestEnableProjectRetriesOnConflict(t *testing.T) {
 						if attempts <= tt.conflicts {
 							return nil, &oapierror.GenericOpenAPIError{StatusCode: http.StatusConflict}
 						}
+
 						return &objectstorage.ProjectStatus{}, nil
 					}),
 				}
@@ -88,9 +90,11 @@ func TestEnableProjectRetriesOnConflict(t *testing.T) {
 				if tt.isValid && err != nil {
 					t.Fatalf("Should not have failed: %v", err)
 				}
+
 				if !tt.isValid && err == nil {
 					t.Fatal("Should have failed")
 				}
+
 				if attempts != tt.wantAttempts {
 					t.Fatalf("Expected %d attempts, got %d", tt.wantAttempts, attempts)
 				}
@@ -112,6 +116,7 @@ func TestEnableProjectDoesNotRetryOtherErrors(t *testing.T) {
 	if err := EnableProject(context.Background(), "pid", "eu01", client); err == nil {
 		t.Fatal("Should have failed")
 	}
+
 	if attempts != 1 {
 		t.Fatalf("Expected a single attempt, got %d", attempts)
 	}

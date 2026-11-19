@@ -155,6 +155,7 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -183,6 +184,7 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc", "Missing VPC ID in response")
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "vpc_id", vpc.Id)
 
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -205,6 +207,7 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC created")
 }
 
@@ -221,10 +224,12 @@ func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
+
 	vpcId := model.VpcId.ValueString()
 	if vpcId == "" {
 		// Resource not yet created; ID is unknown.
@@ -243,7 +248,9 @@ func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading vpc", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -261,6 +268,7 @@ func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC read")
 }
 
@@ -278,6 +286,7 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -321,6 +330,7 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC updated")
 }
 
@@ -328,6 +338,7 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 func (r *vpcResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -339,6 +350,7 @@ func (r *vpcResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -357,7 +369,9 @@ func (r *vpcResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting vpc", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -376,6 +390,7 @@ func (r *vpcResource) ImportState(ctx context.Context, req resource.ImportStateR
 			"Error importing vpc",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[vpc_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -386,6 +401,7 @@ func (r *vpcResource) ImportState(ctx context.Context, req resource.ImportStateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC state imported")
 }
 
@@ -393,6 +409,7 @@ func mapFields(ctx context.Context, vpcResp *iaas.VPC, model *Model) error {
 	if vpcResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

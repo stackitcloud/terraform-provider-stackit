@@ -82,26 +82,34 @@ func TestDefaultClientFactory_RetryRequests(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				attempts := 0
+
 				const requestBody = `{"name":"test"}`
+
 				f := &DefaultClientFactory{
 					RoundTripper: retryTestRoundTripper(func(req *http.Request) (*http.Response, error) {
 						attempts++
+
 						if tt.transportErr != nil {
 							return nil, tt.transportErr
 						}
+
 						if attempts > len(tt.statuses) {
 							t.Fatal("unexpected extra retry")
 						}
+
 						body, err := io.ReadAll(req.Body)
 						if err != nil {
 							t.Fatal(err)
 						}
+
 						if string(body) != requestBody {
 							t.Fatalf("request body was not preserved: %q", body)
 						}
+
 						if err := req.Body.Close(); err != nil {
 							t.Fatal(err)
 						}
+
 						return &http.Response{
 							StatusCode: tt.statuses[attempts-1],
 							Header:     make(http.Header),
@@ -109,20 +117,24 @@ func TestDefaultClientFactory_RetryRequests(t *testing.T) {
 						}, nil
 					}),
 				}
+
 				cfg := config.Configuration{}
 				for _, opt := range f.defaultConfigOptions("") {
 					if err := opt(&cfg); err != nil {
 						t.Fatal(err)
 					}
 				}
+
 				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://example.com", strings.NewReader(requestBody))
 				if err != nil {
 					t.Fatal(err)
 				}
+
 				resp, err := cfg.CustomAuth.RoundTrip(req)
 				if !errors.Is(err, tt.transportErr) {
 					t.Fatalf("RoundTrip() error = %v, want %v", err, tt.transportErr)
 				}
+
 				wantAttempts := len(tt.statuses)
 				if tt.transportErr != nil {
 					wantAttempts = 1
@@ -132,14 +144,17 @@ func TestDefaultClientFactory_RetryRequests(t *testing.T) {
 							t.Error(err)
 						}
 					}()
+
 					if got, want := resp.StatusCode, tt.statuses[len(tt.statuses)-1]; got != want {
 						t.Fatalf("status = %d, want %d", got, want)
 					}
+
 					body, err := io.ReadAll(resp.Body)
 					if err != nil || string(body) != "response" {
 						t.Fatalf("final response body = %q, error = %v", body, err)
 					}
 				}
+
 				if attempts != wantAttempts {
 					t.Fatalf("attempts = %d, want %d", attempts, wantAttempts)
 				}
@@ -154,6 +169,7 @@ func TestRetryTransport_ExponentialBackoffWithJitter(t *testing.T) {
 		factory := &DefaultClientFactory{
 			RoundTripper: retryTestRoundTripper(func(*http.Request) (*http.Response, error) {
 				attempts++
+
 				return &http.Response{
 					StatusCode: http.StatusTooManyRequests,
 					Header:     make(http.Header), // No Retry-After: use exponential backoff.
@@ -161,12 +177,14 @@ func TestRetryTransport_ExponentialBackoffWithJitter(t *testing.T) {
 				}, nil
 			}),
 		}
+
 		cfg := config.Configuration{}
 		for _, opt := range factory.defaultConfigOptions("") {
 			if err := opt(&cfg); err != nil {
 				t.Fatal(err)
 			}
 		}
+
 		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com", http.NoBody)
 		if err != nil {
 			t.Fatal(err)
@@ -175,15 +193,19 @@ func TestRetryTransport_ExponentialBackoffWithJitter(t *testing.T) {
 		start := time.Now()
 		resp, err := cfg.CustomAuth.RoundTrip(req)
 		elapsed := time.Since(start)
+
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if err := resp.Body.Close(); err != nil {
 			t.Fatal(err)
 		}
+
 		if resp.StatusCode != http.StatusTooManyRequests {
 			t.Fatalf("status = %d, want 429", resp.StatusCode)
 		}
+
 		expected := expectedRetryTransport(nil)
 		if wantAttempts := expected.MaxRetries + 1; attempts != wantAttempts {
 			t.Fatalf("attempts = %d, want %d", attempts, wantAttempts)
@@ -193,10 +215,13 @@ func TestRetryTransport_ExponentialBackoffWithJitter(t *testing.T) {
 		for attempt := 0; attempt < expected.MaxRetries; attempt++ {
 			backoff += expected.BaseBackoff * (1 << attempt)
 		}
+
 		maxJitter := time.Duration(expected.MaxRetries) * expected.MaxJitter
+
 		if elapsed <= backoff {
 			t.Errorf("elapsed = %s, want greater than %s due to jitter", elapsed, backoff)
 		}
+
 		if elapsed >= backoff+maxJitter {
 			t.Errorf("elapsed = %s, want less than %s", elapsed, backoff+maxJitter)
 		}
@@ -208,35 +233,44 @@ func TestRetryTransport_ContextCancellation(t *testing.T) {
 		attempts := 0
 		transport := expectedRetryTransport(retryTestRoundTripper(func(*http.Request) (*http.Response, error) {
 			attempts++
+
 			return &http.Response{
 				StatusCode: http.StatusTooManyRequests,
 				Header:     http.Header{"Retry-After": {"60"}},
 				Body:       http.NoBody,
 			}, nil
 		}))
+
 		ctx, cancel := context.WithCancel(t.Context())
+
 		defer cancel()
 		go func() {
 			time.Sleep(time.Second)
 			cancel()
 		}()
+
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com", http.NoBody)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		start := time.Now()
 		resp, err := transport.RoundTrip(req)
+
 		if elapsed := time.Since(start); elapsed != time.Second {
 			t.Fatalf("elapsed = %s, want %s", elapsed, time.Second)
 		}
+
 		if resp != nil {
 			if closeErr := resp.Body.Close(); closeErr != nil {
 				t.Error(closeErr)
 			}
 		}
+
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("error = %v, want context canceled", err)
 		}
+
 		if attempts != 1 {
 			t.Fatalf("attempts = %d, want 1", attempts)
 		}
@@ -285,10 +319,12 @@ func TestRetryTransport_ContextDeadline(t *testing.T) {
 				attempts := 0
 				transport := expectedRetryTransport(retryTestRoundTripper(func(*http.Request) (*http.Response, error) {
 					attempts++
+
 					status := http.StatusTooManyRequests
 					if attempts > 1 {
 						status = http.StatusOK
 					}
+
 					return &http.Response{
 						StatusCode: status,
 						Header:     http.Header{"Retry-After": {tt.retryAfter}},
@@ -297,29 +333,36 @@ func TestRetryTransport_ContextDeadline(t *testing.T) {
 				}))
 				// A one-nanosecond upper bound makes the jitter zero for exact timing checks.
 				transport.MaxJitter = time.Nanosecond
+
 				ctx, cancel := context.WithTimeout(t.Context(), tt.timeout)
 				defer cancel()
+
 				req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com", http.NoBody)
 				if err != nil {
 					t.Fatal(err)
 				}
 
 				start := time.Now()
+
 				resp, err := transport.RoundTrip(req)
 				if resp != nil {
 					if closeErr := resp.Body.Close(); closeErr != nil {
 						t.Error(closeErr)
 					}
 				}
+
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("error = %v, want %v", err, tt.wantErr)
 				}
+
 				if elapsed := time.Since(start); elapsed != tt.wantElapsed {
 					t.Errorf("elapsed = %s, want %s", elapsed, tt.wantElapsed)
 				}
+
 				if attempts != tt.wantAttempts {
 					t.Errorf("attempts = %d, want %d", attempts, tt.wantAttempts)
 				}
+
 				if err := ctx.Err(); err != nil {
 					t.Errorf("context expired instead of returning early: %v", err)
 				}

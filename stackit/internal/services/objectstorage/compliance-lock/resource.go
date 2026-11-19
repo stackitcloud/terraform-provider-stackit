@@ -55,6 +55,7 @@ func (r *compliancelockResource) ModifyPlan(ctx context.Context, req resource.Mo
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -146,6 +147,7 @@ func (r *compliancelockResource) Schema(_ context.Context, _ resource.SchemaRequ
 // Create creates the resource and sets the initial Terraform state.
 func (r *compliancelockResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -163,6 +165,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 	complianceResp, err := r.client.CreateComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 
 		if !(ok && oapiErr.StatusCode == http.StatusConflict) {
@@ -171,6 +174,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 		}
 
 		tflog.Info(ctx, "Compliance lock is already enabled for this project. Please check duplicate resources.")
+
 		complianceResp, err = r.client.GetComplianceLock(ctx, projectId, region).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err))
@@ -186,6 +190,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating compliance lock", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -198,6 +203,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 // Read refreshes the Terraform state with the latest data.
 func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -218,7 +224,9 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -237,6 +245,7 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage compliance lock read")
 }
 
@@ -249,6 +258,7 @@ func (r *compliancelockResource) Update(ctx context.Context, _ resource.UpdateRe
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *compliancelockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -278,6 +288,7 @@ func mapFields(complianceResp *objectstorage.ComplianceLockResponse, model *Mode
 	if complianceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -285,5 +296,6 @@ func mapFields(complianceResp *objectstorage.ComplianceLockResponse, model *Mode
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region)
 	model.Region = types.StringValue(region)
 	model.MaxRetentionDays = types.Int32Value(complianceResp.MaxRetentionDays)
+
 	return nil
 }

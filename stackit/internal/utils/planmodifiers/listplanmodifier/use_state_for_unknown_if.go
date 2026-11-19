@@ -74,15 +74,19 @@ func (m useStateForUnknownIf) PlanModifyList(ctx context.Context, req planmodifi
 func ListUnchanged(attributePath path.Path) UseStateForUnknownIfFunc {
 	return func(ctx context.Context, request planmodifier.ListRequest, response *UseStateForUnknownFuncResponse) {
 		var attributePlan types.List
+
 		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
 		response.Diagnostics.Append(diags...)
+
 		if response.Diagnostics.HasError() {
 			return
 		}
 
 		var attributeState types.List
+
 		diags = request.State.GetAttribute(ctx, attributePath, &attributeState)
 		response.Diagnostics.Append(diags...)
+
 		if response.Diagnostics.HasError() {
 			return
 		}

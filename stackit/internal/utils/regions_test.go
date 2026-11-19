@@ -14,10 +14,12 @@ func TestAdaptRegion(t *testing.T) {
 	type model struct {
 		Region types.String `tfsdk:"region"`
 	}
+
 	type args struct {
 		configRegion  types.String
 		defaultRegion string
 	}
+
 	testcases := []struct {
 		name       string
 		args       args
@@ -67,6 +69,7 @@ func TestAdaptRegion(t *testing.T) {
 			if diags := plan.Set(context.Background(), model{types.StringValue("unknown")}); diags.HasError() {
 				t.Fatalf("cannot create test model: %v", diags)
 			}
+
 			resp := resource.ModifyPlanResponse{
 				Plan: plan,
 			}
@@ -76,9 +79,11 @@ func TestAdaptRegion(t *testing.T) {
 			}
 			planModel := model{}
 			AdaptRegion(context.Background(), configModel.Region, &planModel.Region, tc.args.defaultRegion, &resp)
+
 			if diags := resp.Diagnostics; tc.wantErr != diags.HasError() {
 				t.Errorf("unexpected diagnostics: want err: %v, actual %v", tc.wantErr, diags.Errors())
 			}
+
 			if expected, actual := tc.wantRegion, planModel.Region; !expected.Equal(actual) {
 				t.Errorf("wrong result region. expect %s but got %s", expected, actual)
 			}

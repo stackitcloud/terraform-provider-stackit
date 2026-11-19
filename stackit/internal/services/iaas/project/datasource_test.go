@@ -20,6 +20,7 @@ func testTimestamp() time.Time {
 
 func TestMapDataSourceFields(t *testing.T) {
 	const projectId = "pid"
+
 	tests := []struct {
 		description string
 		state       *DatasourceModel
@@ -108,9 +109,11 @@ func TestMapDataSourceFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatal("should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.expected, tt.state)
 				if diff != "" {

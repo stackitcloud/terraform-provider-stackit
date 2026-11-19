@@ -145,6 +145,7 @@ func testConfigVarsProjectRoleAssignmentUpdated() config.Variables {
 	maps.Copy(tempConfig, testConfigVarsProjectRoleAssignment)
 
 	tempConfig["role"] = config.StringVariable("editor")
+
 	return tempConfig
 }
 
@@ -153,6 +154,7 @@ func testConfigVarsFolderRoleAssignmentUpdated() config.Variables {
 	maps.Copy(tempConfig, testConfigVarsFolderRoleAssignment)
 
 	tempConfig["role"] = config.StringVariable("editor")
+
 	return tempConfig
 }
 
@@ -161,6 +163,7 @@ func testConfigVarsOrgRoleAssignmentUpdated() config.Variables {
 	maps.Copy(tempConfig, testConfigVarsOrgRoleAssignment)
 
 	tempConfig["role"] = config.StringVariable("iaas.project.admin")
+
 	return tempConfig
 }
 
@@ -169,6 +172,7 @@ func testConfigVarsServiceAccountRoleAssignmentUpdated() config.Variables {
 	maps.Copy(tempConfig, testConfigVarsServiceAccountRoleAssignment)
 
 	tempConfig["role"] = config.StringVariable("owner")
+
 	return tempConfig
 }
 
@@ -208,14 +212,17 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_authorization_project_role_assignment.pra")
 					}
+
 					resourceId, ok := r.Primary.Attributes["resource_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute resource_id")
 					}
+
 					role, ok := r.Primary.Attributes["role"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute role")
 					}
+
 					subject, ok := r.Primary.Attributes["subject"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute subject")
@@ -294,14 +301,17 @@ func TestAccFolderRoleAssignmentResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_authorization_folder_role_assignment.fra")
 					}
+
 					resourceId, ok := r.Primary.Attributes["resource_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute resource_id")
 					}
+
 					role, ok := r.Primary.Attributes["role"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute role")
 					}
+
 					subject, ok := r.Primary.Attributes["subject"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute subject")
@@ -370,14 +380,17 @@ func TestAccOrgRoleAssignmentResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_authorization_organization_role_assignment.ora")
 					}
+
 					resourceId, ok := r.Primary.Attributes["resource_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute resource_id")
 					}
+
 					role, ok := r.Primary.Attributes["role"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute role")
 					}
+
 					subject, ok := r.Primary.Attributes["subject"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute subject")
@@ -439,6 +452,7 @@ func TestAccServiceAccountRoleAssignmentResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["resource_id"], r.Primary.Attributes["role"], r.Primary.Attributes["subject"]), nil
 				},
 				ImportState:       true,
@@ -536,6 +550,7 @@ func TestAccProjectCustomRoleResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_authorization_project_custom_role.project_custom_role")
 					}
+
 					roleId, ok := r.Primary.Attributes["role_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute role_id")
@@ -629,10 +644,12 @@ func TestAccFolderCustomRoleResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_authorization_folder_custom_role.folder_custom_role")
 					}
+
 					roleId, ok := r.Primary.Attributes["role_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute role_id")
 					}
+
 					folderId, ok := r.Primary.Attributes["resource_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute resource_id")
@@ -727,6 +744,7 @@ func TestAccOrganizationCustomRoleResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_authorization_organization_custom_role.organization_custom_role")
 					}
+
 					roleId, ok := r.Primary.Attributes["role_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute role_id")
@@ -774,15 +792,19 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -801,6 +823,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	if testutil.OrganizationId == "" {
 		return fmt.Errorf("no Org-ID is set")
 	}
+
 	containerParentId := testutil.OrganizationId
 
 	projectsResp, err := client.DefaultAPI.ListProjects(ctx).ContainerParentId(containerParentId).Execute()
@@ -812,6 +835,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 		if item.LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
 			continue
 		}
+
 		if !utils.Contains(projectsToDestroy, item.ContainerId) {
 			continue
 		}
@@ -820,16 +844,19 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: %w", item.ContainerId, err)
 		}
+
 		_, err = wait.DeleteProjectWaitHandler(ctx, client.DefaultAPI, item.ContainerId).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", item.ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -848,6 +875,7 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	if testutil.OrganizationId == "" {
 		return fmt.Errorf("no Org-ID is set")
 	}
+
 	containerParentId := testutil.OrganizationId
 
 	foldersResponse, err := client.DefaultAPI.ListFolders(ctx).ContainerParentId(containerParentId).Execute()
@@ -865,11 +893,13 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", item.ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := authorization.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AuthorizationCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -895,6 +925,7 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 	if testutil.OrganizationId == "" {
 		return fmt.Errorf("no Org-ID is set")
 	}
+
 	containerParentId := testutil.OrganizationId
 
 	payload := authorization.RemoveMembersPayload{
@@ -904,11 +935,13 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 
 	// Ignore error. If this request errors the org role assignment has been successfully deleted by terraform itself.
 	_, _ = client.DefaultAPI.RemoveMembers(ctx, containerParentId).RemoveMembersPayload(payload).Execute()
+
 	return nil
 }
 
 func testAccCheckServiceAccountRoleAssignmentDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := authorization.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AuthorizationCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -940,5 +973,6 @@ func testAccCheckServiceAccountRoleAssignmentDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying assignment %s: %w", rs.Primary.ID, err)
 		}
 	}
+
 	return nil
 }

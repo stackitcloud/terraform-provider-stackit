@@ -24,8 +24,10 @@ func TestNetworksResource(t *testing.T) {
 
 	// Using pre-generated UUIDs since they are sorted inside the
 	// tested func. Else no reproducible test result is possible.
-	const network01Id = "046bfa2c-4ca3-47b4-a979-63596c0e97e2"
-	const network02Id = "44aad1e1-f660-4408-9406-2fb31bbc23b9"
+	const (
+		network01Id = "046bfa2c-4ca3-47b4-a979-63596c0e97e2"
+		network02Id = "44aad1e1-f660-4408-9406-2fb31bbc23b9"
+	)
 
 	variables := func(mods ...func(variables config.Variables)) config.Variables {
 		vars := config.Variables{
