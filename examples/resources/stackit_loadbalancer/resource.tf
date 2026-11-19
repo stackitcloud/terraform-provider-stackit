@@ -64,6 +64,9 @@ resource "stackit_loadbalancer" "example" {
   project_id = var.project_id
   name       = "example-load-balancer"
   plan_id    = "p10"
+  labels = {
+    env = "dev"
+  }
   target_pools = [
     {
       name        = "example-target-pool"
