@@ -120,6 +120,7 @@ func (r *customDomainDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 
 func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model customDomainDataSourceModel // Use the new data source model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -146,6 +147,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 			map[int]string{},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -164,6 +166,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "CDN custom domain read")
 }
 
@@ -171,6 +174,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 	if customDomainResponse == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -178,6 +182,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 	if customDomainResponse.CustomDomain.Name == "" {
 		return fmt.Errorf("name is empty in response")
 	}
+
 	if customDomainResponse.CustomDomain.Status == "" {
 		return fmt.Errorf("status is empty in response")
 	}
@@ -196,6 +201,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 		if normalizedCert.Version != nil {
 			version = types.Int32Value(*normalizedCert.Version)
 		}
+
 		skipDnsCheck := types.BoolPointerValue(normalizedCert.SkipDnsCheck)
 
 		certificateObj, diags := types.ObjectValue(certificateDataSourceTypes, map[string]attr.Value{
@@ -205,6 +211,7 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 		if diags.HasError() {
 			return fmt.Errorf("failed to map certificate: %w", core.DiagsToError(diags))
 		}
+
 		model.Certificate = certificateObj
 	}
 
@@ -217,13 +224,16 @@ func mapCustomDomainDataSourceFields(customDomainResponse *cdnSdk.GetCustomDomai
 			if e.En == "" {
 				return fmt.Errorf("error description missing")
 			}
+
 			customDomainErrors = append(customDomainErrors, types.StringValue(e.En))
 		}
 	}
+
 	modelErrors, diags := types.ListValue(types.StringType, customDomainErrors)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Errors = modelErrors
 
 	// Also map the fields back to the model from the config

@@ -71,6 +71,7 @@ func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.Modify
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.modifyPlanExpiration(ctx, &req, resp)
 	if resp.Diagnostics.HasError() {
 		return
@@ -85,6 +86,7 @@ func (r *credentialResource) modifyPlanRegion(ctx context.Context, req *resource
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -110,6 +112,7 @@ func (r *credentialResource) modifyPlanRegion(ctx context.Context, req *resource
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 func (r *credentialResource) modifyPlanExpiration(ctx context.Context, req *resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	p := path.Root("expiration_timestamp")
+
 	var (
 		stateDate time.Time
 		planDate  time.Time
@@ -119,6 +122,7 @@ func (r *credentialResource) modifyPlanExpiration(ctx context.Context, req *reso
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, p, resp.Plan, time.RFC3339, &planDate)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -260,6 +264,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 // Create creates the resource and sets the initial Terraform state.
 func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -326,6 +331,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		resp.Diagnostics.Append(utils.GetTimeFromStringAttribute(ctx, path.Root("expiration_timestamp"), req.Plan, time.RFC3339, &planDate)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -342,12 +348,14 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credential created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -358,12 +366,14 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
+
 	credentialId := model.CredentialId.ValueString()
 	if credentialId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -383,6 +393,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	var (
 		currentApiDate time.Time
 		stateDate      time.Time
@@ -412,6 +423,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage credential read")
 }
 
@@ -431,6 +443,7 @@ func (r *credentialResource) Update(_ context.Context, _ resource.UpdateRequest,
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -456,7 +469,9 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -474,6 +489,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 			"Error importing credential",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[credentials_group_id],[credential_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -499,10 +515,12 @@ func toCreatePayload(model *Model) (*objectstorage.CreateAccessKeyPayload, error
 	if expirationTimestampValue == nil {
 		return &objectstorage.CreateAccessKeyPayload{}, nil
 	}
+
 	expirationTimestamp, err := time.Parse(time.RFC3339, *expirationTimestampValue)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse expiration timestamp '%v': %w", *expirationTimestampValue, err)
 	}
+
 	return &objectstorage.CreateAccessKeyPayload{
 		Expires: *objectstorage.NewNullableTime(&expirationTimestamp),
 	}, nil
@@ -512,6 +530,7 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 	if credentialResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -534,6 +553,7 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 		if err != nil {
 			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires.Get(), err)
 		}
+
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
 
@@ -545,6 +565,7 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 	model.AccessKey = types.StringValue(credentialResp.AccessKey)
 	model.SecretAccessKey = types.StringValue(credentialResp.SecretAccessKey)
 	model.Region = types.StringValue(region)
+
 	return nil
 }
 
@@ -562,8 +583,10 @@ func readCredentials(ctx context.Context, model *Model, region string, client ob
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return false, nil
 		}
+
 		return false, fmt.Errorf("getting credentials groups: %w", err)
 	}
+
 	if credentialsGroupResp == nil {
 		return false, fmt.Errorf("getting credentials groups: nil response")
 	}
@@ -588,11 +611,13 @@ func readCredentials(ctx context.Context, model *Model, region string, client ob
 			if err != nil {
 				return foundCredential, fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", credential.Expires, err)
 			}
+
 			model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 		}
 
 		break
 	}
+
 	model.Region = types.StringValue(region)
 
 	return foundCredential, nil

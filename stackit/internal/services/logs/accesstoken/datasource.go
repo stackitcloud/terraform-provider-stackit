@@ -138,6 +138,7 @@ func (d *logsAccessTokenDataSource) Schema(_ context.Context, _ datasource.Schem
 
 func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -169,8 +170,10 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, accessTokenResponse, &model)
@@ -178,11 +181,13 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Logs access token read", map[string]any{
 		"access_token_id": accessTokenID,
 	})
@@ -192,6 +197,7 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -220,6 +226,7 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 	}
 
 	permissionList := types.ListNull(types.StringType)
+
 	var diags diag.Diagnostics
 	if len(accessToken.Permissions) > 0 {
 		permissionList, diags = types.ListValueFrom(ctx, types.StringType, accessToken.Permissions)
@@ -227,6 +234,7 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 			return fmt.Errorf("mapping permissions: %w", core.DiagsToError(diags))
 		}
 	}
+
 	model.Permissions = permissionList
 
 	return nil

@@ -289,6 +289,7 @@ func TestMapFields(t *testing.T) {
 			if tt.isValid && err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			if !tt.isValid && err == nil {
 				t.Fatal("expected error but got none")
 			}

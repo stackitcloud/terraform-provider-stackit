@@ -110,6 +110,7 @@ func (d *customRoleDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 

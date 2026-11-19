@@ -126,6 +126,7 @@ func NewCustomRuleGroupResource() resource.Resource {
 
 func (r *customRuleGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -322,9 +323,11 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 
 func (r *customRuleGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -344,6 +347,7 @@ func (r *customRuleGroupResource) ModifyPlan(ctx context.Context, req resource.M
 	if !req.State.Raw.IsNull() {
 		var stateModel Model
 		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+
 		if !resp.Diagnostics.HasError() {
 			utils.WarnIfNameChanges(stateModel.Name, planModel.Name, "Custom Rule Group", &resp.Diagnostics)
 		}
@@ -363,6 +367,7 @@ func (r *customRuleGroupResource) ImportState(ctx context.Context, req resource.
 			"Error importing ALB WAF Custom Rule Group",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[name]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -376,6 +381,7 @@ func (r *customRuleGroupResource) ImportState(ctx context.Context, req resource.
 
 func (r *customRuleGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -424,11 +430,13 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Custom Rule Group created")
 }
 
 func (r *customRuleGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -476,6 +484,7 @@ func (r *customRuleGroupResource) Update(ctx context.Context, req resource.Updat
 
 func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -498,7 +507,9 @@ func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading ALB WAF Custom Rule Group", err.Error())
+
 		return
 	}
 
@@ -515,11 +526,13 @@ func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ALB WAF Custom Rule Group read")
 }
 
 func (r *customRuleGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -542,7 +555,9 @@ func (r *customRuleGroupResource) Delete(ctx context.Context, req resource.Delet
 			tflog.Info(ctx, "ALB WAF Custom Rule Group was already deleted")
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting ALB WAF Custom Rule Group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -595,6 +610,7 @@ func toRulesPayload(ctx context.Context, modelRules basetypes.ListValue) (*[]alb
 	payloadRules := []albWaf.CreateCustomRule{}
 	if !tfutils.IsUndefined(modelRules) {
 		rules := []RuleModel{}
+
 		diags := modelRules.ElementsAs(ctx, &rules, true)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting to rule map: %w", core.DiagsToError(diags))
@@ -651,6 +667,7 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 
 	if !tfutils.IsUndefined(conditions) {
 		conditionModels := []ConditionModel{}
+
 		diags := conditions.ElementsAs(ctx, &conditionModels, true)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting to rule map: %w", core.DiagsToError(diags))
@@ -666,12 +683,14 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 			}
 
 			var operatorModel = OperatorModel{}
+
 			diags = condition.Operator.As(ctx, &operatorModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting operator: %w", core.DiagsToError(diags))
 			}
 
 			var variableModel = VariableModel{}
+
 			diags = condition.Variable.As(ctx, &variableModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting variable: %w", core.DiagsToError(diags))
@@ -698,6 +717,7 @@ func mapFields(ctx context.Context, customRuleGroup *albWaf.GetCustomRuleGroupRe
 	if customRuleGroup == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -712,14 +732,17 @@ func mapFields(ctx context.Context, customRuleGroup *albWaf.GetCustomRuleGroupRe
 	} else if rules == nil {
 		return fmt.Errorf("rules can not be empty")
 	}
+
 	model.Rules = *rules
 
 	return nil
 }
 
 func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.ListValue, error) {
-	var diags diag.Diagnostics
-	var result basetypes.ListValue
+	var (
+		diags  diag.Diagnostics
+		result basetypes.ListValue
+	)
 
 	if rules != nil {
 		rulesList := []attr.Value{}
@@ -735,6 +758,7 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 			} else if behavior == nil {
 				return nil, fmt.Errorf("behavior can not be empty")
 			}
+
 			ruleTF.Behavior = *behavior
 
 			conditions, err := mapConditions(ctx, &rule)
@@ -743,14 +767,17 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 			} else if conditions == nil {
 				return nil, fmt.Errorf("conditions can not be empty")
 			}
+
 			ruleTF.Conditions = *conditions
 
 			rule, diags := types.ObjectValueFrom(ctx, ruleType, ruleTF)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping rule: %w", core.DiagsToError(diags))
 			}
+
 			rulesList = append(rulesList, rule)
 		}
+
 		result, diags = types.ListValue(types.ObjectType{AttrTypes: ruleType}, rulesList)
 		if diags.HasError() {
 			return nil, fmt.Errorf("creating rule object: %w", core.DiagsToError(diags))
@@ -763,8 +790,10 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 }
 
 func mapBehavior(ctx context.Context, behavior albWaf.GetBehavior) (*basetypes.ObjectValue, error) {
-	var diags diag.Diagnostics
-	var result basetypes.ObjectValue
+	var (
+		diags  diag.Diagnostics
+		result basetypes.ObjectValue
+	)
 
 	behaviorModel := BehaviorModel{
 		Action:   types.StringValue(string(behavior.Action)),
@@ -782,8 +811,10 @@ func mapBehavior(ctx context.Context, behavior albWaf.GetBehavior) (*basetypes.O
 }
 
 func mapConditions(ctx context.Context, rule *albWaf.GetCustomRule) (*basetypes.ListValue, error) {
-	var diags diag.Diagnostics
-	var result basetypes.ListValue
+	var (
+		diags  diag.Diagnostics
+		result basetypes.ListValue
+	)
 
 	if rule != nil {
 		if conditions, ok := rule.GetConditionsOk(); ok {
@@ -828,8 +859,10 @@ func mapConditions(ctx context.Context, rule *albWaf.GetCustomRule) (*basetypes.
 				if diags.HasError() {
 					return nil, fmt.Errorf("mapping condition: %w", core.DiagsToError(diags))
 				}
+
 				conditionsList = append(conditionsList, condition)
 			}
+
 			result, diags = types.ListValue(types.ObjectType{AttrTypes: conditionType}, conditionsList)
 			if diags.HasError() {
 				return nil, fmt.Errorf("mapping conditions: %w", core.DiagsToError(diags))

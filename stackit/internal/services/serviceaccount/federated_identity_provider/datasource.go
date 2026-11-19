@@ -109,6 +109,7 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Configure(ctx contex
 
 func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -123,16 +124,18 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 
 	apiResp, err := r.client.GetFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		Execute()
-
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		// due to security purposes, attempting to get access federation for a non-existent Service Account will return 403.
 		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 

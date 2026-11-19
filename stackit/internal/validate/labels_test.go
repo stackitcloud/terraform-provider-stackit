@@ -136,6 +136,7 @@ func TestLabelValidators(t *testing.T) {
 			if !tt.isValid && !r.Diagnostics.HasError() {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && r.Diagnostics.HasError() {
 				t.Fatalf("Should not have failed: %v", r.Diagnostics.Errors())
 			}

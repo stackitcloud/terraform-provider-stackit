@@ -147,6 +147,7 @@ func (d *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 // Read refreshes the Terraform state with the latest data.
 func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -177,6 +178,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -195,6 +197,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "mariadb credential read")
 }
 
@@ -202,12 +205,15 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *mariadb.Credentia
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if credentialsResp.Raw == nil {
 		return fmt.Errorf("response credentials raw is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	credentials := credentialsResp.Raw.Credentials
 
 	var credentialId string
@@ -247,6 +253,7 @@ func mapDataSourceFields(ctx context.Context, credentialsResp *mariadb.Credentia
 
 		model.Hosts = hostsTF
 	}
+
 	model.Host = types.StringValue(credentials.Host)
 	model.Name = types.StringPointerValue(credentials.Name)
 	model.Password = types.StringValue(credentials.Password)

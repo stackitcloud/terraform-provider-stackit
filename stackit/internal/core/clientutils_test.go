@@ -66,6 +66,7 @@ func Test_initClientCollection_NoErr(t *testing.T) {
 	type args struct {
 		clientFactory ClientFactory
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -106,7 +107,6 @@ func TestInitClientCollection_NoNilFields(t *testing.T) {
 	// This test case makes sure that all fields in the client collection are initialized after initializing it
 	// using a client factory. It uses reflection to make sure all fields are covered, also new ones which got added.
 	// A regular unit test without reflection couldn't cover this.
-
 	mockFactory := &MockClientFactory{}
 
 	cc, err := initClientCollection(mockFactory)
@@ -1052,6 +1052,7 @@ func TestDefaultClientFactory_newDremioV1BetaClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1075,6 +1076,7 @@ func TestDefaultClientFactory_newDremioV1BetaClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1087,11 +1089,13 @@ func TestDefaultClientFactory_newDremioV1BetaClient(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
+
 			got, err := f.newDremioV1BetaClient()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newDremioV1BetaClient() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("newDremioV1BetaClient() got = %v, want %v", got, tt.want)
 			}
@@ -1136,6 +1140,7 @@ func TestDefaultClientFactory_newSecretsManagerV1Client(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1158,6 +1163,7 @@ func TestDefaultClientFactory_newSecretsManagerV1Client(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1170,11 +1176,13 @@ func TestDefaultClientFactory_newSecretsManagerV1Client(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
+
 			got, err := f.newSecretsManagerV1Client()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newSecretsManagerV1Client() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("newSecretsManagerV1Client() got = %v, want %v", got, tt.want)
 			}
@@ -1219,6 +1227,7 @@ func TestDefaultClientFactory_newSecretsManagerV1AlphaClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1241,6 +1250,7 @@ func TestDefaultClientFactory_newSecretsManagerV1AlphaClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1253,11 +1263,13 @@ func TestDefaultClientFactory_newSecretsManagerV1AlphaClient(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
+
 			got, err := f.newSecretsManagerV1AlphaClient()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newSecretsManagerV1AlphaClient() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("newSecretsManagerV1AlphaClient() got = %v, want %v", got, tt.want)
 			}
@@ -1302,6 +1314,7 @@ func TestDefaultClientFactory_newObservabilityV1Client(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1324,6 +1337,7 @@ func TestDefaultClientFactory_newObservabilityV1Client(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1336,11 +1350,13 @@ func TestDefaultClientFactory_newObservabilityV1Client(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
+
 			got, err := f.newObservabilityV1Client()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newObservabilityV1Client() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("newObservabilityV1Client() got = %v, want %v", got, tt.want)
 			}
@@ -1383,6 +1399,7 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1404,6 +1421,7 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error configuring client: %v", err)
 				}
+
 				return apiClient.DefaultAPI
 			}(),
 		},
@@ -1416,11 +1434,13 @@ func TestDefaultClientFactory_newObjectStorageV2Client(t *testing.T) {
 				CustomEndpoints:       tt.fields.CustomEndpoints,
 				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
 			}
+
 			got, err := f.newObjectStorageV2Client()
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("newObjectStorageV2Client() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("newObjectStorageV2Client() got = %v, want %v", got, tt.want)
 			}

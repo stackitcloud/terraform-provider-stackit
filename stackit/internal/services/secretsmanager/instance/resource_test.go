@@ -100,13 +100,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
+
 			err := mapFields(tt.input, tt.ListACLResponse, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -185,9 +188,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -220,6 +225,7 @@ func TestUpdateACL(t *testing.T) {
 			},
 		},
 	}
+
 	getAllACLRespBytes, err := json.Marshal(getAllACLResp)
 	if err != nil {
 		t.Fatalf("Failed to marshal get all ACL response: %v", err)
@@ -368,12 +374,15 @@ func TestUpdateACL(t *testing.T) {
 			// Handler for getting all ACL
 			getAllACLHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
+
 				if tt.getAllACLFails {
 					w.WriteHeader(http.StatusInternalServerError)
+
 					_, err := w.Write(failureRespBytes)
 					if err != nil {
 						t.Errorf("Get all ACL handler: failed to write bad response: %v", err)
 					}
+
 					return
 				}
 
@@ -386,16 +395,20 @@ func TestUpdateACL(t *testing.T) {
 			// Handler for creating ACL
 			createACLHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				decoder := json.NewDecoder(r.Body)
+
 				var payload secretsmanager.CreateACLPayload
+
 				err := decoder.Decode(&payload)
 				if err != nil {
 					t.Errorf("Create ACL handler: failed to parse payload")
 					return
 				}
+
 				if payload.Cidr == "" {
 					t.Errorf("Create ACL handler: nil CIDR")
 					return
 				}
+
 				cidr := payload.Cidr
 				if cidrExists, cidrWasCreated := aclStates[cidr]; cidrWasCreated && cidrExists {
 					t.Errorf("Create ACL handler: attempted to create CIDR '%v' that already exists", payload.Cidr)
@@ -403,12 +416,15 @@ func TestUpdateACL(t *testing.T) {
 				}
 
 				w.Header().Set("Content-Type", "application/json")
+
 				if tt.createACLFails {
 					w.WriteHeader(http.StatusInternalServerError)
+
 					_, err := w.Write(failureRespBytes)
 					if err != nil {
 						t.Errorf("Create ACL handler: failed to write bad response: %v", err)
 					}
+
 					return
 				}
 
@@ -416,49 +432,60 @@ func TestUpdateACL(t *testing.T) {
 					Cidr: cidr,
 					Id:   fmt.Sprintf("id-%s", cidr),
 				}
+
 				respBytes, err := json.Marshal(resp)
 				if err != nil {
 					t.Errorf("Create ACL handler: failed to marshal response: %v", err)
 					return
 				}
+
 				_, err = w.Write(respBytes)
 				if err != nil {
 					t.Errorf("Create ACL handler: failed to write response: %v", err)
 				}
+
 				aclStates[cidr] = true
 			})
 
 			// Handler for deleting ACL
 			deleteACLHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				vars := mux.Vars(r)
+
 				aclId, ok := vars["aclId"]
 				if !ok {
 					t.Errorf("Delete ACL handler: no ACL ID")
 					return
 				}
+
 				cidr, ok := strings.CutPrefix(aclId, "id-")
 				if !ok {
 					t.Errorf("Delete ACL handler: got unexpected ACL ID '%v'", aclId)
 					return
 				}
+
 				cidr, _ = strings.CutSuffix(cidr, "-repeated")
+
 				cidrExists, cidrWasCreated := aclStates[cidr]
 				if !cidrWasCreated {
 					t.Errorf("Delete ACL handler: attempted to delete CIDR '%v' that wasn't created", cidr)
 					return
 				}
+
 				if cidrWasCreated && !cidrExists {
 					t.Errorf("Delete ACL handler: attempted to delete CIDR '%v' that was already deleted", cidr)
 					return
 				}
 
 				w.Header().Set("Content-Type", "application/json")
+
 				if tt.deleteACLFails {
 					w.WriteHeader(http.StatusInternalServerError)
+
 					_, err := w.Write(failureRespBytes)
 					if err != nil {
 						t.Errorf("Delete ACL handler: failed to write bad response: %v", err)
 					}
+
 					return
 				}
 
@@ -466,6 +493,7 @@ func TestUpdateACL(t *testing.T) {
 				if err != nil {
 					t.Errorf("Delete ACL handler: failed to write response: %v", err)
 				}
+
 				aclStates[cidr] = false
 			})
 
@@ -480,8 +508,10 @@ func TestUpdateACL(t *testing.T) {
 				}
 			})
 			router.HandleFunc("/v1/projects/{projectId}/instances/{instanceId}/acls/{aclId}", deleteACLHandler)
+
 			mockedServer := httptest.NewServer(router)
 			defer mockedServer.Close()
+
 			client, err := secretsmanager.NewAPIClient(
 				config.WithEndpoint(mockedServer.URL),
 				config.WithoutAuthentication(),
@@ -495,9 +525,11 @@ func TestUpdateACL(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(aclStates, tt.expectedACLStates)
 				if diff != "" {
@@ -576,9 +608,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {

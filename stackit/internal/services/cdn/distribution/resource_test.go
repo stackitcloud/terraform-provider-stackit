@@ -18,18 +18,23 @@ func createTestConfig(vals map[string]attr.Value) types.Object {
 	if _, ok := vals["blocked_ips"]; !ok {
 		vals["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{})
 	}
+
 	if _, ok := vals["default_cache_duration"]; !ok {
 		vals["default_cache_duration"] = types.StringNull()
 	}
+
 	if _, ok := vals["monthly_limit_bytes"]; !ok {
 		vals["monthly_limit_bytes"] = types.Int64Null()
 	}
+
 	if _, ok := vals["cache_config"]; !ok {
 		vals["cache_config"] = types.ObjectNull(cacheConfigTypes)
 	}
+
 	if _, ok := vals["log_sink"]; !ok {
 		vals["log_sink"] = types.ObjectNull(logSinkTypes)
 	}
+
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -57,6 +62,7 @@ func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
 	for _, mod := range mods {
 		mod(vals)
 	}
+
 	return types.ObjectValueMust(configTypes, vals)
 }
 
@@ -129,6 +135,7 @@ func TestToCreatePayload(t *testing.T) {
 	if !ok {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
+
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 
 	// LogSink config and fixture
@@ -310,8 +317,10 @@ func TestToCreatePayload(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
+
 	tests := map[string]struct {
 		Input    *Model
 		Expected *cdnSdk.CreateDistributionPayload
@@ -819,9 +828,11 @@ func TestToCreatePayload(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				// set generated ID before diffing
 				tc.Expected.IntentId = res.IntentId
@@ -885,6 +896,7 @@ func TestToPatchPayload(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -1040,9 +1052,11 @@ func TestToPatchPayload(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to patch payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				tc.Expected.IntentId = res.IntentId
 
@@ -1175,6 +1189,7 @@ func TestConvertConfig(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 
@@ -1514,9 +1529,11 @@ func TestConvertConfig(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error converting model to create payload: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(
 					res, tc.Expected,
@@ -1571,6 +1588,7 @@ func TestMapFields(t *testing.T) {
 	if !ok {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
+
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 	populatedWafSet := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("rule1"),
@@ -1757,6 +1775,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(model)
 		}
+
 		return model
 	}
 	distributionFixture := func(mods ...func(*cdnSdk.Distribution)) *cdnSdk.Distribution {
@@ -1800,6 +1819,7 @@ func TestMapFields(t *testing.T) {
 		for _, mod := range mods {
 			mod(distribution)
 		}
+
 		return distribution
 	}
 	// define old state with the secrets
@@ -1827,6 +1847,7 @@ func TestMapFields(t *testing.T) {
 		"strip_response_cookies": types.BoolUnknown(),
 		"forward_host_header":    types.BoolUnknown(),
 	})
+
 	tests := map[string]struct {
 		Input        *cdnSdk.Distribution
 		Expected     *Model
@@ -2279,9 +2300,11 @@ func TestMapFields(t *testing.T) {
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
 			}
+
 			if err == nil && !tc.IsValid {
 				t.Fatalf("Should have failed")
 			}
+
 			if tc.IsValid {
 				diff := cmp.Diff(model, tc.Expected)
 				if diff != "" {
@@ -2382,6 +2405,7 @@ func TestValidateCountryCode(t *testing.T) {
 				} else if err.Error() != tc.expectedError {
 					t.Errorf("for input '%s', expected error '%s', but got '%s'", tc.inputCountry, tc.expectedError, err.Error())
 				}
+
 				if gotOutput != "" {
 					t.Errorf("expected empty string on error, but got '%s'", gotOutput)
 				}
@@ -2389,6 +2413,7 @@ func TestValidateCountryCode(t *testing.T) {
 				if err != nil {
 					t.Errorf("did not expect an error for input '%s', but got: %v", tc.inputCountry, err)
 				}
+
 				if gotOutput != tc.wantOutput {
 					t.Errorf("for input '%s', expected output '%s', but got '%s'", tc.inputCountry, tc.wantOutput, gotOutput)
 				}
@@ -2643,12 +2668,14 @@ func TestValidateLogSinkConfig(t *testing.T) {
 			cfg := &distributionConfig{
 				LogSink: tc.logSink,
 			}
+
 			var diags diag.Diagnostics
 			validateLogSinkConfig(context.Background(), cfg, &diags)
 
 			if tc.expectError && !diags.HasError() {
 				t.Fatalf("expected validation error, got none")
 			}
+
 			if !tc.expectError && diags.HasError() {
 				t.Fatalf("unexpected validation errors: %v", diags)
 			}
@@ -2763,9 +2790,11 @@ func TestToPatchLogSinkPayload(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected error, got none")
 				}
+
 				if result != nil {
 					t.Fatalf("expected nil result on error, got %v", result)
 				}
+
 				return
 			}
 
@@ -2980,9 +3009,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if payload.LokiLogSinkCreate == nil {
 			t.Fatalf("expected LokiLogSinkCreate, got nil")
 		}
+
 		if payload.LokiLogSinkCreate.Credentials.Password != "supersecret-password" {
 			t.Fatalf("expected password %q, got %q", "supersecret-password", payload.LokiLogSinkCreate.Credentials.Password)
 		}
@@ -3022,9 +3053,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if payload.OtlpLogSinkCreate == nil || payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials == nil {
 			t.Fatalf("expected OtlpLogSinkBasicCredentials, got nil")
 		}
+
 		if payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials.Password != "otlp-password" {
 			t.Fatalf("expected password %q, got %q", "otlp-password", payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBasicCredentials.Password)
 		}
@@ -3064,9 +3097,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if payload.OtlpLogSinkCreate == nil || payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials == nil {
 			t.Fatalf("expected OtlpLogSinkBearerCredentials, got nil")
 		}
+
 		if payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials.Token != "otlp-bearer-token" {
 			t.Fatalf("expected token %q, got %q", "otlp-bearer-token", payload.OtlpLogSinkCreate.Credentials.OtlpLogSinkBearerCredentials.Token)
 		}
@@ -3120,9 +3155,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.LokiLogSinkPatch == nil || patch.LokiLogSinkPatch.Credentials == nil {
 			t.Fatalf("expected credentials rotated, got nil")
 		}
+
 		if patch.LokiLogSinkPatch.Credentials.Password != "new-secret" {
 			t.Fatalf("expected password %q, got %q", "new-secret", patch.LokiLogSinkPatch.Credentials.Password)
 		}
@@ -3176,9 +3213,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.LokiLogSinkPatch == nil {
 			t.Fatalf("expected LokiLogSinkPatch, got nil")
 		}
+
 		if patch.LokiLogSinkPatch.Credentials != nil {
 			t.Fatalf("expected credentials omitted, got %+v", patch.LokiLogSinkPatch.Credentials)
 		}
@@ -3232,9 +3271,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials == nil {
 			t.Fatalf("expected OtlpLogSinkBearerCredentials rotated, got nil")
 		}
+
 		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token != "rotated-token" {
 			t.Fatalf("expected token %q, got %q", "rotated-token", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token)
 		}
@@ -3268,11 +3309,14 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		}
 
 		var logSink logSinkConfig
+
 		diags := result.As(context.Background(), &logSink, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			t.Fatalf("diags error: %v", diags)
 		}
+
 		var creds logSinkCredentialsConfig
+
 		diags = logSink.Credentials.As(context.Background(), &creds, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			t.Fatalf("diags error: %v", diags)
@@ -3281,6 +3325,7 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if creds.PasswordWoVersion.ValueInt64() != 42 {
 			t.Fatalf("expected password_wo_version 42, got %v", creds.PasswordWoVersion)
 		}
+
 		if !creds.PasswordWo.IsNull() {
 			t.Fatalf("expected password_wo to be null in state, got %v", creds.PasswordWo)
 		}
@@ -3334,12 +3379,15 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.LokiLogSinkPatch == nil || patch.LokiLogSinkPatch.Credentials == nil {
 			t.Fatalf("expected credentials re-sent on username change, got nil")
 		}
+
 		if patch.LokiLogSinkPatch.Credentials.Username != "new-user" {
 			t.Fatalf("expected username %q, got %q", "new-user", patch.LokiLogSinkPatch.Credentials.Username)
 		}
+
 		if patch.LokiLogSinkPatch.Credentials.Password != "same-password" {
 			t.Fatalf("expected password %q, got %q", "same-password", patch.LokiLogSinkPatch.Credentials.Password)
 		}
@@ -3393,12 +3441,15 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials == nil {
 			t.Fatalf("expected OtlpLogSinkBasicCredentials, got nil")
 		}
+
 		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Username != "new-user" {
 			t.Fatalf("expected username %q, got %q", "new-user", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Username)
 		}
+
 		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password != "otlp-password" {
 			t.Fatalf("expected password %q, got %q", "otlp-password", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password)
 		}
@@ -3452,9 +3503,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials == nil {
 			t.Fatalf("expected OtlpLogSinkBearerCredentials, got nil")
 		}
+
 		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token != "bearer-token" {
 			t.Fatalf("expected token %q, got %q", "bearer-token", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token)
 		}
@@ -3508,9 +3561,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials == nil {
 			t.Fatalf("expected OtlpLogSinkBasicCredentials, got nil")
 		}
+
 		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password != "basic-password" {
 			t.Fatalf("expected password %q, got %q", "basic-password", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBasicCredentials.Password)
 		}
@@ -3564,9 +3619,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.OtlpLogSinkPatch == nil || patch.OtlpLogSinkPatch.Credentials == nil || patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials == nil {
 			t.Fatalf("expected OtlpLogSinkBearerCredentials, got nil")
 		}
+
 		if patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token != "new-otlp-token" {
 			t.Fatalf("expected token %q, got %q", "new-otlp-token", patch.OtlpLogSinkPatch.Credentials.OtlpLogSinkBearerCredentials.Token)
 		}
@@ -3620,9 +3677,11 @@ func TestWriteOnlyLogSinkCredentials(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if patch.LokiLogSinkPatch == nil || patch.LokiLogSinkPatch.Credentials == nil {
 			t.Fatalf("expected LokiLogSinkPatch with credentials, got nil")
 		}
+
 		if patch.LokiLogSinkPatch.Credentials.Password != "new-loki-password" {
 			t.Fatalf("expected password %q, got %q", "new-loki-password", patch.LokiLogSinkPatch.Credentials.Password)
 		}

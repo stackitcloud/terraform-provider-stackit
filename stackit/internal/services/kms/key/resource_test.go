@@ -23,6 +23,7 @@ func TestMapFields(t *testing.T) {
 		input  *kms.Key
 		region string
 	}
+
 	tests := []struct {
 		description string
 		args        args
@@ -116,13 +117,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId: tt.expected.ProjectId,
 				KeyRingId: tt.expected.KeyRingId,
 			}
+
 			err := mapFields(tt.args.input, state, tt.args.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -181,9 +185,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {

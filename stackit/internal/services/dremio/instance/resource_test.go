@@ -15,6 +15,7 @@ import (
 
 func TestMapFields(t *testing.T) {
 	instanceId := uuid.New().String()
+
 	tests := []struct {
 		description string
 		state       *InstanceModel
@@ -153,6 +154,7 @@ func TestMapFields(t *testing.T) {
 				t.Errorf("mapFields error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !tt.wantErr {
 				if diff := cmp.Diff(tt.expected, tt.state); diff != "" {
 					t.Errorf("mapping mismatch (-want +got):\n%s", diff)
@@ -386,6 +388,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Errorf("toCreatePayload error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !tt.wantErr {
 				if diff := cmp.Diff(tt.expected, payload); diff != "" {
 					t.Errorf("toCreatePayload mismatch (-want +got):\n%s", diff)
@@ -617,6 +620,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Errorf("toUpdatePayload error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !tt.wantErr {
 				if diff := cmp.Diff(tt.expected, payload); diff != "" {
 					t.Errorf("toUpdatePayload mismatch (-want +got):\n%s", diff)

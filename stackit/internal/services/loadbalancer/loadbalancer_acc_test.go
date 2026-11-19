@@ -104,6 +104,7 @@ func configVarsMinUpdated() config.Variables {
 
 	tempConfig["listener_protocol"] = config.StringVariable("PROTOCOL_TCP")
 	tempConfig["listener_port"] = config.StringVariable("6543")
+
 	return tempConfig
 }
 
@@ -136,6 +137,7 @@ func configVarsMaxUpdated() config.Variables {
 
 	tempConfig["observability_logs_push_url"] = config.StringVariable("https://logs.observability.dummy.stackit.cloud")
 	tempConfig["observability_metrics_push_url"] = config.StringVariable("https://metrics.observability.dummy.stackit.cloud")
+
 	return tempConfig
 }
 
@@ -247,14 +249,17 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_loadbalancer.loadbalancer")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:             true,
@@ -472,14 +477,17 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_loadbalancer.loadbalancer")
 					}
+
 					name, ok := r.Primary.Attributes["name"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, name), nil
 				},
 				ImportState:             true,
@@ -573,6 +581,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 
 func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := loadbalancer.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LoadBalancerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -582,6 +591,7 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	if testutil.Region != "" {
 		region = testutil.Region
 	}
+
 	loadbalancersToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_loadbalancer" {
@@ -607,16 +617,19 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 		if items[i].Name == nil {
 			continue
 		}
+
 		if utils.Contains(loadbalancersToDestroy, *items[i].Name) {
 			_, err := client.DefaultAPI.DeleteLoadBalancer(ctx, testutil.ProjectId, region, *items[i].Name).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying load balancer %s during CheckDestroy: %w", *items[i].Name, err)
 			}
+
 			_, err = wait.DeleteLoadBalancerWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying load balancer %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
 		}
 	}
+
 	return nil
 }
