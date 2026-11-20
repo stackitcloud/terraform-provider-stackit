@@ -177,6 +177,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
 - `automation_custom_endpoint` (String) Custom endpoint for the Automation service
 - `cdn_custom_endpoint` (String) Custom endpoint for the CDN service
+- `container_registry_custom_endpoint` (String) Custom endpoint for the Container Registry service
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
