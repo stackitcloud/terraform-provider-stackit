@@ -60,7 +60,7 @@ func NewNetworkInterfaceResource() resource.Resource {
 	return &networkInterfaceResource{}
 }
 
-// networkResource is the resource implementation.
+// networkInterfaceResource is the resource implementation.
 type networkInterfaceResource struct {
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
