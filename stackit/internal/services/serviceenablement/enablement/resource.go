@@ -173,6 +173,7 @@ func (r *serviceEnablementResource) ModifyPlan(ctx context.Context, req resource
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -286,6 +287,7 @@ func (r *serviceEnablementResource) Read(ctx context.Context, req resource.ReadR
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service enablement", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -314,6 +316,7 @@ func (r *serviceEnablementResource) Read(ctx context.Context, req resource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "service enablement read")
 }
 
@@ -342,6 +345,7 @@ func (r *serviceEnablementResource) ImportState(ctx context.Context, req resourc
 			"Error importing service enablement",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[service_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 

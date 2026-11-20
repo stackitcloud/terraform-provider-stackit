@@ -12,6 +12,7 @@ func TestCheckServiceEnabled(t *testing.T) {
 	type args struct {
 		resp *serviceenablement.ServiceStatus
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -108,6 +109,7 @@ func TestValidateServiceIdAndRegionCombination(t *testing.T) {
 		serviceId                 string
 		region                    string
 	}
+
 	tests := []struct {
 		name string
 		args args

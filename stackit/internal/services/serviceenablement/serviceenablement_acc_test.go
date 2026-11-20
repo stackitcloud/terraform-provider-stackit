@@ -57,7 +57,6 @@ func TestAccServiceEnablementMin(t *testing.T) {
 	// NOTE: This testcase is considered complete. It tests the service enablement resource
 	// implementation for the ske service in a single region. When onboarding new services,
 	// only add them to the "Max" test. There is no need to add them here.
-
 	configVars := config.Variables{
 		"organization_id":       config.StringVariable(testutil.OrganizationId),
 		"project_name":          config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
@@ -136,7 +135,6 @@ func TestAccServiceEnablementMin(t *testing.T) {
 
 func TestAccServiceEnablementMax(t *testing.T) {
 	// Tests the service enablement in all combinations of allowed service IDs and regions.
-
 	configVars := config.Variables{
 		"organization_id":       config.StringVariable(testutil.OrganizationId),
 		"project_name":          config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),

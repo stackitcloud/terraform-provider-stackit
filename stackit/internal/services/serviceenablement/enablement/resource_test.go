@@ -16,6 +16,7 @@ func Test_mapFields(t *testing.T) {
 		model  *ResourceModel
 		region string
 	}
+
 	tests := []struct {
 		name    string
 		args    args

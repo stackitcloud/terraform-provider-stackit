@@ -48,6 +48,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 		resp   *serviceenablement.ServiceStatus
 		region string
 	}
+
 	tests := []struct {
 		name    string
 		args    args

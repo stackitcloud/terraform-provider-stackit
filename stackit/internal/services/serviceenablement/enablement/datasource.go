@@ -99,7 +99,7 @@ func (d *serviceEnablementDatasource) Schema(_ context.Context, _ datasource.Sch
 				Optional: true,
 			},
 			"enabled": schema.BoolAttribute{
-				Description: "Whether or not the service is enabled in that region. Might also be true if the service is currently in the process of beeing enabled but the operation is not completed yet.",
+				Description: "Whether or not the service is enabled in that region. Might also be true if the service is currently in the process of being enabled but the operation is not completed yet.",
 				Computed:    true,
 			},
 		},
@@ -138,7 +138,9 @@ func (d *serviceEnablementDatasource) Read(ctx context.Context, req datasource.R
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service enablement", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -156,6 +158,7 @@ func (d *serviceEnablementDatasource) Read(ctx context.Context, req datasource.R
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "service enablement read")
 }
 
