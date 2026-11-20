@@ -36,5 +36,5 @@ data "stackit_service_enablement" "service_enablement_ske" {
 
 ### Read-Only
 
-- `enabled` (Boolean) Whether or not the service is enabled in that region. Might also be true if the service is currently in the process of beeing enabled but the operation is not completed yet.
+- `enabled` (Boolean) Whether or not the service is enabled in that region. Might also be true if the service is currently in the process of being enabled but the operation is not completed yet.
 - `id` (String) Terraform's internal datasource identifier. It is structured as "`project_id`,`region`,`service_id`".
