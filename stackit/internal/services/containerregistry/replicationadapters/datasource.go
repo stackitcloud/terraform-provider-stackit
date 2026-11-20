@@ -41,7 +41,7 @@ var replicationAdapterTypes = map[string]attr.Type{
 	"registry_type":   types.StringType,
 }
 
-var descriptions = map[string]string{ //nolint:gosec // linter false positive
+var descriptions = map[string]string{ //nolint:gosec // G101: false positive, no hardcoded credentials, only schema descriptions
 	"id":                                   "Terraform's internal data source ID, structured as `project_id`,`region`.",
 	"project_id":                           "STACKIT project ID to which the replication adapters are associated.",
 	"region":                               "STACKIT region where the replication adapters are located. If not defined, the provider default_region is used.",
@@ -72,6 +72,7 @@ func (d *replicationAdaptersDataSource) Configure(ctx context.Context, req datas
 
 	d.providerData = providerData
 	d.client = clients.ContainerRegistryV1Client
+
 	tflog.Info(ctx, "Container Registry client configured")
 }
 
@@ -94,7 +95,6 @@ func (d *replicationAdaptersDataSource) Schema(_ context.Context, _ datasource.S
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
 				Optional:    true,
-				Computed:    true,
 			},
 			"replication_adapters": schema.ListNestedAttribute{
 				Description: descriptions["replication_adapters"],
@@ -122,8 +122,10 @@ func (d *replicationAdaptersDataSource) Schema(_ context.Context, _ datasource.S
 
 func (d *replicationAdaptersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -147,6 +149,7 @@ func (d *replicationAdaptersDataSource) Read(ctx context.Context, req datasource
 				http.StatusNotFound: fmt.Sprintf("Project %q or region %q not found", projectId, region),
 			},
 		)
+
 		return
 	}
 
@@ -165,6 +168,7 @@ func (d *replicationAdaptersDataSource) Read(ctx context.Context, req datasource
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	tflog.Info(ctx, "Container Registry replication adapters read")
 }
 
@@ -196,6 +200,7 @@ func mapFields(ctx context.Context, adapters []registry.ReplicationAdapter, mode
 	if diags.HasError() {
 		return fmt.Errorf("mapping replication adapters list: %w", core.DiagsToError(diags))
 	}
+
 	model.ReplicationAdapters = itemsList
 
 	return nil

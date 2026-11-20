@@ -40,64 +40,40 @@ type artifactoryItemModel struct {
 }
 
 type proxyItemModel struct {
-	Description types.String `tfsdk:"description"`
-
+	Description  types.String `tfsdk:"description"`
 	RegistryType types.String `tfsdk:"registry_type"`
-
-	Url types.String `tfsdk:"url"`
+	Url          types.String `tfsdk:"url"`
 }
 
 var proxyTypes = map[string]attr.Type{
-
-	"description": types.StringType,
-
+	"description":   types.StringType,
 	"registry_type": types.StringType,
-
-	"url": types.StringType,
+	"url":           types.StringType,
 }
 
 var artifactoryItemTypes = map[string]attr.Type{
-
 	"artifactory_id": types.StringType,
-
-	"name": types.StringType,
-
-	"create_time": types.StringType,
-
-	"state": types.StringType,
-
-	"url": types.StringType,
-
-	"proxy": types.ObjectType{AttrTypes: proxyTypes},
+	"name":           types.StringType,
+	"create_time":    types.StringType,
+	"state":          types.StringType,
+	"url":            types.StringType,
+	"proxy":          types.ObjectType{AttrTypes: proxyTypes},
 }
 
 var descriptions = map[string]string{
-
-	"id": "Terraform's internal data source ID, structured as `project_id`,`region`.",
-
-	"project_id": "STACKIT project ID to which the container registry artifactories are associated.",
-
-	"region": "STACKIT region where the container registry artifactories are located. If not defined, the provider default_region is used.",
-
-	"artifactories": "List of container registry artifactories.",
-
-	"artifactory_id": "The unique identifier of the container registry artifactory.",
-
-	"name": "A user-chosen name to distinguish multiple STACKIT artifactories.",
-
-	"create_time": "The date and time the creation of the STACKIT artifactory was triggered.",
-
-	"state": "The current state of the STACKIT artifactory.",
-
-	"url": "The base URL of the STACKIT artifactory.",
-
-	"proxy": "Proxy configuration if this artifactory is created as a proxy-cache for an upstream registry.",
-
+	"id":                  "Terraform's internal data source ID, structured as `project_id`,`region`.",
+	"project_id":          "STACKIT project ID to which the container registry artifactories are associated.",
+	"region":              "STACKIT region where the container registry artifactories are located. If not defined, the provider default_region is used.",
+	"artifactories":       "List of container registry artifactories.",
+	"artifactory_id":      "The unique identifier of the container registry artifactory.",
+	"name":                "A user-chosen name to distinguish multiple STACKIT artifactories.",
+	"create_time":         "The date and time the creation of the STACKIT artifactory was triggered.",
+	"state":               "The current state of the STACKIT artifactory.",
+	"url":                 "The base URL of the STACKIT artifactory.",
+	"proxy":               "Proxy configuration if this artifactory is created as a proxy-cache for an upstream registry.",
 	"proxy.registry_type": "Which replication adapter to use for this registry.",
-
-	"proxy.url": "Upstream registry URL to proxy.",
-
-	"proxy.description": "Description of the upstream registry.",
+	"proxy.url":           "Upstream registry URL to proxy.",
+	"proxy.description":   "Description of the upstream registry.",
 }
 
 func NewArtifactoriesDataSource() datasource.DataSource {
@@ -121,6 +97,7 @@ func (d *artifactoriesDataSource) Configure(ctx context.Context, req datasource.
 
 	d.providerData = providerData
 	d.client = clients.ContainerRegistryV1Client
+
 	tflog.Info(ctx, "Container Registry client configured")
 }
 
@@ -194,11 +171,9 @@ func (d *artifactoriesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		},
 	}
 }
-
 func (d *artifactoriesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
-	diags := req.Config.Get(ctx, &model)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -211,6 +186,7 @@ func (d *artifactoriesDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var allArtifactories []registry.Artifactory
+
 	apiReq := d.client.ListArtifactories(ctx, projectId, region)
 	for {
 		listResp, err := apiReq.Execute()
@@ -225,6 +201,7 @@ func (d *artifactoriesDataSource) Read(ctx context.Context, req datasource.ReadR
 					http.StatusNotFound: fmt.Sprintf("Project %q or region %q not found", projectId, region),
 				},
 			)
+
 			return
 		}
 
@@ -249,7 +226,7 @@ func (d *artifactoriesDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
-	diags = resp.State.Set(ctx, &model)
+	diags := resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	tflog.Info(ctx, "Container Registry artifactories read")
 }
@@ -259,7 +236,9 @@ func mapFields(ctx context.Context, artifactories []registry.Artifactory, model 
 		return fmt.Errorf("model is nil")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region)
+	model.Id = types.StringValue(
+		fmt.Sprintf("%s,%s", model.ProjectId.ValueString(), region),
+	)
 	model.Region = types.StringValue(region)
 
 	items := make([]attr.Value, 0, len(artifactories))
@@ -285,6 +264,7 @@ func mapFields(ctx context.Context, artifactories []registry.Artifactory, model 
 			if diags.HasError() {
 				return fmt.Errorf("mapping proxy: %w", core.DiagsToError(diags))
 			}
+
 			item.Proxy = proxyObj
 		}
 
@@ -300,6 +280,7 @@ func mapFields(ctx context.Context, artifactories []registry.Artifactory, model 
 	if diags.HasError() {
 		return fmt.Errorf("mapping artifactories list: %w", core.DiagsToError(diags))
 	}
+
 	model.Artifactories = itemsList
 
 	return nil

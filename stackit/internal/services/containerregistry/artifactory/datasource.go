@@ -30,7 +30,6 @@ type DataSourceModel struct {
 	ArtifactoryId types.String `tfsdk:"artifactory_id"`
 	Name          types.String `tfsdk:"name"`
 	CreateTime    types.String `tfsdk:"create_time"`
-	State         types.String `tfsdk:"state"`
 	Url           types.String `tfsdk:"url"`
 	Proxy         types.Object `tfsdk:"proxy"`
 }
@@ -68,6 +67,7 @@ func (d *artifactoryDataSource) Configure(ctx context.Context, req datasource.Co
 
 	d.providerData = providerData
 	d.client = clients.ContainerRegistryV1Client
+
 	tflog.Info(ctx, "Container Registry client configured")
 }
 
@@ -90,12 +90,12 @@ func (d *artifactoryDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
 				Optional:    true,
-				Computed:    true,
 			},
 			"artifactory_id": schema.StringAttribute{
 				Description: descriptions["artifactory_id"],
 				Required:    true,
 				Validators: []validator.String{
+					validate.UUID(),
 					validate.NoSeparator(),
 				},
 			},
@@ -105,10 +105,6 @@ func (d *artifactoryDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			},
 			"create_time": schema.StringAttribute{
 				Description: descriptions["create_time"],
-				Computed:    true,
-			},
-			"state": schema.StringAttribute{
-				Description: descriptions["state"],
 				Computed:    true,
 			},
 			"url": schema.StringAttribute{
@@ -139,8 +135,10 @@ func (d *artifactoryDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 
 func (d *artifactoryDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -166,6 +164,8 @@ func (d *artifactoryDataSource) Read(ctx context.Context, req datasource.ReadReq
 				http.StatusNotFound: fmt.Sprintf("Artifactory %q not found", artifactoryId),
 			},
 		)
+		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -179,6 +179,7 @@ func (d *artifactoryDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	tflog.Info(ctx, "Container Registry artifactory read")
 }
 
@@ -186,6 +187,7 @@ func mapDataSourceFields(ctx context.Context, artifactory *registry.Artifactory,
 	if artifactory == nil {
 		return fmt.Errorf("artifactory is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -195,7 +197,6 @@ func mapDataSourceFields(ctx context.Context, artifactory *registry.Artifactory,
 	model.ArtifactoryId = types.StringValue(artifactory.Id)
 	model.Name = types.StringValue(artifactory.Name)
 	model.CreateTime = types.StringValue(artifactory.CreateTime.Format(time.RFC3339))
-	model.State = types.StringValue(string(artifactory.State))
 	model.Url = types.StringValue(artifactory.Url)
 
 	if artifactory.Proxy == nil {
@@ -211,6 +212,7 @@ func mapDataSourceFields(ctx context.Context, artifactory *registry.Artifactory,
 		if diags.HasError() {
 			return fmt.Errorf("mapping proxy: %w", core.DiagsToError(diags))
 		}
+
 		model.Proxy = proxyObj
 	}
 

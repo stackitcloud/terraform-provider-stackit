@@ -44,7 +44,6 @@ type Model struct {
 	ArtifactoryId types.String `tfsdk:"artifactory_id"`
 	Name          types.String `tfsdk:"name"`
 	CreateTime    types.String `tfsdk:"create_time"`
-	State         types.String `tfsdk:"state"`
 	Url           types.String `tfsdk:"url"`
 	Proxy         types.Object `tfsdk:"proxy"`
 }
@@ -77,40 +76,22 @@ var proxyTypes = map[string]attr.Type{
 	"credentials":   types.ObjectType{AttrTypes: credentialsTypes},
 }
 
-var descriptions = map[string]string{ //nolint:gosec // linter false positive
-
-	"id": "Terraform's internal resource ID, structured as `project_id`,`region`,`artifactory_id`.",
-
-	"project_id": "STACKIT project ID to which the container registry artifactory is associated.",
-
-	"region": "STACKIT region where the container registry artifactory is located. If not defined, the provider default_region is used.",
-
-	"artifactory_id": "The unique identifier of the container registry artifactory.",
-
-	"name": "A user-chosen name to distinguish multiple STACKIT artifactories.",
-
-	"create_time": "The date and time the creation of the STACKIT artifactory was triggered.",
-
-	"state": "The current state of the STACKIT artifactory.",
-
-	"url": "The base URL of the STACKIT artifactory.",
-
-	"proxy": "Proxy configuration if this artifactory is created as a proxy-cache for an upstream registry.",
-
-	"proxy.registry_type": "Which replication adapter to use for this registry.",
-
-	"proxy.url": "Upstream registry URL to proxy.",
-
-	"proxy.description": "Description of the upstream registry.",
-
-	"proxy.credentials": "Credentials for the upstream registry.",
-
-	"proxy.credentials.access_key": "Access key or username for the upstream registry.",
-
-	"proxy.credentials.access_secret": "Access secret or password for the upstream registry. Write-only argument `access_secret_wo` should be preferred.",
-
+var descriptions = map[string]string{ //nolint:gosec // G101: false positive, no hardcoded credentials, only schema descriptions
+	"id":                                 "Terraform's internal resource ID, structured as `project_id`,`region`,`artifactory_id`.",
+	"project_id":                         "STACKIT project ID to which the container registry artifactory is associated.",
+	"region":                             "STACKIT region where the container registry artifactory is located. If not defined, the provider default_region is used.",
+	"artifactory_id":                     "The unique identifier of the container registry artifactory.",
+	"name":                               "A user-chosen name to distinguish multiple STACKIT artifactories.",
+	"create_time":                        "The date and time the creation of the STACKIT artifactory was triggered.",
+	"url":                                "The base URL of the STACKIT artifactory.",
+	"proxy":                              "Proxy configuration if this artifactory is created as a proxy-cache for an upstream registry.",
+	"proxy.registry_type":                "Which replication adapter to use for this registry.",
+	"proxy.url":                          "Upstream registry URL to proxy.",
+	"proxy.description":                  "Description of the upstream registry.",
+	"proxy.credentials":                  "Credentials for the upstream registry.",
+	"proxy.credentials.access_key":       "Access key or username for the upstream registry.",
+	"proxy.credentials.access_secret":    "Access secret or password for the upstream registry. Write-only argument `access_secret_wo` should be preferred.",
 	"proxy.credentials.access_secret_wo": "Write-only access secret or password for the upstream registry - never stored in state and never returned by the API. To rotate the secret, update this value AND increment `access_secret_wo_version`. Changing this field alone will NOT trigger an update.",
-
 	"proxy.credentials.access_secret_wo_version": "User-managed rotation counter for `access_secret_wo`. Must be incremented every time `access_secret_wo` is updated.",
 }
 
@@ -119,13 +100,11 @@ func NewArtifactoryResource() resource.Resource {
 }
 
 type artifactoryResource struct {
-	client registry.DefaultAPI
-
+	client       registry.DefaultAPI
 	providerData core.ProviderData
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
-
 func (r *artifactoryResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 
@@ -134,7 +113,6 @@ func (r *artifactoryResource) ModifyPlan(ctx context.Context, req resource.Modif
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -142,19 +120,16 @@ func (r *artifactoryResource) ModifyPlan(ctx context.Context, req resource.Modif
 	var planModel Model
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -172,6 +147,7 @@ func (r *artifactoryResource) Configure(ctx context.Context, req resource.Config
 
 	r.providerData = providerData
 	r.client = clients.ContainerRegistryV1Client
+
 	tflog.Info(ctx, "Container Registry client configured")
 }
 
@@ -208,6 +184,10 @@ func (r *artifactoryResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"artifactory_id": schema.StringAttribute{
 				Description: descriptions["artifactory_id"],
 				Computed:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -227,10 +207,6 @@ func (r *artifactoryResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"create_time": schema.StringAttribute{
 				Description: descriptions["create_time"],
-				Computed:    true,
-			},
-			"state": schema.StringAttribute{
-				Description: descriptions["state"],
 				Computed:    true,
 			},
 			"url": schema.StringAttribute{
@@ -306,19 +282,21 @@ func (r *artifactoryResource) Schema(_ context.Context, _ resource.SchemaRequest
 
 func (r *artifactoryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var configModel Model
-	if req.Config.Schema != nil && req.Config.Raw.Type() != nil {
-		diags = req.Config.Get(ctx, &configModel)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+
+	diags = req.Config.Get(ctx, &configModel)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	ctx = core.InitProviderContext(ctx)
@@ -348,6 +326,7 @@ func (r *artifactoryResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	artifactoryId := createResp.Id
+
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":     projectId,
 		"region":         region,
@@ -371,13 +350,16 @@ func (r *artifactoryResource) Create(ctx context.Context, req resource.CreateReq
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	tflog.Info(ctx, "Container Registry artifactory created")
 }
 
 func (r *artifactoryResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -387,6 +369,14 @@ func (r *artifactoryResource) Read(ctx context.Context, req resource.ReadRequest
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	artifactoryId := model.ArtifactoryId.ValueString()
+
+	if artifactoryId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+
+		return
+	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "artifactory_id", artifactoryId)
@@ -396,9 +386,12 @@ func (r *artifactoryResource) Read(ctx context.Context, req resource.ReadRequest
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
+
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading artifactory", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -417,33 +410,36 @@ func (r *artifactoryResource) Read(ctx context.Context, req resource.ReadRequest
 
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	tflog.Info(ctx, "Container Registry artifactory read")
 }
 
 func (r *artifactoryResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var plan Model
+
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	var state Model
-	if req.State.Schema != nil && req.State.Raw.Type() != nil {
-		diags = req.State.Get(ctx, &state)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	var configModel Model
-	if req.Config.Schema != nil && req.Config.Raw.Type() != nil {
-		diags = req.Config.Get(ctx, &configModel)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+
+	diags = req.Config.Get(ctx, &configModel)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	ctx = core.InitProviderContext(ctx)
@@ -483,13 +479,16 @@ func (r *artifactoryResource) Update(ctx context.Context, req resource.UpdateReq
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+
 	tflog.Info(ctx, "Container Registry artifactory updated")
 }
 
 func (r *artifactoryResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -505,7 +504,13 @@ func (r *artifactoryResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	err := r.client.DeleteArtifactory(ctx, projectId, region, artifactoryId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting artifactory", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -527,6 +532,7 @@ func (r *artifactoryResource) ImportState(ctx context.Context, req resource.Impo
 			"Error importing artifactory",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[artifactory_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -546,29 +552,31 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*registry.
 
 	payload := registry.NewCreateArtifactoryPayload(model.Name.ValueString())
 
-	if !model.Proxy.IsNull() && !model.Proxy.IsUnknown() {
+	if !tfutils.IsUndefined(model.Proxy) {
 		var p proxyModel
+
 		diags := model.Proxy.As(ctx, &p, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting proxy object: %v", diags.Errors())
 		}
 
 		proxyReq := registry.NewCreateProxyRequest(p.RegistryType.ValueString(), p.Url.ValueString())
-		if !p.Description.IsNull() && !p.Description.IsUnknown() {
+		if !tfutils.IsUndefined(p.Description) {
 			proxyReq.SetDescription(p.Description.ValueString())
 		}
 
-		if !p.Credentials.IsNull() && !p.Credentials.IsUnknown() {
+		if !tfutils.IsUndefined(p.Credentials) {
 			var creds credentialsModel
+
 			diags := p.Credentials.As(ctx, &creds, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting credentials object: %v", diags.Errors())
 			}
 
 			var configCreds *credentialsModel
-			if configModel != nil && !configModel.Proxy.IsNull() && !configModel.Proxy.IsUnknown() {
+			if configModel != nil && !tfutils.IsUndefined(configModel.Proxy) {
 				var cp proxyModel
-				if d := configModel.Proxy.As(ctx, &cp, basetypes.ObjectAsOptions{}); !d.HasError() && !cp.Credentials.IsNull() && !cp.Credentials.IsUnknown() {
+				if d := configModel.Proxy.As(ctx, &cp, basetypes.ObjectAsOptions{}); !d.HasError() && !tfutils.IsUndefined(cp.Credentials) {
 					var cc credentialsModel
 					if d2 := cp.Credentials.As(ctx, &cc, basetypes.ObjectAsOptions{}); !d2.HasError() {
 						configCreds = &cc
@@ -597,32 +605,35 @@ func toUpdatePayload(ctx context.Context, model, stateModel, configModel *Model)
 
 	payload := registry.NewPatchArtifactoryPayload()
 
-	if !model.Proxy.IsNull() && !model.Proxy.IsUnknown() {
+	if !tfutils.IsUndefined(model.Proxy) {
 		var p proxyModel
+
 		diags := model.Proxy.As(ctx, &p, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting proxy object: %v", diags.Errors())
 		}
 
 		updateProxyReq := registry.NewUpdateProxyRequest()
-		if !p.Url.IsNull() && !p.Url.IsUnknown() {
+		if !tfutils.IsUndefined(p.Url) {
 			updateProxyReq.SetUrl(p.Url.ValueString())
 		}
-		if !p.Description.IsNull() && !p.Description.IsUnknown() {
+
+		if !tfutils.IsUndefined(p.Description) {
 			updateProxyReq.SetDescription(p.Description.ValueString())
 		}
 
-		if !p.Credentials.IsNull() && !p.Credentials.IsUnknown() {
+		if !tfutils.IsUndefined(p.Credentials) {
 			var creds credentialsModel
+
 			diags := p.Credentials.As(ctx, &creds, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting credentials object: %v", diags.Errors())
 			}
 
 			var stateCreds *credentialsModel
-			if stateModel != nil && !stateModel.Proxy.IsNull() && !stateModel.Proxy.IsUnknown() {
+			if stateModel != nil && !tfutils.IsUndefined(stateModel.Proxy) {
 				var sp proxyModel
-				if d := stateModel.Proxy.As(ctx, &sp, basetypes.ObjectAsOptions{}); !d.HasError() && !sp.Credentials.IsNull() && !sp.Credentials.IsUnknown() {
+				if d := stateModel.Proxy.As(ctx, &sp, basetypes.ObjectAsOptions{}); !d.HasError() && !tfutils.IsUndefined(sp.Credentials) {
 					var sc credentialsModel
 					if d2 := sp.Credentials.As(ctx, &sc, basetypes.ObjectAsOptions{}); !d2.HasError() {
 						stateCreds = &sc
@@ -631,9 +642,9 @@ func toUpdatePayload(ctx context.Context, model, stateModel, configModel *Model)
 			}
 
 			var configCreds *credentialsModel
-			if configModel != nil && !configModel.Proxy.IsNull() && !configModel.Proxy.IsUnknown() {
+			if configModel != nil && !tfutils.IsUndefined(configModel.Proxy) {
 				var cp proxyModel
-				if d := configModel.Proxy.As(ctx, &cp, basetypes.ObjectAsOptions{}); !d.HasError() && !cp.Credentials.IsNull() && !cp.Credentials.IsUnknown() {
+				if d := configModel.Proxy.As(ctx, &cp, basetypes.ObjectAsOptions{}); !d.HasError() && !tfutils.IsUndefined(cp.Credentials) {
 					var cc credentialsModel
 					if d2 := cp.Credentials.As(ctx, &cc, basetypes.ObjectAsOptions{}); !d2.HasError() {
 						configCreds = &cc
@@ -657,20 +668,28 @@ func getAccessSecret(planCreds, stateCreds, configCreds *credentialsModel, isUpd
 	if planCreds == nil {
 		return nil
 	}
+
 	// 1. Legacy field
-	if !planCreds.AccessSecret.IsNull() && !planCreds.AccessSecret.IsUnknown() {
+	if !tfutils.IsUndefined(planCreds.AccessSecret) {
 		return planCreds.AccessSecret.ValueStringPointer()
 	}
+
 	// 2. Write-only field
-	if configCreds != nil && !configCreds.AccessSecretWo.IsNull() && !configCreds.AccessSecretWo.IsUnknown() {
+	if configCreds != nil && !tfutils.IsUndefined(configCreds.AccessSecretWo) {
 		if !isUpdate {
-			return configCreds.AccessSecretWo.ValueStringPointer()
+			if !tfutils.IsUndefined(planCreds.AccessSecretWoVersion) {
+				return configCreds.AccessSecretWo.ValueStringPointer()
+			}
+
+			return nil
 		}
-		// On update, only send if version was bumped (or previously not set)
-		if stateCreds == nil || !planCreds.AccessSecretWoVersion.Equal(stateCreds.AccessSecretWoVersion) {
+
+		// On update, send if version was bumped, or if access_key changed (API requires credentials atomically)
+		if stateCreds == nil || !planCreds.AccessSecretWoVersion.Equal(stateCreds.AccessSecretWoVersion) || !planCreds.AccessKey.Equal(stateCreds.AccessKey) {
 			return configCreds.AccessSecretWo.ValueStringPointer()
 		}
 	}
+
 	return nil
 }
 
@@ -678,6 +697,7 @@ func mapFields(ctx context.Context, artifactory *registry.Artifactory, model *Mo
 	if artifactory == nil {
 		return fmt.Errorf("artifactory is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -696,14 +716,14 @@ func mapFields(ctx context.Context, artifactory *registry.Artifactory, model *Mo
 	model.ArtifactoryId = types.StringValue(artifactoryId)
 	model.Name = types.StringValue(artifactory.Name)
 	model.CreateTime = types.StringValue(artifactory.CreateTime.Format(time.RFC3339))
-	model.State = types.StringValue(string(artifactory.State))
 	model.Url = types.StringValue(artifactory.Url)
 
 	if artifactory.Proxy == nil {
 		model.Proxy = types.ObjectNull(proxyTypes)
 	} else {
 		var p proxyModel
-		if !model.Proxy.IsNull() && !model.Proxy.IsUnknown() {
+
+		if !tfutils.IsUndefined(model.Proxy) {
 			diags := model.Proxy.As(ctx, &p, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true})
 			if diags.HasError() {
 				return fmt.Errorf("converting proxy object: %v", diags.Errors())
@@ -718,7 +738,8 @@ func mapFields(ctx context.Context, artifactory *registry.Artifactory, model *Mo
 			p.Credentials = types.ObjectNull(credentialsTypes)
 		} else {
 			var creds credentialsModel
-			if !p.Credentials.IsNull() && !p.Credentials.IsUnknown() {
+
+			if !tfutils.IsUndefined(p.Credentials) {
 				diags := p.Credentials.As(ctx, &creds, basetypes.ObjectAsOptions{UnhandledNullAsEmpty: true})
 				if diags.HasError() {
 					return fmt.Errorf("converting credentials object: %v", diags.Errors())
@@ -729,6 +750,7 @@ func mapFields(ctx context.Context, artifactory *registry.Artifactory, model *Mo
 			if tfutils.IsUndefined(creds.AccessSecret) {
 				creds.AccessSecret = types.StringNull()
 			}
+
 			creds.AccessSecretWo = types.StringNull()
 			if tfutils.IsUndefined(creds.AccessSecretWoVersion) {
 				creds.AccessSecretWoVersion = types.Int64Null()
@@ -738,6 +760,7 @@ func mapFields(ctx context.Context, artifactory *registry.Artifactory, model *Mo
 			if diags.HasError() {
 				return fmt.Errorf("mapping credentials: %w", core.DiagsToError(diags))
 			}
+
 			p.Credentials = credsObj
 		}
 
@@ -745,6 +768,7 @@ func mapFields(ctx context.Context, artifactory *registry.Artifactory, model *Mo
 		if diags.HasError() {
 			return fmt.Errorf("mapping proxy: %w", core.DiagsToError(diags))
 		}
+
 		model.Proxy = proxyObj
 	}
 

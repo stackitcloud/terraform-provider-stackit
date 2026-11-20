@@ -62,7 +62,6 @@ resource "stackit_containerregistry_artifactory" "docker_hub_proxy" {
 - `artifactory_id` (String) The unique identifier of the container registry artifactory.
 - `create_time` (String) The date and time the creation of the STACKIT artifactory was triggered.
 - `id` (String) Terraform's internal resource ID, structured as `project_id`,`region`,`artifactory_id`.
-- `state` (String) The current state of the STACKIT artifactory.
 - `url` (String) The base URL of the STACKIT artifactory.
 
 <a id="nestedatt--proxy"></a>

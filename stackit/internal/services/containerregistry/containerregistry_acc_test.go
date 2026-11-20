@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -102,8 +103,10 @@ data "stackit_containerregistry_artifactories" "this" {
 }
 
 func TestAccContainerRegistryArtifactoryMax(t *testing.T) {
+	// Note: The STACKIT Container Registry API requires upstream credentials whenever a proxy cache is configured.
 	dockerUsername := os.Getenv("TF_ACC_CONTAINER_REGISTRY_DOCKER_USERNAME")
 	dockerPassword := os.Getenv("TF_ACC_CONTAINER_REGISTRY_DOCKER_PASSWORD")
+
 	if dockerUsername == "" || dockerPassword == "" {
 		t.Skip("Skipping TestAccContainerRegistryArtifactoryMax: TF_ACC_CONTAINER_REGISTRY_DOCKER_USERNAME or TF_ACC_CONTAINER_REGISTRY_DOCKER_PASSWORD not set")
 	}
@@ -111,15 +114,26 @@ func TestAccContainerRegistryArtifactoryMax(t *testing.T) {
 	testConfigVarsMax := config.Variables{
 		"project_id":              config.StringVariable(testutil.ProjectId),
 		"name":                    config.StringVariable(artifactoryNameMax),
+		"description":             config.StringVariable("Docker Hub mirror"),
 		"docker_username":         config.StringVariable(dockerUsername),
 		"docker_password":         config.StringVariable(dockerPassword),
 		"docker_password_version": config.IntegerVariable(1),
+	}
+
+	testConfigVarsMaxUpdated := config.Variables{
+		"project_id":              config.StringVariable(testutil.ProjectId),
+		"name":                    config.StringVariable(artifactoryNameMax),
+		"description":             config.StringVariable("Docker Hub mirror updated"),
+		"docker_username":         config.StringVariable(dockerUsername),
+		"docker_password":         config.StringVariable(dockerPassword),
+		"docker_password_version": config.IntegerVariable(2),
 	}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckContainerRegistryArtifactoryDestroy,
 		Steps: []resource.TestStep{
+			// Step 1: Create Artifactory with proxy and credentials
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
@@ -135,6 +149,40 @@ func TestAccContainerRegistryArtifactoryMax(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_containerregistry_artifactory.this", "proxy.credentials.access_secret_wo"),
 					resource.TestCheckResourceAttrSet("stackit_containerregistry_artifactory.this", "id"),
 				),
+			},
+			// Step 2: Update proxy description and rotate credentials (bump version counter)
+			{
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
+				ConfigVariables: testConfigVarsMaxUpdated,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_containerregistry_artifactory.this", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_containerregistry_artifactory.this", "name", artifactoryNameMax),
+					resource.TestCheckResourceAttr("stackit_containerregistry_artifactory.this", "proxy.registry_type", "docker-hub"),
+					resource.TestCheckResourceAttr("stackit_containerregistry_artifactory.this", "proxy.url", "https://registry-1.docker.io"),
+					resource.TestCheckResourceAttr("stackit_containerregistry_artifactory.this", "proxy.description", "Docker Hub mirror updated"),
+					resource.TestCheckResourceAttr("stackit_containerregistry_artifactory.this", "proxy.credentials.access_key", dockerUsername),
+					resource.TestCheckResourceAttr("stackit_containerregistry_artifactory.this", "proxy.credentials.access_secret_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("stackit_containerregistry_artifactory.this", "proxy.credentials.access_secret"),
+					resource.TestCheckNoResourceAttr("stackit_containerregistry_artifactory.this", "proxy.credentials.access_secret_wo"),
+					resource.TestCheckResourceAttrSet("stackit_containerregistry_artifactory.this", "id"),
+					testAccWaitDelay(10*time.Second),
+				),
+			},
+			// Step 3: Import state
+			{
+				ConfigVariables:   testConfigVarsMaxUpdated,
+				ResourceName:      "stackit_containerregistry_artifactory.this",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"proxy.credentials.access_secret",
+					"proxy.credentials.access_secret_wo",
+					"proxy.credentials.access_secret_wo_version",
+				},
+				ImportStateCheck: func(_ []*terraform.InstanceState) error {
+					time.Sleep(10 * time.Second)
+					return nil
+				},
 			},
 		},
 	})
@@ -176,6 +224,13 @@ func TestAccContainerRegistryReplicationAdaptersDataSource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccWaitDelay(d time.Duration) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		time.Sleep(d)
+		return nil
+	}
 }
 
 func testAccCheckContainerRegistryArtifactoryDestroy(s *terraform.State) error {

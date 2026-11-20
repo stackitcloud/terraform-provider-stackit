@@ -18,8 +18,11 @@ import (
 
 func TestReplicationAdaptersDataSource_Metadata(t *testing.T) {
 	ds := NewReplicationAdaptersDataSource()
+
 	var resp datasource.MetadataResponse
+
 	ds.Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "stackit"}, &resp)
+
 	if resp.TypeName != "stackit_containerregistry_replication_adapters" {
 		t.Errorf("expected type name %q, got %q", "stackit_containerregistry_replication_adapters", resp.TypeName)
 	}
@@ -27,11 +30,15 @@ func TestReplicationAdaptersDataSource_Metadata(t *testing.T) {
 
 func TestReplicationAdaptersDataSource_Schema(t *testing.T) {
 	ds := NewReplicationAdaptersDataSource()
+
 	var resp datasource.SchemaResponse
+
 	ds.Schema(context.Background(), datasource.SchemaRequest{}, &resp)
+
 	if resp.Diagnostics.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", resp.Diagnostics)
 	}
+
 	if len(resp.Schema.Attributes) == 0 {
 		t.Errorf("expected non-empty schema attributes")
 	}
@@ -46,11 +53,15 @@ func TestReplicationAdaptersDataSource_Configure(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error creating provider data: %v", err)
 		}
+
 		var resp datasource.ConfigureResponse
+
 		ds.Configure(ctx, datasource.ConfigureRequest{ProviderData: providerData}, &resp)
+
 		if resp.Diagnostics.HasError() {
 			t.Errorf("unexpected error diagnostics: %v", resp.Diagnostics)
 		}
+
 		if ds.client == nil {
 			t.Error("expected client to be configured")
 		}
@@ -58,7 +69,9 @@ func TestReplicationAdaptersDataSource_Configure(t *testing.T) {
 
 	t.Run("nil provider data", func(t *testing.T) {
 		var resp datasource.ConfigureResponse
+
 		ds.Configure(ctx, datasource.ConfigureRequest{ProviderData: nil}, &resp)
+
 		if resp.Diagnostics.HasError() {
 			t.Errorf("expected no error diagnostics on nil provider data, got %v", resp.Diagnostics)
 		}
@@ -66,7 +79,9 @@ func TestReplicationAdaptersDataSource_Configure(t *testing.T) {
 
 	t.Run("invalid provider data type", func(t *testing.T) {
 		var resp datasource.ConfigureResponse
+
 		ds.Configure(ctx, datasource.ConfigureRequest{ProviderData: "invalid"}, &resp)
+
 		if !resp.Diagnostics.HasError() {
 			t.Error("expected error diagnostics on invalid provider data")
 		}
@@ -76,7 +91,9 @@ func TestReplicationAdaptersDataSource_Configure(t *testing.T) {
 func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 	ctx := context.Background()
 	dsBase := NewReplicationAdaptersDataSource()
+
 	var schemaResp datasource.SchemaResponse
+
 	dsBase.Schema(ctx, datasource.SchemaRequest{}, &schemaResp)
 
 	configAttrTypes := map[string]attr.Type{
@@ -92,10 +109,12 @@ func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 		Id:                  types.StringNull(),
 		ReplicationAdapters: types.ListNull(types.ObjectType{AttrTypes: replicationAdapterTypes}),
 	}
+
 	configVal, diags := types.ObjectValueFrom(ctx, configAttrTypes, configModel)
 	if diags.HasError() {
 		t.Fatalf("unexpected diags creating configVal: %v", diags)
 	}
+
 	rawVal, err := configVal.ToTerraformValue(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error converting to terraform value: %v", err)
@@ -126,18 +145,22 @@ func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 
 		resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
 		ds.Read(ctx, req, &resp)
+
 		if resp.Diagnostics.HasError() {
 			t.Fatalf("unexpected diagnostics: %v", resp.Diagnostics)
 		}
 
 		var resultModel DataSourceModel
+
 		diags = resp.State.Get(ctx, &resultModel)
 		if diags.HasError() {
 			t.Fatalf("unexpected diags getting state: %v", diags)
 		}
+
 		if resultModel.Id.ValueString() != "pid,reg" {
 			t.Errorf("expected id 'pid,reg', got %q", resultModel.Id.ValueString())
 		}
+
 		if len(resultModel.ReplicationAdapters.Elements()) != 1 {
 			t.Errorf("expected 1 replication adapter, got %d", len(resultModel.ReplicationAdapters.Elements()))
 		}
@@ -153,6 +176,7 @@ func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 
 		resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
 		ds.Read(ctx, req, &resp)
+
 		if !resp.Diagnostics.HasError() {
 			t.Error("expected diagnostics on read API error")
 		}
@@ -168,6 +192,7 @@ func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 
 		resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
 		ds.Read(ctx, req, &resp)
+
 		if !resp.Diagnostics.HasError() {
 			t.Error("expected diagnostics on read 404")
 		}
@@ -202,6 +227,7 @@ func TestMapFields(t *testing.T) {
 	if model.Id.ValueString() != "pid,reg" {
 		t.Errorf("expected id 'pid,reg', got %q", model.Id.ValueString())
 	}
+
 	if model.Region.ValueString() != "reg" {
 		t.Errorf("expected region 'reg', got %q", model.Region.ValueString())
 	}
@@ -255,13 +281,16 @@ func TestMapFields_EdgeCases(t *testing.T) {
 		model := &DataSourceModel{
 			ProjectId: types.StringValue("pid"),
 		}
+
 		err := mapFields(ctx, []registry.ReplicationAdapter{}, model, "reg")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if model.ReplicationAdapters.IsNull() {
 			t.Error("expected adapters list not to be null")
 		}
+
 		if len(model.ReplicationAdapters.Elements()) != 0 {
 			t.Errorf("expected 0 elements, got %d", len(model.ReplicationAdapters.Elements()))
 		}

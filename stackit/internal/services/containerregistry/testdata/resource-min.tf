@@ -1,10 +1,5 @@
-variable "project_id" {
-  type = string
-}
-
-variable "name" {
-  type = string
-}
+variable "project_id" {}
+variable "name" {}
 
 resource "stackit_containerregistry_artifactory" "this" {
   project_id = var.project_id

@@ -42,7 +42,6 @@ data "stackit_containerregistry_artifactory" "this" {
 - `id` (String) Terraform's internal resource ID, structured as `project_id`,`region`,`artifactory_id`.
 - `name` (String) A user-chosen name to distinguish multiple STACKIT artifactories.
 - `proxy` (Attributes) Proxy configuration if this artifactory is created as a proxy-cache for an upstream registry. (see [below for nested schema](#nestedatt--proxy))
-- `state` (String) The current state of the STACKIT artifactory.
 - `url` (String) The base URL of the STACKIT artifactory.
 
 <a id="nestedatt--proxy"></a>

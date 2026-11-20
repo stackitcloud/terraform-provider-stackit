@@ -1,24 +1,9 @@
-variable "project_id" {
-  type = string
-}
-
-variable "name" {
-  type = string
-}
-
-variable "docker_username" {
-  type = string
-}
-
-variable "docker_password" {
-  type      = string
-  sensitive = true
-}
-
-variable "docker_password_version" {
-  type    = number
-  default = 1
-}
+variable "project_id" {}
+variable "name" {}
+variable "description" {}
+variable "docker_username" {}
+variable "docker_password" {}
+variable "docker_password_version" {}
 
 resource "stackit_containerregistry_artifactory" "this" {
   project_id = var.project_id
@@ -26,7 +11,7 @@ resource "stackit_containerregistry_artifactory" "this" {
   proxy = {
     registry_type = "docker-hub"
     url           = "https://registry-1.docker.io"
-    description   = "Docker Hub mirror"
+    description   = var.description
     credentials = {
       access_key               = var.docker_username
       access_secret_wo         = var.docker_password
