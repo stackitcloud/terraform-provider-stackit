@@ -103,6 +103,7 @@ func TestMapFields(t *testing.T) {
 			if err := mapFields(ctx, tt.input, tt.state, tt.region); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error")
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -118,13 +119,16 @@ func testRuleSet(rules map[string]albWaf.Mode) *albWaf.GetManagedRuleSetResponse
 	groups := map[string]albWaf.MRSRuleGroup{}
 	for ruleKey, mode := range rules {
 		groupKey := ruleKey[:3]
+
 		group := groups[groupKey]
 		if group.Rules == nil {
 			group.Rules = &map[string]albWaf.MRSRule{}
 		}
+
 		(*group.Rules)[ruleKey] = albWaf.MRSRule{Mode: mode}
 		groups[groupKey] = group
 	}
+
 	return &albWaf.GetManagedRuleSetResponse{
 		Groups:  &groups,
 		Name:    testName.ValueString(),
@@ -142,10 +146,12 @@ func testConfiguredGroups(modes map[string]map[string]string) types.Map {
 		for ruleKey, mode := range rules {
 			ruleMap[ruleKey] = types.ObjectValueMust(configuredRuleType, map[string]attr.Value{"mode": types.StringValue(mode)})
 		}
+
 		groups[groupKey] = types.ObjectValueMust(configuredGroupType, map[string]attr.Value{
 			"rules": types.MapValueMust(types.ObjectType{AttrTypes: configuredRuleType}, ruleMap),
 		})
 	}
+
 	return types.MapValueMust(types.ObjectType{AttrTypes: configuredGroupType}, groups)
 }
 
@@ -154,6 +160,7 @@ func TestRuleModes(t *testing.T) {
 		"911": {"911100": "MODE_LOG_ONLY"},
 		"920": {"920450": "MODE_DISABLED", "920451": "MODE_ENABLED"},
 	}
+
 	tests := []struct {
 		name     string
 		groups   types.Map
@@ -181,6 +188,7 @@ func TestRuleModes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			if diff := cmp.Diff(got, tt.expected); diff != "" {
 				t.Errorf("Data does not match: %s", diff)
 			}
@@ -196,9 +204,11 @@ func TestCheckRulesExist(t *testing.T) {
 	if err := checkRulesExist(ruleSet, map[string]map[string]string{"911": {"911100": "MODE_LOG_ONLY"}}); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+
 	if err := checkRulesExist(ruleSet, nil); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+
 	err := checkRulesExist(ruleSet, map[string]map[string]string{
 		"911": {"911100": "MODE_LOG_ONLY", "911999": "MODE_LOG_ONLY"},
 		"999": {"999100": "MODE_LOG_ONLY"},
@@ -214,6 +224,7 @@ func TestRefreshConfiguredGroups(t *testing.T) {
 		"920450": albWaf.MODE_MODE_LOG_ONLY,
 		"920451": albWaf.MODE_MODE_ENABLED,
 	})
+
 	tests := []struct {
 		name       string
 		configured types.Map
@@ -250,6 +261,7 @@ func TestRefreshConfiguredGroups(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			if !got.Equal(tt.expected) {
 				t.Errorf("got %v, expected %v", got, tt.expected)
 			}
@@ -261,6 +273,7 @@ func TestToPatchPayload(t *testing.T) {
 	logOnly := albWaf.MODE_MODE_LOG_ONLY
 	enabled := albWaf.MODE_MODE_ENABLED
 	disabled := albWaf.MODE_MODE_DISABLED
+
 	tests := []struct {
 		name     string
 		wanted   map[string]map[string]string
@@ -317,6 +330,7 @@ func TestToPatchPayload(t *testing.T) {
 			if (err == nil) != tt.isValid {
 				t.Fatalf("toPatchPayload() error = %v, isValid %v", err, tt.isValid)
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(got.Groups, tt.expected); diff != "" {
 					t.Errorf("Data does not match: %s", diff)

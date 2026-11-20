@@ -114,11 +114,13 @@ func TestRetryRequest(t *testing.T) {
 			ctx := context.Background()
 			if tt.ctx != nil {
 				var cancel context.CancelFunc
+
 				ctx, cancel = tt.ctx()
 				defer cancel()
 			}
 
 			calls := 0
+
 			var fn func() (*string, error)
 
 			if tt.returns != nil {
@@ -126,11 +128,14 @@ func TestRetryRequest(t *testing.T) {
 					if calls >= len(tt.returns) {
 						t.Fatalf("fn called more times (%d) than mocked return values (%d)", calls+1, len(tt.returns))
 					}
+
 					err := tt.returns[calls]
 					calls++
+
 					if err != nil {
 						return nil, err
 					}
+
 					return new("success"), nil
 				}
 			}
@@ -140,9 +145,11 @@ func TestRetryRequest(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RetryRequest() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			if calls != tt.expectedCalls {
 				t.Errorf("RetryRequest() fn called %d times, expected %d", calls, tt.expectedCalls)
 			}
+
 			if !tt.wantErr && (res == nil || *res != tt.wantResult) {
 				t.Errorf("RetryRequest() result = %v, want %v", res, tt.wantResult)
 			}
@@ -258,12 +265,14 @@ func TestRetryRequestWithoutResponse(t *testing.T) {
 			ctx := context.Background()
 			if tt.ctx != nil {
 				var cancel context.CancelFunc
+
 				ctx, cancel = tt.ctx()
 				defer cancel()
 			}
 
 			// 2. Mock execution state local to this subtest
 			calls := 0
+
 			var fn func() error
 
 			if tt.returns != nil {
@@ -271,8 +280,10 @@ func TestRetryRequestWithoutResponse(t *testing.T) {
 					if calls >= len(tt.returns) {
 						t.Fatalf("fn called more times (%d) than mocked return values (%d)", calls+1, len(tt.returns))
 					}
+
 					err := tt.returns[calls]
 					calls++
+
 					return err
 				}
 			}
@@ -284,6 +295,7 @@ func TestRetryRequestWithoutResponse(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RetryRequestWithoutResponse() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 			if calls != tt.expectedCalls {
 				t.Errorf("fn() called %d times, expected %d", calls, tt.expectedCalls)
 			}

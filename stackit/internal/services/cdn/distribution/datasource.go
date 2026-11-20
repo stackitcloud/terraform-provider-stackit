@@ -429,6 +429,7 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 
 func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -439,6 +440,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
+
 	distributionResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		utils.LogError(
@@ -450,6 +452,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 			map[int]string{},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -461,6 +464,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Error processing API response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 }
@@ -471,6 +475,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	if distribution == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -494,10 +499,12 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			distributionErrors = append(distributionErrors, types.StringValue(e.En))
 		}
 	}
+
 	modelErrors, diags := types.ListValue(types.StringType, distributionErrors)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Errors = modelErrors
 
 	// Regions
@@ -505,6 +512,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	for _, r := range distribution.Config.Regions {
 		regions = append(regions, types.StringValue(string(r)))
 	}
+
 	modelRegions, diags := types.ListValue(types.StringType, regions)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -517,6 +525,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			blockedCountries = append(blockedCountries, types.StringValue(string(c)))
 		}
 	}
+
 	modelBlockedCountries, diags := types.ListValue(types.StringType, blockedCountries)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -536,6 +545,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 							tfValues = append(tfValues, types.StringValue(v))
 						}
 					}
+
 					tfValuesList, diags := types.ListValue(types.StringType, tfValues)
 					if diags.HasError() {
 						return core.DiagsToError(diags)
@@ -553,6 +563,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 					if diags.HasError() {
 						return core.DiagsToError(diags)
 					}
+
 					tfMatchers = append(tfMatchers, tfMatcherObj)
 				}
 			}
@@ -598,6 +609,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			tfRules = append(tfRules, tfRuleObj)
 		}
 
@@ -607,6 +619,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		}
 
 		var objDiags diag.Diagnostics
+
 		redirectsVal, objDiags = types.ObjectValue(redirectsTypes, map[string]attr.Value{
 			"rules": tfRulesList,
 		})
@@ -617,6 +630,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// Prepare Backend Values
 	var backendValues map[string]attr.Value
+
 	originRequestHeaders := types.MapNull(types.StringType)
 	geofencingVal := types.MapNull(geofencingTypes.ElemType)
 
@@ -628,10 +642,12 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			for k, v := range origHeaders {
 				headers[k] = types.StringValue(v)
 			}
+
 			mappedHeaders, diags := types.MapValue(types.StringType, headers)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			originRequestHeaders = mappedHeaders
 		}
 
@@ -643,12 +659,15 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 				if diags.HasError() {
 					return core.DiagsToError(diags)
 				}
+
 				geofencingMapElems[url] = listVal
 			}
+
 			mappedGeofencing, diags := types.MapValue(geofencingTypes.ElemType, geofencingMapElems)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			geofencingVal = mappedGeofencing
 		}
 
@@ -683,6 +702,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	if distribution.Config.Waf.ParanoiaLevel != nil {
 		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
 	}
+
 	wafObjAttrs := map[string]attr.Value{
 		"mode":                          types.StringValue(string(distribution.Config.Waf.Mode)),
 		"type":                          types.StringValue(string(distribution.Config.Waf.Type)),
@@ -704,9 +724,11 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	var wafVal attr.Value
 
 	var diagWaf diag.Diagnostics
+
 	wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
 	if diagWaf.HasError() {
 		return core.DiagsToError(diagWaf)
@@ -717,6 +739,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	if o := distribution.Config.Optimizer; o != nil {
 		if enabled, ok := o.GetEnabledOk(); ok {
 			var diags diag.Diagnostics
+
 			optimizerVal, diags = types.ObjectValue(optimizerTypes, map[string]attr.Value{
 				"enabled": types.BoolPointerValue(enabled),
 			})
@@ -740,6 +763,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	for _, h := range distribution.Config.CacheConfig.CacheKeyHeaders {
 		cacheKeyHeaders = append(cacheKeyHeaders, types.StringValue(h))
 	}
+
 	cacheKeyHeadersList, diags := types.ListValue(types.StringType, cacheKeyHeaders)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -749,6 +773,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	for _, p := range distribution.Config.CacheConfig.QueryStringVaryParameters {
 		queryStringVaryParams = append(queryStringVaryParams, types.StringValue(p))
 	}
+
 	queryStringVaryParamsList, diags := types.ListValue(types.StringType, queryStringVaryParams)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -817,6 +842,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Config = cfg
 
 	// Domains
@@ -829,10 +855,12 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 					domainErrors = append(domainErrors, types.StringValue(e.En))
 				}
 			}
+
 			modelDomainErrors, diags := types.ListValue(types.StringType, domainErrors)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			modelDomain, diags := types.ObjectValue(domainTypes, map[string]attr.Value{
 				"name":   types.StringValue(d.Name),
 				"status": types.StringValue(string(d.Status)),
@@ -842,13 +870,16 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
+
 			domains = append(domains, modelDomain)
 		}
 	}
+
 	modelDomains, diags := types.ListValue(types.ObjectType{AttrTypes: domainTypes}, domains)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
+
 	model.Domains = modelDomains
 
 	return nil
@@ -882,5 +913,6 @@ func mapLogSinkDataSource(apiLogSink *cdnSdk.ConfigLogSink) (types.Object, error
 	if diags.HasError() {
 		return types.ObjectNull(dataSourcelogSinkTypes), core.DiagsToError(diags)
 	}
+
 	return logSinkObj, nil
 }

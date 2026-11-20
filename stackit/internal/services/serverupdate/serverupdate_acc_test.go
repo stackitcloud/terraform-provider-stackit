@@ -151,14 +151,17 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server_update_schedule.test_schedule")
 					}
+
 					scheduleId, ok := r.Primary.Attributes["update_schedule_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute update_schedule_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, serverId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -259,14 +262,17 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_server_update_schedule.test_schedule")
 					}
+
 					scheduleId, ok := r.Primary.Attributes["update_schedule_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute update_schedule_id")
 					}
+
 					serverId, ok := r.Primary.Attributes["server_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute server_id")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, serverId, scheduleId), nil
 				},
 				ImportState:       true,
@@ -352,6 +358,7 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 		if schedules[i].Id == 0 {
 			continue
 		}
+
 		scheduleId := strconv.FormatInt(int64(schedules[i].Id), 10)
 		if utils.Contains(schedulesToDestroy, scheduleId) {
 			err := client.DefaultAPI.DeleteUpdateSchedule(ctx, testutil.ProjectId, serverId, scheduleId, testutil.Region).Execute()
@@ -360,12 +367,14 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
 // Additional function to check if the server was deleted if something went wrong in the first case.
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -391,6 +400,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		if servers[i].Id == nil {
 			continue
 		}
+
 		if utils.Contains(serversToDestroy, *servers[i].Id) {
 			err := client.DefaultAPI.DeleteServer(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id).Execute()
 			if err != nil {
@@ -398,5 +408,6 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

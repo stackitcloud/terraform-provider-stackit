@@ -85,6 +85,7 @@ func TestCheckExpiration(t *testing.T) {
 				t.Errorf("CheckExpiration() error = %v, wantErr %v", err, tt.expectedErr)
 				return
 			}
+
 			if hasExpired != tt.expectedExpired {
 				t.Errorf("CheckExpiration() = %v, want %v", hasExpired, tt.expectedExpired)
 			}

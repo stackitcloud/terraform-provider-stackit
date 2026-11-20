@@ -94,6 +94,7 @@ func (r *scfOrganizationManagerResource) ModifyPlan(ctx context.Context, req res
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -203,8 +204,10 @@ func (s *scfOrganizationManagerResource) Schema(_ context.Context, _ resource.Sc
 func (s *scfOrganizationManagerResource) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
+
 	diags := request.Plan.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -221,6 +224,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	ctx = tflog.SetField(ctx, "region", region)
 
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -251,17 +255,21 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	// Set the state with fully populated data.
 	diags = response.State.Set(ctx, model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Scf organization manager created")
 }
 
 func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -285,7 +293,9 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 			response.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading scf organization manager", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -311,8 +321,10 @@ func (s *scfOrganizationManagerResource) Update(ctx context.Context, _ resource.
 func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
+
 	diags := request.State.Get(ctx, &model)
 	response.Diagnostics.Append(diags...)
+
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -334,7 +346,9 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 			tflog.Info(ctx, "Scf organization manager was already deleted")
 			return
 		}
+
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization manager", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -353,6 +367,7 @@ func (s *scfOrganizationManagerResource) ImportState(ctx context.Context, reques
 			"Error importing scf organization manager",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[org_id],[user_id]  Got: %q", request.ID),
 		)
+
 		return
 	}
 
@@ -374,6 +389,7 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -388,6 +404,7 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 	model.Password = types.StringValue(response.Password)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }
 
@@ -395,9 +412,11 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	if response == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	if userId := model.UserId.ValueString(); userId != "" && userId != response.Guid {
 		return fmt.Errorf("user id mismatch in response and model")
 	}
@@ -411,5 +430,6 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	model.UserName = types.StringValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
+
 	return nil
 }

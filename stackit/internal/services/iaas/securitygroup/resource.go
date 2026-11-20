@@ -72,6 +72,7 @@ func (r *securityGroupResource) ModifyPlan(ctx context.Context, req resource.Mod
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -197,6 +198,7 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -243,19 +245,23 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Security group created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	securityGroupId := model.SecurityGroupId.ValueString()
 	if securityGroupId == "" {
 		// Resource not yet created; ID is unknown.
@@ -276,7 +282,9 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -294,6 +302,7 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "security group read")
 }
 
@@ -301,11 +310,13 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
@@ -318,6 +329,7 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -344,11 +356,13 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "security group updated")
 }
 
@@ -356,6 +370,7 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -380,7 +395,9 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -399,6 +416,7 @@ func (r *securityGroupResource) ImportState(ctx context.Context, req resource.Im
 			"Error importing security group",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[security_group_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -415,6 +433,7 @@ func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model
 	if securityGroupResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

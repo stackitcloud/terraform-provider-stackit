@@ -9,6 +9,7 @@ import (
 
 func TestGetEnvStringOrDefault(t *testing.T) {
 	const defaultValue = "default_value"
+
 	tests := []struct {
 		name         string
 		val          types.String

@@ -20,10 +20,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/automation v0.2.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.22.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.25.0
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/git v0.15.0
+	github.com/stackitcloud/stackit-sdk-go/services/git v0.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.15.1
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.14.0
@@ -49,7 +49,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.13.1
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.22.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.19.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.4.0
@@ -107,7 +107,7 @@ require (
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/net v0.59.0 // indirect
-	golang.org/x/sync v0.24.0
+	golang.org/x/sync v0.25.0
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.51.0 // indirect
