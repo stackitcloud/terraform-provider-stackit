@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 
@@ -152,7 +153,6 @@ func TestMapFields(t *testing.T) {
 		ArtifactoryId: types.StringValue("art-1"),
 		Name:          types.StringValue("artifactory-1"),
 		CreateTime:    types.StringValue(testTime.Format(time.RFC3339)),
-		State:         types.StringValue(string(registry.ARTIFACTORYSTATE_ACTIVE)),
 		Url:           types.StringValue("https://art-1.cr.stackit.cloud"),
 		Proxy:         types.ObjectNull(proxyTypes),
 	})
@@ -164,7 +164,6 @@ func TestMapFields(t *testing.T) {
 		ArtifactoryId: types.StringValue("art-2"),
 		Name:          types.StringValue("artifactory-2"),
 		CreateTime:    types.StringValue(testTime.Format(time.RFC3339)),
-		State:         types.StringValue(string(registry.ARTIFACTORYSTATE_ACTIVE)),
 		Url:           types.StringValue("https://art-2.cr.stackit.cloud"),
 		Proxy:         proxyObj,
 	})
@@ -178,10 +177,10 @@ func TestMapFields(t *testing.T) {
 	}
 
 	expectedModel := &DataSourceModel{
-		Id:            types.StringValue("pid,reg"),
-		ProjectId:     types.StringValue("pid"),
-		Region:        types.StringValue("reg"),
-		Artifactories: expectedList,
+		Id:        types.StringValue("pid,reg"),
+		ProjectId: types.StringValue("pid"),
+		Region:    types.StringValue("reg"),
+		Results:   expectedList,
 	}
 
 	if diff := cmp.Diff(model, expectedModel); diff != "" {
@@ -209,12 +208,12 @@ func TestMapFields_EdgeCases(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if model.Artifactories.IsNull() {
-			t.Error("expected artifactories list not to be null")
+		if model.Results.IsNull() {
+			t.Error("expected results list not to be null")
 		}
 
-		if len(model.Artifactories.Elements()) != 0 {
-			t.Errorf("expected 0 elements, got %d", len(model.Artifactories.Elements()))
+		if len(model.Results.Elements()) != 0 {
+			t.Errorf("expected 0 elements, got %d", len(model.Results.Elements()))
 		}
 	})
 
@@ -242,8 +241,8 @@ func TestMapFields_EdgeCases(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(model.Artifactories.Elements()) != 1 {
-			t.Fatalf("expected 1 element, got %d", len(model.Artifactories.Elements()))
+		if len(model.Results.Elements()) != 1 {
+			t.Fatalf("expected 1 element, got %d", len(model.Results.Elements()))
 		}
 	})
 }
@@ -257,17 +256,17 @@ func TestArtifactoriesDataSource_Read(t *testing.T) {
 	dsBase.Schema(ctx, datasource.SchemaRequest{}, &schemaResp)
 
 	configAttrTypes := map[string]attr.Type{
-		"id":            types.StringType,
-		"project_id":    types.StringType,
-		"region":        types.StringType,
-		"artifactories": types.ListType{ElemType: types.ObjectType{AttrTypes: artifactoryItemTypes}},
+		"id":         types.StringType,
+		"project_id": types.StringType,
+		"region":     types.StringType,
+		"results":    types.ListType{ElemType: types.ObjectType{AttrTypes: artifactoryItemTypes}},
 	}
 
 	configModel := DataSourceModel{
-		ProjectId:     types.StringValue("pid"),
-		Region:        types.StringValue("reg"),
-		Id:            types.StringNull(),
-		Artifactories: types.ListNull(types.ObjectType{AttrTypes: artifactoryItemTypes}),
+		ProjectId: types.StringValue("pid"),
+		Region:    types.StringValue("reg"),
+		Id:        types.StringNull(),
+		Results:   types.ListNull(types.ObjectType{AttrTypes: artifactoryItemTypes}),
 	}
 
 	configVal, diags := types.ObjectValueFrom(ctx, configAttrTypes, configModel)
@@ -324,8 +323,68 @@ func TestArtifactoriesDataSource_Read(t *testing.T) {
 			t.Errorf("expected id 'pid,reg', got %q", resultModel.Id.ValueString())
 		}
 
-		if len(resultModel.Artifactories.Elements()) != 1 {
-			t.Errorf("expected 1 artifactory, got %d", len(resultModel.Artifactories.Elements()))
+		if len(resultModel.Results.Elements()) != 1 {
+			t.Errorf("expected 1 artifactory, got %d", len(resultModel.Results.Elements()))
+		}
+	})
+
+	t.Run("read multi-page success", func(t *testing.T) {
+		token := "next-page"
+		callCount := 0
+		mockClient := &registry.DefaultAPIServiceMock{
+			ListArtifactoriesExecuteMock: new(func(_ registry.ApiListArtifactoriesRequest) (*registry.ArtifactoryList, error) {
+				callCount++
+				if callCount == 1 {
+					return &registry.ArtifactoryList{
+						Artifactories: []registry.Artifactory{
+							{Id: "art-1", Name: "art-1", CreateTime: testTime, Url: "url-1"},
+						},
+						NextPageToken: &token,
+					}, nil
+				}
+
+				return &registry.ArtifactoryList{
+					Artifactories: []registry.Artifactory{
+						{Id: "art-2", Name: "art-2", CreateTime: testTime, Url: "url-2"},
+					},
+				}, nil
+			}),
+		}
+		ds := &artifactoriesDataSource{client: mockClient}
+
+		resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+		ds.Read(ctx, req, &resp)
+
+		if resp.Diagnostics.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", resp.Diagnostics)
+		}
+
+		var resultModel DataSourceModel
+
+		diags = resp.State.Get(ctx, &resultModel)
+		if diags.HasError() {
+			t.Fatalf("unexpected diags getting state: %v", diags)
+		}
+
+		if len(resultModel.Results.Elements()) != 2 {
+			t.Errorf("expected 2 artifactories across pages, got %d", len(resultModel.Results.Elements()))
+		}
+	})
+
+	t.Run("read config error", func(t *testing.T) {
+		ds := &artifactoriesDataSource{}
+		invalidReq := datasource.ReadRequest{
+			Config: tfsdk.Config{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+		ds.Read(ctx, invalidReq, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid config")
 		}
 	})
 
@@ -360,4 +419,39 @@ func TestArtifactoriesDataSource_Read(t *testing.T) {
 			t.Error("expected diagnostics on read 404")
 		}
 	})
+}
+
+func TestArtifactoryPageRequest_Methods(t *testing.T) {
+	req := &artifactoryPageRequest{}
+	req = req.PageSize(10)
+	req = req.PageToken("token")
+
+	if req == nil {
+		t.Fatal("expected non-nil request")
+	}
+
+	respNil := &artifactoryPageResponse{resp: nil}
+	if items := respNil.GetItems(); items != nil {
+		t.Errorf("expected nil items, got %v", items)
+	}
+
+	if tok := respNil.GetNextPageToken(); tok != "" {
+		t.Errorf("expected empty token, got %q", tok)
+	}
+
+	token := "tok"
+	respNonNil := &artifactoryPageResponse{
+		resp: &registry.ArtifactoryList{
+			Artifactories: []registry.Artifactory{{Id: "1"}},
+			NextPageToken: &token,
+		},
+	}
+
+	if items := respNonNil.GetItems(); len(items) != 1 {
+		t.Errorf("expected 1 item, got %d", len(items))
+	}
+
+	if tok := respNonNil.GetNextPageToken(); tok != "tok" {
+		t.Errorf("expected 'tok', got %q", tok)
+	}
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/experimental/paginate"
 	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -23,10 +24,10 @@ var (
 )
 
 type DataSourceModel struct {
-	Id                  types.String `tfsdk:"id"`
-	ProjectId           types.String `tfsdk:"project_id"`
-	Region              types.String `tfsdk:"region"`
-	ReplicationAdapters types.List   `tfsdk:"replication_adapters"`
+	Id        types.String `tfsdk:"id"`
+	ProjectId types.String `tfsdk:"project_id"`
+	Region    types.String `tfsdk:"region"`
+	Results   types.List   `tfsdk:"results"`
 }
 
 type replicationAdapterModel struct {
@@ -42,13 +43,13 @@ var replicationAdapterTypes = map[string]attr.Type{
 }
 
 var descriptions = map[string]string{ //nolint:gosec // G101: false positive, no hardcoded credentials, only schema descriptions
-	"id":                                   "Terraform's internal data source ID, structured as `project_id`,`region`.",
-	"project_id":                           "STACKIT project ID to which the replication adapters are associated.",
-	"region":                               "STACKIT region where the replication adapters are located. If not defined, the provider default_region is used.",
-	"replication_adapters":                 "List of supported replication adapters.",
-	"replication_adapters.credential_type": "User-hint for what type of credentials are expected for the replication adapter type.",
-	"replication_adapters.display_name":    "Human-friendly name of the provider the adapter relates to.",
-	"replication_adapters.registry_type":   "Identifies the replication adapter.",
+	"id":                      "Terraform's internal data source ID, structured as `project_id`,`region`.",
+	"project_id":              "STACKIT project ID to which the replication adapters are associated.",
+	"region":                  "STACKIT region where the replication adapters are located. If not defined, the provider default_region is used.",
+	"results":                 "List of supported replication adapters.",
+	"results.credential_type": "User-hint for what type of credentials are expected for the replication adapter type.",
+	"results.display_name":    "Human-friendly name of the provider the adapter relates to.",
+	"results.registry_type":   "Identifies the replication adapter.",
 }
 
 func NewReplicationAdaptersDataSource() datasource.DataSource {
@@ -96,21 +97,21 @@ func (d *replicationAdaptersDataSource) Schema(_ context.Context, _ datasource.S
 				Description: descriptions["region"],
 				Optional:    true,
 			},
-			"replication_adapters": schema.ListNestedAttribute{
-				Description: descriptions["replication_adapters"],
+			"results": schema.ListNestedAttribute{
+				Description: descriptions["results"],
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"credential_type": schema.StringAttribute{
-							Description: descriptions["replication_adapters.credential_type"],
+							Description: descriptions["results.credential_type"],
 							Computed:    true,
 						},
 						"display_name": schema.StringAttribute{
-							Description: descriptions["replication_adapters.display_name"],
+							Description: descriptions["results.display_name"],
 							Computed:    true,
 						},
 						"registry_type": schema.StringAttribute{
-							Description: descriptions["replication_adapters.registry_type"],
+							Description: descriptions["results.registry_type"],
 							Computed:    true,
 						},
 					},
@@ -137,7 +138,9 @@ func (d *replicationAdaptersDataSource) Read(ctx context.Context, req datasource
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	listResp, err := d.client.ListReplicationAdapters(ctx, projectId, region).Execute()
+	adapters, err := paginate.All(&replicationAdapterPageRequest{
+		req: d.client.ListReplicationAdapters(ctx, projectId, region),
+	})
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -155,11 +158,6 @@ func (d *replicationAdaptersDataSource) Read(ctx context.Context, req datasource
 
 	ctx = core.LogResponse(ctx)
 
-	var adapters []registry.ReplicationAdapter
-	if listResp != nil {
-		adapters = listResp.ReplicationAdapters
-	}
-
 	err = mapFields(ctx, adapters, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading replication adapters", fmt.Sprintf("Mapping API response: %v", err))
@@ -170,6 +168,43 @@ func (d *replicationAdaptersDataSource) Read(ctx context.Context, req datasource
 	resp.Diagnostics.Append(diags...)
 
 	tflog.Info(ctx, "Container Registry replication adapters read")
+}
+
+type replicationAdapterPageRequest struct {
+	req registry.ApiListReplicationAdaptersRequest
+}
+
+type replicationAdapterPageResponse struct {
+	resp *registry.ReplicationAdapterList
+}
+
+func (r *replicationAdapterPageRequest) PageSize(_ int32) *replicationAdapterPageRequest {
+	return r
+}
+
+func (r *replicationAdapterPageRequest) PageToken(_ string) *replicationAdapterPageRequest {
+	return r
+}
+
+func (r *replicationAdapterPageRequest) Execute() (*replicationAdapterPageResponse, error) {
+	resp, err := r.req.Execute()
+	return &replicationAdapterPageResponse{resp: resp}, err
+}
+
+func (r *replicationAdapterPageResponse) GetItems() []registry.ReplicationAdapter {
+	if r.resp == nil {
+		return nil
+	}
+
+	return r.resp.GetReplicationAdapters()
+}
+
+func (r *replicationAdapterPageResponse) GetNextPageToken() string {
+	if r.resp == nil {
+		return ""
+	}
+
+	return r.resp.GetNextPageToken()
 }
 
 func mapFields(ctx context.Context, adapters []registry.ReplicationAdapter, model *DataSourceModel, region string) error {
@@ -201,7 +236,7 @@ func mapFields(ctx context.Context, adapters []registry.ReplicationAdapter, mode
 		return fmt.Errorf("mapping replication adapters list: %w", core.DiagsToError(diags))
 	}
 
-	model.ReplicationAdapters = itemsList
+	model.Results = itemsList
 
 	return nil
 }

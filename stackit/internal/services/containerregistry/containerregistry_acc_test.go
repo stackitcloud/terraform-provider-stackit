@@ -88,7 +88,7 @@ data "stackit_containerregistry_artifactories" "this" {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_containerregistry_artifactories.this", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_artifactories.this", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_artifactories.this", "artifactories.#"),
+					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_artifactories.this", "results.#"),
 				),
 			},
 			// Step 4: Import state
@@ -200,7 +200,7 @@ func TestAccContainerRegistryArtifactoriesDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_containerregistry_artifactories.this", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_artifactories.this", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_artifactories.this", "artifactories.#"),
+					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_artifactories.this", "results.#"),
 				),
 			},
 		},
@@ -219,7 +219,7 @@ func TestAccContainerRegistryReplicationAdaptersDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_containerregistry_replication_adapters.this", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_replication_adapters.this", "id"),
-					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_replication_adapters.this", "replication_adapters.#"),
+					resource.TestCheckResourceAttrSet("data.stackit_containerregistry_replication_adapters.this", "results.#"),
 				),
 			},
 		},

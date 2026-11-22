@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/experimental/paginate"
 	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -24,17 +25,16 @@ var (
 )
 
 type DataSourceModel struct {
-	Id            types.String `tfsdk:"id"`
-	ProjectId     types.String `tfsdk:"project_id"`
-	Region        types.String `tfsdk:"region"`
-	Artifactories types.List   `tfsdk:"artifactories"`
+	Id        types.String `tfsdk:"id"`
+	ProjectId types.String `tfsdk:"project_id"`
+	Region    types.String `tfsdk:"region"`
+	Results   types.List   `tfsdk:"results"`
 }
 
 type artifactoryItemModel struct {
 	ArtifactoryId types.String `tfsdk:"artifactory_id"`
 	Name          types.String `tfsdk:"name"`
 	CreateTime    types.String `tfsdk:"create_time"`
-	State         types.String `tfsdk:"state"`
 	Url           types.String `tfsdk:"url"`
 	Proxy         types.Object `tfsdk:"proxy"`
 }
@@ -55,7 +55,6 @@ var artifactoryItemTypes = map[string]attr.Type{
 	"artifactory_id": types.StringType,
 	"name":           types.StringType,
 	"create_time":    types.StringType,
-	"state":          types.StringType,
 	"url":            types.StringType,
 	"proxy":          types.ObjectType{AttrTypes: proxyTypes},
 }
@@ -64,11 +63,10 @@ var descriptions = map[string]string{
 	"id":                  "Terraform's internal data source ID, structured as `project_id`,`region`.",
 	"project_id":          "STACKIT project ID to which the container registry artifactories are associated.",
 	"region":              "STACKIT region where the container registry artifactories are located. If not defined, the provider default_region is used.",
-	"artifactories":       "List of container registry artifactories.",
+	"results":             "List of container registry artifactories.",
 	"artifactory_id":      "The unique identifier of the container registry artifactory.",
 	"name":                "A user-chosen name to distinguish multiple STACKIT artifactories.",
 	"create_time":         "The date and time the creation of the STACKIT artifactory was triggered.",
-	"state":               "The current state of the STACKIT artifactory.",
 	"url":                 "The base URL of the STACKIT artifactory.",
 	"proxy":               "Proxy configuration if this artifactory is created as a proxy-cache for an upstream registry.",
 	"proxy.registry_type": "Which replication adapter to use for this registry.",
@@ -120,10 +118,9 @@ func (d *artifactoriesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
 				Optional:    true,
-				Computed:    true,
 			},
-			"artifactories": schema.ListNestedAttribute{
-				Description: descriptions["artifactories"],
+			"results": schema.ListNestedAttribute{
+				Description: descriptions["results"],
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -137,10 +134,6 @@ func (d *artifactoriesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 						},
 						"create_time": schema.StringAttribute{
 							Description: descriptions["create_time"],
-							Computed:    true,
-						},
-						"state": schema.StringAttribute{
-							Description: descriptions["state"],
 							Computed:    true,
 						},
 						"url": schema.StringAttribute{
@@ -173,6 +166,7 @@ func (d *artifactoriesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 func (d *artifactoriesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -185,42 +179,27 @@ func (d *artifactoriesDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var allArtifactories []registry.Artifactory
+	allArtifactories, err := paginate.All(&artifactoryPageRequest{
+		req: d.client.ListArtifactories(ctx, projectId, region),
+	})
+	if err != nil {
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Error reading artifactories",
+			fmt.Sprintf("Calling API: %v", err),
+			map[int]string{
+				http.StatusNotFound: fmt.Sprintf("Project %q or region %q not found", projectId, region),
+			},
+		)
 
-	apiReq := d.client.ListArtifactories(ctx, projectId, region)
-	for {
-		listResp, err := apiReq.Execute()
-		if err != nil {
-			utils.LogError(
-				ctx,
-				&resp.Diagnostics,
-				err,
-				"Error reading artifactories",
-				fmt.Sprintf("Calling API: %v", err),
-				map[int]string{
-					http.StatusNotFound: fmt.Sprintf("Project %q or region %q not found", projectId, region),
-				},
-			)
-
-			return
-		}
-
-		if listResp == nil {
-			break
-		}
-
-		allArtifactories = append(allArtifactories, listResp.Artifactories...)
-
-		if listResp.NextPageToken == nil || *listResp.NextPageToken == "" {
-			break
-		}
-
-		apiReq = apiReq.NextPageToken(*listResp.NextPageToken)
+		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	err := mapFields(ctx, allArtifactories, &model, region)
+	err = mapFields(ctx, allArtifactories, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading artifactories", fmt.Sprintf("Mapping API response: %v", err))
 		return
@@ -228,7 +207,47 @@ func (d *artifactoriesDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	diags := resp.State.Set(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+
 	tflog.Info(ctx, "Container Registry artifactories read")
+}
+
+type artifactoryPageRequest struct {
+	req registry.ApiListArtifactoriesRequest
+}
+
+type artifactoryPageResponse struct {
+	resp *registry.ArtifactoryList
+}
+
+func (r *artifactoryPageRequest) PageSize(pageSize int32) *artifactoryPageRequest {
+	r.req = r.req.PageSize(pageSize)
+	return r
+}
+
+func (r *artifactoryPageRequest) PageToken(pageToken string) *artifactoryPageRequest {
+	r.req = r.req.NextPageToken(pageToken)
+	return r
+}
+
+func (r *artifactoryPageRequest) Execute() (*artifactoryPageResponse, error) {
+	resp, err := r.req.Execute()
+	return &artifactoryPageResponse{resp: resp}, err
+}
+
+func (r *artifactoryPageResponse) GetItems() []registry.Artifactory {
+	if r.resp == nil {
+		return nil
+	}
+
+	return r.resp.GetArtifactories()
+}
+
+func (r *artifactoryPageResponse) GetNextPageToken() string {
+	if r.resp == nil {
+		return ""
+	}
+
+	return r.resp.GetNextPageToken()
 }
 
 func mapFields(ctx context.Context, artifactories []registry.Artifactory, model *DataSourceModel, region string) error {
@@ -247,7 +266,6 @@ func mapFields(ctx context.Context, artifactories []registry.Artifactory, model 
 			ArtifactoryId: types.StringValue(art.Id),
 			Name:          types.StringValue(art.Name),
 			CreateTime:    types.StringValue(art.CreateTime.Format(time.RFC3339)),
-			State:         types.StringValue(string(art.State)),
 			Url:           types.StringValue(art.Url),
 		}
 
@@ -281,7 +299,7 @@ func mapFields(ctx context.Context, artifactories []registry.Artifactory, model 
 		return fmt.Errorf("mapping artifactories list: %w", core.DiagsToError(diags))
 	}
 
-	model.Artifactories = itemsList
+	model.Results = itemsList
 
 	return nil
 }

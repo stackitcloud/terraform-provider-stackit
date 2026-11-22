@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 
@@ -265,6 +266,23 @@ func TestArtifactoryDataSource_Read(t *testing.T) {
 
 		if resultModel.Name.ValueString() != "my-artifactory" {
 			t.Errorf("expected name 'my-artifactory', got %q", resultModel.Name.ValueString())
+		}
+	})
+
+	t.Run("read config error", func(t *testing.T) {
+		ds := &artifactoryDataSource{}
+		invalidReq := datasource.ReadRequest{
+			Config: tfsdk.Config{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+		ds.Read(ctx, invalidReq, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid config")
 		}
 	})
 

@@ -466,6 +466,23 @@ func TestArtifactoryResource_ModifyPlan(t *testing.T) {
 			t.Errorf("expected adapted region 'eu01', got %q", updatedPlan.Region.ValueString())
 		}
 	})
+
+	t.Run("config get error", func(t *testing.T) {
+		req := resource.ModifyPlanRequest{
+			Config: tfsdk.Config{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		var resp resource.ModifyPlanResponse
+
+		r.ModifyPlan(ctx, req, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid config in ModifyPlan")
+		}
+	})
 }
 
 func TestArtifactoryResource_Metadata(t *testing.T) {
@@ -786,6 +803,16 @@ func TestToPayloads_EdgeCases(t *testing.T) {
 		if s := getAccessSecret(creds, stateCreds, creds, true); s != nil {
 			t.Errorf("expected nil when version unchanged on update, got %v", s)
 		}
+
+		credsNoVersion := &credentialsModel{
+			AccessSecret:          types.StringNull(),
+			AccessSecretWo:        types.StringValue("secret"),
+			AccessSecretWoVersion: types.Int64Null(),
+		}
+
+		if s := getAccessSecret(credsNoVersion, nil, credsNoVersion, false); s != nil {
+			t.Errorf("expected nil when version is null on create, got %v", s)
+		}
 	})
 }
 
@@ -1025,6 +1052,24 @@ func TestArtifactoryResource_Read(t *testing.T) {
 			t.Error("expected diagnostics on read API error")
 		}
 	})
+
+	t.Run("read state get error", func(t *testing.T) {
+		r := &artifactoryResource{}
+		req := resource.ReadRequest{
+			State: tfsdk.State{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		var resp resource.ReadResponse
+
+		r.Read(ctx, req, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid state in Read")
+		}
+	})
 }
 
 func TestArtifactoryResource_Create(t *testing.T) {
@@ -1240,6 +1285,24 @@ func TestArtifactoryResource_Create(t *testing.T) {
 			t.Error("expected error diagnostics on create API failure")
 		}
 	})
+
+	t.Run("create plan get error", func(t *testing.T) {
+		r := &artifactoryResource{}
+		req := resource.CreateRequest{
+			Plan: tfsdk.Plan{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		var resp resource.CreateResponse
+
+		r.Create(ctx, req, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid plan in Create")
+		}
+	})
 }
 
 func TestArtifactoryResource_Update(t *testing.T) {
@@ -1406,6 +1469,24 @@ func TestArtifactoryResource_Update(t *testing.T) {
 			t.Error("expected error diagnostics on update wait error")
 		}
 	})
+
+	t.Run("update plan get error", func(t *testing.T) {
+		r := &artifactoryResource{}
+		req := resource.UpdateRequest{
+			Plan: tfsdk.Plan{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		var resp resource.UpdateResponse
+
+		r.Update(ctx, req, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid plan in Update")
+		}
+	})
 }
 
 func TestArtifactoryResource_Delete(t *testing.T) {
@@ -1544,6 +1625,24 @@ func TestArtifactoryResource_Delete(t *testing.T) {
 
 		if !resp.Diagnostics.HasError() {
 			t.Error("expected diagnostics on delete error")
+		}
+	})
+
+	t.Run("delete state get error", func(t *testing.T) {
+		r := &artifactoryResource{}
+		req := resource.DeleteRequest{
+			State: tfsdk.State{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		var resp resource.DeleteResponse
+
+		r.Delete(ctx, req, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid state in Delete")
 		}
 	})
 }

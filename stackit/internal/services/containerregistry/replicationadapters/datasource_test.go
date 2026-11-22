@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	registry "github.com/stackitcloud/stackit-sdk-go/services/registry/v1api"
 
@@ -97,17 +98,17 @@ func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 	dsBase.Schema(ctx, datasource.SchemaRequest{}, &schemaResp)
 
 	configAttrTypes := map[string]attr.Type{
-		"id":                   types.StringType,
-		"project_id":           types.StringType,
-		"region":               types.StringType,
-		"replication_adapters": types.ListType{ElemType: types.ObjectType{AttrTypes: replicationAdapterTypes}},
+		"id":         types.StringType,
+		"project_id": types.StringType,
+		"region":     types.StringType,
+		"results":    types.ListType{ElemType: types.ObjectType{AttrTypes: replicationAdapterTypes}},
 	}
 
 	configModel := DataSourceModel{
-		ProjectId:           types.StringValue("pid"),
-		Region:              types.StringValue("reg"),
-		Id:                  types.StringNull(),
-		ReplicationAdapters: types.ListNull(types.ObjectType{AttrTypes: replicationAdapterTypes}),
+		ProjectId: types.StringValue("pid"),
+		Region:    types.StringValue("reg"),
+		Id:        types.StringNull(),
+		Results:   types.ListNull(types.ObjectType{AttrTypes: replicationAdapterTypes}),
 	}
 
 	configVal, diags := types.ObjectValueFrom(ctx, configAttrTypes, configModel)
@@ -161,8 +162,8 @@ func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 			t.Errorf("expected id 'pid,reg', got %q", resultModel.Id.ValueString())
 		}
 
-		if len(resultModel.ReplicationAdapters.Elements()) != 1 {
-			t.Errorf("expected 1 replication adapter, got %d", len(resultModel.ReplicationAdapters.Elements()))
+		if len(resultModel.Results.Elements()) != 1 {
+			t.Errorf("expected 1 replication adapter, got %d", len(resultModel.Results.Elements()))
 		}
 	})
 
@@ -179,6 +180,23 @@ func TestReplicationAdaptersDataSource_Read(t *testing.T) {
 
 		if !resp.Diagnostics.HasError() {
 			t.Error("expected diagnostics on read API error")
+		}
+	})
+
+	t.Run("read config error", func(t *testing.T) {
+		ds := &replicationAdaptersDataSource{}
+		invalidReq := datasource.ReadRequest{
+			Config: tfsdk.Config{
+				Schema: schemaResp.Schema,
+				Raw:    tftypes.NewValue(tftypes.String, "invalid"),
+			},
+		}
+
+		resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+		ds.Read(ctx, invalidReq, &resp)
+
+		if !resp.Diagnostics.HasError() {
+			t.Error("expected error on invalid config")
 		}
 	})
 
@@ -256,10 +274,10 @@ func TestMapFields(t *testing.T) {
 	}
 
 	expectedModel := &DataSourceModel{
-		Id:                  types.StringValue("pid,reg"),
-		ProjectId:           types.StringValue("pid"),
-		Region:              types.StringValue("reg"),
-		ReplicationAdapters: expectedList,
+		Id:        types.StringValue("pid,reg"),
+		ProjectId: types.StringValue("pid"),
+		Region:    types.StringValue("reg"),
+		Results:   expectedList,
 	}
 
 	if diff := cmp.Diff(model, expectedModel); diff != "" {
@@ -287,12 +305,47 @@ func TestMapFields_EdgeCases(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if model.ReplicationAdapters.IsNull() {
+		if model.Results.IsNull() {
 			t.Error("expected adapters list not to be null")
 		}
 
-		if len(model.ReplicationAdapters.Elements()) != 0 {
-			t.Errorf("expected 0 elements, got %d", len(model.ReplicationAdapters.Elements()))
+		if len(model.Results.Elements()) != 0 {
+			t.Errorf("expected 0 elements, got %d", len(model.Results.Elements()))
 		}
 	})
+}
+
+func TestReplicationAdapterPageRequest_Methods(t *testing.T) {
+	req := &replicationAdapterPageRequest{}
+	req = req.PageSize(10)
+	req = req.PageToken("token")
+
+	if req == nil {
+		t.Fatal("expected non-nil request")
+	}
+
+	respNil := &replicationAdapterPageResponse{resp: nil}
+	if items := respNil.GetItems(); items != nil {
+		t.Errorf("expected nil items, got %v", items)
+	}
+
+	if tok := respNil.GetNextPageToken(); tok != "" {
+		t.Errorf("expected empty token, got %q", tok)
+	}
+
+	token := "tok"
+	respNonNil := &replicationAdapterPageResponse{
+		resp: &registry.ReplicationAdapterList{
+			ReplicationAdapters: []registry.ReplicationAdapter{{RegistryType: "docker-hub"}},
+			NextPageToken:       &token,
+		},
+	}
+
+	if items := respNonNil.GetItems(); len(items) != 1 {
+		t.Errorf("expected 1 item, got %d", len(items))
+	}
+
+	if tok := respNonNil.GetNextPageToken(); tok != "tok" {
+		t.Errorf("expected 'tok', got %q", tok)
+	}
 }
