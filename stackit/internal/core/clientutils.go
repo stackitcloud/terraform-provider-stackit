@@ -646,7 +646,6 @@ func (f *DefaultClientFactory) newModelExperimentsV1Client() (modelexperiments.D
 
 func (f *DefaultClientFactory) newDremioV1BetaClient() (dremio.DefaultAPI, error) {
 	apiClientConfigOptions := f.defaultConfigOptions(f.CustomEndpoints.DremioCustomEndpoint)
-	apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion("eu01"))
 
 	apiClient, err := dremio.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
