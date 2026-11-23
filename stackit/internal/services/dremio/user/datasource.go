@@ -48,10 +48,6 @@ func (d *userDataSource) Configure(ctx context.Context, req datasource.Configure
 		return
 	}
 
-	if !core.ValidateServiceRegion(ctx, &providerData, "Dremio", &resp.Diagnostics) {
-		return
-	}
-
 	features.CheckExperimentEnabled(ctx, &providerData, features.DremioExperiment, "stackit_dremio_user", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
