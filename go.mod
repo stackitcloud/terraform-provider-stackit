@@ -115,3 +115,6 @@ require (
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+// TODO: remove once a telemetryrouter SDK release containing ResourceLabels is available
+replace github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter => github.com/ozanichkovsky/stackit-sdk-go/services/telemetryrouter v0.0.0-20261120110429-00724e21c450

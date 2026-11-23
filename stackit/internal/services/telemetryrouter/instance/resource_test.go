@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
@@ -38,6 +39,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		CreationTime: types.StringValue(testTime.Format(time.RFC3339)),
 		URI:          types.StringValue("uri"),
 		Status:       types.StringValue("active"),
+		Labels:       types.MapNull(types.StringType),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -141,7 +143,7 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			description: "min values",
 			model:       fixtureModel(),
-			expected:    &telemetryrouter.CreateTelemetryRouterPayload{},
+			expected:    &telemetryrouter.CreateTelemetryRouterPayload{ResourceLabels: &map[string]string{}},
 		},
 		{
 			description: "max values",
@@ -164,8 +166,9 @@ func TestToCreatePayload(t *testing.T) {
 				model.Description = types.StringValue("description")
 			}),
 			expected: &telemetryrouter.CreateTelemetryRouterPayload{
-				DisplayName: "display-name",
-				Description: new("description"),
+				DisplayName:    "display-name",
+				Description:    new("description"),
+				ResourceLabels: &map[string]string{},
 				Filter: &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
 						{
@@ -212,7 +215,7 @@ func TestToUpdatePayload(t *testing.T) {
 		{
 			description: "min values",
 			model:       fixtureModel(),
-			expected:    &telemetryrouter.UpdateTelemetryRouterPayload{},
+			expected:    &telemetryrouter.UpdateTelemetryRouterPayload{ResourceLabels: &map[string]string{}},
 		},
 		{
 			description: "max values",
@@ -235,8 +238,9 @@ func TestToUpdatePayload(t *testing.T) {
 				model.Description = types.StringValue("description")
 			}),
 			expected: &telemetryrouter.UpdateTelemetryRouterPayload{
-				DisplayName: new("display-name"),
-				Description: new("description"),
+				DisplayName:    new("display-name"),
+				Description:    new("description"),
+				ResourceLabels: &map[string]string{},
 				Filter: &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
 						{
@@ -270,5 +274,77 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Payload does not match: %s", diff)
 			}
 		})
+	}
+}
+
+func TestMapFieldsLabels(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *telemetryrouter.TelemetryRouterResponse
+		stateLabels types.Map
+		expected    types.Map
+	}{
+		{
+			description: "labels from response",
+			input: fixtureInstance(func(instance *telemetryrouter.TelemetryRouterResponse) {
+				instance.ResourceLabels = &map[string]string{"key": "value"}
+			}),
+			stateLabels: types.MapNull(types.StringType),
+			expected:    types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+		},
+		{
+			description: "no labels in response, null in state stays null",
+			input:       fixtureInstance(),
+			stateLabels: types.MapNull(types.StringType),
+			expected:    types.MapNull(types.StringType),
+		},
+		{
+			description: "no labels in response, empty map in state stays empty",
+			input:       fixtureInstance(),
+			stateLabels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+			expected:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			state := &Model{
+				ProjectID: types.StringValue("pid"),
+				Labels:    tt.stateLabels,
+			}
+
+			if err := mapFields(context.Background(), tt.input, state, "reg"); err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+
+			if diff := cmp.Diff(state.Labels, tt.expected); diff != "" {
+				t.Fatalf("Labels do not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestPayloadLabels(t *testing.T) {
+	model := fixtureModel(func(model *Model) {
+		model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
+	})
+
+	create, err := toCreatePayload(t.Context(), diag.Diagnostics{}, model)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	update, err := toUpdatePayload(t.Context(), diag.Diagnostics{}, model)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	want := &map[string]string{"key": "value"}
+	for name, got := range map[string]*map[string]string{
+		"create": create.ResourceLabels,
+		"update": update.ResourceLabels,
+	} {
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Fatalf("%s labels do not match: %s", name, diff)
+		}
 	}
 }

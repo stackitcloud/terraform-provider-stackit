@@ -64,6 +64,7 @@ var schemaDescriptions = map[string]string{
 		"The status of the TelemetryRouter instance, possible values: %s",
 		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedTelemetryRouterResponseStatusEnumValues)...),
 	),
+	"labels": "Resource labels as described in the [STACKIT documentation](https://docs.stackit.cloud/platform/cost-and-billing/labels/).",
 }
 
 type Model struct {
@@ -77,6 +78,7 @@ type Model struct {
 	CreationTime types.String `tfsdk:"creation_time"`
 	URI          types.String `tfsdk:"uri"`
 	Status       types.String `tfsdk:"status"`
+	Labels       types.Map    `tfsdk:"labels"`
 }
 
 // Struct corresponding to Model.Filter
@@ -259,6 +261,11 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 						},
 					},
 				},
+			},
+			"labels": schema.MapAttribute{
+				Description: schemaDescriptions["labels"],
+				ElementType: types.StringType,
+				Optional:    true,
 			},
 			"creation_time": schema.StringAttribute{
 				Description: schemaDescriptions["creation_time"],
@@ -516,9 +523,15 @@ func toCreatePayload(ctx context.Context, diags diag.Diagnostics, model *Model) 
 		return nil, fmt.Errorf("missing model")
 	}
 
+	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
+	}
+
 	payload := &telemetryrouter.CreateTelemetryRouterPayload{
-		DisplayName: model.DisplayName.ValueString(),
-		Description: conversion.StringValueToPointer(model.Description),
+		DisplayName:    model.DisplayName.ValueString(),
+		Description:    conversion.StringValueToPointer(model.Description),
+		ResourceLabels: &labels,
 	}
 
 	configFilter, err := toConfigFilter(ctx, diags, model)
@@ -605,6 +618,13 @@ func mapFields(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 		return fmt.Errorf("map filter: %w", err)
 	}
 
+	labels, err := tfutils.MapLabels(ctx, instance.ResourceLabels, model.Labels)
+	if err != nil {
+		return fmt.Errorf("mapping labels: %w", err)
+	}
+
+	model.Labels = labels
+
 	return nil
 }
 
@@ -664,9 +684,15 @@ func toUpdatePayload(ctx context.Context, diags diag.Diagnostics, model *Model) 
 		return nil, fmt.Errorf("missing model")
 	}
 
+	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
+	}
+
 	payload := &telemetryrouter.UpdateTelemetryRouterPayload{
-		DisplayName: conversion.StringValueToPointer(model.DisplayName),
-		Description: conversion.StringValueToPointer(model.Description),
+		DisplayName:    conversion.StringValueToPointer(model.DisplayName),
+		Description:    conversion.StringValueToPointer(model.Description),
+		ResourceLabels: &labels,
 	}
 
 	configFilter, err := toConfigFilter(ctx, diags, model)

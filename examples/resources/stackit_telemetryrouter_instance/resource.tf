@@ -9,6 +9,9 @@ resource "stackit_telemetryrouter_instance" "router2" {
   region       = "eu01"
   display_name = "router-instance"
   description  = "Example description"
+  labels = {
+    "key" = "value"
+  }
   filter = {
     attributes = [
       {

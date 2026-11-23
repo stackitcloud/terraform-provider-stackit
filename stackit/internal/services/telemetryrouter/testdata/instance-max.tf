@@ -8,12 +8,14 @@ variable "filter_level" {}
 variable "filter_matcher" {}
 variable "filter_value0" {}
 variable "filter_value1" {}
+variable "labels" {}
 
 resource "stackit_telemetryrouter_instance" "router" {
   project_id   = var.project_id
   region       = var.region
   display_name = var.display_name
   description  = var.description
+  labels       = var.labels
   filter = {
     attributes = [
       {

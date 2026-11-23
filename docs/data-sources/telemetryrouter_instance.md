@@ -39,6 +39,7 @@ data "stackit_telemetryrouter_instance" "router" {
 - `display_name` (String) The display name of the TelemetryRouter instance
 - `filter` (Attributes) The TelemetryRouter global filter settings (see [below for nested schema](#nestedatt--filter))
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`".
+- `labels` (Map of String) Resource labels as described in the [STACKIT documentation](https://docs.stackit.cloud/platform/cost-and-billing/labels/).
 - `status` (String, Deprecated) The status of the TelemetryRouter instance, possible values: Possible values are: `reconciling`, `active`, `deleting`.
 - `uri` (String) The TelemetryRouter instance's URI
 
