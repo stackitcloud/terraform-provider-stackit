@@ -154,6 +154,7 @@ func (r *customRoleResource) Schema(_ context.Context, _ resource.SchemaRequest,
 // Create creates the resource and sets the initial Terraform state.
 func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -198,6 +199,7 @@ func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequ
 func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -248,6 +250,7 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -294,6 +297,7 @@ func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequ
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *customRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 
@@ -311,7 +315,9 @@ func (r *customRoleResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting custom role", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -383,6 +389,7 @@ func mapGetCustomRoleResponse(ctx context.Context, resp *authorization.GetRoleRe
 	reconciledPermissions := utils.ReconcileStringSlices(modelPermissions, respPermissions)
 
 	var diags diag.Diagnostics
+
 	model.Permissions, diags = types.ListValueFrom(ctx, types.StringType, reconciledPermissions)
 	if diags.HasError() {
 		return fmt.Errorf("mapping permissions: %w", core.DiagsToError(diags))

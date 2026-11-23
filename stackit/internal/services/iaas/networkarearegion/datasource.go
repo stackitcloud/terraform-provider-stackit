@@ -178,5 +178,6 @@ func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.R
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area region read")
 }

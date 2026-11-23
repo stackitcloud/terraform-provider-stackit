@@ -298,6 +298,7 @@ func TestExpectOnlyEphemeralOpen(t *testing.T) {
 				if resp.Error == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
 				}
+
 				if !strings.Contains(resp.Error.Error(), tt.wantErr) {
 					t.Errorf("error %q does not contain %q", resp.Error.Error(), tt.wantErr)
 				}

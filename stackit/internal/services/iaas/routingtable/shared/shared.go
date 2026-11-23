@@ -61,6 +61,7 @@ func GetDatasourceGetAttributes() map[string]schema.Attribute {
 		Description: "Terraform's internal datasource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`\".",
 		Computed:    true,
 	}
+
 	return getAttributes
 }
 
@@ -79,6 +80,7 @@ func GetRouteDataSourceAttributes() map[string]schema.Attribute {
 		Description: "Terraform's internal datasource ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`routing_table_id`,`route_id`\".",
 		Computed:    true,
 	}
+
 	return getAttributes
 }
 
@@ -99,6 +101,7 @@ func GetRoutesDataSourceAttributes() map[string]schema.Attribute {
 		Description: "The datasource region. If not defined, the provider region is used.",
 		Optional:    true,
 	}
+
 	return getAttributes
 }
 
@@ -231,6 +234,7 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaas.RoutingTab
 	if routingTable == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -255,6 +259,7 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaas.RoutingTab
 		createdAtValue := *routingTable.CreatedAt
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	if routingTable.UpdatedAt != nil {
 		updatedAtValue := *routingTable.UpdatedAt
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
@@ -269,5 +274,6 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaas.RoutingTab
 	model.Labels = labels
 	model.CreatedAt = createdAtTF
 	model.UpdatedAt = updatedAtTF
+
 	return nil
 }

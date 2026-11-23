@@ -28,5 +28,6 @@ func EnableProject(ctx context.Context, projectId, region string, client objects
 	if _, err := utils.RetryRequest(ctx, client.EnableService(ctx, projectId, region).Execute, retryConfig); err != nil {
 		return fmt.Errorf("enable object storage project: %w", err)
 	}
+
 	return nil
 }

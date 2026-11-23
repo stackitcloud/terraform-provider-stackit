@@ -119,6 +119,7 @@ func (r *securityGroupRuleResource) ModifyPlan(ctx context.Context, req resource
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -424,6 +425,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -499,20 +501,24 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Security group rule created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
+
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
 	if securityGroupRuleId == "" {
 		// Resource not yet created; ID is unknown.
@@ -534,7 +540,9 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -552,6 +560,7 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "security group rule read")
 }
 
@@ -565,6 +574,7 @@ func (r *securityGroupRuleResource) Update(ctx context.Context, _ resource.Updat
 func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -591,7 +601,9 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group rule", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -610,6 +622,7 @@ func (r *securityGroupRuleResource) ImportState(ctx context.Context, req resourc
 			"Error importing security group rule",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[security_group_id],[security_group_rule_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -627,6 +640,7 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model, regi
 	if securityGroupRuleResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -653,10 +667,12 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model, regi
 	if err != nil {
 		return fmt.Errorf("map icmp_parameters: %w", err)
 	}
+
 	err = mapPortRange(securityGroupRuleResp, model)
 	if err != nil {
 		return fmt.Errorf("map port_range: %w", err)
 	}
+
 	err = mapProtocol(securityGroupRuleResp, model)
 	if err != nil {
 		return fmt.Errorf("map protocol: %w", err)
@@ -684,7 +700,9 @@ func mapIcmpParameters(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) 
 	if diags.HasError() {
 		return fmt.Errorf("create icmpParameters object: %w", core.DiagsToError(diags))
 	}
+
 	m.IcmpParameters = icmpParametersObject
+
 	return nil
 }
 
@@ -707,7 +725,9 @@ func mapPortRange(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error
 	if diags.HasError() {
 		return fmt.Errorf("create portRange object: %w", core.DiagsToError(diags))
 	}
+
 	m.PortRange = portRangeObject
+
 	return nil
 }
 
@@ -731,11 +751,14 @@ func mapProtocol(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error 
 		"name":   protocolNameValue,
 		"number": protocolNumberValue,
 	}
+
 	protocolObject, diags := types.ObjectValue(protocolTypes, protocolValues)
 	if diags.HasError() {
 		return fmt.Errorf("create protocol object: %w", core.DiagsToError(diags))
 	}
+
 	m.Protocol = protocolObject
+
 	return nil
 }
 
@@ -775,6 +798,7 @@ func toIcmpParametersPayload(icmpParameters *icmpParametersModel) (*iaas.ICMPPar
 	if icmpParameters == nil {
 		return nil, nil
 	}
+
 	payloadParams := &iaas.ICMPParameters{}
 
 	payloadParams.Code = icmpParameters.Code.ValueInt64()
@@ -787,6 +811,7 @@ func toPortRangePayload(portRange *portRangeModel) (*iaas.PortRange, error) {
 	if portRange == nil {
 		return nil, nil
 	}
+
 	payloadPortRange := &iaas.PortRange{}
 
 	payloadPortRange.Max = portRange.Max.ValueInt64()
@@ -799,6 +824,7 @@ func toProtocolPayload(protocol *protocolModel) (*iaas.CreateProtocol, error) {
 	if protocol == nil {
 		return nil, nil
 	}
+
 	payloadProtocol := &iaas.CreateProtocol{}
 
 	payloadProtocol.String = conversion.StringValueToPointer(protocol.Name)

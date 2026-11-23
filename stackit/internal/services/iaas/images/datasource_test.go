@@ -86,6 +86,7 @@ func TestMapFields(t *testing.T) {
 			"checksum":      types.ObjectNull(checksumAttrTypes),
 		}),
 	})
+
 	want := DataSourceModel{
 		ID:        types.StringValue("project,eu01"),
 		ProjectID: types.StringValue("project"),

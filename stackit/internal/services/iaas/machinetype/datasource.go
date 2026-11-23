@@ -172,6 +172,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -203,6 +204,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Successfully read machine type")
 }
 
@@ -226,12 +228,15 @@ func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, mod
 	extra := types.MapNull(types.StringType)
 	if len(machineType.ExtraSpecs) > 0 {
 		var diags diag.Diagnostics
+
 		extra, diags = types.MapValueFrom(ctx, types.StringType, machineType.ExtraSpecs)
 		if diags.HasError() {
 			return fmt.Errorf("converting extraspecs: %w", core.DiagsToError(diags))
 		}
 	}
+
 	model.ExtraSpecs = extra
+
 	return nil
 }
 

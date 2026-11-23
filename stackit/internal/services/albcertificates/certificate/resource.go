@@ -73,6 +73,7 @@ func (r *certificatesResource) ModifyPlan(ctx context.Context, req resource.Modi
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -98,6 +99,7 @@ func (r *certificatesResource) ModifyPlan(ctx context.Context, req resource.Modi
 // Configure adds the provider configured client to the resource.
 func (r *certificatesResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -231,6 +233,7 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Certificate", fmt.Sprintf("Calling API for create: %v", errStr))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
@@ -248,6 +251,7 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Certificate", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -259,6 +263,7 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 // Read refreshes the Terraform state with the latest data.
 func (r *certificatesResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -284,8 +289,10 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 				return
 			}
 		}
+
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Certificate", fmt.Sprintf("Calling API: %v", errStr))
+
 		return
 	}
 
@@ -304,6 +311,7 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Certificate read")
 }
 
@@ -315,6 +323,7 @@ func (r *certificatesResource) Update(ctx context.Context, _ resource.UpdateRequ
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *certificatesResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -353,6 +362,7 @@ func (r *certificatesResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing Certificate",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[cert_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -389,6 +399,7 @@ func mapDataFields(cert *certSdk.GetCertificateResponse, m *DataSourceModel, reg
 	if cert == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if m == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -401,6 +412,7 @@ func mapDataFields(cert *certSdk.GetCertificateResponse, m *DataSourceModel, reg
 	} else {
 		return fmt.Errorf("cert ID not present")
 	}
+
 	m.Region = types.StringValue(region)
 	m.CertID = types.StringValue(certID)
 	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), certID)

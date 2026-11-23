@@ -152,6 +152,7 @@ func (r *serviceAccountKeyResource) Schema(_ context.Context, _ resource.SchemaR
 func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the planned values for the resource.
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -200,6 +201,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Service account key created")
 }
 
@@ -207,6 +209,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve the current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -217,6 +220,7 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
+
 	keyId := model.KeyId.ValueString()
 	if keyId == "" {
 		// Resource not yet created; ID is unknown.
@@ -232,7 +236,9 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account key", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -244,6 +250,7 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "key read")
 }
 
@@ -262,6 +269,7 @@ func (r *serviceAccountKeyResource) Update(ctx context.Context, _ resource.Updat
 func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve current state of the resource.
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -284,7 +292,9 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account key", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -307,6 +317,7 @@ func toCreatePayload(model *Model) (*serviceaccount.CreateServiceAccountKeyPaylo
 		if err != nil {
 			return nil, err
 		}
+
 		payload.ValidUntil = &validUntil
 	}
 

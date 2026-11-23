@@ -14,6 +14,7 @@ func TestValidExperiment(t *testing.T) {
 		experiment string
 		diags      *diag.Diagnostics
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -54,6 +55,7 @@ func TestCheckExperimentEnabled(t *testing.T) {
 		resourceType core.ResourceType
 		diags        *diag.Diagnostics
 	}
+
 	tests := []struct {
 		name             string
 		args             args
@@ -134,9 +136,11 @@ func TestCheckExperimentEnabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			CheckExperimentEnabled(tt.args.ctx, tt.args.data, tt.args.experiment, tt.args.resourceName, tt.args.resourceType, tt.args.diags)
+
 			if got := tt.args.diags.HasError(); got != tt.wantDiagsErr {
 				t.Errorf("CheckExperimentEnabled() diags.HasError() = %v, want %v", got, tt.wantDiagsErr)
 			}
+
 			if got := tt.args.diags.WarningsCount() > 0; got != tt.wantDiagsWarning {
 				t.Errorf("CheckExperimentEnabled() diags.WarningsCount() > 0 = %v, want %v", got, tt.wantDiagsErr)
 			}
@@ -153,6 +157,7 @@ func TestCheckExperimentEnabledWithoutError(t *testing.T) {
 		resourceType core.ResourceType
 		diags        *diag.Diagnostics
 	}
+
 	tests := []struct {
 		name             string
 		args             args
@@ -242,9 +247,11 @@ func TestCheckExperimentEnabledWithoutError(t *testing.T) {
 			if got := CheckExperimentEnabledWithoutError(tt.args.ctx, tt.args.data, tt.args.experiment, tt.args.resourceName, tt.args.resourceType, tt.args.diags); got != tt.wantEnabled {
 				t.Errorf("CheckExperimentEnabledWithoutError() = %v, want %v", got, tt.wantEnabled)
 			}
+
 			if got := tt.args.diags.HasError(); got != tt.wantDiagsErr {
 				t.Errorf("CheckExperimentEnabled() diags.HasError() = %v, want %v", got, tt.wantDiagsErr)
 			}
+
 			if got := tt.args.diags.WarningsCount() > 0; got != tt.wantDiagsWarning {
 				t.Errorf("CheckExperimentEnabled() diags.WarningsCount() > 0 = %v, want %v", got, tt.wantDiagsErr)
 			}
