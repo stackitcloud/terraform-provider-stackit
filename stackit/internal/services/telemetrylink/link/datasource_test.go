@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 )
@@ -22,6 +23,7 @@ func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceMod
 		CreateTime:        types.StringValue(testTime.Format(time.RFC3339)),
 		Status:            types.StringValue("active"),
 		Enabled:           types.BoolValue(true),
+		Labels:            types.MapNull(types.StringType),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -86,5 +88,25 @@ func TestMapDataSourceFields(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMapDataSourceFieldsLabels(t *testing.T) {
+	state := &DataSourceModel{
+		ResourceType: types.StringValue("rtp"),
+		ResourceID:   types.StringValue("rid"),
+	}
+
+	input := fixtureLink(func(link *telemetrylink.TelemetryLinkResponse) {
+		link.ResourceLabels = &map[string]string{"key": "value"}
+	})
+
+	if err := mapDataSourceFields(context.Background(), input, state, "reg"); err != nil {
+		t.Fatalf("Should not have failed: %v", err)
+	}
+
+	expected := types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
+	if diff := cmp.Diff(state.Labels, expected); diff != "" {
+		t.Fatalf("Labels do not match: %s", diff)
 	}
 }

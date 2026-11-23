@@ -28,6 +28,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -69,6 +70,7 @@ var schemaDescriptions = map[string]string{
 		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetrylink.AllowedTelemetryLinkResponseStatusEnumValues)...),
 	),
 	"enabled": "Whether the Telemetry Link is enabled or not.",
+	"labels":  "Resource labels as described in the [STACKIT documentation](https://docs.stackit.cloud/platform/cost-and-billing/labels/).",
 }
 
 type Model struct {
@@ -82,6 +84,7 @@ type Model struct {
 	AccessToken          types.String `tfsdk:"access_token"`
 	AccessTokenWo        types.String `tfsdk:"access_token_wo"`
 	AccessTokenWoVersion types.Int64  `tfsdk:"access_token_wo_version"`
+	Labels               types.Map    `tfsdk:"labels"`
 	CreateTime           types.String `tfsdk:"create_time"`
 	Status               types.String `tfsdk:"status"`
 	Enabled              types.Bool   `tfsdk:"enabled"`
@@ -251,6 +254,11 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
 				Computed:           true,
 			},
+			"labels": schema.MapAttribute{
+				Description: schemaDescriptions["labels"],
+				ElementType: types.StringType,
+				Optional:    true,
+			},
 			"enabled": schema.BoolAttribute{
 				Description: schemaDescriptions["enabled"],
 				Optional:    true,
@@ -293,7 +301,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 	var response *telemetrylink.TelemetryLinkResponse
 	switch planModel.ResourceType.ValueString() {
 	case resourceTypeOrganization:
-		payload, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(&planModel, &configModel)
+		payload, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(ctx, &planModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
@@ -332,7 +340,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 		}
 
 	case resourceTypeFolder:
-		payload, err := toCreateOrUpdateFolderTelemetryLinkPayload(&planModel, &configModel)
+		payload, err := toCreateOrUpdateFolderTelemetryLinkPayload(ctx, &planModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
@@ -370,7 +378,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 	case resourceTypeProject:
-		payload, err := toCreateOrUpdateProjectTelemetryLinkPayload(&planModel, &configModel)
+		payload, err := toCreateOrUpdateProjectTelemetryLinkPayload(ctx, &planModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
@@ -541,7 +549,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 	var response *telemetrylink.TelemetryLinkResponse
 	switch resourceType {
 	case resourceTypeOrganization:
-		payload, err := toPartialUpdateOrganizationTelemetryLinkPayload(&planModel, &stateModel, &configModel)
+		payload, err := toPartialUpdateOrganizationTelemetryLinkPayload(ctx, &planModel, &stateModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
@@ -563,7 +571,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			return
 		}
 	case resourceTypeFolder:
-		payload, err := toPartialUpdateFolderTelemetryLinkPayload(&planModel, &stateModel, &configModel)
+		payload, err := toPartialUpdateFolderTelemetryLinkPayload(ctx, &planModel, &stateModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
@@ -585,7 +593,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			return
 		}
 	case resourceTypeProject:
-		payload, err := toPartialUpdateProjectTelemetryLinkPayload(&planModel, &stateModel, &configModel)
+		payload, err := toPartialUpdateProjectTelemetryLinkPayload(ctx, &planModel, &stateModel, &configModel)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
@@ -754,13 +762,18 @@ func getAccessTokenForUpdate(planModel, stateModel, configModel *Model) *string 
 	return nil
 }
 
-func toCreateOrUpdateOrganizationTelemetryLinkPayload(planModel, configModel *Model) (*telemetrylink.CreateOrUpdateOrganizationTelemetryLinkPayload, error) {
+func toCreateOrUpdateOrganizationTelemetryLinkPayload(ctx context.Context, planModel, configModel *Model) (*telemetrylink.CreateOrUpdateOrganizationTelemetryLinkPayload, error) {
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
 
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
+	}
+
+	labels, err := tfutils.LabelsToPayload(ctx, planModel.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
 	}
 
 	return &telemetrylink.CreateOrUpdateOrganizationTelemetryLinkPayload{
@@ -769,16 +782,22 @@ func toCreateOrUpdateOrganizationTelemetryLinkPayload(planModel, configModel *Mo
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
 		Enabled:           planModel.Enabled.ValueBoolPointer(),
+		ResourceLabels:    &labels,
 	}, nil
 }
 
-func toCreateOrUpdateFolderTelemetryLinkPayload(planModel, configModel *Model) (*telemetrylink.CreateOrUpdateFolderTelemetryLinkPayload, error) {
+func toCreateOrUpdateFolderTelemetryLinkPayload(ctx context.Context, planModel, configModel *Model) (*telemetrylink.CreateOrUpdateFolderTelemetryLinkPayload, error) {
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
 
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
+	}
+
+	labels, err := tfutils.LabelsToPayload(ctx, planModel.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
 	}
 
 	return &telemetrylink.CreateOrUpdateFolderTelemetryLinkPayload{
@@ -787,10 +806,11 @@ func toCreateOrUpdateFolderTelemetryLinkPayload(planModel, configModel *Model) (
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
 		Enabled:           planModel.Enabled.ValueBoolPointer(),
+		ResourceLabels:    &labels,
 	}, nil
 }
 
-func toCreateOrUpdateProjectTelemetryLinkPayload(planModel, configModel *Model) (*telemetrylink.CreateOrUpdateProjectTelemetryLinkPayload, error) {
+func toCreateOrUpdateProjectTelemetryLinkPayload(ctx context.Context, planModel, configModel *Model) (*telemetrylink.CreateOrUpdateProjectTelemetryLinkPayload, error) {
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
@@ -799,16 +819,22 @@ func toCreateOrUpdateProjectTelemetryLinkPayload(planModel, configModel *Model) 
 		return nil, fmt.Errorf("missing config model")
 	}
 
+	labels, err := tfutils.LabelsToPayload(ctx, planModel.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
+	}
+
 	return &telemetrylink.CreateOrUpdateProjectTelemetryLinkPayload{
 		DisplayName:       planModel.DisplayName.ValueString(),
 		Description:       planModel.Description.ValueStringPointer(),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueString(),
 		AccessToken:       getAccessTokenForCreate(planModel, configModel),
 		Enabled:           planModel.Enabled.ValueBoolPointer(),
+		ResourceLabels:    &labels,
 	}, nil
 }
 
-func toPartialUpdateOrganizationTelemetryLinkPayload(planModel, stateModel, configModel *Model) (*telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload, error) {
+func toPartialUpdateOrganizationTelemetryLinkPayload(ctx context.Context, planModel, stateModel, configModel *Model) (*telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload, error) {
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
@@ -819,6 +845,11 @@ func toPartialUpdateOrganizationTelemetryLinkPayload(planModel, stateModel, conf
 
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
+	}
+
+	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
 	}
 
 	return &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
@@ -829,10 +860,11 @@ func toPartialUpdateOrganizationTelemetryLinkPayload(planModel, stateModel, conf
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueStringPointer(),
 		AccessToken:       getAccessTokenForUpdate(planModel, stateModel, configModel),
 		Enabled:           planModel.Enabled.ValueBoolPointer(),
+		ResourceLabels:    &labels,
 	}, nil
 }
 
-func toPartialUpdateFolderTelemetryLinkPayload(planModel, stateModel, configModel *Model) (*telemetrylink.PartialUpdateFolderTelemetryLinkPayload, error) {
+func toPartialUpdateFolderTelemetryLinkPayload(ctx context.Context, planModel, stateModel, configModel *Model) (*telemetrylink.PartialUpdateFolderTelemetryLinkPayload, error) {
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
@@ -843,6 +875,11 @@ func toPartialUpdateFolderTelemetryLinkPayload(planModel, stateModel, configMode
 
 	if configModel == nil {
 		return nil, fmt.Errorf("missing config model")
+	}
+
+	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
 	}
 
 	return &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
@@ -851,10 +888,11 @@ func toPartialUpdateFolderTelemetryLinkPayload(planModel, stateModel, configMode
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueStringPointer(),
 		AccessToken:       getAccessTokenForUpdate(planModel, stateModel, configModel),
 		Enabled:           planModel.Enabled.ValueBoolPointer(),
+		ResourceLabels:    &labels,
 	}, nil
 }
 
-func toPartialUpdateProjectTelemetryLinkPayload(planModel, stateModel, configModel *Model) (*telemetrylink.PartialUpdateProjectTelemetryLinkPayload, error) {
+func toPartialUpdateProjectTelemetryLinkPayload(ctx context.Context, planModel, stateModel, configModel *Model) (*telemetrylink.PartialUpdateProjectTelemetryLinkPayload, error) {
 	if planModel == nil {
 		return nil, fmt.Errorf("missing plan model")
 	}
@@ -867,16 +905,22 @@ func toPartialUpdateProjectTelemetryLinkPayload(planModel, stateModel, configMod
 		return nil, fmt.Errorf("missing config model")
 	}
 
+	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
+	if err != nil {
+		return nil, fmt.Errorf("converting labels: %w", err)
+	}
+
 	return &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
 		DisplayName:       planModel.DisplayName.ValueStringPointer(),
 		Description:       new(planModel.Description.ValueString()),
 		TelemetryRouterId: planModel.TelemetryRouterID.ValueStringPointer(),
 		AccessToken:       getAccessTokenForUpdate(planModel, stateModel, configModel),
 		Enabled:           planModel.Enabled.ValueBoolPointer(),
+		ResourceLabels:    &labels,
 	}, nil
 }
 
-func mapFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, model *Model, region string) error {
+func mapFields(ctx context.Context, link *telemetrylink.TelemetryLinkResponse, model *Model, region string) error {
 	if link == nil {
 		return fmt.Errorf("link is nil")
 	}
@@ -893,6 +937,13 @@ func mapFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, mod
 	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
 	model.Status = types.StringValue(string(link.Status))
 	model.Enabled = types.BoolValue(link.Enabled)
+
+	labels, err := tfutils.MapLabels(ctx, link.ResourceLabels, model.Labels)
+	if err != nil {
+		return fmt.Errorf("mapping labels: %w", err)
+	}
+
+	model.Labels = labels
 
 	return nil
 }
