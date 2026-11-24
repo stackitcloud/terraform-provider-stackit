@@ -146,8 +146,8 @@ github.com/mitchellh/reflectwalk v1.0.2 h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zx
 github.com/mitchellh/reflectwalk v1.0.2/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
 github.com/oklog/run v1.2.0/go.mod h1:mgDbKRSwPhJfesJ4PntqFUbKQRZ50NgmZTSPlFA0YFk=
-github.com/ozanichkovsky/stackit-sdk-go/services/telemetrylink v0.0.0-20261119141222-e66ede3147de h1:PS9tIstZioLH2Mp57dV+IhjQPN+k68AELNjnz3itnoo=
-github.com/ozanichkovsky/stackit-sdk-go/services/telemetrylink v0.0.0-20261119141222-e66ede3147de/go.mod h1:t4w8nJ5TQSWTCd49T7DD33pRB7w9MNWzhioGvD2s4L8=
+github.com/ozanichkovsky/stackit-sdk-go/services/telemetrylink v0.0.0-20261124165215-44fa5fe74b97 h1:X1zOOx30vZgBkFUTNW75XfS8Eq2iaz8Xy3rxeZuPyRM=
+github.com/ozanichkovsky/stackit-sdk-go/services/telemetrylink v0.0.0-20261124165215-44fa5fe74b97/go.mod h1:t4w8nJ5TQSWTCd49T7DD33pRB7w9MNWzhioGvD2s4L8=
 github.com/pjbgf/sha1cd v0.3.2 h1:a9wb0bp1oC2TGwStyn0Umc/IGKQnEgF0vVaZ8QF8eo4=
 github.com/pjbgf/sha1cd v0.3.2/go.mod h1:zQWigSxVmsHEZow5qaLtPYxpcKMMQpa09ixqBxuCS6A=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=

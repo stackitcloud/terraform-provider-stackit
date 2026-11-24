@@ -117,4 +117,4 @@ require (
 )
 
 // TODO: remove once a telemetrylink SDK release containing ResourceLabels is available
-replace github.com/stackitcloud/stackit-sdk-go/services/telemetrylink => github.com/ozanichkovsky/stackit-sdk-go/services/telemetrylink v0.0.0-20261119141222-e66ede3147de
+replace github.com/stackitcloud/stackit-sdk-go/services/telemetrylink => github.com/ozanichkovsky/stackit-sdk-go/services/telemetrylink v0.0.0-20261124165215-44fa5fe74b97
