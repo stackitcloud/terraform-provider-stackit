@@ -255,9 +255,7 @@ func mapFields(ctx context.Context, artifactories []registry.Artifactory, model 
 		return fmt.Errorf("model is nil")
 	}
 
-	model.Id = types.StringValue(
-		fmt.Sprintf("%s,%s", model.ProjectId.ValueString(), region),
-	)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region)
 	model.Region = types.StringValue(region)
 
 	items := make([]attr.Value, 0, len(artifactories))

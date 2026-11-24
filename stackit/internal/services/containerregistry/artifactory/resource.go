@@ -373,7 +373,6 @@ func (r *artifactoryResource) Read(ctx context.Context, req resource.ReadRequest
 	if artifactoryId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
-
 		return
 	}
 
@@ -386,12 +385,10 @@ func (r *artifactoryResource) Read(ctx context.Context, req resource.ReadRequest
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
-
 			return
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading artifactory", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 
@@ -510,7 +507,6 @@ func (r *artifactoryResource) Delete(ctx context.Context, req resource.DeleteReq
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting artifactory", fmt.Sprintf("Calling API: %v", err))
-
 		return
 	}
 

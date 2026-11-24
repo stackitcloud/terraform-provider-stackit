@@ -62,10 +62,10 @@ func TestAccContainerRegistryArtifactoryLifecycle(t *testing.T) {
 			// Step 2: Read via Artifactory DataSource
 			{
 				Config: testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin + `
-data "stackit_containerregistry_artifactory" "this" {
-  project_id     = stackit_containerregistry_artifactory.this.project_id
-  artifactory_id = stackit_containerregistry_artifactory.this.artifactory_id
-}`,
+				data "stackit_containerregistry_artifactory" "this" {
+				  project_id     = stackit_containerregistry_artifactory.this.project_id
+				  artifactory_id = stackit_containerregistry_artifactory.this.artifactory_id
+				}`,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(
@@ -81,9 +81,9 @@ data "stackit_containerregistry_artifactory" "this" {
 			// Step 3: Read via Artifactories (plural) DataSource
 			{
 				Config: testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin + `
-data "stackit_containerregistry_artifactories" "this" {
-  project_id = stackit_containerregistry_artifactory.this.project_id
-}`,
+				data "stackit_containerregistry_artifactories" "this" {
+				  project_id = stackit_containerregistry_artifactory.this.project_id
+				}`,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_containerregistry_artifactories.this", "project_id", testutil.ProjectId),
