@@ -389,6 +389,7 @@ func (r *artifactoryResource) Read(ctx context.Context, req resource.ReadRequest
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading artifactory", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -507,6 +508,7 @@ func (r *artifactoryResource) Delete(ctx context.Context, req resource.DeleteReq
 		}
 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting artifactory", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
