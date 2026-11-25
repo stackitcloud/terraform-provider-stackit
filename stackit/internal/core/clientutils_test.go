@@ -996,91 +996,22 @@ func TestDefaultClientFactory_newModelExperimentsV1Client(t *testing.T) {
 }
 
 func TestDefaultClientFactory_newDremioV1BetaClient(t *testing.T) {
-	var testRoundTripper http.RoundTripper = &http.Transport{
-		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
-	}
+	test := testHelper[dremio.DefaultAPI]{
+		factoryMethod: (*DefaultClientFactory).newDremioV1BetaClient,
+		clientInitFunc: func(opts ...config.ConfigurationOption) dremio.DefaultAPI {
+			client, err := dremio.NewAPIClient(opts...)
+			if err != nil {
+				t.Fatalf("error creating client: %v", err)
+			}
 
-	type fields struct {
-		RoundTripper          http.RoundTripper
-		UserAgent             string
-		CustomEndpoints       CustomEndpointConfig
-		ProviderDefaultRegion string
-	}
-
-	tests := []struct {
-		name    string
-		fields  fields
-		want    dremio.DefaultAPI
-		wantErr bool
-	}{
-		{
-			name: "without custom endpoint",
-			fields: fields{
-				RoundTripper: testRoundTripper,
-				UserAgent:    "stackit-terraform-provider/1.2.3",
-				CustomEndpoints: CustomEndpointConfig{
-					DremioCustomEndpoint: "",
-				},
-				ProviderDefaultRegion: "eu01",
-			},
-			want: func() dremio.DefaultAPI {
-				apiClient, err := dremio.NewAPIClient(
-					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
-					config.WithRegion("eu01"),
-				)
-				if err != nil {
-					t.Fatalf("error configuring client: %v", err)
-				}
-
-				return apiClient.DefaultAPI
-			}(),
+			return client.DefaultAPI
 		},
-		{
-			name: "with custom endpoint",
-			fields: fields{
-				RoundTripper: testRoundTripper,
-				UserAgent:    "stackit-terraform-provider/1.2.3",
-				CustomEndpoints: CustomEndpointConfig{
-					DremioCustomEndpoint: testCustomEndpoint,
-				},
-				ProviderDefaultRegion: "eu01",
-			},
-			want: func() dremio.DefaultAPI {
-				apiClient, err := dremio.NewAPIClient(
-					config.WithUserAgent("stackit-terraform-provider/1.2.3"),
-					config.WithEndpoint(testCustomEndpoint),
-					config.WithRegion("eu01"),
-					config.WithCustomAuth(expectedRetryTransport(testRoundTripper)),
-				)
-				if err != nil {
-					t.Fatalf("error configuring client: %v", err)
-				}
-
-				return apiClient.DefaultAPI
-			}(),
+		customEndpointSetter: func(cfg *CustomEndpointConfig) {
+			cfg.DremioCustomEndpoint = testCustomEndpoint
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := &DefaultClientFactory{
-				RoundTripper:          tt.fields.RoundTripper,
-				UserAgent:             tt.fields.UserAgent,
-				CustomEndpoints:       tt.fields.CustomEndpoints,
-				ProviderDefaultRegion: tt.fields.ProviderDefaultRegion,
-			}
 
-			got, err := f.newDremioV1BetaClient()
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("newDremioV1BetaClient() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("newDremioV1BetaClient() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	test.run(t)
 }
 
 func TestDefaultClientFactory_newSecretsManagerV1Client(t *testing.T) {

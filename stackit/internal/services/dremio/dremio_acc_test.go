@@ -52,7 +52,7 @@ var testDremioConfigVarsMin = config.Variables{
 
 var testDremioConfigVarsMax = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
-	"region":     config.StringVariable("eu01"),
+	"region":     config.StringVariable(testutil.Region),
 	// Instance
 	"display_name":                       config.StringVariable("tfAccDremioMaxInstance"),
 	"description":                        config.StringVariable("description"),
@@ -505,7 +505,7 @@ func testAccDremioInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
 
 	client, err := dremioSdk.NewAPIClient(
-		testutil.NewConfigBuilder().BuildClientOptions(testutil.DremioCustomEndpoint, true)...)
+		testutil.NewConfigBuilder().BuildClientOptions(testutil.DremioCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
