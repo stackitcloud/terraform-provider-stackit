@@ -19,6 +19,8 @@ variable "scrapeconfig_name" {}
 variable "scrapeconfig_metrics_path" {}
 variable "scrapeconfig_targets_url" {}
 
+variable "cert_check_source" {}
+
 
 resource "stackit_observability_alertgroup" "alertgroup" {
   project_id  = var.project_id
@@ -71,6 +73,8 @@ resource "stackit_observability_scrapeconfig" "scrapeconfig" {
   targets = [{ urls = [var.scrapeconfig_targets_url] }]
 }
 
-
-
-
+resource "stackit_observability_cert_check" "cert_check" {
+  project_id  = var.project_id
+  instance_id = stackit_observability_instance.instance.instance_id
+  source      = var.cert_check_source
+}
