@@ -20,6 +20,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "mariadb"
+)
+
 //go:embed testfiles/resource-min.tf
 var resourceMinConfig string
 
@@ -62,6 +67,10 @@ func configVarsMaxUpdated() config.Variables {
 
 // minimum configuration
 func TestAccMariaDbResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("Maria test instance name: %s", testutil.ConvertConfigVariable(testConfigVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -213,6 +222,10 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 
 // maximum configuration
 func TestAccMariaDbResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("Maria test instance name: %s", testutil.ConvertConfigVariable(testConfigVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,

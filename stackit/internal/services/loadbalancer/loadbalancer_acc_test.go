@@ -23,6 +23,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "load-balancer"
+)
+
 //go:embed testfiles/resource-min.tf
 var resourceMinConfig string
 
@@ -142,6 +147,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccLoadBalancerResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckLoadBalancerDestroy,
@@ -319,6 +328,10 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 }
 
 func TestAccLoadBalancerResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckLoadBalancerDestroy,

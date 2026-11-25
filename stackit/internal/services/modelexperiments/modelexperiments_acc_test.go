@@ -21,6 +21,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "model-experiments"
+)
+
 //go:embed testdata/resource-min.tf
 var resourceModelexperimentsInstanceMin string
 
@@ -83,6 +88,10 @@ func testModelexperimentsInstanceConfigVarsMaxUpdated() config.Variables {
 }
 
 func TestAccModelExperimentsInstanceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckModelExperimentsInstanceDestroy,
@@ -230,6 +239,10 @@ func TestAccModelExperimentsInstanceMin(t *testing.T) {
 }
 
 func TestAccModelExperimentsInstanceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckModelExperimentsInstanceDestroy,

@@ -23,6 +23,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "server-update"
+)
+
 var (
 	//go:embed testdata/resource-min.tf
 	resourceMinConfig string
@@ -83,6 +88,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccServerUpdateScheduleMinResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeTestCheckFunc(
@@ -195,6 +204,10 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 }
 
 func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy: resource.ComposeTestCheckFunc(

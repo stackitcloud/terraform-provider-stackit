@@ -15,6 +15,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "n/a"
+)
+
 //go:embed testdata/ephemeral_resource.tf
 var ephemeralResourceConfig string
 
@@ -23,6 +28,10 @@ var testConfigVars = config.Variables{
 }
 
 func TestAccEphemeralAccessToken(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_10_0),

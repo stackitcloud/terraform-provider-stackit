@@ -17,6 +17,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "redis"
+)
+
 // Instance resource data
 var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
@@ -94,6 +99,10 @@ func resourceConfigCredential() string {
 }
 
 func TestAccRedisResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckRedisDestroy,

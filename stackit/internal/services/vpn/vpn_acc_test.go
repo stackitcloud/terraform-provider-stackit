@@ -22,6 +22,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "vpn"
+)
+
 //go:embed testdata/gateway-min.tf
 var gatewayMinConfig string
 
@@ -159,6 +164,10 @@ var connectionMaxVarsPskRotated = func() config.Variables {
 }()
 
 func TestAccVpnGatewayResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckVpnResourcesDestroy,
@@ -282,6 +291,10 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 }
 
 func TestAccVpnGatewayResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckVpnResourcesDestroy,
@@ -446,6 +459,10 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 }
 
 func TestAccVpnConnectionResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckVpnResourcesDestroy,
@@ -631,6 +648,10 @@ func TestAccVpnConnectionResourceMin(t *testing.T) {
 }
 
 func TestAccVpnConnectionResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckVpnResourcesDestroy,

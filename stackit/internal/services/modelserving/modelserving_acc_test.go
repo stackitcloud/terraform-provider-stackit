@@ -16,6 +16,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "model-serving"
+)
+
 // Token resource data
 var tokenResource = map[string]string{
 	"project_id":          testutil.ProjectId,
@@ -48,6 +53,10 @@ func inputTokenConfig(name, description string) string {
 }
 
 func TestAccModelServingTokenResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckModelServingTokenDestroy,

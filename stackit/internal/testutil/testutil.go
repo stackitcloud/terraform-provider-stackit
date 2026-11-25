@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"testing"
 	"text/template"
 	"time"
 
@@ -563,4 +564,18 @@ func NewTestUnitV6ProviderFactories(clientFactory core.ClientFactory) map[string
 	return map[string]func() (tfprotov6.ProviderServer, error){
 		"stackit": providerserver.NewProtocol6WithError(stackit.NewTestProvider("test-version", clientFactory)()),
 	}
+}
+
+type AccTestMetadata struct {
+	// ProductId is the API identifier from this overview: https://itdoc.schwarz/spaces/STACKIT/pages/1820820061/Product+Names+and+Categories
+	ProductId string
+}
+
+// PrintMetadata prints test metadata which is parsed for the RRWG dashboard
+func PrintMetadata(t *testing.T, metadata AccTestMetadata) {
+	t.Helper()
+
+	// Note: Do not change the prefix below without talking to the RRWG first!
+	// They are using our tests as part of their test suite and their reports.
+	t.Logf("tf-acc-stackit-product-id=%s", metadata.ProductId)
 }

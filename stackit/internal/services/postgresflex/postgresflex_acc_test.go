@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	productId            = "postgresql-flex"
 	retentionDaysDefault = "32" // default value during deprecation period
 )
 
@@ -166,6 +167,10 @@ var testConfigUserVarsMinUpdated = func() config.Variables {
 }()
 
 func TestAccPostgresFlexInstanceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -322,6 +327,10 @@ func TestAccPostgresFlexInstanceMin(t *testing.T) {
 }
 
 func TestAccPostgresFlexInstanceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -587,6 +596,10 @@ func TestAccPostgresFlexInstanceMax(t *testing.T) {
 }
 
 func TestAccPostgresFlexDatabaseMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -739,6 +752,10 @@ func TestAccPostgresFlexDatabaseMin(t *testing.T) {
 }
 
 func TestAccPostgresFlexUserMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -890,6 +907,10 @@ func TestAccPostgresFlexUserMin(t *testing.T) {
 }
 
 func TestAccPostgresFlexFlavorsDataSource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{

@@ -22,6 +22,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "dns"
+)
+
 var (
 	//go:embed testdata/resource-min.tf
 	resourceMinConfig string
@@ -84,6 +89,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccDnsMinResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDnsDestroy,
@@ -266,6 +275,10 @@ func TestAccDnsMinResource(t *testing.T) {
 }
 
 func TestAccDnsMaxResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDnsDestroy,

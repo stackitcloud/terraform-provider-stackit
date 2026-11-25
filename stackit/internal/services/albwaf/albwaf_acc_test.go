@@ -21,6 +21,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "alb"
+)
+
 var (
 	//go:embed testdata/custom-rule-group-min.tf
 	customRuleGroupMinConfig string
@@ -141,6 +146,10 @@ var testConfigVarsMinUpdated = func() config.Variables {
 }
 
 func TestAccCustomRuleGroupMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -264,6 +273,10 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 }
 
 func TestAccCustomRuleGroupMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -401,6 +414,10 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 	})
 }
 func TestAccManagedRuleSetMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -506,6 +523,10 @@ func testManagedRuleSetMaxModes(modes map[string]map[string]string) config.Varia
 }
 
 func TestAccManagedRuleSetMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	cfg := fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), managedRuleSetMaxConfig)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -576,6 +597,10 @@ func TestAccManagedRuleSetMax(t *testing.T) {
 }
 
 func TestAccWafConfigurationMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -656,6 +681,10 @@ func TestAccWafConfigurationMin(t *testing.T) {
 }
 
 func TestAccWafConfigurationMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,

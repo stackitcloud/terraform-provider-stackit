@@ -22,6 +22,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "mssql-flex"
+)
+
 var (
 	//go:embed testdata/resource-max.tf
 	resourceMaxConfig string
@@ -75,6 +80,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccSQLServerFlexMinResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccChecksqlserverflexDestroy,
@@ -304,6 +313,10 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 }
 
 func TestAccSQLServerFlexMaxResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccChecksqlserverflexDestroy,
@@ -553,6 +566,10 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 }
 
 func TestAccSqlServerFlexFlavorsDatasource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{

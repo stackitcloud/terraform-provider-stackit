@@ -20,6 +20,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "network"
+)
+
 var (
 	// VPC
 
@@ -285,6 +290,10 @@ var testConfigVPCNetworkRangeVarsMaxUpdated = func() config.Variables {
 }()
 
 func TestAccVPCMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -370,6 +379,10 @@ func TestAccVPCMin(t *testing.T) {
 }
 
 func TestAccVPCMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -478,6 +491,10 @@ func TestAccVPCMax(t *testing.T) {
 }
 
 func TestAccVPCRoutingTableMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -618,6 +635,10 @@ func TestAccVPCRoutingTableMin(t *testing.T) {
 }
 
 func TestAccVPCRoutingTableMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -758,6 +779,10 @@ func TestAccVPCRoutingTableMax(t *testing.T) {
 }
 
 func TestAccVPCRegionMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -853,6 +878,10 @@ func TestAccVPCRegionMin(t *testing.T) {
 }
 
 func TestAccVPCRoutingTableStaticRouteMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -1014,6 +1043,10 @@ func TestAccVPCRoutingTableStaticRouteMin(t *testing.T) {
 }
 
 func TestAccVPCRoutingTableStaticRouteMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -1179,6 +1212,10 @@ func TestAccVPCRoutingTableStaticRouteMax(t *testing.T) {
 }
 
 func TestAccVPCNetworkRangeMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,
@@ -1319,6 +1356,10 @@ func TestAccVPCNetworkRangeMin(t *testing.T) {
 }
 
 func TestAccVPCNetworkRangeMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,

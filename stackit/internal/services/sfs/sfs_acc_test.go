@@ -24,6 +24,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "file-storage"
+)
+
 var (
 	//go:embed testdata/export-policy-min.tf
 	resourceExportPolicyMinConfig string
@@ -182,6 +187,10 @@ var testConfigProjectLockVarsMin = config.Variables{
 }
 
 func TestAccExportPolicyMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -278,6 +287,10 @@ func TestAccExportPolicyMin(t *testing.T) {
 }
 
 func TestAccExportPolicyMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -416,6 +429,10 @@ func TestAccExportPolicyMax(t *testing.T) {
 }
 
 func TestAccResourcePoolResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -524,6 +541,10 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 }
 
 func TestAccResourcePoolResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -645,6 +666,10 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 }
 
 func TestAccShareResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -762,6 +787,10 @@ func TestAccShareResourceMin(t *testing.T) {
 }
 
 func TestAccShareResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -891,6 +920,10 @@ func TestAccShareResourceMax(t *testing.T) {
 }
 
 func TestAccProjectLockMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccProjectLockDestroyed,
@@ -945,6 +978,10 @@ func TestAccProjectLockMin(t *testing.T) {
 }
 
 func TestAccSnapshotPolicies(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	projectId := config.StringVariable(testutil.ProjectId)
 	cfg := fmt.Sprintf(`
 %s

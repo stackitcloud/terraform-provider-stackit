@@ -31,6 +31,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "servers"
+)
+
 var (
 	//go:embed testdata/resource-security-group-min.tf
 	resourceSecurityGroupMinConfig string
@@ -706,6 +711,10 @@ var testConfigIaasProject = config.Variables{
 var localFileForIaasImage os.File
 
 func TestAccNetworkMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -829,6 +838,10 @@ func TestAccNetworkMin(t *testing.T) {
 }
 
 func TestAccNetworkMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -1144,6 +1157,10 @@ func TestAccNetworkMax(t *testing.T) {
 }
 
 func TestAccNetworkVpc(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -1252,6 +1269,10 @@ func TestAccNetworkVpc(t *testing.T) {
 }
 
 func TestAccNetworkAreaMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkAreaMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMin["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -1333,6 +1354,10 @@ func TestAccNetworkAreaMin(t *testing.T) {
 }
 
 func TestAccNetworkAreaMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkAreaMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -1419,6 +1444,10 @@ func TestAccNetworkAreaMax(t *testing.T) {
 }
 
 func TestAccNetworkAreaRegionMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkAreaRegionMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaRegionVarsMin["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -1539,6 +1568,10 @@ func TestAccNetworkAreaRegionMin(t *testing.T) {
 }
 
 func TestAccNetworkAreaRegionMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkAreaRegionMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaRegionVarsMax["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -1664,6 +1697,10 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 }
 
 func TestAccNetworkAreaRouteMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkAreaRouteMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMin["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -1772,6 +1809,10 @@ func TestAccNetworkAreaRouteMin(t *testing.T) {
 }
 
 func TestAccNetworkAreaRouteMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkAreaRouteMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkAreaRouteVarsMax["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -1902,6 +1943,10 @@ func TestAccNetworkAreaRouteMax(t *testing.T) {
 }
 
 func TestAccVolumeMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccVolumeMin name: null")
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -2070,6 +2115,10 @@ func TestAccVolumeMin(t *testing.T) {
 }
 
 func TestAccVolumeMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccVolumeMax name: %s", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -2563,6 +2612,10 @@ func TestAccVolumeMax(t *testing.T) {
 }
 
 func TestAccServerMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccServerMin name: %s", testutil.ConvertConfigVariable(testConfigServerVarsMin["server_name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -2735,6 +2788,10 @@ func TestAccServerMin(t *testing.T) {
 }
 
 func TestAccServerMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccServerMax server name: %s", testutil.ConvertConfigVariable(testConfigServerVarsMax["server_name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -3501,6 +3558,10 @@ func TestAccServerMax(t *testing.T) {
 }
 
 func TestAccAffinityGroupMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccAffinityGroupMin name: %s", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -3568,6 +3629,10 @@ func TestAccAffinityGroupMin(t *testing.T) {
 }
 
 func TestAccIaaSSecurityGroupMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccIaaSSecurityGroupMin name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -3714,6 +3779,10 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 }
 
 func TestAccIaaSSecurityGroupMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccIaaSSecurityGroupMax name: %s", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -4075,6 +4144,10 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 }
 
 func TestAccNetworkInterfaceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkInterfaceMin name: %s", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMin["network_name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -4290,6 +4363,10 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 }
 
 func TestAccNetworkInterfaceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccNetworkInterfaceMax name: %s", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["network_name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -4785,6 +4862,10 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 }
 
 func TestAccKeyPairMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccKeyPairMin name: %s", testutil.ConvertConfigVariable(testConfigKeyPairMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -4851,6 +4932,10 @@ func TestAccKeyPairMin(t *testing.T) {
 }
 
 func TestAccKeyPairMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccKeyPairMax name: %s", testutil.ConvertConfigVariable(testConfigKeyPairMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -4928,6 +5013,10 @@ func TestAccKeyPairMax(t *testing.T) {
 }
 
 func TestAccImageMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccImageMin name: %s", testutil.ConvertConfigVariable(testConfigImageVarsMin["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -5022,6 +5111,10 @@ func TestAccImageMin(t *testing.T) {
 }
 
 func TestAccImageMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccImageMax name: %s", testutil.ConvertConfigVariable(testConfigImageVarsMax["name"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -5164,6 +5257,10 @@ func TestAccImageMax(t *testing.T) {
 }
 
 func TestAccImagesDatasource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{{
@@ -5181,6 +5278,10 @@ func TestAccImagesDatasource(t *testing.T) {
 }
 
 func TestAccImageDatasourceSearchVariants(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("TestDataSource Image Variants")
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -5309,6 +5410,10 @@ func TestAccImageDatasourceSearchVariants(t *testing.T) {
 }
 
 func TestAccDatasourcePublicIpRanges(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("TestDataSource STACKIT Public Ip Ranges")
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -5328,6 +5433,10 @@ func TestAccDatasourcePublicIpRanges(t *testing.T) {
 }
 
 func TestAccProject(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -5360,6 +5469,10 @@ func TestAccProject(t *testing.T) {
 }
 
 func TestAccMachineTypesDatasource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{{
@@ -5387,6 +5500,10 @@ func TestAccMachineTypesDatasource(t *testing.T) {
 }
 
 func TestAccMachineType(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccMachineType projectid: %s", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"]))
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -5426,6 +5543,10 @@ func TestAccMachineType(t *testing.T) {
 }
 
 func TestAccRoutingTableMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -5615,6 +5736,10 @@ func TestAccRoutingTableMin(t *testing.T) {
 }
 
 func TestAccRoutingTableMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -5806,6 +5931,10 @@ func TestAccRoutingTableMax(t *testing.T) {
 }
 
 func TestAccRoutingTableRouteMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -6009,6 +6138,10 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 }
 
 func TestAccRoutingTableRouteMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -6216,6 +6349,10 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 }
 
 func TestAccDatasourceIaaSProject(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccDatasourceIaaSProject name: %s", testutil.ConvertConfigVariable(testConfigIaasProject["name"]))
 
 	const (
@@ -6970,6 +7107,10 @@ func validateImportedNameservers(expectedIPs []string) func(states []*terraform.
 }
 
 func TestAccNetworksDataSource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	configVars := config.Variables{
 		"organization_id":      config.StringVariable(testutil.OrganizationId),
 		"project_name":         config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),

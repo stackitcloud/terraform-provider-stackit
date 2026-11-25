@@ -18,6 +18,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "mongodb-flex"
+)
+
 // Instance resource data
 var instanceResource = map[string]string{
 	"project_id":                      testutil.ProjectId,
@@ -107,6 +112,10 @@ func configResources(version, backupSchedule, snapshotRetentionDays string) stri
 }
 
 func TestAccMongoDBFlexFlexResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckMongoDBFlexDestroy,

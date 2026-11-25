@@ -20,6 +20,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "scf"
+)
+
 //go:embed testdata/resource-min.tf
 var resourceMin string
 
@@ -79,6 +84,10 @@ func testScfOrgConfigVarsMaxUpdated() config.Variables {
 }
 
 func TestAccScfOrganizationMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckScfOrganizationDestroy,
@@ -236,6 +245,10 @@ func TestAccScfOrganizationMin(t *testing.T) {
 }
 
 func TestAccScfOrgMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckScfOrganizationDestroy,

@@ -14,12 +14,21 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "secrets-manager"
+)
+
 var (
 	//go:embed testdata/instance.tf
 	instanceConfig string
 )
 
 func TestAccSecretsManagerInstanceRoleBindings(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	variables := config.Variables{
 		"project_id":    config.StringVariable(testutil.ProjectId),
 		"instance_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),

@@ -21,6 +21,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "observability"
+)
+
 //go:embed testdata/resource-min.tf
 var resourceMinConfig string
 
@@ -150,6 +155,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckObservabilityDestroy,
@@ -499,6 +508,10 @@ func TestAccResourceMin(t *testing.T) {
 }
 
 func TestAccResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckObservabilityDestroy,

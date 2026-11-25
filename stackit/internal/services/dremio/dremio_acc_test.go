@@ -27,6 +27,9 @@ var resourceDremioInstanceMin string
 var resourceDremioInstanceMax string
 
 const (
+	// API identifier for RRWG
+	productId = "dremio"
+
 	dremioInstanceResource     = "stackit_dremio_instance.example"
 	dremioInstanceDataResource = "data.stackit_dremio_instance.example"
 )
@@ -98,6 +101,10 @@ func testDremioInstanceConfigVarsMaxUpdated() config.Variables {
 }
 
 func TestAccDremioInstanceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccDremioInstanceDestroy,
@@ -274,6 +281,10 @@ func TestAccDremioInstanceMin(t *testing.T) {
 }
 
 func TestAccDremioInstanceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccDremioInstanceDestroy,

@@ -23,6 +23,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "edge"
+)
+
 var (
 	// Currently the API does not verify if the UUID belongs to a valid plan
 	// This will change with GA, which will require replacing the random UUIDs with real plan UUIDs
@@ -64,6 +69,10 @@ func configVarsMax(displayName, planId, description string, expiration, recreate
 }
 
 func TestAccEdgeCloudInstanceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckEdgeCloudInstanceDestroy,
@@ -132,6 +141,10 @@ func TestAccEdgeCloudInstanceMin(t *testing.T) {
 }
 
 func TestAccEdgeCloudMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	displayName := "mx-in-" + acctest.RandStringFromCharSet(2, acctest.CharSetAlpha)
 	initialVars := configVarsMax(displayName, testPlanId, testDescription, testExpiration, testRecreateBefore)
 	updatedVars := configVarsMax(displayName, testPlanIdUpdated, testDescriptionUpdated, testExpiration, testRecreateBeforeUpdated)
@@ -266,6 +279,10 @@ func TestAccEdgeCloudMax(t *testing.T) {
 }
 
 func TestAccEdgeCloudInstance_validation(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	validDisplayName := "mx-v-" + acctest.RandStringFromCharSet(2, acctest.CharSetAlpha)
 	tooShortDisplayName := "abc"          // Invalid (3 chars)
 	tooLongDisplayName := "too-long-name" // Invalid (13 chars)
@@ -313,6 +330,10 @@ func TestAccEdgeCloudInstance_validation(t *testing.T) {
 }
 
 func TestAccEdgeCloudKubeconfigToken_validation(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	displayName := "mx-v-" + acctest.RandStringFromCharSet(2, acctest.CharSetAlpha)
 	tooShortExpiration := 599
 	tooLongExpiration := 15552001
