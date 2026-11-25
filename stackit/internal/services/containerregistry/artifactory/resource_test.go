@@ -254,6 +254,46 @@ func TestToUpdatePayload(t *testing.T) {
 		}
 	})
 
+	t.Run("toUpdatePayload removing proxy returns error", func(t *testing.T) {
+		proxyObj, diags := types.ObjectValueFrom(ctx, proxyTypes, proxyModel{
+			RegistryType: types.StringValue("docker-hub"),
+			Url:          types.StringValue("https://registry-1.docker.io"),
+			Description:  types.StringNull(),
+			Credentials:  types.ObjectNull(credentialsTypes),
+		})
+		if diags.HasError() {
+			t.Fatalf("unexpected diags: %v", diags)
+		}
+
+		stateModel := &Model{Proxy: proxyObj}
+		planModel := &Model{Proxy: types.ObjectNull(proxyTypes)}
+
+		_, err := toUpdatePayload(ctx, planModel, stateModel, planModel)
+		if err == nil {
+			t.Error("expected error when removing proxy on update")
+		}
+	})
+
+	t.Run("toUpdatePayload adding proxy returns error", func(t *testing.T) {
+		proxyObj, diags := types.ObjectValueFrom(ctx, proxyTypes, proxyModel{
+			RegistryType: types.StringValue("docker-hub"),
+			Url:          types.StringValue("https://registry-1.docker.io"),
+			Description:  types.StringNull(),
+			Credentials:  types.ObjectNull(credentialsTypes),
+		})
+		if diags.HasError() {
+			t.Fatalf("unexpected diags: %v", diags)
+		}
+
+		stateModel := &Model{Proxy: types.ObjectNull(proxyTypes)}
+		planModel := &Model{Proxy: proxyObj}
+
+		_, err := toUpdatePayload(ctx, planModel, stateModel, planModel)
+		if err == nil {
+			t.Error("expected error when adding proxy on update")
+		}
+	})
+
 	t.Run("with proxy and credentials", func(t *testing.T) {
 		credsObj, diags := types.ObjectValueFrom(ctx, credentialsTypes, credentialsModel{
 			AccessKey:    types.StringValue("updated-user"),

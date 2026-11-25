@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -216,6 +217,17 @@ func (r *artifactoryResource) Schema(_ context.Context, _ resource.SchemaRequest
 			"proxy": schema.SingleNestedAttribute{
 				Description: descriptions["proxy"],
 				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplaceIf(
+						func(_ context.Context, req planmodifier.ObjectRequest, resp *objectplanmodifier.RequiresReplaceIfFuncResponse) {
+							if req.StateValue.IsNull() != req.PlanValue.IsNull() {
+								resp.RequiresReplace = true
+							}
+						},
+						"If the proxy configuration is added or removed, the artifactory must be replaced.",
+						"If the proxy configuration is added or removed, the artifactory must be replaced.",
+					),
+				},
 				Attributes: map[string]schema.Attribute{
 					"registry_type": schema.StringAttribute{
 						Description: descriptions["proxy.registry_type"],
@@ -599,6 +611,14 @@ func toCreatePayload(ctx context.Context, model, configModel *Model) (*registry.
 func toUpdatePayload(ctx context.Context, model, stateModel, configModel *Model) (*registry.PatchArtifactoryPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model input is nil")
+	}
+
+	if stateModel != nil && !tfutils.IsUndefined(stateModel.Proxy) && tfutils.IsUndefined(model.Proxy) {
+		return nil, fmt.Errorf("proxy configuration cannot be removed; artifactory must be replaced")
+	}
+
+	if stateModel != nil && tfutils.IsUndefined(stateModel.Proxy) && !tfutils.IsUndefined(model.Proxy) {
+		return nil, fmt.Errorf("proxy configuration cannot be added to an existing non-proxy artifactory; artifactory must be replaced")
 	}
 
 	payload := registry.NewPatchArtifactoryPayload()
