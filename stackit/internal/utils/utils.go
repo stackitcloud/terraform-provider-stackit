@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	// TODO RUH
 	SKEServiceId              = "cloud.stackit.ske"
 	ModelServingServiceId     = "cloud.stackit.model-serving"
 	EdgecloudServiceId        = "cloud.stackit.edge-cloud"
