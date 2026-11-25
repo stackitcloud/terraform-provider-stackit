@@ -146,8 +146,6 @@ github.com/mitchellh/reflectwalk v1.0.2 h1:G2LzWKi524PWgd3mLHV8Y5k7s6XUvT0Gef6zx
 github.com/mitchellh/reflectwalk v1.0.2/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
 github.com/oklog/run v1.2.0/go.mod h1:mgDbKRSwPhJfesJ4PntqFUbKQRZ50NgmZTSPlFA0YFk=
-github.com/ozanichkovsky/stackit-sdk-go/services/telemetryrouter v0.0.0-20261120110429-00724e21c450 h1:BdAES2GTwDt269sY2eZM+YC9hH9eAfzSQZ9Wmj3v9eU=
-github.com/ozanichkovsky/stackit-sdk-go/services/telemetryrouter v0.0.0-20261120110429-00724e21c450/go.mod h1:e457u40HTJAVzw9YFP7Ri90otkJlgDqIphiDD5AZISI=
 github.com/pjbgf/sha1cd v0.3.2 h1:a9wb0bp1oC2TGwStyn0Umc/IGKQnEgF0vVaZ8QF8eo4=
 github.com/pjbgf/sha1cd v0.3.2/go.mod h1:zQWigSxVmsHEZow5qaLtPYxpcKMMQpa09ixqBxuCS6A=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
@@ -235,6 +233,8 @@ github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.20.0 h1:dHsxhHt
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.20.0/go.mod h1:chULz8M6OKvzWEMVH/3DWKDb1UQab87O1KLJfWV0Vp4=
 github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0 h1:glsamuWGVTwzBk3yoWYmq8gDcDkJncepHRn/tDwSwjA=
 github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0/go.mod h1:JyuStufMDibWblEo4wPOrh3B02aMgIUEhDF7YK5WGas=
+github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.7.0 h1:dky5GDANFoZXiGQeeFxoQwMOkxkgWtx+TGyyXCr2bHM=
+github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.7.0/go.mod h1:e457u40HTJAVzw9YFP7Ri90otkJlgDqIphiDD5AZISI=
 github.com/stackitcloud/stackit-sdk-go/services/valkey v0.4.0 h1:75iJs+mZPnrGSlSoTZtKYYCyNqtqgx6JVChwJokcKVg=
 github.com/stackitcloud/stackit-sdk-go/services/valkey v0.4.0/go.mod h1:0crDO5v97ulHjVZVoFR2gJ4FCpEQeXGdM+V+AlZ6M6E=
 github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.3 h1:rtY3Pdup5W3ZNQFiNo6STnoKKxpfM4YWjMbaps3OZb4=

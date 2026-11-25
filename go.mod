@@ -51,7 +51,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.22.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.6.0
-	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.6.1
+	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/valkey v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.3
 	github.com/teambition/rrule-go v1.8.2
@@ -115,6 +115,3 @@ require (
 	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-// TODO: remove once a telemetryrouter SDK release containing ResourceLabels is available
-replace github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter => github.com/ozanichkovsky/stackit-sdk-go/services/telemetryrouter v0.0.0-20261120110429-00724e21c450
