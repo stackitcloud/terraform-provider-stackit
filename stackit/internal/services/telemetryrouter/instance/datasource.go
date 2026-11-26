@@ -125,6 +125,11 @@ func (d *telemetryRouterInstanceDataSource) Schema(_ context.Context, _ datasour
 					},
 				},
 			},
+			"labels": schema.MapAttribute{
+				Description: schemaDescriptions["labels"],
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 			"creation_time": schema.StringAttribute{
 				Description: schemaDescriptions["creation_time"],
 				Computed:    true,

@@ -24,6 +24,9 @@ resource "stackit_telemetryrouter_instance" "router2" {
   region       = "eu01"
   display_name = "router-instance"
   description  = "Example description"
+  labels = {
+    "key" = "value"
+  }
   filter = {
     attributes = [
       {
@@ -55,6 +58,7 @@ resource "stackit_telemetryrouter_instance" "router2" {
 
 - `description` (String) The description of the TelemetryRouter instance
 - `filter` (Attributes) The TelemetryRouter global filter settings (see [below for nested schema](#nestedatt--filter))
+- `labels` (Map of String) Resource labels as described in the [STACKIT documentation](https://docs.stackit.cloud/platform/cost-and-billing/labels/).
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only

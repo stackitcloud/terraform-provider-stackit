@@ -59,6 +59,11 @@ func testConfigVarsMinUpdated() config.Variables {
 	return newVars
 }
 
+const (
+	labelValueMax     = "tf-acc-label"
+	labelValueUpdated = "tf-acc-label-updated"
+)
+
 var testConfigVarsMax = config.Variables{
 	"project_id":     config.StringVariable(testutil.ProjectId),
 	"region":         config.StringVariable(testutil.Region),
@@ -69,6 +74,7 @@ var testConfigVarsMax = config.Variables{
 	"filter_matcher": config.StringVariable("="),
 	"filter_value0":  config.StringVariable("value1"),
 	"filter_value1":  config.StringVariable("value2"),
+	"labels":         config.MapVariable(map[string]config.Variable{"acc-test": config.StringVariable(labelValueMax)}),
 }
 
 func testConfigVarsMaxUpdated() config.Variables {
@@ -81,6 +87,15 @@ func testConfigVarsMaxUpdated() config.Variables {
 	newVars["filter_matcher"] = config.StringVariable("!=")
 	newVars["filter_value0"] = config.StringVariable("value3")
 	newVars["filter_value1"] = config.StringVariable("value4")
+	newVars["labels"] = config.MapVariable(map[string]config.Variable{"acc-test": config.StringVariable(labelValueUpdated)})
+
+	return newVars
+}
+
+// testConfigVarsMaxLabelsRemoved sets an empty labels map so that the previously set label gets removed.
+func testConfigVarsMaxLabelsRemoved() config.Variables {
+	newVars := testConfigVarsMaxUpdated()
+	newVars["labels"] = config.MapVariable(map[string]config.Variable{})
 
 	return newVars
 }
@@ -321,6 +336,8 @@ func TestAccTelemetryRouterInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigVarsMax["filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigVarsMax["filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigVarsMax["filter_value1"])),
+					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "labels.acc-test", labelValueMax),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "instance_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "creation_time"),
@@ -392,6 +409,11 @@ func TestAccTelemetryRouterInstanceMax(t *testing.T) {
 						"stackit_telemetryrouter_instance.router", "filter.attributes.0.value.1",
 						"data.stackit_telemetryrouter_instance.router", "filter.attributes.0.value.1",
 					),
+					resource.TestCheckResourceAttr("data.stackit_telemetryrouter_instance.router", "labels.%", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_telemetryrouter_instance.router", "labels.acc-test",
+						"data.stackit_telemetryrouter_instance.router", "labels.acc-test",
+					),
 				),
 			},
 			// Import
@@ -428,11 +450,22 @@ func TestAccTelemetryRouterInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["filter_value1"])),
+					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "labels.acc-test", labelValueUpdated),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "instance_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "creation_time"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "uri"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_instance.router", "status"),
+				),
+			},
+			// Remove labels - an empty labels map must clear the existing label
+			{
+				ConfigVariables: testConfigVarsMaxLabelsRemoved(),
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + instanceMax,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "labels.%", "0"),
+					resource.TestCheckResourceAttr("stackit_telemetryrouter_instance.router", "display_name", testutil.ConvertConfigVariable(testConfigVarsMaxLabelsRemoved()["display_name"])),
 				),
 			},
 			// Deletion handled by framework
