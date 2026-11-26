@@ -70,6 +70,7 @@ func TestMapFields(t *testing.T) {
 				instance.DisplayName = "display-name"
 				instance.Description = new("description")
 				instance.Uri = "query-url"
+				instance.ResourceLabels = &map[string]string{"key": "value"}
 				instance.Filter = &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
 						{
@@ -99,6 +100,17 @@ func TestMapFields(t *testing.T) {
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
 				model.URI = types.StringValue("query-url")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
+			}),
+		},
+		{
+			description: "empty labels in state stay empty",
+			input: fixtureInstance(func(instance *telemetryrouter.TelemetryRouterResponse) {
+				instance.DisplayName = "display-name"
+			}),
+			expected: fixtureModel(func(model *Model) {
+				model.DisplayName = types.StringValue("display-name")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
 			}),
 		},
 		{
@@ -112,6 +124,7 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				ProjectID: tt.expected.ProjectID,
 				Region:    tt.expected.Region,
+				Labels:    tt.expected.Labels,
 			}
 
 			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
@@ -164,11 +177,12 @@ func TestToCreatePayload(t *testing.T) {
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
 			}),
 			expected: &telemetryrouter.CreateTelemetryRouterPayload{
 				DisplayName:    "display-name",
 				Description:    new("description"),
-				ResourceLabels: &map[string]string{},
+				ResourceLabels: &map[string]string{"key": "value"},
 				Filter: &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
 						{
@@ -236,11 +250,12 @@ func TestToUpdatePayload(t *testing.T) {
 				model.Filter = fltr
 				model.DisplayName = types.StringValue("display-name")
 				model.Description = types.StringValue("description")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
 			}),
 			expected: &telemetryrouter.UpdateTelemetryRouterPayload{
 				DisplayName:    new("display-name"),
 				Description:    new("description"),
-				ResourceLabels: &map[string]string{},
+				ResourceLabels: &map[string]string{"key": "value"},
 				Filter: &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
 						{
@@ -274,77 +289,5 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Payload does not match: %s", diff)
 			}
 		})
-	}
-}
-
-func TestMapFieldsLabels(t *testing.T) {
-	tests := []struct {
-		description string
-		input       *telemetryrouter.TelemetryRouterResponse
-		stateLabels types.Map
-		expected    types.Map
-	}{
-		{
-			description: "labels from response",
-			input: fixtureInstance(func(instance *telemetryrouter.TelemetryRouterResponse) {
-				instance.ResourceLabels = &map[string]string{"key": "value"}
-			}),
-			stateLabels: types.MapNull(types.StringType),
-			expected:    types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-		},
-		{
-			description: "no labels in response, null in state stays null",
-			input:       fixtureInstance(),
-			stateLabels: types.MapNull(types.StringType),
-			expected:    types.MapNull(types.StringType),
-		},
-		{
-			description: "no labels in response, empty map in state stays empty",
-			input:       fixtureInstance(),
-			stateLabels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
-			expected:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			state := &Model{
-				ProjectID: types.StringValue("pid"),
-				Labels:    tt.stateLabels,
-			}
-
-			if err := mapFields(context.Background(), tt.input, state, "reg"); err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
-
-			if diff := cmp.Diff(state.Labels, tt.expected); diff != "" {
-				t.Fatalf("Labels do not match: %s", diff)
-			}
-		})
-	}
-}
-
-func TestPayloadLabels(t *testing.T) {
-	model := fixtureModel(func(model *Model) {
-		model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
-	})
-
-	create, err := toCreatePayload(t.Context(), diag.Diagnostics{}, model)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	update, err := toUpdatePayload(t.Context(), diag.Diagnostics{}, model)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	want := &map[string]string{"key": "value"}
-	for name, got := range map[string]*map[string]string{
-		"create": create.ResourceLabels,
-		"update": update.ResourceLabels,
-	} {
-		if diff := cmp.Diff(got, want); diff != "" {
-			t.Fatalf("%s labels do not match: %s", name, diff)
-		}
 	}
 }
