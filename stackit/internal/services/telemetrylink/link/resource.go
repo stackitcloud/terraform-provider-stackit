@@ -28,7 +28,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -847,7 +846,7 @@ func toPartialUpdateOrganizationTelemetryLinkPayload(ctx context.Context, planMo
 		return nil, fmt.Errorf("missing config model")
 	}
 
-	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
+	labels, err := tfutils.LabelsToNullableValuePayload(ctx, planModel.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting labels: %w", err)
 	}
@@ -877,7 +876,7 @@ func toPartialUpdateFolderTelemetryLinkPayload(ctx context.Context, planModel, s
 		return nil, fmt.Errorf("missing config model")
 	}
 
-	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
+	labels, err := tfutils.LabelsToNullableValuePayload(ctx, planModel.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting labels: %w", err)
 	}
@@ -905,7 +904,7 @@ func toPartialUpdateProjectTelemetryLinkPayload(ctx context.Context, planModel, 
 		return nil, fmt.Errorf("missing config model")
 	}
 
-	labels, err := conversion.ToLabelsMapPartialUpdatePayload(ctx, stateModel.Labels, planModel.Labels)
+	labels, err := tfutils.LabelsToNullableValuePayload(ctx, planModel.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting labels: %w", err)
 	}

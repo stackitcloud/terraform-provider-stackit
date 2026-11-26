@@ -51,11 +51,13 @@ func TestMapDataSourceFields(t *testing.T) {
 				link.DisplayName = "display-name"
 				link.AccessToken = new("access-token")
 				link.TelemetryRouterId = "tlmr-id"
+				link.ResourceLabels = &map[string]string{"key": "value"}
 			}),
 			expected: fixtureDataSourceModel(func(model *DataSourceModel) {
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
 				model.TelemetryRouterID = types.StringValue("tlmr-id")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
 			}),
 		},
 		{
@@ -88,25 +90,5 @@ func TestMapDataSourceFields(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestMapDataSourceFieldsLabels(t *testing.T) {
-	state := &DataSourceModel{
-		ResourceType: types.StringValue("rtp"),
-		ResourceID:   types.StringValue("rid"),
-	}
-
-	input := fixtureLink(func(link *telemetrylink.TelemetryLinkResponse) {
-		link.ResourceLabels = &map[string]string{"key": "value"}
-	})
-
-	if err := mapDataSourceFields(context.Background(), input, state, "reg"); err != nil {
-		t.Fatalf("Should not have failed: %v", err)
-	}
-
-	expected := types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
-	if diff := cmp.Diff(state.Labels, expected); diff != "" {
-		t.Fatalf("Labels do not match: %s", diff)
 	}
 }

@@ -335,8 +335,6 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
 			},
-			// Remove labels - an empty labels map must delete
-			// the existing label via the null value in the partial update payload.
 			{
 				ConfigVariables: testConfigVarsMaxLabelsRemoved(),
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
