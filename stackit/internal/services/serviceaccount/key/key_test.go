@@ -20,6 +20,7 @@ import (
 func TestServiceAccountKeyReadNonAPIError(t *testing.T) {
 	projectId := uuid.NewString()
 	keyId := uuid.NewString()
+
 	const email = "sa@sa.stackit.cloud"
 
 	keyJSON := fmt.Sprintf(`{
@@ -34,6 +35,7 @@ func TestServiceAccountKeyReadNonAPIError(t *testing.T) {
 	}`, time.Now().UTC().Format(time.RFC3339), email, keyId, keyId)
 
 	var dropConnection atomic.Bool
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -46,14 +48,18 @@ func TestServiceAccountKeyReadNonAPIError(t *testing.T) {
 					t.Errorf("response writer does not support hijacking")
 					return
 				}
+
 				conn, _, err := hijacker.Hijack()
 				if err != nil {
 					t.Errorf("hijacking connection: %v", err)
 					return
 				}
+
 				_ = conn.Close()
+
 				return
 			}
+
 			w.Header().Set("content-type", "application/json")
 			_, _ = w.Write([]byte(keyJSON))
 		case http.MethodDelete:
