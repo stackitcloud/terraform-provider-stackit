@@ -145,6 +145,7 @@ type schedulesDatasourceItemModel struct {
 // Read refreshes the Terraform state with the latest data.
 func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model schedulesDataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -173,6 +174,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -191,6 +193,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Server backup schedules read")
 }
 
@@ -198,11 +201,13 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 	if schedules == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
 	tflog.Debug(ctx, "response", map[string]any{"schedules": schedules})
+
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 
@@ -216,10 +221,12 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 			Rrule:            types.StringValue(schedule.Rrule),
 			Enabled:          types.BoolValue(schedule.Enabled),
 		}
+
 		ids, diags := types.ListValueFrom(ctx, types.StringType, schedule.BackupProperties.VolumeIds)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 		}
+
 		scheduleState.BackupProperties = &scheduleBackupPropertiesModel{
 			BackupName:      types.StringValue(schedule.BackupProperties.Name),
 			RetentionPeriod: types.Int32Value(schedule.BackupProperties.RetentionPeriod),
@@ -227,5 +234,6 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 		}
 		model.Items = append(model.Items, scheduleState)
 	}
+
 	return nil
 }

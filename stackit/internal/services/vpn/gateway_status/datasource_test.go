@@ -60,6 +60,7 @@ func fixtureInput(mods ...func(m *vpn.GatewayStatusResponse)) *vpn.GatewayStatus
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -98,6 +99,7 @@ func fixtureModel(mods ...func(m *Model)) *Model {
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -174,6 +176,7 @@ func TestMapDatasourceFields(t *testing.T) {
 			if err := mapFields(ctx, tt.input, tt.state, tt.region); (err == nil) != tt.isValid {
 				t.Errorf("unexpected error: %s", err)
 			}
+
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -228,10 +231,12 @@ func TestMapTunnels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
 			tfTunnels, err := mapTunnels(ctx, tt.input)
 			if (err == nil) != tt.isValid {
 				t.Errorf("unexpected error: %s", err)
 			}
+
 			if tt.isValid {
 				if !reflect.DeepEqual(tfTunnels, tt.expected) {
 					t.Errorf("ParseProviderData() got = %v, want %v", tfTunnels, tt.expected)

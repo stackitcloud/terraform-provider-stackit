@@ -17,11 +17,14 @@ import (
 func TestSfsResourcePoolSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
+
 	const (
 		region = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -72,6 +75,7 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -93,11 +97,14 @@ func TestSfsShareSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
 	resourcePoolId := uuid.NewString()
+
 	const (
 		region = "eu01"
 	)
+
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "%s"
@@ -147,6 +154,7 @@ resource "stackit_sfs_share" "example" {
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}
+
 								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
@@ -169,8 +177,10 @@ resource "stackit_sfs_share" "example" {
 // those tests slow and flaky.
 func TestSfsResourcePoolCreateTimeout(t *testing.T) {
 	projectId := uuid.NewString()
+
 	s := testutil.NewMockServer(t)
 	defer s.Server.Close()
+
 	tfConfig := fmt.Sprintf(`
 provider "stackit" {
 	default_region = "eu01"

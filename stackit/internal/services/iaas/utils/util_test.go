@@ -2,6 +2,8 @@ package utils
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -10,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 )
 
@@ -18,6 +21,7 @@ func TestMapLabels(t *testing.T) {
 		responseLabels map[string]any
 		currentLabels  types.Map
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -82,11 +86,13 @@ func TestMapLabels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
 			got, err := MapLabels(ctx, tt.args.responseLabels, tt.args.currentLabels)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapLabels() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MapLabels() got = %v, want %v", got, tt.want)
 			}
@@ -96,6 +102,7 @@ func TestMapLabels(t *testing.T) {
 
 func TestReadXRequestId(t *testing.T) {
 	ctx := context.Background()
+
 	tests := []struct {
 		name    string
 		ctx     context.Context
@@ -163,8 +170,65 @@ func TestReadXRequestId(t *testing.T) {
 				t.Errorf("ReadXRequestId() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if got != tt.want {
 				t.Errorf("ReadXRequestId() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsNetworkAreaRegionNotFound(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "non-API error",
+			err:  errors.New("connection reset"),
+			want: false,
+		},
+		{
+			name: "404",
+			err:  oapierror.NewErrorWithBody(http.StatusNotFound, "Not Found", []byte(`{"code":404,"msg":"resource not found: area"}`), nil),
+			want: true,
+		},
+		{
+			name: "404 wrapped",
+			err:  fmt.Errorf("waiting: %w", oapierror.NewError(http.StatusNotFound, "Not Found")),
+			want: true,
+		},
+		{
+			name: "400 region not enabled",
+			err:  oapierror.NewErrorWithBody(http.StatusBadRequest, "Bad Request", []byte(`{"code":400,"msg":"region not enabled"}`), nil),
+			want: true,
+		},
+		{
+			name: "400 other reason",
+			err:  oapierror.NewErrorWithBody(http.StatusBadRequest, "Bad Request", []byte(`{"code":400,"msg":"invalid prefix"}`), nil),
+			want: false,
+		},
+		{
+			name: "403",
+			err:  oapierror.NewError(http.StatusForbidden, "Forbidden"),
+			want: false,
+		},
+		{
+			name: "500",
+			err:  oapierror.NewError(http.StatusInternalServerError, "Internal Server Error"),
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsNetworkAreaRegionNotFound(tt.err); got != tt.want {
+				t.Errorf("IsNetworkAreaRegionNotFound() = %v, want %v", got, tt.want)
 			}
 		})
 	}

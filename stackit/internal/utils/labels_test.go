@@ -15,6 +15,7 @@ func TestMapLabels(t *testing.T) {
 		currentLabels  types.Map
 		responseLabels *map[string]string
 	}
+
 	tests := []struct {
 		name           string
 		input          args
@@ -70,9 +71,11 @@ func TestMapLabels(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expectedOutput)
 				if diff != "" {
@@ -119,9 +122,11 @@ func TestLabelsToPayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expectedOutput)
 				if diff != "" {

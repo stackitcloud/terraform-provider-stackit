@@ -49,6 +49,7 @@ func (r *policiesDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 func (r *policiesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -179,6 +180,7 @@ type schedule struct {
 
 func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -205,6 +207,7 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 		tflog.Warn(ctx, fmt.Sprintf(`%s | %s`, title, content))
 		resp.Diagnostics.AddWarning(title, content)
 	}
+
 	policies, err := listRequest.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &diags, "Error listing snapshot policies", fmt.Sprintf("Calling API: %v", err))
@@ -224,6 +227,7 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS snapshot policies read")
 }
 
@@ -231,6 +235,7 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 	if resp == nil || resp.SnapshotPolicies == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -244,6 +249,7 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 		if respPolicy.CreatedAt != nil {
 			createdAt = types.StringValue(respPolicy.CreatedAt.String())
 		}
+
 		modelPolicy := policy{
 			ID:        types.StringPointerValue(respPolicy.Id),
 			Name:      types.StringPointerValue(respPolicy.Name),
@@ -256,6 +262,7 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 			if respPolicy.CreatedAt != nil {
 				scheduleCreatedAt = types.StringValue(respSchedule.CreatedAt.String())
 			}
+
 			modelSchedule := schedule{
 				ID:              types.StringPointerValue(respSchedule.Id),
 				Name:            types.StringPointerValue(respSchedule.Name),
@@ -267,7 +274,9 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 			}
 			modelPolicy.SnapshotSchedules = append(modelPolicy.SnapshotSchedules, modelSchedule)
 		}
+
 		model.Items = append(model.Items, modelPolicy)
 	}
+
 	return nil
 }

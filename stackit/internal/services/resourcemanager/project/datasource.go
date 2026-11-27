@@ -135,6 +135,7 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 // Read refreshes the Terraform state with the latest data.
 func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -156,6 +157,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// set project identifier. If projectId is provided, it takes precedence over containerId
 	var identifier = containerId
+
 	identifierType := "Container"
 	if projectId != "" {
 		identifier = projectId
@@ -175,6 +177,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -191,5 +194,6 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Resource Manager project read")
 }

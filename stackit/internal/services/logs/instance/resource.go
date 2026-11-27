@@ -94,9 +94,11 @@ func (r *logsInstanceResource) Configure(ctx context.Context, req resource.Confi
 
 func (r *logsInstanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -216,6 +218,7 @@ func (r *logsInstanceResource) Schema(_ context.Context, _ resource.SchemaReques
 
 func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -237,6 +240,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	regionId := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "region", regionId)
+
 	createResp, err := r.client.CreateLogsInstance(ctx, projectId, regionId).CreateLogsInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Calling API: %v", err))
@@ -249,6 +253,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", "Create API response: Incomplete response (id missing)")
 		return
 	}
+
 	instanceId := createResp.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -271,16 +276,19 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Logs instance created")
 }
 
 func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -291,6 +299,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 
 	projectID := model.ProjectID.ValueString()
 	region := model.Region.ValueString()
+
 	instanceID := model.InstanceID.ValueString()
 	if instanceID == "" {
 		// Resource not yet created; ID is unknown.
@@ -305,14 +314,18 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	instanceResponse, err := r.client.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading logs instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, instanceResponse, &model)
@@ -320,11 +333,13 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading logs instance", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Logs Instance read", map[string]any{
 		"instance_id": instanceID,
 	})
@@ -332,6 +347,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 
 func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -373,6 +389,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Logs Instance updated", map[string]any{
 		"instance_id": instanceID,
 	})
@@ -380,6 +397,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 
 func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -402,7 +420,9 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs Instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -445,8 +465,10 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		var acl []string
+
 		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
 		diagnostics.Append(aclDiags...)
+
 		if !aclDiags.HasError() {
 			payload.Acl = acl
 		}
@@ -459,9 +481,11 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	if instance == nil {
 		return fmt.Errorf("instance is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
+
 	var instanceID string
 	if model.InstanceID.ValueString() != "" {
 		instanceID = model.InstanceID.ValueString()
@@ -472,6 +496,7 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	}
 
 	aclList := types.ListNull(types.StringType)
+
 	var diags diag.Diagnostics
 	if len(instance.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, instance.Acl)
@@ -510,8 +535,10 @@ func toUpdatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
 		var acl []string
+
 		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
 		diagnostics.Append(aclDiags...)
+
 		if !aclDiags.HasError() {
 			payload.Acl = acl
 		}

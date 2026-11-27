@@ -18,7 +18,31 @@ resource "stackit_cdn_distribution" "example_distribution" {
     optimizer = {
       enabled = true
     }
+
+    cache_config = {
+      cache_key_headers            = ["Accept-Language"]
+      query_string_vary_enabled    = true
+      query_string_vary_parameters = ["page", "sort"]
+    }
   }
+}
+
+# Logs instance used as the OTLP destination for the CDN distribution below.
+# See https://docs.stackit.cloud/stackit/en/logs-service for setup details.
+resource "stackit_logs_instance" "logs" {
+  project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  region         = "eu01"
+  display_name   = "cdn-logs-example"
+  retention_days = 30
+}
+
+# Access token the CDN uses to authenticate when pushing logs to the instance.
+resource "stackit_logs_access_token" "logs_token" {
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id  = stackit_logs_instance.logs.instance_id
+  region       = "eu01"
+  display_name = "cdn-logs-token-example"
+  permissions  = ["read", "write"]
 }
 
 resource "stackit_cdn_distribution" "example_bucket_distribution" {
@@ -104,5 +128,17 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       disabled_rule_ids = ["@builtin/crs/request/942151"]
       log_only_rule_ids = ["@builtin/crs/response/954120"]
     }
+
+    log_sink = {
+      # ingest_otlp_url is returned without the protocol prefix, so prepend "https://".
+      push_url = "https://${stackit_logs_instance.logs.ingest_otlp_url}"
+      type     = "otlp"
+      credentials = {
+        type             = "bearer"
+        token_wo         = stackit_logs_access_token.logs_token.access_token
+        token_wo_version = 1
+      }
+    }
   }
 }
+

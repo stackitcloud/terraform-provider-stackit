@@ -123,6 +123,7 @@ func (d *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 // Read refreshes the Terraform state with the latest data.
 func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -153,6 +154,7 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -171,5 +173,6 @@ func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "LogMe credential read")
 }

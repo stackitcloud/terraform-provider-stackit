@@ -136,6 +136,7 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 // Read refreshes the Terraform state with the latest data.
 func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -166,6 +167,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -184,6 +186,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MongoDB Flex user read")
 }
 
@@ -191,9 +194,11 @@ func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourc
 	if userResp == nil || userResp.Item == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
+
 	user := userResp.Item
 
 	var userId string
@@ -204,6 +209,7 @@ func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourc
 	} else {
 		return fmt.Errorf("user id not present")
 	}
+
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
 	model.Username = types.StringPointerValue(user.Username)
@@ -216,13 +222,17 @@ func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourc
 		for _, role := range user.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
+
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
 			return fmt.Errorf("mapping roles: %w", core.DiagsToError(diags))
 		}
+
 		model.Roles = rolesSet
 	}
+
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
+
 	return nil
 }

@@ -88,6 +88,7 @@ func (r *runnerResource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -261,10 +262,12 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner created")
 }
 
@@ -294,7 +297,9 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -312,6 +317,7 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner read")
 }
 
@@ -366,12 +372,14 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -395,7 +403,9 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 			tflog.Info(ctx, "Intake runner already deleted")
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -420,6 +430,7 @@ func (r *runnerResource) ImportState(ctx context.Context, req resource.ImportSta
 			"Error importing intake runner",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[runner_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -437,6 +448,7 @@ func mapFields(ctx context.Context, runnerResp *intake.IntakeRunnerResponse, mod
 	if runnerResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -508,6 +520,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*intake.UpdateIntakeRun
 	if err != nil {
 		return nil, err
 	}
+
 	payload.Labels = labels
 
 	return payload, nil

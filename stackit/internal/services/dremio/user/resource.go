@@ -96,6 +96,7 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -247,6 +248,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -272,6 +274,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	if userResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -299,10 +302,12 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio user", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio user created")
 }
 
@@ -318,6 +323,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -326,12 +332,14 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+
 	userId := model.UserId.ValueString()
 	if userId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -343,7 +351,9 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio user", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -359,6 +369,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio user read")
 }
 
@@ -368,6 +379,7 @@ func (r *userResource) Update(_ context.Context, _ resource.UpdateRequest, _ *re
 
 func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model UserModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -380,6 +392,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -400,6 +413,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Dremio user", fmt.Sprintf("Calling API: %v", err))
 	}
 
@@ -421,6 +435,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 			"Error importing dremio user",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id] got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -438,6 +453,7 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model, region stri
 	if userResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

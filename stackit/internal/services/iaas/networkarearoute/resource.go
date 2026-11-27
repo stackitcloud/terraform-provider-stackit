@@ -93,6 +93,7 @@ func (r *networkAreaRouteResource) ModifyPlan(ctx context.Context, req resource.
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -118,6 +119,7 @@ func (r *networkAreaRouteResource) ModifyPlan(ctx context.Context, req resource.
 // Configure adds the provider configured client to the resource.
 func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -329,6 +331,7 @@ func (r *networkAreaRouteResource) UpgradeState(_ context.Context) map[int64]res
 func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ModelV1
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -389,20 +392,24 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area route created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model ModelV1
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
 	if networkAreaRouteId == "" {
 		// Resource not yet created; ID is unknown.
@@ -424,7 +431,9 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route.", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -442,6 +451,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area route read")
 }
 
@@ -449,6 +459,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ModelV1
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -474,7 +485,9 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area route", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -487,6 +500,7 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model ModelV1
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -507,6 +521,7 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 
 	// Retrieve values from state
 	var stateModel ModelV1
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -533,11 +548,13 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Network area route updated")
 }
 
@@ -551,6 +568,7 @@ func (r *networkAreaRouteResource) ImportState(ctx context.Context, req resource
 			"Error importing network area route",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id],[region],[network_area_route_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -568,6 +586,7 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *ModelV1
 	if networkAreaRoute == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -668,6 +687,7 @@ func toNextHopPayload(model *ModelV1) (*iaas.RouteNexthop, error) {
 	case "ipv6":
 		return new(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", model.NextHop.Value.ValueString()))), nil
 	}
+
 	return nil, fmt.Errorf("unknown nexthop type: %s", model.NextHop.Type.ValueString())
 }
 
@@ -684,6 +704,7 @@ func toDestinationPayload(model *ModelV1) (*iaas.RouteDestination, error) {
 	case "cidrv6":
 		return new(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", model.Destination.Value.ValueString()))), nil
 	}
+
 	return nil, fmt.Errorf("unknown destination type: %s", model.Destination.Type.ValueString())
 }
 
