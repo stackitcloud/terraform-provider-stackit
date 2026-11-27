@@ -46,6 +46,8 @@ variable "ahc_unhealthy_threshold" {}
 variable "ahc_http_ok_status_200" {}
 variable "ahc_http_ok_status_201" {}
 variable "ahc_http_path" {}
+variable "ahc_http_tls_enabled" {}
+variable "ahc_http_tls_skip" {}
 variable "tls_config_enabled" {}
 variable "tls_config_skip" {}
 variable "tls_config_custom_ca" {}
@@ -170,6 +172,10 @@ resource "stackit_application_load_balancer" "loadbalancer" {
         http_health_checks = {
           ok_status = [var.ahc_http_ok_status_200, var.ahc_http_ok_status_201]
           path      = var.ahc_http_path
+          tls_config = {
+            enabled                     = var.ahc_http_tls_enabled
+            skip_certificate_validation = var.ahc_http_tls_skip
+          }
         }
       }
       target_port = var.target_pool_port_1

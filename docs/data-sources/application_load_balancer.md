@@ -244,6 +244,17 @@ Read-Only:
 
 - `ok_status` (Set of String) List of HTTP status codes that indicate a healthy response.
 - `path` (String) Path to send the health check request to.
+- `tls_config` (Attributes) Configuration for TLS of the HTTP health checks. (see [below for nested schema](#nestedatt--target_pools--active_health_check--http_health_checks--tls_config))
+
+<a id="nestedatt--target_pools--active_health_check--http_health_checks--tls_config"></a>
+### Nested Schema for `target_pools.active_health_check.http_health_checks.tls_config`
+
+Read-Only:
+
+- `custom_ca` (String) Custom Certificate Authority (CA) trusted for the HTTP health check requests.
+- `enabled` (Boolean) Whether TLS is enabled for the HTTP health check requests.
+- `skip_certificate_validation` (Boolean) Whether certificate validation is bypassed for the HTTP health check requests.
+
 
 
 
