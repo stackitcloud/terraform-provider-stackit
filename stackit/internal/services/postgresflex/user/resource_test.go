@@ -18,7 +18,9 @@ func TestMapFieldsCreate(t *testing.T) {
 		userId     = 123
 		userIdStr  = "123"
 	)
+
 	var id = fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, instanceId, userIdStr)
+
 	tests := []struct {
 		description    string
 		createUserResp *postgresflex.CreateUserResponse
@@ -164,13 +166,16 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId:        tt.expected.InstanceId,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
+
 			err := mapFieldsCreate(tt.createUserResp, tt.userResp, tt.instanceResp, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -183,6 +188,7 @@ func TestMapFieldsCreate(t *testing.T) {
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
+
 	tests := []struct {
 		description  string
 		userResp     *postgresflex.GetUserResponse
@@ -302,13 +308,16 @@ func TestMapFields(t *testing.T) {
 				UserId:            tt.expected.UserId,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
+
 			err := mapFields(tt.userResp, tt.instanceResp, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -392,9 +401,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -476,9 +487,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {

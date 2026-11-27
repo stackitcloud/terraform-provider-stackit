@@ -352,6 +352,7 @@ func (r *applicationLoadBalancerResource) ModifyPlan(ctx context.Context, req re
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1234,6 +1235,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1245,6 +1247,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 // Read refreshes the Terraform state with the latest data.
 func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1270,8 +1273,10 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 				return
 			}
 		}
+
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Application Load Balancer", fmt.Sprintf("Calling API: %v", errStr))
+
 		return
 	}
 
@@ -1290,6 +1295,7 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Application Load Balancer read")
 }
 
@@ -1297,6 +1303,7 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1314,11 +1321,13 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 
 	// get version (computed field) for update call via state
 	var state Model
+
 	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	model.Version = state.Version
 
 	// Generate API request body from model
@@ -1364,6 +1373,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -1387,8 +1397,10 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Calling API for delete: %v", errStr))
+
 		return
 	}
 
@@ -1413,6 +1425,7 @@ func (r *applicationLoadBalancerResource) ImportState(ctx context.Context, req r
 			"Error importing Application Load Balancer",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[name]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -1432,18 +1445,22 @@ func toCreatePayload(ctx context.Context, model *Model) (*albSdk.CreateLoadBalan
 	if err != nil {
 		return nil, fmt.Errorf("converting labels: %w", err)
 	}
+
 	listenersPayload, err := toListenersPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting listeners: %w", err)
 	}
+
 	networksPayload, err := toNetworksPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting networks: %w", err)
 	}
+
 	optionsPayload, err := toOptionsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting options: %w", err)
 	}
+
 	targetPoolsPayload, err := toTargetPoolsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting target_pools: %w", err)
@@ -1466,12 +1483,14 @@ func toLabelPayload(ctx context.Context, model *Model) (*map[string]string, erro
 	if utils.IsUndefined(model.Labels) {
 		return nil, nil
 	}
+
 	var payload map[string]string
 	// Unpack types.Map -> map[string]string
 	diags := model.Labels.ElementsAs(ctx, &payload, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
 	}
+
 	return &payload, nil
 }
 
@@ -1481,6 +1500,7 @@ func toListenersPayload(ctx context.Context, model *Model) ([]albSdk.Listener, e
 	}
 
 	var listenersModel []listener
+
 	diags := model.Listeners.ElementsAs(ctx, &listenersModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting listeners: %w", core.DiagsToError(diags))
@@ -1489,14 +1509,17 @@ func toListenersPayload(ctx context.Context, model *Model) ([]albSdk.Listener, e
 	var payload []albSdk.Listener
 	for i := range listenersModel {
 		listenerModel := listenersModel[i]
+
 		httpPayload, err := toHttpPayload(ctx, &listenerModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting http payload: %w", err)
 		}
+
 		httpsPayload, err := toHttpsPayload(ctx, &listenerModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting https payload: %w", err)
 		}
+
 		payload = append(payload, albSdk.Listener{
 			Http:          httpPayload,
 			Https:         httpsPayload,
@@ -1516,6 +1539,7 @@ func toHttpPayload(ctx context.Context, listenerModel *listener) (*albSdk.Protoc
 	}
 
 	httpModel := httpALB{}
+
 	diags := listenerModel.Http.As(ctx, &httpModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting http: %w", core.DiagsToError(diags))
@@ -1529,6 +1553,7 @@ func toHttpPayload(ctx context.Context, listenerModel *listener) (*albSdk.Protoc
 	payload := albSdk.ProtocolOptionsHTTP{
 		Hosts: hostsPayload,
 	}
+
 	return &payload, nil
 }
 
@@ -1538,6 +1563,7 @@ func toHostsPayload(ctx context.Context, httpModel *httpALB) ([]albSdk.HostConfi
 	}
 
 	var hostsModel []hostConfig
+
 	diags := httpModel.Hosts.ElementsAs(ctx, &hostsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting hosts: %w", core.DiagsToError(diags))
@@ -1549,15 +1575,18 @@ func toHostsPayload(ctx context.Context, httpModel *httpALB) ([]albSdk.HostConfi
 		if utils.IsUndefined(hostModel.Host) {
 			return nil, fmt.Errorf("no hosts specified")
 		}
+
 		rulesPayload, err := toRulesPayload(ctx, &hostModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting host payload: %w", err)
 		}
+
 		payload = append(payload, albSdk.HostConfig{
 			Host:  conversion.StringValueToPointer(hostModel.Host),
 			Rules: rulesPayload,
 		})
 	}
+
 	return payload, nil
 }
 
@@ -1567,6 +1596,7 @@ func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) ([]albSdk.
 	}
 
 	var rulesModel []rule
+
 	diags := hostConfigModel.Rules.ElementsAs(ctx, &rulesModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting rules: %w", core.DiagsToError(diags))
@@ -1575,22 +1605,27 @@ func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) ([]albSdk.
 	var payload []albSdk.Rule
 	for i := range rulesModel {
 		ruleModel := rulesModel[i]
+
 		cookiePersistencePayload, err := toCookiePersistencePayload(ctx, &ruleModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting rule payload: %w", err)
 		}
+
 		headersPayload, err := toHeadersPayload(ctx, &ruleModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting rule payload: %w", err)
 		}
+
 		pathPayload, err := toPathPayload(ctx, &ruleModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting rule payload: %w", err)
 		}
+
 		queryParametersPayload, err := toQueryParametersPayload(ctx, &ruleModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting rule payload: %w", err)
 		}
+
 		payload = append(payload, albSdk.Rule{
 			CookiePersistence: cookiePersistencePayload,
 			Headers:           headersPayload,
@@ -1600,6 +1635,7 @@ func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) ([]albSdk.
 			WebSocket:         conversion.BoolValueToPointer(ruleModel.WebSocket),
 		})
 	}
+
 	return payload, nil
 }
 
@@ -1609,6 +1645,7 @@ func toQueryParametersPayload(ctx context.Context, ruleModel *rule) ([]albSdk.Qu
 	}
 
 	var queryParametersModel []queryParameter
+
 	diags := ruleModel.QueryParameters.ElementsAs(ctx, &queryParametersModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting query parameter payload: %w", core.DiagsToError(diags))
@@ -1632,6 +1669,7 @@ func toPathPayload(ctx context.Context, ruleModel *rule) (*albSdk.Path, error) {
 	}
 
 	pathModel := pathALB{}
+
 	diags := ruleModel.Path.As(ctx, &pathModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting path: %w", core.DiagsToError(diags))
@@ -1640,6 +1678,7 @@ func toPathPayload(ctx context.Context, ruleModel *rule) (*albSdk.Path, error) {
 	if utils.IsUndefined(pathModel.Exact) && utils.IsUndefined(pathModel.Prefix) {
 		return nil, fmt.Errorf("no path prefix or exact match specified")
 	}
+
 	if !utils.IsUndefined(pathModel.Exact) && !utils.IsUndefined(pathModel.Prefix) {
 		return nil, fmt.Errorf("path prefix and exact match are specified at the same time")
 	}
@@ -1648,6 +1687,7 @@ func toPathPayload(ctx context.Context, ruleModel *rule) (*albSdk.Path, error) {
 		ExactMatch: conversion.StringValueToPointer(pathModel.Exact),
 		Prefix:     conversion.StringValueToPointer(pathModel.Prefix),
 	}
+
 	return &payload, nil
 }
 
@@ -1657,6 +1697,7 @@ func toCookiePersistencePayload(ctx context.Context, ruleModel *rule) (*albSdk.C
 	}
 
 	cookieModel := cookiePersistence{}
+
 	diags := ruleModel.CookiePersistence.As(ctx, &cookieModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting cookie persistence config: %w", core.DiagsToError(diags))
@@ -1676,6 +1717,7 @@ func toHeadersPayload(ctx context.Context, ruleModel *rule) ([]albSdk.HttpHeader
 	}
 
 	var headersModel []headers
+
 	diags := ruleModel.Headers.ElementsAs(ctx, &headersModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting headers: %w", core.DiagsToError(diags))
@@ -1689,6 +1731,7 @@ func toHeadersPayload(ctx context.Context, ruleModel *rule) ([]albSdk.HttpHeader
 			Name:       conversion.StringValueToPointer(header.Name),
 		})
 	}
+
 	return payload, nil
 }
 
@@ -1698,6 +1741,7 @@ func toHttpsPayload(ctx context.Context, listenerModel *listener) (*albSdk.Proto
 	}
 
 	httpsModel := https{}
+
 	diags := listenerModel.Https.As(ctx, &httpsModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting https: %w", core.DiagsToError(diags))
@@ -1721,10 +1765,12 @@ func toCertificateConfigPayload(ctx context.Context, https *https) (*albSdk.Cert
 	}
 
 	certificateConfigModel := certificateConfig{}
+
 	diags := https.CertificateConfig.As(ctx, &certificateConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting certificate config: %w", core.DiagsToError(diags))
 	}
+
 	if utils.IsUndefined(certificateConfigModel.CertificateConfigIDs) {
 		return nil, fmt.Errorf("converting certificate config: no certificate config found")
 	}
@@ -1737,6 +1783,7 @@ func toCertificateConfigPayload(ctx context.Context, https *https) (*albSdk.Cert
 	payload := albSdk.CertificateConfig{
 		CertificateIds: certificateConfigSet,
 	}
+
 	return &payload, nil
 }
 
@@ -1746,6 +1793,7 @@ func toNetworksPayload(ctx context.Context, model *Model) ([]albSdk.Network, err
 	}
 
 	var networksModel []network
+
 	diags := model.Networks.ElementsAs(ctx, &networksModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting networks: %w", core.DiagsToError(diags))
@@ -1769,6 +1817,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 	}
 
 	optionsModel := options{}
+
 	diags := model.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting options: %w", core.DiagsToError(diags))
@@ -1777,21 +1826,26 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 	accessControlPayload := &albSdk.LoadbalancerOptionAccessControl{}
 	if !utils.IsUndefined(optionsModel.AccessControl) {
 		accessControlModel := accessControl{}
+
 		diags := optionsModel.AccessControl.As(ctx, &accessControlModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting access control: %w", core.DiagsToError(diags))
 		}
+
 		var allowedSourceRangesModel []string
+
 		diags = accessControlModel.AllowedSourceRanges.ElementsAs(ctx, &allowedSourceRangesModel, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting allowed source ranges: %w", core.DiagsToError(diags))
 		}
+
 		accessControlPayload.AllowedSourceRanges = allowedSourceRangesModel
 	}
 
 	observabilityPayload := &albSdk.LoadbalancerOptionObservability{}
 	if !utils.IsUndefined(optionsModel.Observability) {
 		observabilityModel := observability{}
+
 		diags := optionsModel.Observability.As(ctx, &observabilityModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability: %w", core.DiagsToError(diags))
@@ -1800,10 +1854,12 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 		// observability logs
 		if !utils.IsUndefined(observabilityModel.Logs) {
 			observabilityLogsModel := observabilityOption{}
+
 			diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
 			}
+
 			observabilityPayload.Logs = &albSdk.LoadbalancerOptionLogs{
 				CredentialsRef: observabilityLogsModel.CredentialsRef.ValueStringPointer(),
 				PushUrl:        observabilityLogsModel.PushUrl.ValueStringPointer(),
@@ -1813,10 +1869,12 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 		// observability metrics
 		if !utils.IsUndefined(observabilityModel.Metrics) {
 			observabilityMetricsModel := observabilityOption{}
+
 			diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
 			}
+
 			observabilityPayload.Metrics = &albSdk.LoadbalancerOptionMetrics{
 				CredentialsRef: observabilityMetricsModel.CredentialsRef.ValueStringPointer(),
 				PushUrl:        observabilityMetricsModel.PushUrl.ValueStringPointer(),
@@ -1840,6 +1898,7 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) ([]albSdk.TargetPoo
 	}
 
 	var targetPoolsModel []targetPool
+
 	diags := model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting targetPools: %w", core.DiagsToError(diags))
@@ -1853,10 +1912,12 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) ([]albSdk.TargetPoo
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting active_health_check: %w", i, err)
 		}
+
 		targetsPayload, err := toTargetsPayload(ctx, &targetPoolModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting targets: %w", i, err)
 		}
+
 		tlsConfigPayload, err := toTlsConfigPayload(ctx, &targetPoolModel)
 		if err != nil {
 			return nil, fmt.Errorf("converting index %d: converting tls_config: %w", i, err)
@@ -1879,6 +1940,7 @@ func toTlsConfigPayload(ctx context.Context, tp *targetPool) (*albSdk.TlsConfig,
 	if err != nil {
 		return nil, fmt.Errorf("converting target pool TLS config: %w", err)
 	}
+
 	return payload, nil
 }
 
@@ -1889,6 +1951,7 @@ func toTlsConfig(ctx context.Context, tlsConfigTF types.Object) (*albSdk.TlsConf
 	}
 
 	tlsConfigModel := tlsConfig{}
+
 	diags := tlsConfigTF.As(ctx, &tlsConfigModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -1916,22 +1979,27 @@ func toUpdatePayload(ctx context.Context, model *Model) (*albSdk.UpdateLoadBalan
 	if err != nil {
 		return nil, fmt.Errorf("converting labels: %w", err)
 	}
+
 	listenersPayload, err := toListenersPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting listeners: %w", err)
 	}
+
 	networksPayload, err := toNetworksPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting networks: %w", err)
 	}
+
 	optionsPayload, err := toOptionsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting options: %w", err)
 	}
+
 	targetPoolsPayload, err := toTargetPoolsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting target_pools: %w", err)
 	}
+
 	externalAddressPayload, err := toExternalAddress(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("converting external_address: %w", err)
@@ -1958,23 +2026,29 @@ func toExternalAddress(ctx context.Context, m *Model) (*string, error) {
 		// no ephemeral or private option are set
 		return conversion.StringValueToPointer(m.ExternalAddress), nil
 	}
+
 	o := &options{}
+
 	diags := m.Options.As(ctx, o, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting options: %w", core.DiagsToError(diags))
 	}
+
 	if utils.IsUndefined(o.EphemeralAddress) && utils.IsUndefined(o.PrivateNetworkOnly) {
 		// options exist but ephemeral or private option are set (default false) so use external address
 		return conversion.StringValueToPointer(m.ExternalAddress), nil
 	}
+
 	if !o.EphemeralAddress.IsNull() && !o.PrivateNetworkOnly.IsNull() && o.EphemeralAddress.ValueBool() && o.PrivateNetworkOnly.ValueBool() {
 		// options exist but both ephemeral or private option are set true so error for impossible combination
 		return nil, fmt.Errorf("ephemeral_address and private_network_only cannot both be true")
 	}
+
 	if !o.EphemeralAddress.IsNull() && o.EphemeralAddress.ValueBool() {
 		// ephemeral exist and true so send no external address
 		return nil, nil
 	}
+
 	if !o.PrivateNetworkOnly.IsNull() && o.PrivateNetworkOnly.ValueBool() {
 		// private exist and true so send no external address
 		return nil, nil
@@ -1989,6 +2063,7 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*albSdk.Ac
 	}
 
 	activeHealthCheckModel := activeHealthCheck{}
+
 	diags := tp.ActiveHealthCheck.As(ctx, &activeHealthCheckModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
@@ -2016,6 +2091,7 @@ func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (*
 	}
 
 	httpHealthChecksModel := httpHealthChecks{}
+
 	diags := check.HttpHealthChecks.As(ctx, &httpHealthChecksModel, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
@@ -2036,6 +2112,7 @@ func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (*
 		Path:       conversion.StringValueToPointer(httpHealthChecksModel.Path),
 		Tls:        tlsConfigPayload,
 	}
+
 	return &payload, nil
 }
 
@@ -2045,6 +2122,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) ([]albSdk.Target, err
 	}
 
 	var targetsModel []target
+
 	diags := tp.Targets.ElementsAs(ctx, &targetsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting Targets list: %w", core.DiagsToError(diags))
@@ -2067,6 +2145,7 @@ func mapFields(ctx context.Context, alb *albSdk.LoadBalancer, m *Model, region s
 	if alb == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if m == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -2079,6 +2158,7 @@ func mapFields(ctx context.Context, alb *albSdk.LoadBalancer, m *Model, region s
 	} else {
 		return fmt.Errorf("name not present")
 	}
+
 	m.Region = types.StringValue(region)
 	m.Name = types.StringValue(name)
 	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), name)
@@ -2088,34 +2168,42 @@ func mapFields(ctx context.Context, alb *albSdk.LoadBalancer, m *Model, region s
 	m.ExternalAddress = types.StringPointerValue(alb.ExternalAddress)
 	m.Version = types.StringPointerValue(alb.Version)
 	mapDisableSecurityGroupAssignment(alb, m)
+
 	err := mapErrors(alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping errors: %w", err)
 	}
+
 	err = mapTargetSecurityGroup(alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping target security group: %w", err)
 	}
+
 	err = mapLoadBalancerSecurityGroup(alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping load balancer security group: %w", err)
 	}
+
 	err = mapLabels(alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping labels: %w", err)
 	}
+
 	err = mapListeners(ctx, alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping listeners: %w", err)
 	}
+
 	err = mapNetworks(alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping network: %w", err)
 	}
+
 	err = mapOptions(alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
+
 	err = mapTargetPools(ctx, alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping target pools: %w", err)
@@ -2163,6 +2251,7 @@ func mapErrors(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) error
 	}
 
 	m.Errors = errorsTF
+
 	return nil
 }
 
@@ -2183,6 +2272,7 @@ func mapLoadBalancerSecurityGroup(applicationLoadBalancerResp *albSdk.LoadBalanc
 	}
 
 	m.LoadBalancerSecurityGroup = lbSecurityGroupTF
+
 	return nil
 }
 
@@ -2203,6 +2293,7 @@ func mapTargetSecurityGroup(applicationLoadBalancerResp *albSdk.LoadBalancer, m 
 	}
 
 	m.TargetSecurityGroup = tSecurityGroupTF
+
 	return nil
 }
 
@@ -2226,6 +2317,7 @@ func mapLabels(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) error
 	}
 
 	m.Labels = labelsTF
+
 	return nil
 }
 
@@ -2252,6 +2344,7 @@ func mapListeners(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadB
 				break
 			}
 		}
+
 		var httpModel = types.ObjectNull(httpTypes)
 		if configMatch != nil {
 			httpModel = configMatch.Http
@@ -2291,6 +2384,7 @@ func mapListeners(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadB
 	}
 
 	m.Listeners = listenersTF
+
 	return nil
 }
 
@@ -2301,16 +2395,19 @@ func mapHttp(ctx context.Context, httpResp *albSdk.ProtocolOptionsHTTP, l map[st
 	}
 
 	var configHttp *httpALB
+
 	diags := httpModel.As(ctx, &configHttp, basetypes.ObjectAsOptions{})
 	if diags.HasError() {
 		return fmt.Errorf("unpacking http from model: %w", core.DiagsToError(diags))
 	}
+
 	var hostsModel = types.ListNull(types.ObjectType{AttrTypes: hostConfigTypes})
 	if configHttp != nil {
 		hostsModel = configHttp.Hosts
 	}
 
 	httpMap := map[string]attr.Value{}
+
 	err := mapHosts(ctx, httpResp.Hosts, httpMap, hostsModel)
 	if err != nil {
 		return fmt.Errorf("mapping hosts: %w", err)
@@ -2322,6 +2419,7 @@ func mapHttp(ctx context.Context, httpResp *albSdk.ProtocolOptionsHTTP, l map[st
 	}
 
 	l["http"] = httpTF
+
 	return nil
 }
 
@@ -2332,6 +2430,7 @@ func mapHosts(ctx context.Context, hostsResp []albSdk.HostConfig, h map[string]a
 	}
 
 	var configHosts []hostConfig
+
 	diags := hostsModel.ElementsAs(ctx, &configHosts, false)
 	if diags.HasError() {
 		return fmt.Errorf("unpacking hosts from model: %w", core.DiagsToError(diags))
@@ -2346,6 +2445,7 @@ func mapHosts(ctx context.Context, hostsResp []albSdk.HostConfig, h map[string]a
 				break
 			}
 		}
+
 		var rulesModel = types.ListNull(types.ObjectType{AttrTypes: ruleTypes})
 		if configMatch != nil {
 			rulesModel = configMatch.Rules
@@ -2377,6 +2477,7 @@ func mapHosts(ctx context.Context, hostsResp []albSdk.HostConfig, h map[string]a
 	}
 
 	h["hosts"] = hostsTF
+
 	return nil
 }
 
@@ -2387,6 +2488,7 @@ func mapRules(ctx context.Context, rulesResp []albSdk.Rule, h map[string]attr.Va
 	}
 
 	var configRules []rule
+
 	diags := rulesModel.ElementsAs(ctx, &configRules, false)
 	if diags.HasError() {
 		return fmt.Errorf("unpacking rules from model: %w", core.DiagsToError(diags))
@@ -2443,6 +2545,7 @@ func mapRules(ctx context.Context, rulesResp []albSdk.Rule, h map[string]attr.Va
 	}
 
 	h["rules"] = rulesTF
+
 	return nil
 }
 
@@ -2463,6 +2566,7 @@ func mapPath(pathResp *albSdk.Path, r map[string]attr.Value) error {
 	}
 
 	r["path"] = pathTF
+
 	return nil
 }
 
@@ -2496,6 +2600,7 @@ func mapQueryParameters(queryParamsResp []albSdk.QueryParameter, r map[string]at
 	}
 
 	r["query_parameters"] = queryParamTF
+
 	return nil
 }
 
@@ -2529,6 +2634,7 @@ func mapHeaders(headersResp []albSdk.HttpHeader, r map[string]attr.Value) error 
 	}
 
 	r["headers"] = headersTF
+
 	return nil
 }
 
@@ -2549,6 +2655,7 @@ func mapCookiePersistence(cookiePersistResp *albSdk.CookiePersistence, r map[str
 	}
 
 	r["cookie_persistence"] = cookiePersistTF
+
 	return nil
 }
 
@@ -2571,6 +2678,7 @@ func mapHttps(ctx context.Context, httpsResp *albSdk.ProtocolOptionsHTTPS, l map
 	}
 
 	l["https"] = httpsTF
+
 	return nil
 }
 
@@ -2584,6 +2692,7 @@ func mapCertificates(ctx context.Context, certResp *albSdk.CertificateConfig, h 
 	if diags.HasError() {
 		return fmt.Errorf("mapping certificateIDs: %w", core.DiagsToError(diags))
 	}
+
 	certMap := map[string]attr.Value{
 		"certificate_ids": certificateIDsTF,
 	}
@@ -2594,6 +2703,7 @@ func mapCertificates(ctx context.Context, certResp *albSdk.CertificateConfig, h 
 	}
 
 	h["certificate_config"] = certTF
+
 	return nil
 }
 
@@ -2627,6 +2737,7 @@ func mapNetworks(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) err
 	}
 
 	m.Networks = networksTF
+
 	return nil
 }
 
@@ -2650,6 +2761,7 @@ func mapOptions(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) erro
 	if opt.PrivateNetworkOnly != nil && *opt.PrivateNetworkOnly {
 		privateNetworkOnlyTF = types.BoolValue(true)
 	}
+
 	if opt.EphemeralAddress != nil && *opt.EphemeralAddress {
 		ephemeralAddressTF = types.BoolValue(true)
 	}
@@ -2675,6 +2787,7 @@ func mapOptions(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) erro
 	}
 
 	m.Options = optionsTF
+
 	return nil
 }
 
@@ -2692,6 +2805,7 @@ func mapObservability(observabilityResp *albSdk.LoadbalancerOptionObservability,
 		observabilityLogsMap["credentials_ref"] = types.StringPointerValue(observabilityResp.Logs.CredentialsRef)
 		observabilityLogsMap["push_url"] = types.StringPointerValue(observabilityResp.Logs.PushUrl)
 	}
+
 	observabilityLogsTF, diags := types.ObjectValue(observabilityOptionTypes, observabilityLogsMap)
 	if diags.HasError() {
 		return fmt.Errorf("mapping logs: %w", core.DiagsToError(diags))
@@ -2705,6 +2819,7 @@ func mapObservability(observabilityResp *albSdk.LoadbalancerOptionObservability,
 		observabilityMetricsMap["credentials_ref"] = types.StringPointerValue(observabilityResp.Metrics.CredentialsRef)
 		observabilityMetricsMap["push_url"] = types.StringPointerValue(observabilityResp.Metrics.PushUrl)
 	}
+
 	observabilityMetricsTF, diags := types.ObjectValue(observabilityOptionTypes, observabilityMetricsMap)
 	if diags.HasError() {
 		return fmt.Errorf("mapping metrics: %w", core.DiagsToError(diags))
@@ -2714,12 +2829,14 @@ func mapObservability(observabilityResp *albSdk.LoadbalancerOptionObservability,
 		"logs":    observabilityLogsTF,
 		"metrics": observabilityMetricsTF,
 	}
+
 	observabilityTF, diags := types.ObjectValue(observabilityTypes, observabilityMap)
 	if diags.HasError() {
 		return fmt.Errorf("mapping observability: %w", core.DiagsToError(diags))
 	}
 
 	o["observability"] = observabilityTF
+
 	return nil
 }
 
@@ -2746,12 +2863,14 @@ func mapAccessControl(accessControlResp *albSdk.LoadbalancerOptionAccessControl,
 
 		accessControlMap["allowed_source_ranges"] = allowedSourceRangesTF
 	}
+
 	accessControlTF, diags := types.ObjectValue(accessControlTypes, accessControlMap)
 	if diags.HasError() {
 		return fmt.Errorf("mapping access control: %w", core.DiagsToError(diags))
 	}
 
 	o["access_control"] = accessControlTF
+
 	return nil
 }
 
@@ -2778,6 +2897,7 @@ func mapTargetPools(ctx context.Context, applicationLoadBalancerResp *albSdk.Loa
 				break
 			}
 		}
+
 		var tlsModel = types.ObjectNull(tlsConfigTypes)
 		if configMatch != nil {
 			tlsModel = configMatch.TLSConfig
@@ -2807,6 +2927,7 @@ func mapTargetPools(ctx context.Context, applicationLoadBalancerResp *albSdk.Loa
 		if diags.HasError() {
 			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
 		}
+
 		targetPoolsSet = append(targetPoolsSet, targetPoolTF)
 	}
 
@@ -2819,6 +2940,7 @@ func mapTargetPools(ctx context.Context, applicationLoadBalancerResp *albSdk.Loa
 	}
 
 	m.TargetPools = targetPoolsTF
+
 	return nil
 }
 
@@ -2848,6 +2970,7 @@ func mapActiveHealthCheck(ctx context.Context, activeHealthCheckResp *albSdk.Act
 	}
 
 	tp["active_health_check"] = activeHealthCheckTF
+
 	return nil
 }
 
@@ -2861,10 +2984,12 @@ func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *albSdk.HttpH
 	if diags.HasError() {
 		return fmt.Errorf("map OkStatuses list: %w", core.DiagsToError(diags))
 	}
+
 	tlsConfigTF, err := tlsConfigToObject(httpHealthChecksResp.Tls)
 	if err != nil {
 		return fmt.Errorf("map TLS config: %w", err)
 	}
+
 	httpHealthChecksMap := map[string]attr.Value{
 		"ok_status":  okStatusesTF,
 		"path":       types.StringPointerValue(httpHealthChecksResp.Path),
@@ -2877,6 +3002,7 @@ func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *albSdk.HttpH
 	}
 
 	ahc["http_health_checks"] = httpHealthChecksTF
+
 	return nil
 }
 
@@ -2893,7 +3019,9 @@ func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig
 	if err != nil {
 		return err
 	}
+
 	tp["tls_config"] = targetPoolTLSConfigTF
+
 	return nil
 }
 
@@ -2910,6 +3038,7 @@ func tlsConfigToObject(tlsConfigResp *albSdk.TlsConfig) (types.Object, error) {
 	if tlsConfigResp.Enabled != nil && *tlsConfigResp.Enabled {
 		enabled = types.BoolValue(true)
 	}
+
 	if tlsConfigResp.SkipCertificateValidation != nil && *tlsConfigResp.SkipCertificateValidation {
 		skipCertificateValidation = types.BoolValue(true)
 	}
@@ -2925,6 +3054,7 @@ func tlsConfigToObject(tlsConfigResp *albSdk.TlsConfig) (types.Object, error) {
 		if err != nil {
 			return types.ObjectNull(tlsConfigTypes), fmt.Errorf("base64 decoding custom ca: %w", err)
 		}
+
 		tlsConfigMap["custom_ca"] = types.StringValue(string(pemBytes))
 	}
 
@@ -2932,6 +3062,7 @@ func tlsConfigToObject(tlsConfigResp *albSdk.TlsConfig) (types.Object, error) {
 	if diags.HasError() {
 		return types.ObjectNull(tlsConfigTypes), fmt.Errorf("mapping TLSConfig: %w", core.DiagsToError(diags))
 	}
+
 	return tlsConfigTF, nil
 }
 
@@ -2965,5 +3096,6 @@ func mapTargets(targetsResp []albSdk.Target, tp map[string]attr.Value) error {
 	}
 
 	tp["targets"] = targetsTF
+
 	return nil
 }

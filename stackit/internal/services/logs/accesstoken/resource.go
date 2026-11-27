@@ -102,9 +102,11 @@ func (r *logsAccessTokenResource) Configure(ctx context.Context, req resource.Co
 
 func (r *logsAccessTokenResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -254,6 +256,7 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 
 func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -290,16 +293,19 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs access token", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Logs instance created")
 }
 
 func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -311,6 +317,7 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 	projectID := model.ProjectID.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceID := model.InstanceID.ValueString()
+
 	accessTokenID := model.AccessTokenID.ValueString()
 	if accessTokenID == "" {
 		// Resource not yet created; ID is unknown.
@@ -326,14 +333,18 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, accessTokenResponse, &model)
@@ -341,11 +352,13 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Logs access token read", map[string]any{
 		"access_token_id": accessTokenID,
 	})
@@ -353,6 +366,7 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 
 func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -402,6 +416,7 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Logs access token updated", map[string]any{
 		"access_token_id": accessTokenID,
 	})
@@ -409,6 +424,7 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 
 func (r *logsAccessTokenResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -433,7 +449,9 @@ func (r *logsAccessTokenResource) Delete(ctx context.Context, req resource.Delet
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs access token", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -448,6 +466,7 @@ func (r *logsAccessTokenResource) ImportState(ctx context.Context, req resource.
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing Logs access token", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`,`access_token_id`", req.ID))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
@@ -474,8 +493,10 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 
 	if !(tfutils.IsUndefined(model.Permissions)) {
 		var permissions []string
+
 		permissionDiags := model.Permissions.ElementsAs(ctx, &permissions, false)
 		diagnostics.Append(permissionDiags...)
+
 		if !permissionDiags.HasError() {
 			payload.Permissions = tfutils.Map(permissions, func(t string) logs.PermissionsInner {
 				return logs.PermissionsInner(t)
@@ -490,6 +511,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
@@ -522,6 +544,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	}
 
 	permissionList := types.ListNull(types.StringType)
+
 	var diags diag.Diagnostics
 	if len(accessToken.Permissions) > 0 {
 		permissionList, diags = types.ListValueFrom(ctx, types.StringType, accessToken.Permissions)
@@ -529,6 +552,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 			return fmt.Errorf("mapping permissions: %w", core.DiagsToError(diags))
 		}
 	}
+
 	model.Permissions = permissionList
 
 	return nil

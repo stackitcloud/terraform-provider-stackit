@@ -285,6 +285,7 @@ func fixtureModel(explicitBool *bool, mods ...func(m *Model)) *Model {
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -311,6 +312,7 @@ func fixtureModelNull(mods ...func(m *Model)) *Model {
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -480,6 +482,7 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 	for _, mod := range mods {
 		mod(resp)
 	}
+
 	return resp
 }
 
@@ -597,9 +600,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -642,9 +647,11 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -657,6 +664,7 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
+
 	tests := []struct {
 		description             string
 		input                   *albSdk.LoadBalancer
@@ -1453,9 +1461,11 @@ func TestMapFields(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(tt.output, tt.expected)
 				if diff != "" {
@@ -1593,9 +1603,11 @@ func Test_toExternalAddress(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
@@ -1680,9 +1692,11 @@ func Test_toPathPayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
@@ -1695,6 +1709,7 @@ func Test_toPathPayload(t *testing.T) {
 
 func TestTlsConfigRoundTrip(t *testing.T) {
 	const pem = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
+
 	tlsConfigTF := types.ObjectValueMust(tlsConfigTypes, map[string]attr.Value{
 		"enabled":                     types.BoolValue(true),
 		"skip_certificate_validation": types.BoolValue(false),
@@ -1705,6 +1720,7 @@ func TestTlsConfigRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Should not have failed: %v", err)
 	}
+
 	if payload == nil || payload.CustomCa == nil || *payload.CustomCa != base64.StdEncoding.EncodeToString([]byte(pem)) {
 		t.Fatalf("Expected base64 encoded custom CA, got %+v", payload)
 	}
@@ -1713,6 +1729,7 @@ func TestTlsConfigRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Should not have failed: %v", err)
 	}
+
 	if diff := cmp.Diff(got, tlsConfigTF); diff != "" {
 		t.Fatalf("Data does not match: %s", diff)
 	}
@@ -1721,6 +1738,7 @@ func TestTlsConfigRoundTrip(t *testing.T) {
 	if err != nil || payload != nil {
 		t.Fatalf("Expected nil payload for null config, got %+v, %v", payload, err)
 	}
+
 	got, err = tlsConfigToObject(nil)
 	if err != nil || !got.IsNull() {
 		t.Fatalf("Expected null object for nil response, got %v, %v", got, err)

@@ -33,6 +33,7 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 		model  *RoutingTableRoutesDataSourceModel
 		region string
 	}
+
 	tests := []struct {
 		name          string
 		args          args

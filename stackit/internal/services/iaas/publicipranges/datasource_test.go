@@ -47,6 +47,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 			},
 			expected: func() Model {
 				cidrs := []string{"192.168.0.0/24", "192.168.1.0/24"}
+
 				ipRangesList := make([]attr.Value, 0, len(cidrs))
 				for _, cidr := range cidrs {
 					ipRange, _ := types.ObjectValue(publicIpRangesTypes, map[string]attr.Value{
@@ -54,6 +55,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 					})
 					ipRangesList = append(ipRangesList, ipRange)
 				}
+
 				ipRangesVal, _ := types.ListValue(types.ObjectType{AttrTypes: publicIpRangesTypes}, ipRangesList)
 				cidrListVal, _ := types.ListValueFrom(ctx, types.StringType, cidrs)
 
@@ -79,6 +81,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 				})
 				ipRangesVal, _ := types.ListValue(types.ObjectType{AttrTypes: publicIpRangesTypes}, []attr.Value{ipRange})
 				cidrListVal, _ := types.ListValueFrom(ctx, types.StringType, cidrs)
+
 				return Model{
 					PublicIpRanges: ipRangesVal,
 					CidrList:       cidrListVal,
@@ -92,6 +95,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var model Model
+
 			err := mapPublicIpRanges(ctx, tt.input, &model)
 
 			if !tt.isValid {

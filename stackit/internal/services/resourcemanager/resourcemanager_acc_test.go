@@ -430,6 +430,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckResourceManagerProjectsDestroy,
 		testAccCheckResourceManagerFoldersDestroy,
 	}
+
 	var errs []error
 
 	wg := sync.WaitGroup{}
@@ -441,15 +442,19 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -485,6 +490,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 		if items[i].LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
 			continue
 		}
+
 		if !utils.Contains(projectsToDestroy, items[i].ContainerId) {
 			continue
 		}
@@ -499,11 +505,13 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", items[i].ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -545,6 +553,7 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", items[i].ContainerId, err)
 		}
 	}
+
 	return nil
 }
 
@@ -553,9 +562,11 @@ func getImportIdFromID(s *terraform.State, resourceName, keyName string) (string
 	if !ok {
 		return "", fmt.Errorf("couldn't find resource %s", resourceName)
 	}
+
 	id, ok := r.Primary.Attributes[keyName]
 	if !ok {
 		return "", fmt.Errorf("couldn't find attribute %s", keyName)
 	}
+
 	return id, nil
 }

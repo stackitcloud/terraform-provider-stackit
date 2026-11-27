@@ -15,6 +15,7 @@ import (
 
 func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := secretsmanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SecretsManagerCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -43,5 +44,6 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

@@ -62,6 +62,7 @@ func (r *shareResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -200,6 +201,7 @@ You can also assign a Share Export Policy after creating the Share`,
 func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -253,6 +255,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share creation waiting: %v", err))
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "share_id", response.Share.Id)
 
 	// the responses of create and update are not compatible, so we can't use a unified
@@ -262,6 +265,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "response did not contain an ID")
 		return
 	}
+
 	getResponse, err := r.client.GetShare(ctx, projectId, region, resourcePoolId, *response.Share.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
@@ -281,25 +285,30 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS Share created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
+
 	shareId := model.ShareId.ValueString()
 	if shareId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
@@ -317,7 +326,9 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading share", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -335,6 +346,7 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS share read")
 }
 
@@ -342,11 +354,13 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	shareId := model.ShareId.ValueString()
 	region := model.Region.ValueString()
@@ -360,6 +374,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -383,7 +398,9 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -402,16 +419,19 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", fmt.Sprintf("share get: %v", err))
 		return
 	}
+
 	err = mapFields(ctx, getResponse.Share, region, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS share updated")
 }
 
@@ -419,6 +439,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -445,7 +466,9 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -469,6 +492,7 @@ func (r *shareResource) ImportState(ctx context.Context, req resource.ImportStat
 			"Error importing share",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[resource_pool_id],[share_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -485,6 +509,7 @@ func mapFields(ctx context.Context, share *sfs.Share, region string, model *Mode
 	if share == nil {
 		return fmt.Errorf("share empty in response")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -492,6 +517,7 @@ func mapFields(ctx context.Context, share *sfs.Share, region string, model *Mode
 	if share.Id == nil {
 		return fmt.Errorf("share id not present")
 	}
+
 	model.ShareId = types.StringPointerValue(share.Id)
 
 	model.Region = types.StringValue(region)
@@ -507,6 +533,7 @@ func mapFields(ctx context.Context, share *sfs.Share, region string, model *Mode
 	if err != nil {
 		return err
 	}
+
 	model.Labels = labels
 
 	if share.ExportPolicy.IsSet() {
@@ -537,6 +564,7 @@ func toCreatePayload(ctx context.Context, model *Model) (ret *sfs.CreateSharePay
 		Labels:                  &labels,
 		SpaceHardLimitGigabytes: model.SpaceHardLimitGigabytes.ValueInt32(),
 	}
+
 	return result, nil
 }
 
@@ -555,5 +583,6 @@ func toUpdatePayload(ctx context.Context, model *Model) (*sfs.UpdateSharePayload
 		SpaceHardLimitGigabytes: *sfs.NewNullableInt32(model.SpaceHardLimitGigabytes.ValueInt32Pointer()),
 		Labels:                  &labels,
 	}
+
 	return result, nil
 }

@@ -74,15 +74,19 @@ func (m useStateForUnknownIf) PlanModifyInt32(ctx context.Context, req planmodif
 func Int32Unchanged(attributePath path.Path) UseStateForUnknownIfFunc {
 	return func(ctx context.Context, request planmodifier.Int32Request, response *UseStateForUnknownFuncResponse) {
 		var attributePlan types.Int32
+
 		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
 		response.Diagnostics.Append(diags...)
+
 		if response.Diagnostics.HasError() {
 			return
 		}
 
 		var attributeState types.Int32
+
 		diags = request.State.GetAttribute(ctx, attributePath, &attributeState)
 		response.Diagnostics.Append(diags...)
+
 		if response.Diagnostics.HasError() {
 			return
 		}

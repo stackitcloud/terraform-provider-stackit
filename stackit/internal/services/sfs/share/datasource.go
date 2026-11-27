@@ -66,11 +66,13 @@ func (r *shareDataSource) Metadata(_ context.Context, req datasource.MetadataReq
 // Read implements datasource.DataSource.
 func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model dataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	shareId := model.ShareId.ValueString()
@@ -91,7 +93,9 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading share", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -109,6 +113,7 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS share read")
 }
 
@@ -186,6 +191,7 @@ func mapDataSourceFields(ctx context.Context, region string, share *sfs.Share, m
 	if share == nil {
 		return fmt.Errorf("share empty in response")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -193,6 +199,7 @@ func mapDataSourceFields(ctx context.Context, region string, share *sfs.Share, m
 	if share.Id == nil {
 		return fmt.Errorf("share id not present")
 	}
+
 	model.ShareId = types.StringPointerValue(share.Id)
 	model.Region = types.StringValue(region)
 
@@ -202,6 +209,7 @@ func mapDataSourceFields(ctx context.Context, region string, share *sfs.Share, m
 		model.ResourcePoolId.ValueString(),
 		utils.Coalesce(model.ShareId, types.StringPointerValue(share.Id)).ValueString(),
 	)
+
 	model.Name = types.StringPointerValue(share.Name)
 	if share.ExportPolicy.IsSet() {
 		if policy := share.ExportPolicy.Get(); policy != nil {
@@ -220,6 +228,7 @@ func mapDataSourceFields(ctx context.Context, region string, share *sfs.Share, m
 	if err != nil {
 		return err
 	}
+
 	model.Labels = labels
 
 	return nil

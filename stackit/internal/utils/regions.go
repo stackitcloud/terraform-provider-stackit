@@ -20,6 +20,7 @@ func AdaptRegion(ctx context.Context, configRegion types.String, planRegion *typ
 			core.LogAndAddError(ctx, &resp.Diagnostics, "set region", "no region defined in config or provider")
 			return
 		}
+
 		intendedRegion = types.StringValue(defaultRegion)
 	} else {
 		intendedRegion = configRegion
@@ -31,7 +32,9 @@ func AdaptRegion(ctx context.Context, configRegion types.String, planRegion *typ
 	p := path.Root("region")
 	if !intendedRegion.Equal(*planRegion) {
 		resp.RequiresReplace.Append(p)
+
 		*planRegion = intendedRegion
 	}
+
 	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, *planRegion)...)
 }
