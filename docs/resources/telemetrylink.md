@@ -21,6 +21,9 @@ resource "stackit_telemetrylink" "link" {
   access_token_wo         = "eyJxxx"
   access_token_wo_version = 1
   telemetry_router_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  labels = {
+    "key" = "value"
+  }
 }
 
 # access_token is kept for backwards compatibility, but access_token_wo (see above) should be preferred
@@ -55,6 +58,7 @@ resource "stackit_telemetrylink" "link2" {
 - `access_token_wo_version` (Number) User-managed rotation counter for `access_token_wo`. Must be incremented every time `access_token_wo` is changed. Terraform diffs this field to detect token rotations - changing `access_token_wo` alone will NOT trigger an update because it is write-only and never stored in state.
 - `description` (String) The description of the Telemetry Link resource.
 - `enabled` (Boolean) Whether the Telemetry Link is enabled or not.
+- `labels` (Map of String) Resource labels as described in the [STACKIT documentation](https://docs.stackit.cloud/platform/cost-and-billing/labels/).
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 )
@@ -22,6 +23,7 @@ func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceMod
 		CreateTime:        types.StringValue(testTime.Format(time.RFC3339)),
 		Status:            types.StringValue("active"),
 		Enabled:           types.BoolValue(true),
+		Labels:            types.MapNull(types.StringType),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -49,11 +51,13 @@ func TestMapDataSourceFields(t *testing.T) {
 				link.DisplayName = "display-name"
 				link.AccessToken = new("access-token")
 				link.TelemetryRouterId = "tlmr-id"
+				link.ResourceLabels = &map[string]string{"key": "value"}
 			}),
 			expected: fixtureDataSourceModel(func(model *DataSourceModel) {
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
 				model.TelemetryRouterID = types.StringValue("tlmr-id")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
 			}),
 		},
 		{

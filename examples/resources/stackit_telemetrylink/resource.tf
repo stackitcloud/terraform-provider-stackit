@@ -6,6 +6,9 @@ resource "stackit_telemetrylink" "link" {
   access_token_wo         = "eyJxxx"
   access_token_wo_version = 1
   telemetry_router_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  labels = {
+    "key" = "value"
+  }
 }
 
 # access_token is kept for backwards compatibility, but access_token_wo (see above) should be preferred

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 )
@@ -43,6 +44,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		CreateTime:           types.StringValue(testTime.Format(time.RFC3339)),
 		Status:               types.StringValue("active"),
 		Enabled:              types.BoolValue(true),
+		Labels:               types.MapNull(types.StringType),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -70,11 +72,20 @@ func TestMapFields(t *testing.T) {
 				link.DisplayName = "display-name"
 				link.AccessToken = new("access-token")
 				link.TelemetryRouterId = "tlmr-id"
+				link.ResourceLabels = &map[string]string{"key": "value"}
 			}),
 			expected: fixtureModel(func(model *Model) {
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
 				model.TelemetryRouterID = types.StringValue("tlmr-id")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
+			}),
+		},
+		{
+			description: "empty labels in state stay empty",
+			input:       fixtureLink(),
+			expected: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
 			}),
 		},
 		{
@@ -89,6 +100,7 @@ func TestMapFields(t *testing.T) {
 				ResourceType: tt.expected.ResourceType,
 				ResourceID:   tt.expected.ResourceID,
 				Region:       tt.expected.Region,
+				Labels:       tt.expected.Labels,
 			}
 
 			err := mapFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
@@ -127,6 +139,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -136,6 +149,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				model.DisplayName = types.StringValue("display-name")
 				model.AccessToken = types.StringValue("access-token")
 				model.TelemetryRouterID = types.StringValue("tlmr_id")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
 			}),
 			configModel: fixtureModel(),
 			expected: &telemetrylink.CreateOrUpdateOrganizationTelemetryLinkPayload{
@@ -144,6 +158,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{"key": "value"},
 			},
 		},
 		{
@@ -159,6 +174,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "wo-access-token",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -172,6 +188,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(false),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -181,7 +198,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(tt.model, tt.configModel)
+			got, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(context.Background(), tt.model, tt.configModel)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -215,6 +232,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -224,6 +242,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				model.DisplayName = types.StringValue("display-name")
 				model.AccessToken = types.StringValue("access-token")
 				model.TelemetryRouterID = types.StringValue("tlmr_id")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
 			}),
 			configModel: fixtureModel(),
 			expected: &telemetrylink.CreateOrUpdateFolderTelemetryLinkPayload{
@@ -232,6 +251,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{"key": "value"},
 			},
 		},
 		{
@@ -247,6 +267,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "wo-access-token",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -260,6 +281,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(false),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -269,7 +291,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toCreateOrUpdateFolderTelemetryLinkPayload(tt.model, tt.configModel)
+			got, err := toCreateOrUpdateFolderTelemetryLinkPayload(context.Background(), tt.model, tt.configModel)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -303,6 +325,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -312,6 +335,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				model.DisplayName = types.StringValue("display-name")
 				model.AccessToken = types.StringValue("access-token")
 				model.TelemetryRouterID = types.StringValue("tlmr_id")
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")})
 			}),
 			configModel: fixtureModel(),
 			expected: &telemetrylink.CreateOrUpdateProjectTelemetryLinkPayload{
@@ -320,6 +344,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{"key": "value"},
 			},
 		},
 		{
@@ -335,6 +360,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "wo-access-token",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -348,6 +374,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				AccessToken:       "",
 				TelemetryRouterId: "tlmrid",
 				Enabled:           new(false),
+				ResourceLabels:    &map[string]string{},
 			},
 		},
 		{
@@ -357,7 +384,7 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toCreateOrUpdateProjectTelemetryLinkPayload(tt.model, tt.configModel)
+			got, err := toCreateOrUpdateProjectTelemetryLinkPayload(context.Background(), tt.model, tt.configModel)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -396,6 +423,7 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       new("access-token"),
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -415,6 +443,7 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -434,6 +463,7 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       new("new-wo-access-token"),
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -454,6 +484,7 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -469,6 +500,77 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(false),
+				ResourceLabels:    &map[string]*string{},
+			},
+		},
+		{
+			description: "labels added and changed",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("2"), "b": types.StringValue("3")})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{"a": new("2"), "b": new("3")},
+			},
+		},
+		{
+			description: "label removed - full remaining set is sent",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1"), "b": types.StringValue("2")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{"a": new("1")},
+			},
+		},
+		{
+			description: "all labels removed",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
+			},
+		},
+		{
+			description: "labels removed from config (null) - sent as empty map to clear",
+			model:       fixtureModel(),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -478,7 +580,7 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toPartialUpdateOrganizationTelemetryLinkPayload(tt.model, tt.stateModel, tt.configModel)
+			got, err := toPartialUpdateOrganizationTelemetryLinkPayload(context.Background(), tt.model, tt.stateModel, tt.configModel)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -517,6 +619,7 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       new("access-token"),
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -536,6 +639,7 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -555,6 +659,7 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       new("new-wo-access-token"),
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -570,6 +675,7 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -585,6 +691,77 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(false),
+				ResourceLabels:    &map[string]*string{},
+			},
+		},
+		{
+			description: "labels added and changed",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("2"), "b": types.StringValue("3")})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{"a": new("2"), "b": new("3")},
+			},
+		},
+		{
+			description: "label removed - full remaining set is sent",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1"), "b": types.StringValue("2")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{"a": new("1")},
+			},
+		},
+		{
+			description: "all labels removed",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
+			},
+		},
+		{
+			description: "labels removed from config (null) - sent as empty map to clear",
+			model:       fixtureModel(),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -594,7 +771,7 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toPartialUpdateFolderTelemetryLinkPayload(tt.model, tt.stateModel, tt.configModel)
+			got, err := toPartialUpdateFolderTelemetryLinkPayload(context.Background(), tt.model, tt.stateModel, tt.configModel)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -633,6 +810,7 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       new("access-token"),
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -652,6 +830,7 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -671,6 +850,7 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       new("new-wo-access-token"),
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -686,6 +866,7 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -701,6 +882,77 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				TelemetryRouterId: new("tlmrid"),
 				AccessToken:       nil,
 				Enabled:           new(false),
+				ResourceLabels:    &map[string]*string{},
+			},
+		},
+		{
+			description: "labels added and changed",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("2"), "b": types.StringValue("3")})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{"a": new("2"), "b": new("3")},
+			},
+		},
+		{
+			description: "label removed - full remaining set is sent",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1"), "b": types.StringValue("2")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{"a": new("1")},
+			},
+		},
+		{
+			description: "all labels removed",
+			model: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			}),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
+			},
+		},
+		{
+			description: "labels removed from config (null) - sent as empty map to clear",
+			model:       fixtureModel(),
+			stateModel: fixtureModel(func(model *Model) {
+				model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"a": types.StringValue("1")})
+			}),
+			configModel: fixtureModel(),
+			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				Description:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+				AccessToken:       nil,
+				Enabled:           new(true),
+				ResourceLabels:    &map[string]*string{},
 			},
 		},
 		{
@@ -710,7 +962,7 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toPartialUpdateProjectTelemetryLinkPayload(tt.model, tt.stateModel, tt.configModel)
+			got, err := toPartialUpdateProjectTelemetryLinkPayload(context.Background(), tt.model, tt.stateModel, tt.configModel)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}

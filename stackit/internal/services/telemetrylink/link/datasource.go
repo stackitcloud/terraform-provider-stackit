@@ -39,6 +39,7 @@ type DataSourceModel struct {
 	CreateTime        types.String `tfsdk:"create_time"`
 	Status            types.String `tfsdk:"status"`
 	Enabled           types.Bool   `tfsdk:"enabled"`
+	Labels            types.Map    `tfsdk:"labels"`
 }
 
 type telemetryLinkDataSource struct {
@@ -116,6 +117,11 @@ func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Description: schemaDescriptions["enabled"],
 				Computed:    true,
 			},
+			"labels": schema.MapAttribute{
+				Description: schemaDescriptions["labels"],
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -191,7 +197,7 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 	})
 }
 
-func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, model *DataSourceModel, region string) error {
+func mapDataSourceFields(ctx context.Context, link *telemetrylink.TelemetryLinkResponse, model *DataSourceModel, region string) error {
 	if link == nil {
 		return fmt.Errorf("link is nil")
 	}
@@ -208,6 +214,13 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
 	model.Status = types.StringValue(string(link.Status))
 	model.Enabled = types.BoolValue(link.Enabled)
+
+	labels, err := tfutils.MapLabels(ctx, link.ResourceLabels, model.Labels)
+	if err != nil {
+		return fmt.Errorf("mapping labels: %w", err)
+	}
+
+	model.Labels = labels
 
 	return nil
 }
