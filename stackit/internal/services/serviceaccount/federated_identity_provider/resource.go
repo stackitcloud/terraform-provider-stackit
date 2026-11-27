@@ -171,6 +171,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Configure(ctx context.
 
 func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -210,6 +211,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 
 func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -224,16 +226,18 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 
 	apiResp, err := r.client.GetFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		Execute()
-
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		// due to security purposes, attempting to get access federation for a non-existent Service Account will return 403.
 		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -250,6 +254,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Read the plan to get the desired configuration
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -258,11 +263,13 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 
 	// federation_id is a computed field only available in the current state, not the plan
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	model.FederationId = stateModel.FederationId
 
 	ctx = core.InitProviderContext(ctx)
@@ -297,6 +304,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 
 func (r *serviceAccountFederatedIdentityProviderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -331,6 +339,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) ImportState(ctx contex
 			"Error importing federated identity provider",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[email],[federation_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -345,6 +354,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) ImportState(ctx contex
 			"Error importing federated identity provider",
 			fmt.Sprintf("Invalid service account email: %v", err),
 		)
+
 		return
 	}
 
@@ -360,6 +370,7 @@ func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityPro
 	if apiResp == nil {
 		return fmt.Errorf("apiResp is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -368,8 +379,10 @@ func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityPro
 	if apiResp.Id != nil {
 		federationId = *apiResp.Id
 	}
+
 	model.Id = utils.BuildInternalTerraformId(projectId, serviceAccountEmail, federationId)
 	model.ProjectId = types.StringValue(projectId)
+
 	model.ServiceAccountEmail = types.StringValue(serviceAccountEmail)
 	if federationId != "" {
 		model.FederationId = types.StringValue(federationId)
@@ -429,6 +442,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*serviceaccount.CreateF
 
 	if !model.Assertions.IsNull() {
 		var assertions []AssertionModel
+
 		diags := model.Assertions.ElementsAs(ctx, &assertions, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to extract assertions from model")
@@ -442,6 +456,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*serviceaccount.CreateF
 				Value:    conversion.StringValueToPointer(assertion.Value),
 			}
 		}
+
 		payload.Assertions = assertionsPayload
 	}
 
@@ -450,17 +465,22 @@ func toCreatePayload(ctx context.Context, model *Model) (*serviceaccount.CreateF
 
 func toUpdatePayload(ctx context.Context, model *Model) (*serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayload, error) {
 	payload := &serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayload{}
+
 	if model == nil {
 		return nil, fmt.Errorf("model input is nil")
 	}
+
 	if !model.Issuer.IsNull() {
 		payload.Issuer = model.Issuer.ValueString()
 	}
+
 	if !model.Name.IsNull() {
 		payload.Name = model.Name.ValueString()
 	}
+
 	if !model.Assertions.IsNull() {
 		var assertions []AssertionModel
+
 		diags := model.Assertions.ElementsAs(ctx, &assertions, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to extract assertions from model")
@@ -474,6 +494,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*serviceaccount.Partial
 				Value:    conversion.StringValueToPointer(assertion.Value),
 			}
 		}
+
 		payload.Assertions = assertionsPayload
 	}
 

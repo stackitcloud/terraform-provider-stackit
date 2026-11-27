@@ -53,6 +53,7 @@ import (
 	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
 	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
 	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
+	iaasNetworks "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networks"
 	iaasProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/project"
 	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
 	iaasPublicIpAssociate "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipassociate"
@@ -557,6 +558,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// Retrieve provider data and configuration
 	var providerConfig providerModel
+
 	diags := req.Config.Get(ctx, &providerConfig)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -565,8 +567,11 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Configure SDK client
 	sdkConfig := &config.Configuration{}
-	var providerData core.ProviderData
-	var customEndpointConfig core.CustomEndpointConfig
+
+	var (
+		providerData         core.ProviderData
+		customEndpointConfig core.CustomEndpointConfig
+	)
 
 	// Helper function to set a string field if it's known and not null
 	setStringField := func(v basetypes.StringValue, setter func(string)) {
@@ -582,6 +587,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up bool value: %v", diags.Errors()))
 			}
+
 			setter(val.ValueBool())
 		}
 	}
@@ -643,10 +649,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
+
 		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
 		}
+
 		providerData.Experiments = experimentValues
 	}
 
@@ -680,6 +688,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Workload Identity Federation via provided OIDC Token
 	oidc_token := ""
 	setStringField(providerConfig.WifFederatedToken, func(v string) { oidc_token = v })
+
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token != "" {
 		sdkConfig.WorkloadIdentityFederation = true
 		sdkConfig.ServiceAccountFederatedTokenFunc = func(context.Context) (string, error) {
@@ -690,6 +699,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Workload Identity Federation via OIDC Token from file
 	oidc_token_path := ""
 	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { oidc_token_path = v })
+
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token_path != "" {
 		sdkConfig.WorkloadIdentityFederation = true
 		sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.ReadJWTFromFileSystem(oidc_token_path)
@@ -700,6 +710,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
 		oidcReqURL := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
+
 		oidcReqToken := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestGHOIDCToken(oidcReqURL, oidcReqToken)
@@ -752,121 +763,122 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	dataSources := []func() datasource.DataSource{
 		alb.NewApplicationLoadBalancerDataSource,
-		albWafCustomRuleGroup.NewCustomRuleGroupDataSource,
 		albWaf.NewWafConfigurationDatasource,
+		albWafCustomRuleGroup.NewCustomRuleGroupDataSource,
 		albWafManagedRuleSet.NewManagedRuleSetDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		automationTemplates.NewAutomationTemplatesDataSource,
 		automationVolume.NewVolumeAutomationDataSource,
 		cdn.NewDistributionDataSource,
-		cert.NewCertificatesDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
-		dnsZone.NewZoneDataSource,
+		cert.NewCertificatesDataSource,
+		compliancelock.NewComplianceLockDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		dnsZone.NewZoneDataSource,
 		dremioInstance.NewInstanceDataSource,
 		dremioUser.NewUserDataSource,
 		edgeCloudInstances.NewInstancesDataSource,
 		edgeCloudPlans.NewPlansDataSource,
+		exportpolicy.NewExportPolicyDataSource,
 		gitInstance.NewGitDataSource,
+		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasAlphaVpc.NewVPCDatasource,
-		iaasAlphaVpcRoutingTable.NewVpcRoutingTableDatasource,
 		iaasAlphaVpcNetworkRange.NewVpcNetworkRangeDatasource,
 		iaasAlphaVpcRegion.NewVPCRegionDatasource,
+		iaasAlphaVpcRoutingTable.NewVpcRoutingTableDatasource,
 		iaasAlphaVpcStaticRoute.NewStaticRouteDatasource,
-		iaasProject.NewProjectDataSource,
-		iaasImages.NewImagesDataSource,
-		intakeRunner.NewRunnerDataSource,
-		kmsKey.NewKeyDataSource,
-		kmsKeyRing.NewKeyRingDataSource,
-		kmsWrappingKey.NewWrappingKeyDataSource,
-		loadBalancer.NewLoadBalancerDataSource,
-		logMeInstance.NewInstanceDataSource,
-		logMeCredential.NewCredentialDataSource,
-		logsInstance.NewLogsInstanceDataSource,
-		logsAccessToken.NewLogsAccessTokenDataSource,
-		logAlertGroup.NewLogAlertGroupDataSource,
-		machineType.NewMachineTypeDataSource,
-		iaasMachineTypes.NewMachineTypesDataSource,
-		mariaDBInstance.NewInstanceDataSource,
-		mariaDBCredential.NewCredentialDataSource,
-		modelExperimentsInstance.NewInstanceDataSource,
-		modelExperimentsToken.NewInstanceTokenDataSource,
-		mongoDBFlexInstance.NewInstanceDataSource,
-		mongoDBFlexUser.NewUserDataSource,
-		objectStorageBucket.NewBucketDataSource,
-		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
-		objecStorageCredential.NewCredentialDataSource,
-		objectstorageDefaultRetention.NewDefaultRetentionDataSource,
-		observabilityInstance.NewInstanceDataSource,
-		observabilityScrapeConfig.NewScrapeConfigDataSource,
-		openSearchInstance.NewInstanceDataSource,
-		openSearchCredential.NewCredentialDataSource,
-		postgresFlexDatabase.NewDatabaseDataSource,
-		postgresFlexFlavors.NewFlavorsDataSource,
-		postgresFlexInstance.NewInstanceDataSource,
-		postgresFlexUser.NewUserDataSource,
-		rabbitMQInstance.NewInstanceDataSource,
-		rabbitMQCredential.NewCredentialDataSource,
-		redisInstance.NewInstanceDataSource,
-		redisCredential.NewCredentialDataSource,
-		resourceManagerProject.NewProjectDataSource,
-		scfOrganization.NewScfOrganizationDataSource,
-		scfOrganizationmanager.NewScfOrganizationManagerDataSource,
-		scfPlatform.NewScfPlatformDataSource,
-		resourceManagerFolder.NewFolderDataSource,
-		secretsManagerInstance.NewInstanceDataSource,
-		secretsManagerUser.NewUserDataSource,
-		sqlServerFlexDatabase.NewDatabaseDataSource,
-		sqlServerFlexInstance.NewInstanceDataSource,
-		sqlServerFlexUser.NewUserDataSource,
-		sqlServerFlexFlavors.NewFlavorsDataSource,
-		serverBackupSchedule.NewScheduleDataSource,
-		serverBackupSchedule.NewSchedulesDataSource,
-		serverUpdateSchedule.NewScheduleDataSource,
-		serverUpdateSchedule.NewSchedulesDataSource,
-		serviceAccount.NewServiceAccountDataSource,
-		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderDataSource,
-		serviceAccounts.NewServiceAccountsDataSource,
-		skeCluster.NewClusterDataSource,
-		skeKubernetesVersion.NewKubernetesVersionsDataSource,
-		skeMachineImages.NewKubernetesMachineImageVersionDataSource,
-		resourcepool.NewResourcePoolDataSource,
-		share.NewShareDataSource,
-		exportpolicy.NewExportPolicyDataSource,
-		snapshots.NewResourcePoolSnapshotDataSource,
-		snapshotPolicy.NewSnapshotPoliciesDataSource,
-		projectLock.NewProjectLockDatasource,
-		compliancelock.NewComplianceLockDataSource,
-		serverBackupEnable.NewServerBackupEnableDataSource,
-		serverUpdateEnable.NewServerUpdateEnableDataSource,
-		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenDataSource,
-		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
-		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
-		telemetryLink.NewTelemetryLinkDataSource,
-		valkeyInstance.NewInstanceDataSource,
-		valkeyCredential.NewCredentialDataSource,
-		vpnGateway.NewVPNGatewayDataSource,
-		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
-		vpnConnection.NewVPNConnectionDataSource,
-		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasImage.NewImageDataSource,
 		iaasImageV2.NewImageV2DataSource,
+		iaasImages.NewImagesDataSource,
+		iaasKeyPair.NewKeyPairDataSource,
+		iaasMachineTypes.NewMachineTypesDataSource,
 		iaasNetwork.NewNetworkDataSource,
 		iaasNetworkArea.NewNetworkAreaDataSource,
 		iaasNetworkAreaRegion.NewNetworkAreaRegionDataSource,
 		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
 		iaasNetworkInterface.NewNetworkInterfaceDataSource,
+		iaasNetworks.NewNetworksDataSource,
+		iaasProject.NewProjectDataSource,
 		iaasPublicIp.NewPublicIpDataSource,
 		iaasPublicIpRanges.NewPublicIpRangesDataSource,
-		iaasKeyPair.NewKeyPairDataSource,
-		iaasServer.NewServerDataSource,
-		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasRoutingTable.NewRoutingTableDataSource,
 		iaasRoutingTableRoute.NewRoutingTableRouteDataSource,
-		iaasRoutingTables.NewRoutingTablesDataSource,
 		iaasRoutingTableRoutes.NewRoutingTableRoutesDataSource,
+		iaasRoutingTables.NewRoutingTablesDataSource,
+		iaasSecurityGroup.NewSecurityGroupDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		iaasServer.NewServerDataSource,
 		iaasVolume.NewVolumeDataSource,
+		intakeRunner.NewRunnerDataSource,
+		kmsKey.NewKeyDataSource,
+		kmsKeyRing.NewKeyRingDataSource,
+		kmsWrappingKey.NewWrappingKeyDataSource,
+		loadBalancer.NewLoadBalancerDataSource,
+		logAlertGroup.NewLogAlertGroupDataSource,
+		logMeCredential.NewCredentialDataSource,
+		logMeInstance.NewInstanceDataSource,
+		logsAccessToken.NewLogsAccessTokenDataSource,
+		logsInstance.NewLogsInstanceDataSource,
+		machineType.NewMachineTypeDataSource,
+		mariaDBCredential.NewCredentialDataSource,
+		mariaDBInstance.NewInstanceDataSource,
+		modelExperimentsInstance.NewInstanceDataSource,
+		modelExperimentsToken.NewInstanceTokenDataSource,
+		mongoDBFlexInstance.NewInstanceDataSource,
+		mongoDBFlexUser.NewUserDataSource,
+		objecStorageCredential.NewCredentialDataSource,
+		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
+		objectStorageBucket.NewBucketDataSource,
+		objectstorageDefaultRetention.NewDefaultRetentionDataSource,
+		observabilityInstance.NewInstanceDataSource,
+		observabilityScrapeConfig.NewScrapeConfigDataSource,
+		openSearchCredential.NewCredentialDataSource,
+		openSearchInstance.NewInstanceDataSource,
+		postgresFlexDatabase.NewDatabaseDataSource,
+		postgresFlexFlavors.NewFlavorsDataSource,
+		postgresFlexInstance.NewInstanceDataSource,
+		postgresFlexUser.NewUserDataSource,
+		projectLock.NewProjectLockDatasource,
+		rabbitMQCredential.NewCredentialDataSource,
+		rabbitMQInstance.NewInstanceDataSource,
+		redisCredential.NewCredentialDataSource,
+		redisInstance.NewInstanceDataSource,
+		resourceManagerFolder.NewFolderDataSource,
+		resourceManagerProject.NewProjectDataSource,
+		resourcepool.NewResourcePoolDataSource,
+		scfOrganization.NewScfOrganizationDataSource,
+		scfOrganizationmanager.NewScfOrganizationManagerDataSource,
+		scfPlatform.NewScfPlatformDataSource,
+		secretsManagerInstance.NewInstanceDataSource,
+		secretsManagerUser.NewUserDataSource,
+		serverBackupEnable.NewServerBackupEnableDataSource,
+		serverBackupSchedule.NewScheduleDataSource,
+		serverBackupSchedule.NewSchedulesDataSource,
+		serverUpdateEnable.NewServerUpdateEnableDataSource,
+		serverUpdateSchedule.NewScheduleDataSource,
+		serverUpdateSchedule.NewSchedulesDataSource,
+		serviceAccount.NewServiceAccountDataSource,
+		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderDataSource,
+		serviceAccounts.NewServiceAccountsDataSource,
+		share.NewShareDataSource,
+		skeCluster.NewClusterDataSource,
+		skeKubernetesVersion.NewKubernetesVersionsDataSource,
+		skeMachineImages.NewKubernetesMachineImageVersionDataSource,
+		snapshotPolicy.NewSnapshotPoliciesDataSource,
+		snapshots.NewResourcePoolSnapshotDataSource,
+		sqlServerFlexDatabase.NewDatabaseDataSource,
+		sqlServerFlexFlavors.NewFlavorsDataSource,
+		sqlServerFlexInstance.NewInstanceDataSource,
+		sqlServerFlexUser.NewUserDataSource,
+		telemetryLink.NewTelemetryLinkDataSource,
+		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenDataSource,
+		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
+		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
+		valkeyCredential.NewCredentialDataSource,
+		valkeyInstance.NewInstanceDataSource,
+		vpnConnection.NewVPNConnectionDataSource,
+		vpnGateway.NewVPNGatewayDataSource,
+		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)

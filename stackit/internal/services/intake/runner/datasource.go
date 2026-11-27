@@ -155,7 +155,9 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -172,5 +174,6 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Intake runner read")
 }

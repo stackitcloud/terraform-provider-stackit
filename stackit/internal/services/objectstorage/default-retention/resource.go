@@ -68,6 +68,7 @@ func (r *defaultRetentionResource) ModifyPlan(ctx context.Context, req resource.
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -97,6 +98,7 @@ func (r *defaultRetentionResource) ImportState(ctx context.Context, req resource
 			"Error importing default-retention",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[bucketName], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -183,11 +185,13 @@ func (r *defaultRetentionResource) Metadata(_ context.Context, req resource.Meta
 
 func (r *defaultRetentionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic
 	var model model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -203,6 +207,7 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Parsing model: %v", err))
 	}
+
 	result, err := apiRequest.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err))
@@ -223,16 +228,19 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage default-retention created")
 }
 
 func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic
 	var model model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -251,12 +259,15 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 				resp.State.RemoveResource(ctx)
 				return
 			}
+
 			if oapiErr.StatusCode == http.StatusConflict {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting default-retention", "Encountered conflict")
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting default-retention", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -267,11 +278,13 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 
 func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic
 	var model model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -290,7 +303,9 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading default-retention", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -308,16 +323,19 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage default-retention read")
 }
 
 func (r *defaultRetentionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic
 	var model model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -333,6 +351,7 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Parsing model: %v", err))
 	}
+
 	result, err := apiRequest.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Calling API: %v", err))
@@ -353,20 +372,24 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "ObjectStorage default-retention set")
 }
 
 func toSetDefaultRetentionRequest(ctx context.Context, client objectstorage.DefaultAPI, m *model, projectId, bucketName, region string) (objectstorage.ApiSetDefaultRetentionRequest, error) {
 	days := m.Days.ValueInt32()
 	stringMode := m.Mode.ValueString()
+
 	mode, err := objectstorage.NewRetentionModeFromValue(stringMode)
 	if err != nil {
 		return objectstorage.ApiSetDefaultRetentionRequest{}, fmt.Errorf("could not parse provided retention mode to enum: %w", err)
 	}
+
 	apiRequest := client.SetDefaultRetention(ctx, projectId, region, bucketName).SetDefaultRetentionPayload(objectstorage.SetDefaultRetentionPayload{
 		Days: days,
 		Mode: *mode,
 	})
+
 	return apiRequest, nil
 }
 
@@ -374,6 +397,7 @@ func mapFields(res *objectstorage.DefaultRetentionResponse, m *model, region str
 	if res == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if m == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -383,5 +407,6 @@ func mapFields(res *objectstorage.DefaultRetentionResponse, m *model, region str
 	m.Region = types.StringValue(region)
 	m.Days = types.Int32Value(res.Days)
 	m.Mode = types.StringValue(string(res.Mode))
+
 	return nil
 }

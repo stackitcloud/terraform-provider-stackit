@@ -53,11 +53,13 @@ func NewExportPolicyDataSource() datasource.DataSource {
 // Read implements datasource.DataSource.
 func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { //nolint:gocritic // defined by terraform api
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
@@ -77,7 +79,9 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 				return
 			}
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
+
 		return
 	}
 

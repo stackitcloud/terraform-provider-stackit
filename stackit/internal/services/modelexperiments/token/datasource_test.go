@@ -104,6 +104,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
+
 			err := mapDataSourceFields(ctx, tt.input, tt.state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")

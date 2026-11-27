@@ -31,6 +31,7 @@ resource "stackit_ske_cluster" "example" {
       availability_zones = ["eu01-3"]
       volume_type        = "storage_premium_perf6"
       volume_size        = "48"
+      kata               = false
     }
   ]
   network = {
@@ -90,6 +91,7 @@ Optional:
 
 - `allow_system_components` (Boolean) Allow system components to run on this node pool.
 - `cri` (String) Specifies the container runtime. Defaults to `containerd`
+- `kata` (Boolean) Enable workload isolation via Kata Containers for pods scheduled on this node pool. Note: This feature is in private preview. Enabling is only possible for enabled accounts. Otherwise the request will be rejected. Defaults to `false`.
 - `labels` (Map of String) Labels to add to each node.
 - `max_surge` (Number) Maximum number of additional VMs that are created during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.
 - `max_unavailable` (Number) Maximum number of VMs that that can be unavailable during an update. If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.

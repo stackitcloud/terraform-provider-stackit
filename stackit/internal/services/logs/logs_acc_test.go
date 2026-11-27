@@ -48,6 +48,7 @@ func testConfigVarsMinUpdated() config.Variables {
 	maps.Copy(newVars, testConfigVarsMin)
 	newVars["display_name"] = config.StringVariable("tf-acc-test-logs-updated")
 	newVars["retention_days"] = config.IntegerVariable(14)
+
 	return newVars
 }
 
@@ -67,6 +68,7 @@ func testConfigVarsMaxUpdated() config.Variables {
 	newVars["retention_days"] = config.IntegerVariable(14)
 	newVars["acl"] = config.StringVariable("192.168.0.1/16")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test Logs Instance Updated")
+
 	return newVars
 }
 
@@ -105,6 +107,7 @@ func testConfigAccessTokenVarsMaxUpdated() config.Variables {
 	maps.Copy(newVars, testConfigAccessTokenVarsMax)
 	newVars["display_name"] = config.StringVariable("tf-acc-test-token-updated")
 	newVars["description"] = config.StringVariable("tf-acc-test-token-decription-updated")
+
 	return newVars
 }
 
@@ -204,10 +207,12 @@ data "stackit_logs_instance" "logs" {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_instance.logs")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
 				ImportState:       true,
@@ -344,10 +349,12 @@ data "stackit_logs_instance" "logs" {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_instance.logs")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
 				ImportState:       true,
@@ -451,14 +458,17 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_access_token.accessToken")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					tokenId, ok := rs.Primary.Attributes["access_token_id"]
 					if !ok {
 						return "", fmt.Errorf("access_token_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, tokenId), nil
 				},
 				ImportState:             true,
@@ -576,14 +586,17 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", "stackit_logs_access_token.accessToken")
 					}
+
 					instanceId, ok := rs.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("instance_id not set")
 					}
+
 					tokenId, ok := rs.Primary.Attributes["access_token_id"]
 					if !ok {
 						return "", fmt.Errorf("access_token_id not set")
 					}
+
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, tokenId), nil
 				},
 				ImportState:             true,
@@ -634,15 +647,19 @@ func testAccCheckDestroy(s *terraform.State) error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
+
 	return errors.Join(errs...)
 }
 
 func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -653,6 +670,7 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_logs_instance" {
 			continue
 		}
+
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
@@ -661,6 +679,7 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	if err != nil {
 		return fmt.Errorf("getting instances: %w", err)
 	}
+
 	for i := range response.Instances {
 		if !slices.Contains(instancesToDestroy, response.Instances[i].Id) {
 			continue
@@ -671,11 +690,13 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 			return fmt.Errorf("deleting instance %s: %w", response.Instances[i].Id, err)
 		}
 	}
+
 	return nil
 }
 
 func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -687,6 +708,7 @@ func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_logs_access_token" {
 			continue
 		}
+
 		accessTokenId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
@@ -699,6 +721,7 @@ func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 					continue
 				}
 			}
+
 			errs = append(errs, fmt.Errorf("cannot trigger access token deletion %q: %w", accessTokenId, err))
 		}
 	}

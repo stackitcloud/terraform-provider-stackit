@@ -141,13 +141,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId: tt.expected.ProjectId,
 			}
 			ctx := context.TODO()
+
 			err := mapFields(ctx, tt.input, state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -231,9 +234,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				cmpOpts := cmp.Options{
 					cmp.AllowUnexported(
@@ -243,6 +248,7 @@ func TestToCreatePayload(t *testing.T) {
 						automation.NullableString{},
 					),
 				}
+
 				diff := cmp.Diff(tt.expected, output, cmpOpts)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -314,9 +320,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				cmpOpts := cmp.Options{
 					cmp.AllowUnexported(
@@ -326,6 +334,7 @@ func TestToUpdatePayload(t *testing.T) {
 						automation.NullableString{},
 					),
 				}
+
 				diff := cmp.Diff(output, tt.expected, cmpOpts)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)

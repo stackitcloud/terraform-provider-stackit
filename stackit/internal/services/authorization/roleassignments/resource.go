@@ -61,6 +61,7 @@ func NewRoleAssignmentResources() []func() resource.Resource {
 			}
 		})
 	}
+
 	return resources
 }
 
@@ -162,6 +163,7 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 // Create creates the resource and sets the initial Terraform state.
 func (r *roleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -241,6 +243,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 // Read refreshes the Terraform state with the latest data.
 func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -268,7 +271,9 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorization", fmt.Sprintf("Processing API payload: %v", err))
+
 		return
 	}
 
@@ -278,6 +283,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment read successful", r.apiName))
 }
 
@@ -289,6 +295,7 @@ func (r *roleAssignmentResource) Update(_ context.Context, _ resource.UpdateRequ
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -319,6 +326,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 	}
 
@@ -339,6 +347,7 @@ func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.I
 			fmt.Sprintf("Error importing %s role assignment", r.apiName),
 			fmt.Sprintf("Expected import identifier with format [resource_id],[role],[subject], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -378,9 +387,11 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if resp.Members == nil {
 		return fmt.Errorf("response members are nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -403,7 +414,6 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 // Duplicates lead to inconsistent state (Terraform then fails).
 func checkDuplicate(model Model, listMemberResp *authorization.ListMembersResponse) error { //nolint:gocritic // A read only copy is required since an api response is parsed into the model and this check should not affect the model parameter
 	err := mapListMembersResponse(listMemberResp, &model)
-
 	if err != nil {
 		if errors.Is(err, errRoleAssignmentNotFound) {
 			return nil

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +23,7 @@ const testRegion = "region"
 
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
+
 	tests := []struct {
 		description     string
 		stateExtensions types.Object
@@ -101,11 +101,11 @@ func TestMapFields(t *testing.T) {
 					Version: "1.2.3",
 				},
 				Maintenance: &ske.Maintenance{
-					AutoUpdate: ske.MaintenanceAutoUpdate{
+					AutoUpdate: &ske.MaintenanceAutoUpdate{
 						KubernetesVersion:   new(true),
 						MachineImageVersion: new(true),
 					},
-					TimeWindow: ske.TimeWindow{
+					TimeWindow: &ske.TimeWindow{
 						Start: time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60)),
 						End:   time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC),
 					},
@@ -223,7 +223,8 @@ func TestMapFields(t *testing.T) {
 										),
 									},
 								),
-								"cri": types.StringValue("containerd"),
+								"cri":  types.StringValue("containerd"),
+								"kata": types.BoolValue(false),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -613,6 +614,7 @@ func TestMapFields(t *testing.T) {
 							),
 							"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
 							"cri":    types.StringValue("containerd"),
+							"kata":   types.BoolValue(true),
 							"availability_zones": types.ListValueMust(
 								types.StringType,
 								[]attr.Value{
@@ -657,11 +659,11 @@ func TestMapFields(t *testing.T) {
 					Version: "1.2.3",
 				},
 				Maintenance: &ske.Maintenance{
-					AutoUpdate: ske.MaintenanceAutoUpdate{
+					AutoUpdate: &ske.MaintenanceAutoUpdate{
 						KubernetesVersion:   new(true),
 						MachineImageVersion: new(true),
 					},
-					TimeWindow: ske.TimeWindow{
+					TimeWindow: &ske.TimeWindow{
 						Start: time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60)),
 						End:   time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC),
 					},
@@ -678,6 +680,9 @@ func TestMapFields(t *testing.T) {
 						AvailabilityZones: []string{"z1", "z2"},
 						Cri: &ske.CRI{
 							Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
+							Kata: &ske.Kata{
+								Enabled: true,
+							},
 						},
 						Labels: &map[string]string{"k": "v"},
 						Machine: ske.Machine{
@@ -746,6 +751,7 @@ func TestMapFields(t *testing.T) {
 								),
 								"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
 								"cri":    types.StringValue("containerd"),
+								"kata":   types.BoolValue(true),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -837,17 +843,21 @@ func TestMapFields(t *testing.T) {
 				Extensions: tt.stateExtensions,
 				NodePools:  tt.stateNodePools,
 			}
+
 			err := mapFields(context.Background(), tt.input, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				if tt.expected.Audit.Attributes() == nil {
 					tt.expected.Audit = types.ObjectNull(auditTypes)
 				}
+
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -868,6 +878,28 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 		expectedWarning              bool
 		isValid                      bool
 	}{
+		{
+			description: "ignore malformed versions when selecting latest supported version",
+			availableVersions: []ske.KubernetesVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.20.1"), State: new(VersionStateSupported)},
+				{Version: new("1.20.2"), State: new(VersionStateSupported)},
+				{Version: new("also-invalid"), State: new(VersionStateSupported)},
+			},
+			expectedVersionUsed: new("1.20.2"),
+			isValid:             true,
+		},
+		{
+			description: "ignore malformed versions when selecting matching version",
+			availableVersions: []ske.KubernetesVersion{
+				{Version: new("1.20.1"), State: new(VersionStateSupported)},
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.20.2"), State: new(VersionStateSupported)},
+			},
+			kubernetesVersionMin: new("1.20"),
+			expectedVersionUsed:  new("1.20.2"),
+			isValid:              true,
+		},
 		{
 			"available_version",
 			[]ske.KubernetesVersion{
@@ -1337,21 +1369,26 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var diags diag.Diagnostics
+
 			versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(tt.availableVersions, tt.kubernetesVersionMin, tt.currentKubernetesVersion, &diags)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				if *versionUsed != *tt.expectedVersionUsed {
 					t.Fatalf("Used version does not match: expecting %s, got %s", *tt.expectedVersionUsed, *versionUsed)
 				}
+
 				if tt.expectedHasDeprecatedVersion != hasDeprecatedVersion {
 					t.Fatalf("hasDeprecatedVersion flag is wrong: expecting %t, got %t", tt.expectedHasDeprecatedVersion, hasDeprecatedVersion)
 				}
 			}
+
 			if hasWarnings := len(diags.Warnings()) > 0; tt.expectedWarning != hasWarnings {
 				t.Fatalf("Emitted warnings do not match. Expected %t but got %t", tt.expectedWarning, hasWarnings)
 			}
@@ -1854,13 +1891,16 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				if *versionUsed != *tt.expectedVersionUsed {
 					t.Fatalf("Used version does not match: expecting %s, got %s", *tt.expectedVersionUsed, *versionUsed)
 				}
+
 				if tt.expectedHasDeprecatedVersion != hasDeprecatedVersion {
 					t.Fatalf("hasDeprecatedVersion flag is wrong: expecting %t, got %t", tt.expectedHasDeprecatedVersion, hasDeprecatedVersion)
 				}
@@ -1971,7 +2011,7 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			apiResponse := &ske.Cluster{
 				Maintenance: &ske.Maintenance{
-					TimeWindow: ske.TimeWindow{
+					TimeWindow: &ske.TimeWindow{
 						Start: tt.startAPI,
 						End:   tt.endAPI,
 					},
@@ -1984,28 +2024,32 @@ func TestGetMaintenanceTimes(t *testing.T) {
 				"start":                                types.StringPointerValue(tt.startTF),
 				"end":                                  types.StringPointerValue(tt.endTF),
 			}
+
 			maintenanceObject, diags := types.ObjectValue(maintenanceTypes, maintenanceValues)
 			if diags.HasError() {
 				t.Fatalf("failed to create flavor: %v", core.DiagsToError(diags))
 			}
+
 			tfState := &Model{
 				Maintenance: maintenanceObject,
 			}
 
 			start, end, err := getMaintenanceTimes(context.Background(), apiResponse, tfState)
-
 			if err != nil {
 				if tt.isValid {
 					t.Errorf("getMaintenanceTimes failed on valid input: %v", err)
 				}
 				return
 			}
+
 			if !tt.isValid {
 				t.Fatalf("getMaintenanceTimes didn't fail on invalid input")
 			}
+
 			if tt.startExpected != start {
 				t.Errorf("expected start '%s', got '%s'", tt.startExpected, start)
 			}
+
 			if tt.endExpected != end {
 				t.Errorf("expected end '%s', got '%s'", tt.endExpected, end)
 			}
@@ -2211,6 +2255,7 @@ func TestGetCurrentVersion(t *testing.T) {
 							StatusCode: http.StatusInternalServerError,
 						}
 					}
+
 					return tt.mockedResp, nil
 				}),
 			}
@@ -2219,6 +2264,7 @@ func TestGetCurrentVersion(t *testing.T) {
 				Name:      types.StringValue("name"),
 			}
 			kubernetesVersion, machineImageVersions := getCurrentVersions(context.Background(), client, model)
+
 			diff := cmp.Diff(kubernetesVersion, tt.expectedKubernetesVersion)
 			if diff != "" {
 				t.Errorf("Kubernetes version does not match: %s", diff)
@@ -2232,76 +2278,7 @@ func TestGetCurrentVersion(t *testing.T) {
 	}
 }
 
-func TestGetLatestSupportedKubernetesVersion(t *testing.T) {
-	tests := []struct {
-		description           string
-		listKubernetesVersion []ske.KubernetesVersion
-		isValid               bool
-		expectedVersion       *string
-	}{
-		{
-			description: "base",
-			listKubernetesVersion: []ske.KubernetesVersion{
-				{
-					State:   new("supported"),
-					Version: new("1.2.3"),
-				},
-				{
-					State:   new("supported"),
-					Version: new("3.2.1"),
-				},
-				{
-					State:   new("not-supported"),
-					Version: new("4.4.4"),
-				},
-			},
-			isValid:         true,
-			expectedVersion: new("3.2.1"),
-		},
-		{
-			description:           "no Kubernetes versions 1",
-			listKubernetesVersion: nil,
-			isValid:               false,
-		},
-		{
-			description:           "no Kubernetes versions 2",
-			listKubernetesVersion: []ske.KubernetesVersion{},
-			isValid:               false,
-		},
-		{
-			description: "no supported Kubernetes versions",
-			listKubernetesVersion: []ske.KubernetesVersion{
-				{
-					State:   new("not-supported"),
-					Version: new("1.2.3"),
-				},
-			},
-			isValid: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			version, err := getLatestSupportedKubernetesVersion(tt.listKubernetesVersion)
-
-			if tt.isValid && err != nil {
-				t.Errorf("failed on valid input")
-			}
-			if !tt.isValid && err == nil {
-				t.Errorf("did not fail on invalid input")
-			}
-			if !tt.isValid {
-				return
-			}
-			diff := cmp.Diff(version, tt.expectedVersion)
-			if diff != "" {
-				t.Fatalf("Output is not as expected: %s", diff)
-			}
-		})
-	}
-}
-
-func TestGetLatestSupportedMachineVersion(t *testing.T) {
+func TestGetLatestSupportedVersion(t *testing.T) {
 	tests := []struct {
 		description        string
 		listMachineVersion []ske.MachineImageVersion
@@ -2328,6 +2305,27 @@ func TestGetLatestSupportedMachineVersion(t *testing.T) {
 			expectedVersion: new("3.2.1"),
 		},
 		{
+			description: "ignore malformed supported versions",
+			listMachineVersion: []ske.MachineImageVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new("1.2.3"), State: new(VersionStateSupported)},
+				{Version: new("3.2.1"), State: new(VersionStateSupported)},
+				{Version: new("also-invalid"), State: new(VersionStateSupported)},
+			},
+			isValid:         true,
+			expectedVersion: new("3.2.1"),
+		},
+		{
+			description: "no valid supported versions",
+			listMachineVersion: []ske.MachineImageVersion{
+				{Version: new("invalid"), State: new(VersionStateSupported)},
+				{Version: new(""), State: new(VersionStateSupported)},
+				{State: new(VersionStateSupported)},
+				{Version: new("3.2.1"), State: new(VersionStatePreview)},
+			},
+			isValid: false,
+		},
+		{
 			description:        "no mchine versions 1",
 			listMachineVersion: nil,
 			isValid:            false,
@@ -2351,17 +2349,23 @@ func TestGetLatestSupportedMachineVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			version, err := getLatestSupportedMachineVersion(tt.listMachineVersion)
+			versions := toVersionsWithState(tt.listMachineVersion, func(version *ske.MachineImageVersion) VersionWithState {
+				return version
+			})
+			version, err := getLatestSupportedVersion(versions)
 
 			if tt.isValid && err != nil {
 				t.Errorf("failed on valid input")
 			}
+
 			if !tt.isValid && err == nil {
 				t.Errorf("did not fail on invalid input")
 			}
+
 			if !tt.isValid {
 				return
 			}
+
 			diff := cmp.Diff(version, tt.expectedVersion)
 			if diff != "" {
 				t.Fatalf("Output is not as expected: %s", diff)
@@ -2443,6 +2447,7 @@ func TestToNetworkPayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(payload, tt.expected)
 				if diff != "" {
@@ -2455,6 +2460,7 @@ func TestToNetworkPayload(t *testing.T) {
 
 func TestToAuditPayload(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name  string
 		input types.Object
@@ -2493,13 +2499,16 @@ func TestToAuditPayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			m := &Model{
 				Audit: tt.input,
 			}
+
 			got, err := toAuditPayload(t.Context(), m)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
@@ -2593,9 +2602,11 @@ func TestMaintenanceWindow(t *testing.T) {
 			if diags.HasError() {
 				t.Fatalf("cannot create object value: %v", diags)
 			}
+
 			model := Model{
 				Maintenance: val,
 			}
+
 			maintenance, err := toMaintenancePayload(context.Background(), &model)
 			if err != nil {
 				t.Fatalf("cannot create payload: %v", err)
@@ -2603,10 +2614,12 @@ func TestMaintenanceWindow(t *testing.T) {
 
 			startLocation := maintenance.TimeWindow.Start.Location()
 			endLocation := maintenance.TimeWindow.End.Location()
+
 			wantStart, err := time.ParseInLocation(time.TimeOnly, tt.wantStart, startLocation)
 			if err != nil {
 				t.Fatalf("cannot parse start date %q: %v", tt.wantStart, err)
 			}
+
 			wantEnd, err := time.ParseInLocation(time.TimeOnly, tt.wantEnd, endLocation)
 			if err != nil {
 				t.Fatalf("cannot parse end date %q: %v", tt.wantEnd, err)
@@ -2615,6 +2628,7 @@ func TestMaintenanceWindow(t *testing.T) {
 			if expected, actual := wantStart.In(startLocation), maintenance.TimeWindow.Start; expected != actual {
 				t.Errorf("invalid start date. expected %s but got %s", expected, actual)
 			}
+
 			if expected, actual := wantEnd.In(endLocation), (maintenance.TimeWindow.End); expected != actual {
 				t.Errorf("invalid End date. expected %s but got %s", expected, actual)
 			}
@@ -2667,6 +2681,23 @@ func TestSortK8sVersion(t *testing.T) {
 			},
 		},
 		{
+			description: "malformed versions sort after valid versions",
+			versions: []ske.KubernetesVersion{
+				{Version: new("invalid")},
+				{Version: new("1.20.0")},
+				{Version: new("invalid")},
+				{Version: new("1.20.2")},
+				{Version: new("1.20.1")},
+			},
+			wantSorted: []ske.KubernetesVersion{
+				{Version: new("1.20.2")},
+				{Version: new("1.20.1")},
+				{Version: new("1.20.0")},
+				{Version: new("invalid")},
+				{Version: new("invalid")},
+			},
+		},
+		{
 			description: "slice without prefix and minor version change",
 			versions: []ske.KubernetesVersion{
 				{Version: new("1.20.0")},
@@ -2687,28 +2718,17 @@ func TestSortK8sVersion(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.description, func(t *testing.T) {
-			sortK8sVersions(tc.versions)
+			versions := toVersionsWithState(tc.versions, func(version *ske.KubernetesVersion) VersionWithState {
+				return version
+			})
 
-			joinK8sVersions := func(in []ske.KubernetesVersion, sep string) string {
-				var builder strings.Builder
-				for i, l := 0, len(in); i < l; i++ {
-					if i > 0 {
-						builder.WriteString(sep)
-					}
-					if v := in[i].Version; v != nil {
-						builder.WriteString(*v)
-					} else {
-						builder.WriteString("undef")
-					}
-				}
-				return builder.String()
-			}
+			sortVersions(versions)
 
-			expected := joinK8sVersions(tc.wantSorted, ", ")
-			actual := joinK8sVersions(tc.versions, ", ")
-
-			if expected != actual {
-				t.Errorf("wrong sort order. wanted %s but got %s", expected, actual)
+			expectedVersions := toVersionsWithState(tc.wantSorted, func(version *ske.KubernetesVersion) VersionWithState {
+				return version
+			})
+			if diff := cmp.Diff(expectedVersions, versions); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -2875,6 +2895,7 @@ func TestValidateConfig(t *testing.T) {
 			diags := diag.Diagnostics{}
 
 			validateConfig(ctx, &diags, tt.model)
+
 			if diags.HasError() != tt.wantErr {
 				t.Errorf("validateConfig() = %v, want %v", diags.HasError(), tt.wantErr)
 			}
@@ -2884,6 +2905,7 @@ func TestValidateConfig(t *testing.T) {
 
 func TestMapAudit(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name       string
 		input      *ske.Audit
@@ -2929,6 +2951,7 @@ func TestMapAudit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			m := &Model{
 				Audit: tt.stateAudit,
 			}
@@ -2940,6 +2963,7 @@ func TestMapAudit(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			if diff := cmp.Diff(tt.want, m.Audit); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
@@ -2949,6 +2973,7 @@ func TestMapAudit(t *testing.T) {
 
 func TestMapAccess(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   *ske.Access
@@ -2975,6 +3000,7 @@ func TestMapAccess(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			m := &Model{}
 			cluster := &ske.Cluster{
 				Access: tt.input,
@@ -2984,9 +3010,11 @@ func TestMapAccess(t *testing.T) {
 			if !tt.wantErr && err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			if tt.wantErr && err == nil {
 				t.Fatalf("expected error, but got none")
 			}
+
 			if diff := cmp.Diff(tt.want, m.Access); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
@@ -2996,6 +3024,7 @@ func TestMapAccess(t *testing.T) {
 
 func TestToAccessPayload(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   basetypes.ObjectValue
@@ -3032,16 +3061,20 @@ func TestToAccessPayload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			m := &Model{
 				Access: tt.input,
 			}
+
 			got, err := toAccessPayload(t.Context(), m)
 			if err != nil && !tt.wantErr {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			if err == nil && tt.wantErr {
 				t.Fatalf("expected error, but got none")
 			}
+
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}

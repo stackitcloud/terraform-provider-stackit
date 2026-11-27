@@ -104,6 +104,7 @@ func (r *vpcNetworkRangeResource) ModifyPlan(ctx context.Context, req resource.M
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -258,6 +259,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -290,6 +292,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network range", fmt.Sprintf("Missing Network Range ID in response: %+v", networkRange))
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "network_range_id", *networkRange.VPCNetworkRangeIPv4.Id)
 
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -320,6 +323,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Network range created")
 }
 
@@ -336,12 +340,14 @@ func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
 	projectId := model.ProjectId.ValueString()
 	vpcId := model.VpcId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	networkRangeId := model.NetworkRangeId.ValueString()
 	if networkRangeId == "" {
 		// Resource not yet created; ID is unknown.
@@ -362,7 +368,9 @@ func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network range", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -380,6 +388,7 @@ func (r *vpcNetworkRangeResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Network range read")
 }
 
@@ -398,6 +407,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -451,6 +461,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Network range updated")
 }
 
@@ -458,6 +469,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model ResourceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -470,6 +482,7 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -492,7 +505,9 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network range", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -517,6 +532,7 @@ func (r *vpcNetworkRangeResource) ImportState(ctx context.Context, req resource.
 			"Error importing vpc network range",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[vpc_id],[region],[network_range_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -529,6 +545,7 @@ func (r *vpcNetworkRangeResource) ImportState(ctx context.Context, req resource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC Network range state imported")
 }
 
@@ -536,6 +553,7 @@ func mapFields(ctx context.Context, networkRangeResp *iaas.VPCNetworkRange, mode
 	if networkRangeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -553,6 +571,7 @@ func mapIpv4NetworkRange(ctx context.Context, ipv4Resp *iaas.VPCNetworkRangeIPv4
 	if ipv4Resp == nil {
 		return fmt.Errorf("response network range ipv4 is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -597,6 +616,7 @@ func mapIpv4NetworkRange(ctx context.Context, ipv4Resp *iaas.VPCNetworkRangeIPv4
 		reconciledRangePrefixes := utils.ReconcileStringSlices(modelNameservers, ipv4Resp.Nameservers)
 
 		var diags diag.Diagnostics
+
 		model.Nameservers, diags = types.ListValueFrom(ctx, types.StringType, reconciledRangePrefixes)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map nameservers: %w", core.DiagsToError(diags))
@@ -610,6 +630,7 @@ func mapIpv6NetworkRange(ctx context.Context, ipv6Resp *iaas.VPCNetworkRangeIPv6
 	if ipv6Resp == nil {
 		return fmt.Errorf("response network range ipv6 is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -654,6 +675,7 @@ func mapIpv6NetworkRange(ctx context.Context, ipv6Resp *iaas.VPCNetworkRangeIPv6
 		reconciledRangePrefixes := utils.ReconcileStringSlices(modelNameservers, ipv6Resp.Nameservers)
 
 		var diags diag.Diagnostics
+
 		model.Nameservers, diags = types.ListValueFrom(ctx, types.StringType, reconciledRangePrefixes)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map nameservers: %w", core.DiagsToError(diags))
@@ -688,6 +710,7 @@ func toCreatePayload(ctx context.Context, model *SharedModel) (*iaas.CreateVPCNe
 		Nameservers:      modelNameservers,
 		Prefix:           model.Prefix.ValueString(),
 	})
+
 	return &payload, nil
 }
 
@@ -715,5 +738,6 @@ func toUpdatePayload(ctx context.Context, model *SharedModel, currentLabels type
 		MinPrefixLen:     model.MinPrefixLength.ValueInt64Pointer(),
 		Nameservers:      modelNameservers,
 	})
+
 	return &payload, nil
 }

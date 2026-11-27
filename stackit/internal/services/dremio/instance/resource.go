@@ -8,15 +8,19 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
@@ -48,6 +52,7 @@ type Model struct {
 
 	// Optional Fields
 	Description types.String `tfsdk:"description"`
+	Acl         types.List   `tfsdk:"acl"`
 
 	// Read-only Fields
 	Endpoints types.Object `tfsdk:"endpoints"` // see EndpointsModel
@@ -130,6 +135,7 @@ var descriptions = map[string]string{ //nolint:gosec // no hardcoded credentials
 	"endpoints_arrow_flight":     "The arrow flight endpoint of the Dremio instance.",
 	"endpoints_catalog":          "The Apache Iceberg endpoint of the Dremio instance.",
 	"endpoints_ui":               "The UI endpoint of the Dremio instance.",
+	"acl":                        "The Access Control List (ACL) defining the IPv4 or IPv6 CIDR ranges allowed to connect to the Dremio instance. An empty list allows access from any address.",
 	"authentication":             "Dremio instance authentication settings. A change here triggers a Dremio restart and will incur downtime.",
 	"authentication_type":        "Type of authentication (local-only, azuread, oauth).",
 	"azuread":                    "Azure Active Directory authentication configuration.",
@@ -169,6 +175,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -252,6 +259,24 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 			"display_name": schema.StringAttribute{
 				Description: descriptions["display_name"],
 				Required:    true,
+			},
+			"acl": schema.ListAttribute{
+				Optional:    true,
+				Computed:    true, // Required when using Default
+				ElementType: types.StringType,
+				// The API returns an empty list for acl even if the field is omitted (null) in the request.
+				// This causes an "inconsistent result" error in Terraform, because the config is null
+				// but the state is [].
+				//
+				// By setting a Default value of an empty list, we tell Terraform to treat a missing
+				// acl block in the HCL as if the user explicitly defined acl = [].
+				// This ensures the config (empty list) matches the API response (empty list).
+				Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+				Description: descriptions["acl"],
+				Validators: []validator.List{
+					listvalidator.NoNullValues(),
+					listvalidator.ValueStringsAre(validate.CIDR()),
+				},
 			},
 			"authentication": schema.SingleNestedAttribute{
 				Description: descriptions["authentication"],
@@ -400,6 +425,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -411,7 +437,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// prepare the payload struct for the create instance request
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -423,6 +449,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	if instanceResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -450,10 +477,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance created")
 }
 
@@ -469,6 +498,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -476,12 +506,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -492,7 +524,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -508,6 +542,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance read")
 }
 
@@ -525,6 +560,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
@@ -535,18 +571,20 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
 	instanceId := state.InstanceId.ValueString()
+
 	instanceResp, err := r.client.UpdateDremioInstance(ctx, projectId, region, instanceId).UpdateDremioInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	if instanceResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -579,11 +617,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance updated")
 }
 
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model InstanceModel
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -596,6 +636,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -614,6 +655,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Dremio instance", fmt.Sprintf("Calling API: %v", err))
 	}
 
@@ -635,6 +677,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing dremio instance",
 			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id], got %q", req.ID),
 		)
+
 		return
 	}
 
@@ -651,6 +694,7 @@ func mapFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse, mode
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -663,6 +707,7 @@ func mapFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse, mode
 	if model.Authentication == nil {
 		model.Authentication = new(AuthenticationModel)
 	}
+
 	err = mapAuthentication(instanceResp, model.Authentication)
 	if err != nil {
 		return fmt.Errorf("failed to map Authentication fields")
@@ -676,6 +721,7 @@ func mapModelFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse,
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -696,19 +742,58 @@ func mapModelFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse,
 		Catalog:     types.StringValue(instanceResp.Endpoints.Catalog),
 		Ui:          types.StringValue(instanceResp.Endpoints.Ui),
 	}
+
 	endpointsObj, diags := types.ObjectValueFrom(ctx, endpointsAttrTypes, endpoints)
 	if diags.HasError() {
 		return fmt.Errorf("failed to parse endpoints")
 	}
+
 	model.Endpoints = endpointsObj
 
+	acl, err := mapAcl(ctx, instanceResp.Acl, model.Acl)
+	if err != nil {
+		return err
+	}
+
+	model.Acl = acl
+
 	return nil
+}
+
+func mapAcl(ctx context.Context, apiAcl []string, modelAcl types.List) (basetypes.ListValue, error) {
+	var (
+		acl   basetypes.ListValue
+		diags diag.Diagnostics
+	)
+
+	if apiAcl == nil {
+		acl = types.ListNull(types.StringType)
+	} else {
+		var modelAclSlice []string
+
+		if !modelAcl.IsNull() && !modelAcl.IsUnknown() {
+			diags = modelAcl.ElementsAs(ctx, &modelAclSlice, false)
+			if diags.HasError() {
+				return basetypes.ListValue{}, fmt.Errorf("failed to parse acl: %w", core.DiagsToError(diags))
+			}
+		}
+
+		aclSlice := utils.ReconcileStringSlices(modelAclSlice, apiAcl)
+
+		acl, diags = types.ListValueFrom(ctx, types.StringType, aclSlice)
+		if diags.HasError() {
+			return basetypes.ListValue{}, fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
+		}
+	}
+
+	return acl, nil
 }
 
 func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *AuthenticationModel) error {
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if auth == nil {
 		return fmt.Errorf("auth input is nil")
 	}
@@ -732,6 +817,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 		if auth.OAuth == nil {
 			auth.OAuth = new(OAuthModel)
 		}
+
 		oauthResp := instanceResp.Authentication.Oauth
 		oauthModel := auth.OAuth
 
@@ -749,6 +835,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 					Value: types.StringValue(p.Value),
 				})
 			}
+
 			oauthModel.Parameters = params
 		}
 	}
@@ -757,7 +844,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *Authenticat
 }
 
 // Build UpdateDremioInstancePayload from provider's model
-func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePayload, error) {
+func toUpdatePayload(ctx context.Context, model *InstanceModel) (*dremioSdk.UpdateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -767,7 +854,16 @@ func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePaylo
 		return nil, fmt.Errorf("failed to parse authentication: %w", err)
 	}
 
+	var acl []string
+	if !model.Acl.IsNull() && !model.Acl.IsUnknown() {
+		diags := model.Acl.ElementsAs(ctx, &acl, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("failed to parse acl: %v", diags)
+		}
+	}
+
 	return &dremioSdk.UpdateDremioInstancePayload{
+		Acl:            acl,
 		Authentication: authentication,
 		Description:    model.Description.ValueStringPointer(),
 		DisplayName:    model.DisplayName.ValueStringPointer(),
@@ -775,7 +871,7 @@ func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePaylo
 }
 
 // Build CreateDremioInstancePayload from provider's model
-func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePayload, error) {
+func toCreatePayload(ctx context.Context, model *InstanceModel) (*dremioSdk.CreateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -785,7 +881,16 @@ func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePaylo
 		return nil, fmt.Errorf("failed to parse authentication: %w", err)
 	}
 
+	var acl []string
+	if !model.Acl.IsNull() && !model.Acl.IsUnknown() {
+		diags := model.Acl.ElementsAs(ctx, &acl, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("failed to parse acl: %v", diags)
+		}
+	}
+
 	return &dremioSdk.CreateDremioInstancePayload{
+		Acl:            acl,
 		Authentication: authentication,
 		Description:    model.Description.ValueStringPointer(),
 		DisplayName:    model.DisplayName.ValueString(),
@@ -796,12 +901,12 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 	// API only saves the block of the stated type. The other one is omitted.
 	// Keeping the block in TF leads to inconsistent state. Therefore we have
 	// make sure the type matches the existing block.
-
 	switch model.Authentication.Type.ValueString() {
 	case string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY):
 		if !(model.Authentication.OAuth == nil) || !(model.Authentication.AzureAD == nil) {
 			return nil, fmt.Errorf("can't state idp config if auth type is %q", dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)
 		}
+
 		return &dremioSdk.Authentication{
 			Azuread: nil,
 			Oauth:   nil,
@@ -811,6 +916,7 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 		if !(model.Authentication.AzureAD == nil) {
 			return nil, fmt.Errorf("can't state azure idp config if auth type is %q", dremioSdk.AUTHENTICATIONTYPE_OAUTH)
 		}
+
 		if model.Authentication.OAuth == nil {
 			return nil, fmt.Errorf("missing oauth idp config")
 		}
@@ -847,6 +953,7 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 		if !(model.Authentication.OAuth == nil) {
 			return nil, fmt.Errorf("can't state oauth idp config if auth type is %q", dremioSdk.AUTHENTICATIONTYPE_AZUREAD)
 		}
+
 		if model.Authentication.AzureAD == nil {
 			return nil, fmt.Errorf("missing azuread config")
 		}
@@ -857,6 +964,7 @@ func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error
 			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueStringPointer(),
 			RedirectUrl:  model.Authentication.AzureAD.RedirectUrl.ValueStringPointer(),
 		}
+
 		return &dremioSdk.Authentication{
 			Azuread: azureAdPayload,
 			Oauth:   nil,

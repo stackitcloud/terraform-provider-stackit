@@ -108,6 +108,7 @@ func (r *RoleBindingDatasource[C]) Schema(_ context.Context, _ datasource.Schema
 // Read refreshes the Terraform state with the latest data.
 func (r *RoleBindingDatasource[C]) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DatasourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -143,6 +144,7 @@ func (r *RoleBindingDatasource[C]) Read(ctx context.Context, req datasource.Read
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, fmt.Sprintf("%s %s role bindings read", r.ApiName, r.ResourceType))
 }
 

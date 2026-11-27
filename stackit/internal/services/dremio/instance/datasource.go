@@ -10,11 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
+	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 )
 
 var (
@@ -101,6 +101,7 @@ func mapDatasourceFields(ctx context.Context, instanceResp *dremioSdk.DremioResp
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -113,6 +114,7 @@ func mapDatasourceFields(ctx context.Context, instanceResp *dremioSdk.DremioResp
 	if model.Authentication == nil {
 		model.Authentication = new(AuthenticationDatasourceModel)
 	}
+
 	err = mapDatasourceAuthentication(instanceResp, model.Authentication)
 	if err != nil {
 		return fmt.Errorf("failed to map Authentication fields")
@@ -125,6 +127,7 @@ func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *A
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if auth == nil {
 		return fmt.Errorf("auth input is nil")
 	}
@@ -148,6 +151,7 @@ func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *A
 		if auth.OAuth == nil {
 			auth.OAuth = new(OAuthDatasourceModel)
 		}
+
 		oauthResp := instanceResp.Authentication.Oauth
 		oauthModel := auth.OAuth
 
@@ -165,6 +169,7 @@ func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *A
 					Value: types.StringValue(p.Value),
 				})
 			}
+
 			oauthModel.Parameters = params
 		}
 	}
@@ -219,6 +224,11 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Computed:    true,
 					},
 				},
+			},
+			"acl": schema.ListAttribute{
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: descriptions["acl"],
 			},
 			"authentication": schema.SingleNestedAttribute{
 				Description: descriptions["authentication"],
@@ -337,6 +347,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -353,5 +364,6 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Dremio instance read")
 }

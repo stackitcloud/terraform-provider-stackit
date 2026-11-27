@@ -81,6 +81,7 @@ func (r *vpcRoutingTableResource) Metadata(_ context.Context, req resource.Metad
 // Configure adds the provider configured client to the resource.
 func (r *vpcRoutingTableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -110,6 +111,7 @@ func (r *vpcRoutingTableResource) ModifyPlan(ctx context.Context, req resource.M
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	var planModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
@@ -222,6 +224,7 @@ func (r *vpcRoutingTableResource) Schema(_ context.Context, _ resource.SchemaReq
 func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -257,6 +260,7 @@ func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.Creat
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc routing table", "response did not return a valid ID")
 		return
 	}
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":       projectId,
 		"vpc_id":           vpcId,
@@ -276,12 +280,14 @@ func (r *vpcRoutingTableResource) Create(ctx context.Context, req resource.Creat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC routing table created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -319,6 +325,7 @@ func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadReq
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -336,6 +343,7 @@ func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC routing table read")
 }
 
@@ -343,6 +351,7 @@ func (r *vpcRoutingTableResource) Read(ctx context.Context, req resource.ReadReq
 func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -363,6 +372,7 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -396,6 +406,7 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC routing table updated")
 }
 
@@ -403,6 +414,7 @@ func (r *vpcRoutingTableResource) Update(ctx context.Context, req resource.Updat
 func (r *vpcRoutingTableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -428,7 +440,9 @@ func (r *vpcRoutingTableResource) Delete(ctx context.Context, req resource.Delet
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting vpc routing table", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -447,6 +461,7 @@ func (r *vpcRoutingTableResource) ImportState(ctx context.Context, req resource.
 			"Error importing routing table",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[vpc_id],[region],[routing_table_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -459,6 +474,7 @@ func (r *vpcRoutingTableResource) ImportState(ctx context.Context, req resource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table state imported")
 }
 
@@ -466,6 +482,7 @@ func mapFields(ctx context.Context, routingTable *iaas.VPCRoutingTable, model *M
 	if routingTable == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -493,6 +510,7 @@ func mapFields(ctx context.Context, routingTable *iaas.VPCRoutingTable, model *M
 	model.Region = types.StringValue(region)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
 	model.DynamicRoutes = types.BoolPointerValue(routingTable.DynamicRoutes)
+
 	return nil
 }
 

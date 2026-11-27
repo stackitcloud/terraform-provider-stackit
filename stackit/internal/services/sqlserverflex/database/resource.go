@@ -63,9 +63,11 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 
 func (r *databaseResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
+
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -183,6 +185,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 
@@ -236,6 +239,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SqlserverFlex database created")
 }
 
@@ -251,6 +255,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 
@@ -267,7 +272,9 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("calling API: %v", err))
+
 		return
 	}
 
@@ -283,6 +290,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SqlserverFlex database read")
 }
 
@@ -302,6 +310,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
@@ -319,7 +328,9 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
+
 		resp.Diagnostics.AddError("Error deleting database", err.Error())
+
 		return
 	}
 
@@ -335,8 +346,10 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 			"Unexpected Import Identifier",
 			fmt.Sprintf("Expected import identifier with format: project_id,region,instance_id,name. Got: %q", req.ID),
 		)
+
 		return
 	}
+
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
 		"region":      idParts[1],
@@ -346,6 +359,7 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SqlserverFlex database state imported")
 }
 
@@ -353,6 +367,7 @@ func mapFields(apiResp *sqlserverflex.GetDatabaseResponse, model *SharedModel, r
 	if apiResp == nil {
 		return fmt.Errorf("response is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -378,6 +393,7 @@ func toCreatePayload(model *Model) (*sqlserverflex.CreateDatabasePayload, error)
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	payload := &sqlserverflex.CreateDatabasePayload{
 		Name:  model.Name.ValueString(),
 		Owner: model.Owner.ValueString(),
@@ -386,9 +402,11 @@ func toCreatePayload(model *Model) (*sqlserverflex.CreateDatabasePayload, error)
 	if !model.Collation.IsNull() && !model.Collation.IsUnknown() {
 		payload.Collation = model.Collation.ValueStringPointer()
 	}
+
 	if !model.Compatibility.IsNull() && !model.Compatibility.IsUnknown() {
 		compatibility := int32(model.Compatibility.ValueInt64()) // nolint:gosec // user input is controlled by schema
 		payload.Compatibility = &compatibility
 	}
+
 	return payload, nil
 }

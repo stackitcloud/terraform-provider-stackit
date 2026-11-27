@@ -80,6 +80,7 @@ func (r *keyRingResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -170,6 +171,7 @@ func (r *keyRingResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -189,6 +191,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
 	createResponse, err := r.client.CreateKeyRing(ctx, projectId, region).CreateKeyRingPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Calling API: %v", err))
@@ -227,11 +230,13 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Key Ring created")
 }
 
 func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -241,12 +246,14 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	keyRingId := model.KeyRingId.ValueString()
 	if keyRingId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "keyring_id", keyRingId)
@@ -256,12 +263,15 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 	keyRingResponse, err := r.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading keyring", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -272,11 +282,13 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading keyring", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Key ring read")
 }
 
@@ -287,6 +299,7 @@ func (r *keyRingResource) Update(ctx context.Context, _ resource.UpdateRequest, 
 
 func (r *keyRingResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -308,6 +321,7 @@ func (r *keyRingResource) ImportState(ctx context.Context, req resource.ImportSt
 			"Error importing keyring",
 			fmt.Sprintf("Exptected import identifier with format: [project_id],[region],[keyring_id], got :%q", req.ID),
 		)
+
 		return
 	}
 
@@ -324,6 +338,7 @@ func mapFields(keyRing *kms.KeyRing, model *Model, region string) error {
 	if keyRing == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

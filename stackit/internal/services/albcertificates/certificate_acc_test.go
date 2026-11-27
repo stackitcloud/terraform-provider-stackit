@@ -108,14 +108,17 @@ func TestAccCertResourceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_certificate.certificate")
 					}
+
 					certID, ok := r.Primary.Attributes["cert_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, certID), nil
 				},
 				ImportState:       true,
@@ -201,14 +204,17 @@ func TestAccCertResourceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_alb_certificate.certificate")
 					}
+
 					certID, ok := r.Primary.Attributes["cert_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute name")
 					}
+
 					region, ok := r.Primary.Attributes["region"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute region")
 					}
+
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, certID), nil
 				},
 				ImportState:       true,
@@ -223,6 +229,7 @@ func TestAccCertResourceMax(t *testing.T) {
 
 func testAccCheckCertDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := certSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ALBCertCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
@@ -232,6 +239,7 @@ func testAccCheckCertDestroy(s *terraform.State) error {
 	if testutil.Region != "" {
 		region = testutil.Region
 	}
+
 	certificatesToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_alb_certificate" {
@@ -263,10 +271,12 @@ func testAccCheckCertDestroy(s *terraform.State) error {
 	if err != nil {
 		return fmt.Errorf("getting certificateResp after destroy: %w", err)
 	}
+
 	for i := range certificateResp.Items {
 		if utils.Contains(certificatesToDestroy, *certificateResp.Items[i].Id) {
 			return fmt.Errorf("certificate %s has not been destroyed", *certificateResp.Items[i].Id)
 		}
 	}
+
 	return nil
 }

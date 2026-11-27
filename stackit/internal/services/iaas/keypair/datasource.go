@@ -81,11 +81,13 @@ func (d *keyPairDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 // Read refreshes the Terraform state with the latest data.
 func (d *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	name := model.Name.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
@@ -103,6 +105,7 @@ func (d *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			nil,
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -120,5 +123,6 @@ func (d *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Key pair read")
 }

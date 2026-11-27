@@ -159,6 +159,7 @@ func TestUnchangedPaths(t *testing.T) {
 	type itemModel struct {
 		Value types.String `tfsdk:"value"`
 	}
+
 	type testModel struct {
 		Anchor  types.String `tfsdk:"anchor"`
 		First   types.String `tfsdk:"first"`
@@ -167,6 +168,7 @@ func TestUnchangedPaths(t *testing.T) {
 		Count   types.Int64  `tfsdk:"count"`
 		Items   types.List   `tfsdk:"items"`
 	}
+
 	type testValues struct {
 		anchor  string
 		first   string
@@ -183,6 +185,7 @@ func TestUnchangedPaths(t *testing.T) {
 		for _, value := range values.items {
 			items = append(items, itemModel{Value: types.StringValue(value)})
 		}
+
 		itemList, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: itemAttributeTypes}, items)
 		if diags.HasError() {
 			t.Fatalf("failed to construct item list: %v", diags.Errors())
@@ -202,10 +205,12 @@ func TestUnchangedPaths(t *testing.T) {
 		t.Helper()
 
 		plan := tfsdk.Plan{Schema: testSchema}
+
 		diags := plan.Set(ctx, modelFromValues(t, values))
 		if diags.HasError() {
 			t.Fatalf("failed to construct plan: %v", diags.Errors())
 		}
+
 		return plan
 	}
 
@@ -213,10 +218,12 @@ func TestUnchangedPaths(t *testing.T) {
 		t.Helper()
 
 		state := tfsdk.State{Schema: testSchema}
+
 		diags := state.Set(ctx, modelFromValues(t, values))
 		if diags.HasError() {
 			t.Fatalf("failed to construct state: %v", diags.Errors())
 		}
+
 		return state
 	}
 
@@ -344,6 +351,7 @@ func TestUnchangedPaths(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plan := newPlan(t, tt.plan)
 			state := newState(t, tt.state)
+
 			configPlan := plan
 			if tt.configItems != nil {
 				configValues := tt.plan
@@ -367,6 +375,7 @@ func TestUnchangedPaths(t *testing.T) {
 			if response.Diagnostics.HasError() != tt.wantError {
 				t.Fatalf("unexpected diagnostics: %v", response.Diagnostics)
 			}
+
 			if response.UseStateForUnknown != tt.want {
 				t.Errorf("UseStateForUnknown = %t, want %t", response.UseStateForUnknown, tt.want)
 			}

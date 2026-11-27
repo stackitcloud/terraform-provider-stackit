@@ -137,6 +137,7 @@ func ValidateServiceRegion(ctx context.Context, providerData *ProviderData, serv
 	}
 
 	LogAndAddError(ctx, diagnostics, "Unsupported region", fmt.Sprintf("Service %s is only available in region eu01.", serviceName))
+
 	return false
 }
 
@@ -266,6 +267,7 @@ func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagno
 		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.providerDataInternal, got %T", providerData))
 		return ProviderData{}, ClientCollection{}, false
 	}
+
 	return stackitProviderDataInternal.providerData, stackitProviderDataInternal.clients, true
 }
 
@@ -295,6 +297,7 @@ func DiagsToError(diags diag.Diagnostics) error {
 	}
 
 	diagsError := diags.Errors()
+
 	diagsStrings := make([]string, 0)
 	for _, diagnostic := range diagsError {
 		diagsStrings = append(diagsStrings, fmt.Sprintf(
@@ -303,6 +306,7 @@ func DiagsToError(diags diag.Diagnostics) error {
 			diagnostic.Detail(),
 		))
 	}
+
 	return fmt.Errorf("%s", strings.Join(diagsStrings, ";"))
 }
 
@@ -356,5 +360,6 @@ func LogResponse(ctx context.Context) context.Context {
 	tflog.Info(ctx, "response data", map[string]any{
 		"x-trace-id": traceId,
 	})
+
 	return ctx
 }
