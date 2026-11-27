@@ -6,6 +6,13 @@ resource "stackit_observability_scrapeconfig" "example" {
   saml2 = {
     enable_url_parameters = true
   }
+  metrics_relabel_configs = [
+    {
+      action        = "drop"
+      source_labels = ["__name__"]
+      regex         = "go_.*"
+    }
+  ]
   targets = [
     {
       urls = ["url1", "urls2"]

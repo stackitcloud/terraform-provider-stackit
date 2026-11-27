@@ -127,6 +127,43 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 					},
 				},
 			},
+			"metrics_relabel_configs": schema.ListNestedAttribute{
+				Description: "List of metric relabel configurations, applied to the scraped samples before they are stored.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"action": schema.StringAttribute{
+							Description: "Action to perform based on the regex matching.",
+							Computed:    true,
+						},
+						"modulus": schema.Int32Attribute{
+							Description: "Modulus to take of the hash of the source label values.",
+							Computed:    true,
+						},
+						"regex": schema.StringAttribute{
+							Description: "Regular expression against which the extracted value is matched.",
+							Computed:    true,
+						},
+						"replacement": schema.StringAttribute{
+							Description: "Replacement value against which a regex replace is performed if the regular expression matches.",
+							Computed:    true,
+						},
+						"separator": schema.StringAttribute{
+							Description: "Separator placed between concatenated source label values.",
+							Computed:    true,
+						},
+						"source_labels": schema.ListAttribute{
+							Description: "The source labels select values from existing labels.",
+							Computed:    true,
+							ElementType: types.StringType,
+						},
+						"target_label": schema.StringAttribute{
+							Description: "Label to which the resulting value is written in a `replace` action.",
+							Computed:    true,
+						},
+					},
+				},
+			},
 			"basic_auth": schema.SingleNestedAttribute{
 				Description: "A basic authentication block.",
 				Computed:    true,
