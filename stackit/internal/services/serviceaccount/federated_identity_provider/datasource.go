@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -129,7 +130,7 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 
 		ok := errors.As(err, &oapiErr)
 		// due to security purposes, attempting to get access federation for a non-existent Service Account will return 403.
-		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
+		if ok && slices.Contains([]int{http.StatusForbidden, http.StatusNotFound}, oapiErr.StatusCode) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
