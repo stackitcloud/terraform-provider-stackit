@@ -19,6 +19,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "git"
+)
+
 //go:embed testdata/resource-min.tf
 var resourceMin string
 
@@ -65,6 +70,10 @@ func testConfigVarsMaxUpdated() config.Variables {
 }
 
 func TestAccGitMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckGitInstanceDestroy,
@@ -180,6 +189,10 @@ func TestAccGitMin(t *testing.T) {
 }
 
 func TestAccGitMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckGitInstanceDestroy,

@@ -24,6 +24,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "authorization"
+)
+
 var (
 	//go:embed testdata/resource-project-role-assignment.tf
 	resourceProjectRoleAssignment string
@@ -177,6 +182,10 @@ func testConfigVarsServiceAccountRoleAssignmentUpdated() config.Variables {
 }
 
 func TestAccProjectRoleAssignmentResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("Testing project role assignment resource")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -266,6 +275,10 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 }
 
 func TestAccFolderRoleAssignmentResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("Testing folder role assignment resource")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -354,6 +367,10 @@ func TestAccFolderRoleAssignmentResource(t *testing.T) {
 }
 
 func TestAccOrgRoleAssignmentResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("Testing org role assignment resource")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -424,6 +441,10 @@ func TestAccOrgRoleAssignmentResource(t *testing.T) {
 }
 
 func TestAccServiceAccountRoleAssignmentResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("Testing service-account (act-as) role assignment resource")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -484,6 +505,10 @@ func TestAccServiceAccountRoleAssignmentResource(t *testing.T) {
 }
 
 func TestAccProjectCustomRoleResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("Testing project custom role resource")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -580,6 +605,10 @@ func TestAccProjectCustomRoleResource(t *testing.T) {
 }
 
 func TestAccFolderCustomRoleResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("Testing folder custom role resource")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -678,6 +707,10 @@ func TestAccFolderCustomRoleResource(t *testing.T) {
 }
 
 func TestAccOrganizationCustomRoleResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Log("Testing org custom role resource")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,

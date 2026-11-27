@@ -23,6 +23,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "telemetry-router"
+)
+
 var (
 	//go:embed testdata/instance-min.tf
 	instanceMin string
@@ -201,6 +206,10 @@ func testConfigDestinationVarsS3Updated() config.Variables {
 }
 
 func TestAccTelemetryRouterInstanceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -303,6 +312,10 @@ func TestAccTelemetryRouterInstanceMin(t *testing.T) {
 }
 
 func TestAccTelemetryRouterInstanceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -441,6 +454,10 @@ func TestAccTelemetryRouterInstanceMax(t *testing.T) {
 }
 
 func TestAccTelemetryRouterAccessTokenMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -546,6 +563,10 @@ func TestAccTelemetryRouterAccessTokenMin(t *testing.T) {
 }
 
 func TestAccTelemetryRouterAccessTokenMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -660,6 +681,10 @@ func TestAccTelemetryRouterAccessTokenMax(t *testing.T) {
 }
 
 func TestAccTelemetryRouterDestinationOTLPBasicAuth(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -790,6 +815,10 @@ func TestAccTelemetryRouterDestinationOTLPBasicAuth(t *testing.T) {
 }
 
 func TestAccTelemetryRouterDestinationOTLPBearerToken(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -918,6 +947,10 @@ func TestAccTelemetryRouterDestinationOTLPBearerToken(t *testing.T) {
 }
 
 func TestAccTelemetryRouterDestinationS3(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,

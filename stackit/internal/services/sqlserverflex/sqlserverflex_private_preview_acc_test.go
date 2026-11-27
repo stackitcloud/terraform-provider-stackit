@@ -58,6 +58,10 @@ func configVarsMaxPrivatePreviewUpdated() config.Variables {
 }
 
 func TestAccSQLServerFlexMaxPrivatePreviewResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccChecksqlserverflexDestroy,

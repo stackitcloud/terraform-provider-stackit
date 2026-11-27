@@ -22,6 +22,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "alb"
+)
+
 //go:embed testfiles/resource-min.tf
 var resourceMinConfig string
 
@@ -176,6 +181,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccALBResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckALBDestroy,
@@ -355,6 +364,10 @@ func TestAccALBResourceMin(t *testing.T) {
 }
 
 func TestAccALBResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckALBDestroy,

@@ -23,6 +23,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "ske"
+)
+
 const ephemeralKubeconfigAddress = "ephemeral.stackit_ske_kubeconfig.ephemeral_kubeconfig"
 
 var (
@@ -129,6 +134,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccSKEMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_10_0),
@@ -306,6 +315,10 @@ func TestAccSKEMin(t *testing.T) {
 }
 
 func TestAccSKEMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_10_0),
@@ -593,6 +606,10 @@ func TestAccSKEMax(t *testing.T) {
 }
 
 func TestAccProviderOption(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccProviderOption")
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,

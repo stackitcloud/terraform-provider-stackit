@@ -20,6 +20,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "resource-management"
+)
+
 //go:embed testdata/resource-project.tf
 var resourceProject string
 
@@ -108,6 +113,10 @@ func testConfigFolderNameParentUUIDUpdated() config.Variables {
 }
 
 func TestAccResourceManagerProjectContainerId(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccResourceManagerProjectContainerId name: %s", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -188,6 +197,10 @@ func TestAccResourceManagerProjectContainerId(t *testing.T) {
 }
 
 func TestAccResourceManagerProjectParentUUID(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccResourceManagerProjectParentUUID name: %s", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -268,6 +281,10 @@ func TestAccResourceManagerProjectParentUUID(t *testing.T) {
 }
 
 func TestAccResourceManagerFolderContainerId(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccResourceManagerFolderContainerId name: %s", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -347,6 +364,10 @@ func TestAccResourceManagerFolderContainerId(t *testing.T) {
 }
 
 func TestAccResourceManagerFolderParentUUID(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Logf("TestAccResourceManagerFolderParentUUID name: %s", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,

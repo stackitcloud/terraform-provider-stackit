@@ -22,6 +22,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "telemetry-router"
+)
+
 var (
 	//go:embed testdata/resource-min.tf
 	resourceMin string
@@ -78,6 +83,10 @@ func testConfigVarsMaxRotated() config.Variables {
 }
 
 func TestAccTelemetryLinkMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -180,6 +189,10 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 }
 
 func TestAccTelemetryLinkMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,

@@ -29,6 +29,11 @@ import (
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "cdn"
+)
+
 var (
 	bucketName             = "acc-b" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
 	bucketNameUpdated      = "acc-b-updated" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
@@ -222,6 +227,10 @@ func makeCertAndKey(organization, domain string) (cert, key []byte) {
 }
 
 func TestAccCDNDistributionHttp(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckCDNDistributionDestroy,
@@ -528,6 +537,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 }
 
 func TestAccCDNDistributionBucket(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	expectedBucketUrl := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketName)
 	expectedBucketUrlUpdated := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketNameUpdated)
 
@@ -755,6 +768,10 @@ func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, er
 }
 
 func TestAccCDNDistributionLogSinkWriteOnlyRotation(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	woTestName := "acc-wo" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
 
 	baseVars := config.Variables{

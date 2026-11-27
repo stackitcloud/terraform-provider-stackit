@@ -21,6 +21,11 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/logme/v2api/wait"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "logme"
+)
+
 var (
 	//go:embed testdata/resource-min.tf
 	resourceMinConfig string
@@ -92,6 +97,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccLogMeMinResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckLogMeDestroy,
@@ -230,6 +239,10 @@ func TestAccLogMeMinResource(t *testing.T) {
 }
 
 func TestAccLogMeMaxResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckLogMeDestroy,

@@ -18,6 +18,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "service-account"
+)
+
 var (
 	//go:embed testdata/resource-service-account.tf
 	resourceServiceAccount string
@@ -103,6 +108,10 @@ var testConfigVarsFederatedIdentityProviderUpdate = config.Variables{
 }
 
 func TestServiceAccount(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServiceAccountDestroy,

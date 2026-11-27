@@ -16,6 +16,7 @@ linters:
     - tfmodifyplan # custom local linter
     - tfstateremove # custom local linter
     - tfclientcollection # custom local linter
+    - tfprintmetadata # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -55,6 +56,9 @@ linters:
       tfclientcollection:
         type: module
         description: "A custom local linter"
+      tfprintmetadata:
+        type: module
+        description: "A custom local linter, checking that testutil.PrintMetadata is called as the first thing in all TestAcc test cases"
     depguard:
       rules:
         main:

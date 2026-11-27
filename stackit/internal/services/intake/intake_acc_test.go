@@ -20,6 +20,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "intake"
+)
+
 //go:embed testdata/resource-min.tf
 var resourceIntakeRunnerMin string
 
@@ -59,6 +64,10 @@ func testIntakeRunnerConfigVarsMaxUpdated() config.Variables {
 }
 
 func TestAccIntakeRunnerMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakeRunnerDestroy,
@@ -145,6 +154,10 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 }
 
 func TestAccIntakeRunnerMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakeRunnerDestroy,

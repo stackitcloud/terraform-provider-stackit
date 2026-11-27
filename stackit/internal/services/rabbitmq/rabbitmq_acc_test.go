@@ -17,6 +17,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "rabbitmq"
+)
+
 // Instance resource data
 var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
@@ -90,6 +95,10 @@ func resourceConfigCredential() string {
 }
 
 func TestAccRabbitMQResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	acls := instanceResource["sgw_acl_invalid"]
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,

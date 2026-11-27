@@ -16,6 +16,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "n/a"
+)
+
 //go:embed testdata/provider-credentials.tf
 var providerCredentialConfig string
 
@@ -124,6 +129,10 @@ func getServiceAccountToken() (string, error) {
 }
 
 func TestAccEnvVarTokenValid(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	// Check if acceptance tests should be run
 	if v := os.Getenv(resource.EnvTfAcc); v == "" {
 		t.Skipf(
@@ -156,6 +165,10 @@ func TestAccEnvVarTokenValid(t *testing.T) {
 }
 
 func TestAccEnvVarTokenInvalid(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "foo")
 
@@ -176,6 +189,10 @@ func TestAccEnvVarTokenInvalid(t *testing.T) {
 }
 
 func TestAccCredentialsFileValid(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "")
 
@@ -195,6 +212,10 @@ func TestAccCredentialsFileValid(t *testing.T) {
 }
 
 func TestAccCredentialsFileInvalid(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	t.Setenv("STACKIT_CREDENTIALS_PATH", "")
 	t.Setenv("STACKIT_SERVICE_ACCOUNT_TOKEN", "")
 
@@ -215,6 +236,10 @@ func TestAccCredentialsFileInvalid(t *testing.T) {
 }
 
 func TestAccProviderConfigureValidValues(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	// Check if acceptance tests should be run
 	if v := os.Getenv(resource.EnvTfAcc); v == "" {
 		t.Skipf(
@@ -246,6 +271,10 @@ func TestAccProviderConfigureValidValues(t *testing.T) {
 }
 
 func TestAccProviderConfigureAnInvalidValue(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	// Check if acceptance tests should be run
 	if v := os.Getenv(resource.EnvTfAcc); v == "" {
 		t.Skipf(

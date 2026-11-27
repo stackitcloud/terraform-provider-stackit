@@ -22,6 +22,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "automation-service"
+)
+
 var (
 	//go:embed testdata/datasource-templates.tf
 	templatesDataSourceConfig string
@@ -171,6 +176,10 @@ func configVarsMaxUpdated(base config.Variables) config.Variables {
 }
 
 func TestAccAutomationTemplatesDataSource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -194,6 +203,10 @@ func TestAccAutomationTemplatesDataSource(t *testing.T) {
 }
 
 func TestAccVolumeAutomationMinResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	varsMin := testConfigVarsMin(lookupVolumeRecoveryPointManagementTemplateID(t))
 	varsMinUpdated := configVarsMinUpdated(varsMin)
 	resource.Test(t, resource.TestCase{
@@ -274,6 +287,10 @@ func TestAccVolumeAutomationMinResource(t *testing.T) {
 }
 
 func TestAccVolumeAutomationMaxResource(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	varsMax := testConfigVarsMax(lookupVolumeRecoveryPointManagementTemplateID(t))
 	varsMaxUpdated := configVarsMaxUpdated(varsMax)
 	varsMaxCleared := maps.Clone(varsMaxUpdated)

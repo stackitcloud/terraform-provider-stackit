@@ -70,6 +70,10 @@ var testConfigInstanceVarsPrivatePreviewMaxUpdated = func() config.Variables {
 }()
 
 func TestAccPostgresFlexInstancePrivatePreviewMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testCheckDestroy,

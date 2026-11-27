@@ -19,6 +19,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+const (
+	// API identifier for RRWG
+	productId = "opensearch"
+)
+
 var (
 	//go:embed testdata/resource-min.tf
 	resourceMinConfig string
@@ -88,6 +93,10 @@ var testConfigVarsMaxUpdated = func() config.Variables {
 }()
 
 func TestAccOpenSearchResourceMin(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckOpenSearchDestroy,
@@ -279,6 +288,10 @@ func TestAccOpenSearchResourceMin(t *testing.T) {
 }
 
 func TestAccOpenSearchResourceMax(t *testing.T) {
+	testutil.PrintMetadata(t, testutil.AccTestMetadata{
+		ProductId: productId,
+	})
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckOpenSearchDestroy,
