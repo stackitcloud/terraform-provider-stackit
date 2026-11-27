@@ -136,6 +136,7 @@ func (r *vpcRoutingTableDatasource) Schema(_ context.Context, _ datasource.Schem
 // Read refreshes the Terraform state with the latest data.
 func (r *vpcRoutingTableDatasource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -167,6 +168,7 @@ func (r *vpcRoutingTableDatasource) Read(ctx context.Context, req datasource.Rea
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -184,5 +186,6 @@ func (r *vpcRoutingTableDatasource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPC routing table read")
 }

@@ -115,6 +115,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -317,6 +318,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -378,6 +380,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
@@ -397,12 +400,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MariaDB instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -413,12 +418,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -430,7 +437,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -456,12 +465,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MariaDB instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -526,6 +537,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "MariaDB instance updated")
 }
 
@@ -533,6 +545,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -556,7 +569,9 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -567,6 +582,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "MariaDB instance deleted")
 }
 
@@ -580,6 +596,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -595,6 +612,7 @@ func mapFields(instance *mariadb.Instance, model *Model, region string) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -626,8 +644,10 @@ func mapFields(instance *mariadb.Instance, model *Model, region string) error {
 		if err != nil {
 			return fmt.Errorf("mapping parameters: %w", err)
 		}
+
 		model.Parameters = parameters
 	}
+
 	return nil
 }
 
@@ -653,6 +673,7 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				if !ok {
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as string", attribute, valueInterface)
 				}
+
 				value = types.StringValue(valueString)
 			}
 		case basetypes.BoolType:
@@ -663,6 +684,7 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				if !ok {
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as bool", attribute, valueInterface)
 				}
+
 				value = types.BoolValue(valueBool)
 			}
 		case basetypes.Int32Type:
@@ -680,6 +702,7 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				case float64:
 					valueInt32 = int32(temp)
 				}
+
 				value = types.Int32Value(valueInt32)
 			}
 		case basetypes.ListType: // Assumed to be a list of strings
@@ -702,16 +725,20 @@ func mapParameters(params map[string]any) (types.Object, error) {
 						if !ok {
 							return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' with element '%s' of type %T, failed to assert as string", attribute, x, x)
 						}
+
 						valueList = append(valueList, types.StringValue(xString))
 					}
 				}
+
 				temp2, diags := types.ListValue(types.StringType, valueList)
 				if diags.HasError() {
 					return types.ObjectNull(parametersTypes), fmt.Errorf("failed to map %s: %w", attribute, core.DiagsToError(diags))
 				}
+
 				value = temp2
 			}
 		}
+
 		attributes[attribute] = value
 	}
 
@@ -719,6 +746,7 @@ func mapParameters(params map[string]any) (types.Object, error) {
 	if diags.HasError() {
 		return types.ObjectNull(parametersTypes), fmt.Errorf("failed to create object: %w", core.DiagsToError(diags))
 	}
+
 	return output, nil
 }
 
@@ -726,10 +754,12 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*mariadb.Create
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	payloadParams, err := toInstanceParams(parameters)
 	if err != nil {
 		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
+
 	return &mariadb.CreateInstancePayload{
 		InstanceName: model.Name.ValueString(),
 		PlanId:       model.PlanId.ValueString(),
@@ -741,10 +771,12 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*mariadb.Partia
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	payloadParams, err := toInstanceParams(parameters)
 	if err != nil {
 		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
+
 	return &mariadb.PartialUpdateInstancePayload{
 		PlanId:     conversion.StringValueToPointer(model.PlanId),
 		Parameters: payloadParams,
@@ -755,6 +787,7 @@ func toInstanceParams(parameters *parametersModel) (*mariadb.InstanceParameters,
 	if parameters == nil {
 		return nil, nil
 	}
+
 	payloadParams := &mariadb.InstanceParameters{}
 
 	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
@@ -769,6 +802,7 @@ func toInstanceParams(parameters *parametersModel) (*mariadb.InstanceParameters,
 	if err != nil {
 		return nil, fmt.Errorf("convert syslog: %w", err)
 	}
+
 	payloadParams.Syslog = syslog
 
 	return payloadParams, nil
@@ -776,6 +810,7 @@ func toInstanceParams(parameters *parametersModel) (*mariadb.InstanceParameters,
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model, region string) error {
 	projectId := model.ProjectId.ValueString()
+
 	res, err := r.client.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting MariaDB offerings: %w", err)
@@ -785,22 +820,26 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model, region 
 	planName := model.PlanName.ValueString()
 	availableVersions := ""
 	availablePlanNames := ""
+
 	isValidVersion := false
 	for offer := range res.Offerings {
 		if !strings.EqualFold(res.Offerings[offer].Version, version) {
 			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, res.Offerings[offer].Version)
 			continue
 		}
+
 		isValidVersion = true
 
 		for _, plan := range res.Offerings[offer].Plans {
 			if plan.Name == "" {
 				continue
 			}
+
 			if strings.EqualFold(plan.Name, planName) && plan.Id != "" {
 				model.PlanId = types.StringValue(plan.Id)
 				return nil
 			}
+
 			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, plan.Name)
 		}
 	}
@@ -808,12 +847,14 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model, region 
 	if !isValidVersion {
 		return fmt.Errorf("couldn't find version '%s', available versions are: %s", version, availableVersions)
 	}
+
 	return fmt.Errorf("couldn't find plan_name '%s' for version %s, available names are: %s", planName, version, availablePlanNames)
 }
 
 func loadPlanNameAndVersion(ctx context.Context, client mariadb.DefaultAPI, model *Model, region string) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
+
 	res, err := client.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting MariaDB offerings: %w", err)

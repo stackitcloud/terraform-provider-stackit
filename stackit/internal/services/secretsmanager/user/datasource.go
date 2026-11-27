@@ -127,6 +127,7 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 // Read refreshes the Terraform state with the latest data.
 func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -155,6 +156,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -173,6 +175,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Secrets Manager user read")
 }
 
@@ -180,6 +183,7 @@ func mapDataSourceFields(user *secretsmanager.User, model *DataSourceModel) erro
 	if user == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -198,5 +202,6 @@ func mapDataSourceFields(user *secretsmanager.User, model *DataSourceModel) erro
 	model.Description = types.StringValue(user.Description)
 	model.WriteEnabled = types.BoolValue(user.Write)
 	model.Username = types.StringValue(user.Username)
+
 	return nil
 }

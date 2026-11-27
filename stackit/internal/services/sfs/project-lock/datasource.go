@@ -119,6 +119,7 @@ func (r *projectlockDatasource) Read(ctx context.Context, req datasource.ReadReq
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -136,5 +137,6 @@ func (r *projectlockDatasource) Read(ctx context.Context, req datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "SFS project lock read")
 }

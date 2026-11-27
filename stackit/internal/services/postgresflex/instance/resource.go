@@ -170,6 +170,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -199,6 +200,7 @@ func handleV3Migration(_ context.Context, planModel, configModel *Model, resp *r
 		resp.Diagnostics.AddError("handling v3 migration", "configModel is nil. This is an error in the provider. Please report it https://github.com/stackitcloud/terraform-provider-stackit/issues")
 		return
 	}
+
 	if planModel == nil {
 		resp.Diagnostics.AddError("handling v3 migration", "planModel is nil. This is an error in the provider. Please report it https://github.com/stackitcloud/terraform-provider-stackit/issues")
 		return
@@ -209,6 +211,7 @@ func handleV3Migration(_ context.Context, planModel, configModel *Model, resp *r
 		if planModel.RetentionDays.IsNull() || planModel.RetentionDays.IsUnknown() {
 			planModel.RetentionDays = types.Int32Value(32)
 		}
+
 		resp.Diagnostics.AddAttributeWarning(path.Root("retention_days"),
 			"retention_days will be required after February 2027", "retention_days will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 32 days during deprecation period.")
 	}
@@ -216,6 +219,7 @@ func handleV3Migration(_ context.Context, planModel, configModel *Model, resp *r
 	// backup_schedule
 	if !(planModel.BackupSchedule.IsNull() || planModel.BackupSchedule.IsUnknown()) {
 		backupSchedule := planModel.BackupSchedule.ValueString()
+
 		backupScheduleSimplified := utils.SimplifyCronString(backupSchedule)
 		if backupSchedule != backupScheduleSimplified {
 			resp.Diagnostics.AddAttributeWarning(path.Root("backup_schedule"),
@@ -232,6 +236,7 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -550,6 +555,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -571,6 +577,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	}
+
 	var flavor = &flavorModel{}
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
@@ -578,12 +585,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
+
 	var storage = &storageModel{}
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -592,6 +601,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	}
+
 	var network = &networkModel{}
 	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
@@ -600,6 +610,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	}
+
 	var encryption *encryptionModel
 	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
 		encryption = &encryptionModel{}
@@ -657,12 +668,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex instance created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -672,12 +685,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+
 	instanceId := model.InstanceId.ValueString()
 	if instanceId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -689,7 +704,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", err.Error())
+
 		return
 	}
 
@@ -729,6 +746,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex instance read")
 }
 
@@ -736,6 +754,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -759,6 +778,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 	}
+
 	var flavor = &flavorModel{}
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
@@ -766,12 +786,14 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
 		err := loadFlavorId(ctx, r.client, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
 		}
 	}
+
 	var storage = &storageModel{}
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -780,6 +802,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 	}
+
 	var network = &networkModel{}
 	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
@@ -816,11 +839,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Postgresflex instance updated")
 }
 
@@ -828,6 +853,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -850,7 +876,9 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -861,6 +889,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
 	}
+
 	tflog.Info(ctx, "Postgres Flex instance deleted")
 }
 
@@ -874,6 +903,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -889,6 +919,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -903,6 +934,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 	}
 
 	aclList := types.ListNull(types.StringType)
+
 	var diags diag.Diagnostics
 	if resp.Network.Acl != nil {
 		modelACL, err := utils.ListValueToStringSlice(model.ACL)
@@ -924,6 +956,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 		"instance_address": types.StringPointerValue(resp.Network.InstanceAddress),
 		"router_address":   types.StringPointerValue(resp.Network.RouterAddress),
 	}
+
 	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
 		return fmt.Errorf("mapping network: %w", core.DiagsToError(diags))
@@ -936,6 +969,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 		"ram":         flavor.RAM,
 		"node_type":   flavor.NodeType,
 	}
+
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
 		return fmt.Errorf("mapping flavor: %w", core.DiagsToError(diags))
@@ -945,6 +979,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 		"class": types.StringPointerValue(resp.Storage.Class),
 		"size":  types.Int64PointerValue(resp.Storage.Size),
 	}
+
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 	if diags.HasError() {
 		return fmt.Errorf("mapping storage: %w", core.DiagsToError(diags))
@@ -958,6 +993,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 			"kek_key_version": types.StringValue(resp.Encryption.KekKeyVersion),
 			"service_account": types.StringValue(resp.Encryption.ServiceAccount),
 		}
+
 		encryptionObject, diags = types.ObjectValue(encryptionTypes, encryptionValues)
 		if diags.HasError() {
 			return fmt.Errorf("mapping encryption: %w", core.DiagsToError(diags))
@@ -996,6 +1032,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 		case NODE_TYPE_REPLICA:
 			replica = new(NODE_TYPE_REPLICA_VALUE)
 		}
+
 		model.Replicas = types.Int32PointerValue(replica)
 	}
 
@@ -1012,6 +1049,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 	model.Region = types.StringValue(region)
 	model.Network = networkObject
 	model.ConnectionInfo = connectionObject
+
 	return nil
 }
 
@@ -1019,6 +1057,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
@@ -1037,10 +1076,12 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		networkPayload.Acl = acl
 	} else if network != nil && !(network.Acl.IsNull() || network.Acl.IsUnknown()) {
 		var err error
+
 		networkPayload.Acl, err = conversion.StringListToSlice(network.Acl)
 		if err != nil {
 			return nil, err
 		}
+
 		if !(network.AccessScope.IsUnknown() || network.AccessScope.IsNull()) {
 			networkPayload.AccessScope = (*postgresflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
 		}
@@ -1088,6 +1129,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
 	}
@@ -1106,6 +1148,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		networkPayload.Acl = acl
 	} else if network != nil && !(network.Acl.IsNull() || network.Acl.IsUnknown()) {
 		var err error
+
 		networkPayload.Acl, err = conversion.StringListToSlice(network.Acl)
 		if err != nil {
 			return nil, err
@@ -1140,38 +1183,49 @@ type postgresFlexClient interface {
 // Deprecated: getAllFlavors is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getAllFlavors(ctx context.Context, client postgresFlexClient, projectId, region string) ([]postgresflex.ListFlavors, error) {
 	var result []postgresflex.ListFlavors
+
 	req := client.ListFlavors(ctx, projectId, region).Size(100)
+
 	resp, err := client.ListFlavorsExecute(req)
 	if err != nil {
 		return nil, fmt.Errorf("error listing flavors: %w", err)
 	}
+
 	if resp == nil {
 		return nil, fmt.Errorf("nil response received when listing flavors")
 	}
+
 	if resp.Flavors != nil {
 		result = append(result, resp.Flavors...)
 	}
 
 	currentPage := resp.Pagination.Page
+
 	totalPages := resp.Pagination.TotalPages
 	for currentPage < totalPages {
 		nextPage := currentPage + 1
+
 		resp, err = client.ListFlavorsExecute(req.Page(nextPage))
 		if err != nil {
 			return nil, fmt.Errorf("error listing flavors: %w", err)
 		}
+
 		if resp == nil {
 			return nil, fmt.Errorf("nil response received when listing flavors on page %d", nextPage)
 		}
+
 		if resp.Flavors != nil {
 			result = append(result, resp.Flavors...)
 		}
+
 		if resp.Pagination.Page <= currentPage {
 			break // Prevent infinite loop if page number does not advance
 		}
+
 		currentPage = resp.Pagination.Page
 		totalPages = resp.Pagination.TotalPages
 	}
+
 	return result, nil
 }
 
@@ -1180,13 +1234,16 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
+
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
+
 	cpu := conversion.Int64ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
+
 	ram := conversion.Int64ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
@@ -1194,18 +1251,22 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
+
 	res, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {
 		return fmt.Errorf("listing postgresflex flavors: %w", err)
 	}
 
 	avl := ""
+
 	if res == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
+
 	if model.Replicas.IsNull() || model.Replicas.IsUnknown() {
 		return fmt.Errorf("no replicas defined")
 	}
+
 	var nodeType string
 	switch model.Replicas.ValueInt32() {
 	case NODE_TYPE_SINGLE_VALUE:
@@ -1215,18 +1276,22 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	default:
 		return fmt.Errorf("unknown replica count. only 1 and 3 are supported")
 	}
+
 	for _, f := range res {
 		if f.Id == "" || f.Cpu == 0 || f.Memory == 0 {
 			continue
 		}
+
 		if f.Cpu == *cpu && f.Memory == *ram && f.NodeType == nodeType {
 			flavor.Id = types.StringValue(f.Id)
 			flavor.Description = types.StringValue(f.Description)
 			flavor.NodeType = types.StringValue(f.NodeType)
 			break
 		}
+
 		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM, %s node type", avl, f.Cpu, f.Memory, f.NodeType)
 	}
+
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
 	}
@@ -1240,10 +1305,12 @@ func getFlavor(ctx context.Context, client postgresFlexClient, projectId, region
 	if err != nil {
 		return nil, fmt.Errorf("failed to list flavors: %w", err)
 	}
+
 	for _, flavor := range flavorsResp {
 		if flavor.Id == flavorId {
 			return &flavor, nil
 		}
 	}
+
 	return nil, fmt.Errorf("flavor with ID %q not found in project %q", flavorId, projectId)
 }

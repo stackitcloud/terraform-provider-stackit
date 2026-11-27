@@ -128,13 +128,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
+
 			err := mapFields(context.Background(), tt.input, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
@@ -316,9 +319,11 @@ func TestToCreatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -493,9 +498,11 @@ func TestToUpdatePayload(t *testing.T) {
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
+
 			if tt.isValid && err != nil {
 				t.Fatalf("Should not have failed: %v", err)
 			}
+
 			if tt.isValid {
 				diff := cmp.Diff(output, tt.expected)
 				if diff != "" {
@@ -508,6 +515,7 @@ func TestToUpdatePayload(t *testing.T) {
 
 func TestMapMetricsRelabelConfigs(t *testing.T) {
 	model := &Model{}
+
 	err := mapMetricsRelabelConfigs(context.Background(), &observabilitySdk.Job{
 		MetricsRelabelConfigs: []observabilitySdk.MetricsRelabelConfig{
 			{
@@ -531,6 +539,7 @@ func TestMapMetricsRelabelConfigs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Should not have failed: %v", err)
 	}
+
 	expected := types.ListValueMust(types.ObjectType{AttrTypes: metricsRelabelConfigTypes}, []attr.Value{
 		types.ObjectValueMust(metricsRelabelConfigTypes, map[string]attr.Value{
 			"action":        types.StringValue("drop"),
@@ -559,6 +568,7 @@ func TestMapMetricsRelabelConfigs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Should not have failed: %v", err)
 	}
+
 	if !model.MetricsRelabelConfigs.IsNull() {
 		t.Fatalf("Expected null list, got %v", model.MetricsRelabelConfigs)
 	}
@@ -589,10 +599,12 @@ func TestMetricsRelabelConfigsPayload(t *testing.T) {
 			TargetLabel:  new("shard"),
 		},
 	}
+
 	createPayload, err := toCreatePayload(context.Background(), model, &saml2Model{}, &basicAuthModel{}, nil)
 	if err != nil {
 		t.Fatalf("Should not have failed: %v", err)
 	}
+
 	if diff := cmp.Diff(createPayload.MetricsRelabelConfigs, expectedCreate); diff != "" {
 		t.Fatalf("Create payload does not match: %s", diff)
 	}
@@ -605,10 +617,12 @@ func TestMetricsRelabelConfigsPayload(t *testing.T) {
 			TargetLabel:  new("shard"),
 		},
 	}
+
 	updatePayload, err := toUpdatePayload(context.Background(), model, &saml2Model{}, &basicAuthModel{}, nil)
 	if err != nil {
 		t.Fatalf("Should not have failed: %v", err)
 	}
+
 	if diff := cmp.Diff(updatePayload.MetricsRelabelConfigs, expectedUpdate); diff != "" {
 		t.Fatalf("Update payload does not match: %s", diff)
 	}

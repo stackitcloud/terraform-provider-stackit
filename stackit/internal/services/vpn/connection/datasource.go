@@ -229,6 +229,7 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 
 func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -250,14 +251,18 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 	connResp, err := d.client.GetGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
+
 		ok := errors.As(err, &oapiErr)
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, connResp, &model, region)
@@ -271,6 +276,7 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "VPN connection read", map[string]any{
 		"connection_id": connectionId,
 	})
@@ -283,18 +289,22 @@ func mapDataSourceFields(ctx context.Context, conn connectionResponse, model *Da
 	}
 
 	tunnel1 := conn.GetTunnel1()
+
 	if model.Tunnel1 == nil {
 		model.Tunnel1 = &DataSourceTunnelModel{}
 	}
+
 	err = mapTunnel(ctx, &tunnel1, model.Tunnel1)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
 
 	tunnel2 := conn.GetTunnel2()
+
 	if model.Tunnel2 == nil {
 		model.Tunnel2 = &DataSourceTunnelModel{}
 	}
+
 	err = mapTunnel(ctx, &tunnel2, model.Tunnel2)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)

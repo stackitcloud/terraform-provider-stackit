@@ -41,6 +41,7 @@ func (r *albDataSource) Metadata(_ context.Context, req datasource.MetadataReque
 // Configure adds the provider configured client to the data source.
 func (r *albDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
+
 	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -542,6 +543,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 // Read refreshes the Terraform state with the latest data.
 func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -570,6 +572,7 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -588,5 +591,6 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Application Load Balancer read")
 }

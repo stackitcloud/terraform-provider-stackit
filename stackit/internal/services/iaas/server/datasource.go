@@ -199,11 +199,13 @@ func (d *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 // Read refreshes the Terraform state with the latest data.
 func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
+
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
@@ -216,6 +218,7 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	serverReq := d.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
+
 	serverResp, err := serverReq.Execute()
 	if err != nil {
 		utils.LogError(
@@ -229,6 +232,7 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			},
 		)
 		resp.State.RemoveResource(ctx)
+
 		return
 	}
 
@@ -246,6 +250,7 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "server read")
 }
 
@@ -253,6 +258,7 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	if serverResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -279,21 +285,25 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		createdAtValue := *serverResp.CreatedAt
 		createdAt = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	var updatedAt basetypes.StringValue
 	if serverResp.UpdatedAt != nil {
 		updatedAtValue := *serverResp.UpdatedAt
 		updatedAt = types.StringValue(updatedAtValue.Format(time.RFC3339))
 	}
+
 	var launchedAt basetypes.StringValue
 	if serverResp.LaunchedAt != nil {
 		launchedAtValue := *serverResp.LaunchedAt
 		launchedAt = types.StringValue(launchedAtValue.Format(time.RFC3339))
 	}
+
 	if serverResp.Nics != nil {
 		var respNics []string
 		for _, nic := range serverResp.Nics {
 			respNics = append(respNics, nic.NicId)
 		}
+
 		nicTF, diags := types.ListValueFrom(ctx, types.StringType, respNics)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map networkInterfaces: %w", core.DiagsToError(diags))
@@ -312,6 +322,7 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		if diags.HasError() {
 			return fmt.Errorf("failed to map bootVolume: %w", core.DiagsToError(diags))
 		}
+
 		model.BootVolume = bootVolume
 	} else {
 		model.BootVolume = types.ObjectNull(bootVolumeDataTypes)
@@ -321,12 +332,14 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	if serverResp.Agent != nil && serverResp.Agent.Provisioned != nil {
 		agentProvisioned = types.BoolPointerValue(serverResp.Agent.Provisioned)
 	}
+
 	agent, diags := types.ObjectValue(agentDataTypes, map[string]attr.Value{
 		"provisioned": agentProvisioned,
 	})
 	if diags.HasError() {
 		return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
 	}
+
 	model.Agent = agent
 
 	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)

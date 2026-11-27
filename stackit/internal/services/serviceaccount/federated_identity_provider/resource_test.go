@@ -26,6 +26,7 @@ func assertionsListFromModels(t *testing.T, assertions []AssertionModel) types.L
 	if diags.HasError() {
 		t.Fatalf("failed to build assertions list: %v", diags.Errors())
 	}
+
 	return listValue
 }
 
@@ -86,6 +87,7 @@ func TestMapFields(t *testing.T) {
 				}
 				return
 			}
+
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -93,6 +95,7 @@ func TestMapFields(t *testing.T) {
 			if model.ProjectId.ValueString() != tt.projectID {
 				t.Fatalf("project_id mismatch: got %q, expected %q", model.ProjectId.ValueString(), tt.projectID)
 			}
+
 			if model.ServiceAccountEmail.ValueString() != tt.serviceAccountEmail {
 				t.Fatalf("service_account_email mismatch: got %q, expected %q", model.ServiceAccountEmail.ValueString(), tt.serviceAccountEmail)
 			}
@@ -101,12 +104,15 @@ func TestMapFields(t *testing.T) {
 				if model.Name.ValueString() != "provider-name" {
 					t.Fatalf("name mismatch: got %q", model.Name.ValueString())
 				}
+
 				if model.Id.ValueString() != "pid,service-account@sa.stackit.cloud,fed-uuid-123" {
 					t.Fatalf("id mismatch: got %q", model.Id.ValueString())
 				}
+
 				if model.FederationId.ValueString() != "fed-uuid-123" {
 					t.Fatalf("federation_id mismatch: got %q", model.FederationId.ValueString())
 				}
+
 				if model.Issuer.ValueString() != "https://issuer.example.com" {
 					t.Fatalf("issuer mismatch: got %q", model.Issuer.ValueString())
 				}
@@ -116,27 +122,34 @@ func TestMapFields(t *testing.T) {
 				if !model.Assertions.IsNull() {
 					t.Fatalf("expected assertions to be null")
 				}
+
 				if !model.Issuer.IsNull() {
 					t.Fatalf("expected issuer to be null")
 				}
+
 				return
 			}
 
 			var mappedAssertions []AssertionModel
+
 			diags := model.Assertions.ElementsAs(ctx, &mappedAssertions, false)
 			if diags.HasError() {
 				t.Fatalf("failed to decode assertions: %v", diags.Errors())
 			}
+
 			if len(mappedAssertions) != len(tt.expectedAssertions) {
 				t.Fatalf("assertions length mismatch: got %d, expected %d", len(mappedAssertions), len(tt.expectedAssertions))
 			}
+
 			for i := range mappedAssertions {
 				if mappedAssertions[i].Item.ValueString() != tt.expectedAssertions[i].Item.ValueString() {
 					t.Fatalf("assertions[%d].item mismatch: got %q, expected %q", i, mappedAssertions[i].Item.ValueString(), tt.expectedAssertions[i].Item.ValueString())
 				}
+
 				if mappedAssertions[i].Operator.ValueString() != tt.expectedAssertions[i].Operator.ValueString() {
 					t.Fatalf("assertions[%d].operator mismatch: got %q, expected %q", i, mappedAssertions[i].Operator.ValueString(), tt.expectedAssertions[i].Operator.ValueString())
 				}
+
 				if mappedAssertions[i].Value.ValueString() != tt.expectedAssertions[i].Value.ValueString() {
 					t.Fatalf("assertions[%d].value mismatch: got %q, expected %q", i, mappedAssertions[i].Value.ValueString(), tt.expectedAssertions[i].Value.ValueString())
 				}
@@ -196,11 +209,14 @@ func TestToCreatePayload(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
 				}
+
 				if payload != nil {
 					t.Fatalf("expected nil payload on error")
 				}
+
 				return
 			}
+
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -208,6 +224,7 @@ func TestToCreatePayload(t *testing.T) {
 			if payload.Name != "provider-name" {
 				t.Fatalf("name mismatch: got %q", payload.Name)
 			}
+
 			if payload.Issuer != "https://issuer.example.com" {
 				t.Fatalf("issuer mismatch: got %q", payload.Issuer)
 			}
@@ -217,21 +234,27 @@ func TestToCreatePayload(t *testing.T) {
 				if len(payload.Assertions) != 2 {
 					t.Fatalf("assertions length mismatch: got %d", len(payload.Assertions))
 				}
+
 				if payload.Assertions[0].Item == nil || *payload.Assertions[0].Item != "iss" {
 					t.Fatalf("assertions[0].item mismatch")
 				}
+
 				if payload.Assertions[0].Operator == nil || *payload.Assertions[0].Operator != "equals" {
 					t.Fatalf("assertions[0].operator mismatch")
 				}
+
 				if payload.Assertions[0].Value == nil || *payload.Assertions[0].Value != "https://issuer.example.com" {
 					t.Fatalf("assertions[0].value mismatch")
 				}
+
 				if payload.Assertions[1].Item == nil || *payload.Assertions[1].Item != "sub" {
 					t.Fatalf("assertions[1].item mismatch")
 				}
+
 				if payload.Assertions[1].Operator == nil || *payload.Assertions[1].Operator != "equals" {
 					t.Fatalf("assertions[1].operator mismatch")
 				}
+
 				if payload.Assertions[1].Value == nil || *payload.Assertions[1].Value != "user@example.com" {
 					t.Fatalf("assertions[1].value mismatch")
 				}
@@ -303,11 +326,14 @@ func TestToUpdatePayload(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
 				}
+
 				if payload != nil {
 					t.Fatalf("expected nil payload on error")
 				}
+
 				return
 			}
+
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -317,21 +343,27 @@ func TestToUpdatePayload(t *testing.T) {
 				if payload.Name != "provider-name" {
 					t.Fatalf("name mismatch: got %q", payload.Name)
 				}
+
 				if payload.Issuer != "https://issuer.example.com" {
 					t.Fatalf("issuer mismatch: got %q", payload.Issuer)
 				}
+
 				if len(payload.Assertions) != 2 {
 					t.Fatalf("assertions length mismatch: got %d, expected 2", len(payload.Assertions))
 				}
+
 				if payload.Assertions[0].Item == nil || *payload.Assertions[0].Item != "aud" {
 					t.Fatalf("assertions[0].item mismatch")
 				}
+
 				if payload.Assertions[0].Operator == nil || *payload.Assertions[0].Operator != "equals" {
 					t.Fatalf("assertions[0].operator mismatch")
 				}
+
 				if payload.Assertions[0].Value == nil || *payload.Assertions[0].Value != "https://example.com" {
 					t.Fatalf("assertions[0].value mismatch")
 				}
+
 				if payload.Assertions[1].Item == nil || *payload.Assertions[1].Item != "sub" {
 					t.Fatalf("assertions[1].item mismatch")
 				}
@@ -343,9 +375,11 @@ func TestToUpdatePayload(t *testing.T) {
 				if payload.Issuer != "" {
 					t.Fatalf("expected empty issuer for null, got %q", payload.Issuer)
 				}
+
 				if payload.Name != "" {
 					t.Fatalf("expected empty name for null, got %q", payload.Name)
 				}
+
 				if len(payload.Assertions) != 1 {
 					t.Fatalf("assertions length mismatch: got %d, expected 1", len(payload.Assertions))
 				}

@@ -54,12 +54,13 @@ var testDremioConfigVarsMax = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"region":     config.StringVariable("eu01"),
 	// Instance
-	"display_name":                                     config.StringVariable("tfAccDremioMaxInstance"),
-	"description":                                      config.StringVariable("description"),
-	"authentication_type":                              config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
-	"authentication_oauth_authority_url":               config.StringVariable("oauth-authority-url"),
-	"authentication_oauth_client_id":                   config.StringVariable("oauth-client-id"),
-	"authentication_oauth_client_secret":               config.StringVariable("oauth-client-secret"),
+	"display_name":                       config.StringVariable("tfAccDremioMaxInstance"),
+	"description":                        config.StringVariable("description"),
+	"acl":                                config.ListVariable(config.StringVariable("0.0.0.0/0")),
+	"authentication_type":                config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
+	"authentication_oauth_authority_url": config.StringVariable("oauth-authority-url"),
+	"authentication_oauth_client_id":     config.StringVariable("oauth-client-id"),
+	"authentication_oauth_client_secret": config.StringVariable("oauth-client-secret"),
 	"authentication_oauth_client_jwt_claims_user_name": config.StringVariable("oauth-jwt-claim-user"),
 	"authentication_oauth_scope":                       config.StringVariable("oauth-scope"),
 	"authentication_oauth_parameter_name":              config.StringVariable("oauth-parameter-name"),
@@ -217,6 +218,7 @@ func TestAccDremioInstanceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioInstanceResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
@@ -235,10 +237,12 @@ func TestAccDremioInstanceMin(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioUserResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute userId")
@@ -284,6 +288,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttr(dremioInstanceResource, "region", testutil.Region),
 					resource.TestCheckResourceAttr(dremioInstanceResource, "display_name", testutil.ConvertConfigVariable(testDremioConfigVarsMax["display_name"])),
 					resource.TestCheckResourceAttr(dremioInstanceResource, "description", testutil.ConvertConfigVariable(testDremioConfigVarsMax["description"])),
+					testutil.CheckListAttr(dremioInstanceResource, "acl", testDremioConfigVarsMax["acl"]),
 
 					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.type", testutil.ConvertConfigVariable(testDremioConfigVarsMax["authentication_type"])),
 
@@ -342,6 +347,10 @@ func TestAccDremioInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "description",
 						dremioInstanceDataResource, "description",
+					),
+					resource.TestCheckResourceAttrPair(
+						dremioInstanceResource, "acl",
+						dremioInstanceDataResource, "acl",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "authentication.type",
@@ -429,6 +438,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioInstanceResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
@@ -448,10 +458,12 @@ func TestAccDremioInstanceMax(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", dremioUserResource)
 					}
+
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instanceId")
 					}
+
 					userId, ok := r.Primary.Attributes["user_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute userId")
@@ -491,6 +503,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 
 func testAccDremioInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
+
 	client, err := dremioSdk.NewAPIClient(
 		testutil.NewConfigBuilder().BuildClientOptions(testutil.DremioCustomEndpoint, true)...)
 	if err != nil {
@@ -531,5 +544,6 @@ func testAccDremioInstanceDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }

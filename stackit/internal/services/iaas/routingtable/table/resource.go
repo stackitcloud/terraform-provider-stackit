@@ -95,6 +95,7 @@ func (r *routingTableResource) ModifyPlan(ctx context.Context, req resource.Modi
 	if req.Config.Raw.IsNull() {
 		return
 	}
+
 	var configModel Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
@@ -225,6 +226,7 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -268,12 +270,14 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table created")
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (r *routingTableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -283,12 +287,14 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	organizationId := model.OrganizationId.ValueString()
+
 	routingTableId := model.RoutingTableId.ValueString()
 	if routingTableId == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
@@ -304,7 +310,9 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -322,6 +330,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table read")
 }
 
@@ -329,6 +338,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -349,6 +359,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// Retrieve values from state
 	var stateModel Model
+
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -382,6 +393,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	tflog.Info(ctx, "Routing table updated")
 }
 
@@ -389,6 +401,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -414,7 +427,9 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
+
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting routing table", fmt.Sprintf("Calling API: %v", err))
+
 		return
 	}
 
@@ -433,6 +448,7 @@ func (r *routingTableResource) ImportState(ctx context.Context, req resource.Imp
 			"Error importing routing table",
 			fmt.Sprintf("Expected import identifier with format: [organization_id],[region],[network_area_id],[routing_table_id]  Got: %q", req.ID),
 		)
+
 		return
 	}
 
@@ -456,6 +472,7 @@ func mapFields(ctx context.Context, routingTable *iaas.RoutingTable, model *Mode
 	if routingTable == nil {
 		return fmt.Errorf("response input is nil")
 	}
+
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -482,6 +499,7 @@ func mapFields(ctx context.Context, routingTable *iaas.RoutingTable, model *Mode
 		createdAtValue := *routingTable.CreatedAt
 		createdAtTF = types.StringValue(createdAtValue.Format(time.RFC3339))
 	}
+
 	if routingTable.UpdatedAt != nil {
 		updatedAtValue := *routingTable.UpdatedAt
 		updatedAtTF = types.StringValue(updatedAtValue.Format(time.RFC3339))
@@ -496,6 +514,7 @@ func mapFields(ctx context.Context, routingTable *iaas.RoutingTable, model *Mode
 	model.DynamicRoutes = types.BoolPointerValue(routingTable.DynamicRoutes)
 	model.CreatedAt = createdAtTF
 	model.UpdatedAt = updatedAtTF
+
 	return nil
 }
 
