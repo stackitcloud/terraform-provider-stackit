@@ -93,6 +93,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"private_address":                       "Transient private Load Balancer IP address. It can change any time.",
 		"target_pools":                          "List of all target pools which will be used in the Load Balancer. Limited to 20.",
 		"healthy_threshold":                     "Healthy threshold of the health checking.",
+		"alt_port":                              "Overrides the default port used for health check probes.",
+		"http_health_checks":                    "Options for the HTTP health checking.",
+		"http_health_checks.ok_status":          "List of HTTP status codes that indicate a healthy response.",
+		"http_health_checks.path":               "Path to send the health check request to.",
 		"interval":                              "Interval duration of health checking in seconds.",
 		"interval_jitter":                       "Interval duration threshold of the health checking in seconds.",
 		"timeout":                               "Active health checking timeout duration in seconds.",
@@ -298,9 +302,28 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: descriptions["active_health_check"],
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
+								"alt_port": schema.Int32Attribute{
+									Description: descriptions["alt_port"],
+									Computed:    true,
+								},
 								"healthy_threshold": schema.Int64Attribute{
 									Description: descriptions["healthy_threshold"],
 									Computed:    true,
+								},
+								"http_health_checks": schema.SingleNestedAttribute{
+									Description: descriptions["http_health_checks"],
+									Computed:    true,
+									Attributes: map[string]schema.Attribute{
+										"path": schema.StringAttribute{
+											Description: descriptions["http_health_checks.path"],
+											Computed:    true,
+										},
+										"ok_status": schema.SetAttribute{
+											Description: descriptions["http_health_checks.ok_status"],
+											Computed:    true,
+											ElementType: types.StringType,
+										},
+									},
 								},
 								"interval": schema.StringAttribute{
 									Description: descriptions["interval"],
